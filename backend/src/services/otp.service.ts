@@ -1,7 +1,8 @@
 import { OTPRepository } from "../repositories/otp.repository";
 import { EmailService } from "./email.service";
 import { generateOtp, getOtpExpiry, isOtpExpired } from "../utils/otp.util";
-import type { IOTPService, OTPData, OTPUserData } from "./interfaces/IOtpService";
+import type { IOTPService } from "./interfaces/IOtpService";
+import type { OTPData, OTPUserData } from "../types/otp.type";
 
 export class OTPService implements IOTPService {
   private otpRepository: OTPRepository;
@@ -29,7 +30,7 @@ export class OTPService implements IOTPService {
       expiresAt,
     });
 
-    await this.emailService.sendOTP(email, otp, name);
+    await this.emailService.sendOtpEmail(email, name, otp);
     return otp;
   }
 
@@ -67,7 +68,7 @@ export class OTPService implements IOTPService {
     const expiresAt = getOtpExpiry(expiryMinutes);
 
     await this.otpRepository.updateOtp(email, { otp: newOtp, expiresAt });
-    await this.emailService.sendOTP(email, newOtp, otpRecord.userData?.name || "");
+    await this.emailService.sendOtpEmail(email, otpRecord.userData?.name || "", newOtp);
   }
 
   async createPasswordResetOtp(email: string, name: string, userData: OTPUserData): Promise<void> {
@@ -82,7 +83,7 @@ export class OTPService implements IOTPService {
       await this.otpRepository.create({ email, otp, userData, expiresAt });
     }
 
-    await this.emailService.sendPasswordResetOTP(email, otp, name);
+    await this.emailService.sendPasswordResetEmail(email, name, otp);
   }
 
   async verifyAndCreateResetToken(email: string, otp: string): Promise<string> {

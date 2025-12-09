@@ -16,6 +16,19 @@ import type {
   ResetPasswordRequest,
 } from "../types";
 
+interface ApiErrorResponse {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
+
+function getErrorMessage(error: unknown): string {
+  const apiError = error as ApiErrorResponse;
+  return apiError.response?.data?.message || "An error occurred";
+}
+
 class AuthService {
   private getApiRoutes(role: "user" | "doctor") {
     return role === "doctor" ? DOCTOR_API_ROUTES : USER_API_ROUTES;
@@ -28,10 +41,10 @@ class AuthService {
         userData
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        message: error.response?.data?.message || "Registration failed",
+        message: getErrorMessage(error) || "Registration failed",
       };
     }
   }
@@ -43,10 +56,10 @@ class AuthService {
         otpData
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        message: error.response?.data?.message || "OTP verification failed",
+        message: getErrorMessage(error) || "OTP verification failed",
       };
     }
   }
@@ -58,10 +71,10 @@ class AuthService {
         email,
       });
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to resend OTP",
+        message: getErrorMessage(error) || "Failed to resend OTP",
       };
     }
   }
@@ -73,10 +86,10 @@ class AuthService {
         credentials
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        message: error.response?.data?.message || "Login failed",
+        message: getErrorMessage(error) || "Login failed",
       };
     }
   }
@@ -92,10 +105,10 @@ class AuthService {
         doctorData
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        message: error.response?.data?.message || "Registration failed",
+        message: getErrorMessage(error) || "Registration failed",
       };
     }
   }
@@ -107,10 +120,10 @@ class AuthService {
         otpData
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        message: error.response?.data?.message || "OTP verification failed",
+        message: getErrorMessage(error) || "OTP verification failed",
       };
     }
   }
@@ -121,10 +134,10 @@ class AuthService {
         email,
       });
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to resend OTP",
+        message: getErrorMessage(error) || "Failed to resend OTP",
       };
     }
   }
@@ -136,10 +149,10 @@ class AuthService {
         credentials
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        message: error.response?.data?.message || "Login failed",
+        message: getErrorMessage(error) || "Login failed",
       };
     }
   }
@@ -155,20 +168,24 @@ class AuthService {
         credentials
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        message: error.response?.data?.message || "Admin login failed",
+        message: getErrorMessage(error) || "Admin login failed",
       };
     }
   }
 
-  logout(): void {
+  async logout() {
+    try {
+      await axiosInstance.get(AUTH_ROUTES.LOGOUT);
+    } catch (error) {
+      console.error("Logout failed", error);
+    }
     localStorage.removeItem("authToken");
     localStorage.removeItem("user");
     localStorage.removeItem("doctor");
     localStorage.removeItem("admin");
-    window.location.href = `${AUTH_BASE_URL}${AUTH_ROUTES.LOGOUT}`;
   }
 
   isAuthenticated(): boolean {
@@ -203,10 +220,10 @@ class AuthService {
         email,
       });
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to send reset link",
+        message: getErrorMessage(error) || "Failed to send reset link",
       };
     }
   }
@@ -223,10 +240,10 @@ class AuthService {
         otp,
       });
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        message: error.response?.data?.message || "OTP verification failed",
+        message: getErrorMessage(error) || "OTP verification failed",
       };
     }
   }
@@ -238,10 +255,10 @@ class AuthService {
         email,
       });
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to resend OTP",
+        message: getErrorMessage(error) || "Failed to resend OTP",
       };
     }
   }
@@ -259,14 +276,15 @@ class AuthService {
     try {
       const response = await axiosInstance.post(apiRoutes.RESET_PASSWORD, data);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to reset password",
+        message: getErrorMessage(error) || "Failed to reset password",
       };
     }
   }
 }
 
 export default new AuthService();
+
 

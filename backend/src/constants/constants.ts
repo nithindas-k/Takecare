@@ -18,7 +18,9 @@ export const MESSAGES = {
   INVALID_ROLE: "Invalid role provided",
   UNAUTHORIZED: "Unauthorized",
   NOT_FOUND: "Not found",
-  VERIFICATION_SUBMITTED:"success",
+  VERIFICATION_SUBMITTED: "success",
+  USER_NOT_ACTIVE: "User is not active",
+  USER_BLOCKED: "Your account has been blocked",  
 
   INVALID_CREDENTIALS: "Invalid email or password",
   LOGIN_SUCCESS: "Login successful",

@@ -29,9 +29,9 @@ class AdminService {
     }
   }
 
-  async rejectDoctor(doctorId: string) {
+  async rejectDoctor(doctorId: string, reason: string) {
     try {
-      const res = await axiosInstance.post(ADMIN_API_ROUTES.REJECT_DOCTOR(doctorId));
+      const res = await axiosInstance.post(ADMIN_API_ROUTES.REJECT_DOCTOR(doctorId), { reason });
       return res.data;
     } catch (error: any) {
       return { success: false, message: error.response?.data?.message || "Reject failed" };

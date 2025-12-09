@@ -12,6 +12,9 @@ import {
 import { STATUS, MESSAGES } from "../constants/constants";
 import { IAuthService } from "../services/interfaces/IAuthService";
 import { IAuthController } from "./interfaces/IAuth.controller";
+import { AppError } from "../types/error.type";
+import { sendSuccess } from "../utils/response.util";
+import { generateAccessToken, generateRefreshToken } from "../utils/jwt.util";
 
 export class AuthController implements IAuthController {
 
@@ -24,20 +27,26 @@ export class AuthController implements IAuthController {
     if (r === Role.Patient) return Role.Patient as Role;
     if (r === Role.Doctor) return Role.Doctor as Role;
     if (r === Role.Admin) return Role.Admin as Role;
-    const err: any = new Error(MESSAGES.INVALID_ROLE);
-    err.status = STATUS.BAD_REQUEST;
-    throw err;
+    if (r === Role.Admin) return Role.Admin as Role;
+    throw new AppError(MESSAGES.INVALID_ROLE, STATUS.BAD_REQUEST);
+  }
+
+  private setRefreshTokenCookie(res: Response, token: string) {
+    res.cookie('refreshToken', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000 //=
+    });
   }
 
   register = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const dto: RegisterDTO = req.body;
-      const role = this.parseRole(dto.role as any);
+      const role = this.parseRole(dto.role as string);
 
       if (!dto.name || !dto.email || !dto.phone || !dto.password || !dto.confirmPassword) {
-        const err: any = new Error(MESSAGES.MISSING_FIELDS);
-        err.status = STATUS.BAD_REQUEST;
-        throw err;
+        throw new AppError(MESSAGES.MISSING_FIELDS, STATUS.BAD_REQUEST);
       }
 
       const result = await this._authService.register({
@@ -45,13 +54,9 @@ export class AuthController implements IAuthController {
         role,
       });
 
-       res.status(STATUS.OK).json({
-        success: true,
-        message: MESSAGES.OTP_SENT,
-        data: result,
-      });
-    } catch (err) {
-       next(err);
+      sendSuccess(res, result, MESSAGES.OTP_SENT, STATUS.OK);
+    } catch (err: unknown) {
+      next(err);
     }
   };
 
@@ -61,20 +66,20 @@ export class AuthController implements IAuthController {
       const role = this.parseRole(dto.role);
 
       if (!dto.email || !dto.otp) {
-        const err: any = new Error(MESSAGES.MISSING_FIELDS);
-        err.status = STATUS.BAD_REQUEST;
-        throw err;
+        throw new AppError(MESSAGES.MISSING_FIELDS, STATUS.BAD_REQUEST);
       }
 
       const result = await this._authService.verifyOtp({ email: dto.email, otp: dto.otp, role });
 
-       res.status(STATUS.CREATED).json({
-        success: true,
-        message: MESSAGES.REGISTRATION_COMPLETE,
-        data: result,
-      });
-    } catch (err) {
-       next(err);
+      if (result.refreshToken) {
+        this.setRefreshTokenCookie(res, result.refreshToken);
+      
+        delete result.refreshToken;
+      }
+
+      sendSuccess(res, result, MESSAGES.REGISTRATION_COMPLETE, STATUS.CREATED);
+    } catch (err: unknown) {
+      next(err);
     }
   };
 
@@ -83,14 +88,12 @@ export class AuthController implements IAuthController {
 
       const dto: ResendOtpDTO = req.body;
       if (!dto.email) {
-        const err: any = new Error("Email is required");
-        err.status = STATUS.BAD_REQUEST;
-        throw err;
+        throw new AppError("Email is required", STATUS.BAD_REQUEST);
       }
 
       await this._authService.resendOtp(dto);
-       res.status(STATUS.OK).json({ success: true, message: MESSAGES.OTP_RESENT });
-    } catch (err) {
+      sendSuccess(res, undefined, MESSAGES.OTP_RESENT, STATUS.OK);
+    } catch (err: unknown) {
       return next(err);
     }
   };
@@ -101,15 +104,35 @@ export class AuthController implements IAuthController {
       const role = this.parseRole(dto.role);
 
       if (!dto.email || !dto.password) {
-        const err: any = new Error(MESSAGES.MISSING_FIELDS);
-        err.status = STATUS.BAD_REQUEST;
-        throw err;
+        throw new AppError(MESSAGES.MISSING_FIELDS, STATUS.BAD_REQUEST);
       }
 
       const result = await this._authService.login({ email: dto.email, password: dto.password, role });
-       res.status(STATUS.OK).json({ success: true, message: MESSAGES.LOGIN_SUCCESS, data: result });
-    } catch (err) {
-       next(err);
+
+      if (result.refreshToken) {
+        this.setRefreshTokenCookie(res, result.refreshToken);
+        delete result.refreshToken;
+      }
+
+      sendSuccess(res, result, MESSAGES.LOGIN_SUCCESS, STATUS.OK);
+    } catch (err: unknown) {
+      next(err);
+    }
+  };
+
+  refreshToken = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const token = req.cookies.refreshToken;
+
+      if (!token) {
+        throw new AppError("Refresh token missing", STATUS.UNAUTHORIZED);
+      }
+
+      const result = await this._authService.refreshToken(token);
+
+      sendSuccess(res, result, "Token refreshed successfully", STATUS.OK);
+    } catch (err: unknown) {
+      next(err);
     }
   };
 
@@ -119,15 +142,13 @@ export class AuthController implements IAuthController {
       const role = this.parseRole(dto.role);
 
       if (!dto.email) {
-        const err: any = new Error("Email is required");
-        err.status = STATUS.BAD_REQUEST;
-        throw err;
+        throw new AppError("Email is required", STATUS.BAD_REQUEST);
       }
 
       await this._authService.forgotPassword({ email: dto.email, role });
-       res.status(STATUS.OK).json({ success: true, message: MESSAGES.PASSWORD_RESET_OTP });
-    } catch (err) {
-       next(err);
+      sendSuccess(res, undefined, MESSAGES.PASSWORD_RESET_OTP, STATUS.OK);
+    } catch (err: unknown) {
+      next(err);
     }
   };
 
@@ -135,14 +156,12 @@ export class AuthController implements IAuthController {
     try {
       const dto: ForgotPasswordVerifyOtpDTO = req.body;
       if (!dto.email || !dto.otp) {
-        const err: any = new Error(MESSAGES.MISSING_FIELDS);
-        err.status = STATUS.BAD_REQUEST;
-        throw err;
+        throw new AppError(MESSAGES.MISSING_FIELDS, STATUS.BAD_REQUEST);
       }
       const result = await this._authService.forgotPasswordVerifyOtp(dto);
-       res.status(STATUS.OK).json({ success: true, message: MESSAGES.OTP_VERIFIED, data: result });
-    } catch (err) {
-       next(err);
+      sendSuccess(res, result, MESSAGES.OTP_VERIFIED, STATUS.OK);
+    } catch (err: unknown) {
+      next(err);
     }
   };
 
@@ -150,19 +169,17 @@ export class AuthController implements IAuthController {
     try {
       const dto: ResetPasswordDTO = req.body;
       if (!dto.email || !dto.resetToken || !dto.newPassword || !dto.confirmPassword) {
-        const err: any = new Error(MESSAGES.MISSING_FIELDS);
-        err.status = STATUS.BAD_REQUEST;
-        throw err;
+        throw new AppError(MESSAGES.MISSING_FIELDS, STATUS.BAD_REQUEST);
       }
       await this._authService.resetPassword(dto);
-       res.status(STATUS.OK).json({ success: true, message: MESSAGES.PASSWORD_RESET_SUCCESS });
-    } catch (err) {
-       next(err);
+      sendSuccess(res, undefined, MESSAGES.PASSWORD_RESET_SUCCESS, STATUS.OK);
+    } catch (err: unknown) {
+      next(err);
     }
   };
 
 
-  userGoogleCallback = (req: Request, res: Response, next: NextFunction): void => {
+  userGoogleCallback = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {
         return res.redirect(
@@ -170,9 +187,29 @@ export class AuthController implements IAuthController {
         );
       }
 
-      return res.redirect("http://localhost:5173/patient/dashboard");
+      const user = req.user as any;
+      const token = generateAccessToken(user);
+      const refreshToken = generateRefreshToken(user);
 
-    } catch (err) {
+      this.setRefreshTokenCookie(res, refreshToken);
+
+      let verificationStatus;
+      if (user.role === "doctor") {
+        verificationStatus = await this._authService.getDoctorStatus(user._id.toString());
+      }
+
+      const userData = encodeURIComponent(JSON.stringify({
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        profileImage: user.profileImage,
+        verificationStatus
+      }));
+
+      return res.redirect(`http://localhost:5173/auth/callback?token=${token}&user=${userData}`);
+
+    } catch (err: unknown) {
       console.error("Google User Callback Error:", err);
       return res.redirect(
         "http://localhost:5173/patient/login?error=server_error"
@@ -180,7 +217,7 @@ export class AuthController implements IAuthController {
     }
   };
 
-  doctorGoogleCallback = (req: Request, res: Response, next: NextFunction): void => {
+  doctorGoogleCallback = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {
         return res.redirect(
@@ -188,9 +225,26 @@ export class AuthController implements IAuthController {
         );
       }
 
-      return res.redirect("http://localhost:5173/doctor/dashboard");
+      const user = req.user as any;
+      const token = generateAccessToken(user);
+      const refreshToken = generateRefreshToken(user);
 
-    } catch (err) {
+      this.setRefreshTokenCookie(res, refreshToken);
+
+      const verificationStatus = await this._authService.getDoctorStatus(user._id.toString());
+
+      const userData = encodeURIComponent(JSON.stringify({
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        profileImage: user.profileImage,
+        verificationStatus
+      }));
+
+      return res.redirect(`http://localhost:5173/auth/callback?token=${token}&user=${userData}`);
+
+    } catch (err: unknown) {
       console.error("Google Doctor Callback Error:", err);
       return res.redirect(
         "http://localhost:5173/doctor/login?error=server_error"
@@ -208,6 +262,12 @@ export class AuthController implements IAuthController {
           message: MESSAGES.LOGOUT_FAILED,
         });
       }
+
+      res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
+      });
 
       req.session.destroy((err) => {
         if (err) {

@@ -1,21 +1,22 @@
 import nodemailer, { Transporter } from "nodemailer";
 import { env } from "../configs/env";
-import type { IEmailService, EmailConfig } from "../services/interfaces/IEmailService";
+import type { IEmailService } from "../services/interfaces/IEmailService";
+import type { EmailConfig, SmtpConfig } from "../types/email.type";
 
 export class EmailService implements IEmailService {
   private transporter: Transporter;
   private readonly fromAddress: string;
 
-  constructor(config?: EmailConfig) {
+  constructor(config?: SmtpConfig) {
     const emailConfig = config || this.getDefaultConfig();
-    
+
     this.transporter = nodemailer.createTransport(emailConfig);
-    this.fromAddress = `"TackCare" <${env.SMTP_USER}>`;
-    
+    this.fromAddress = `"TakeCare" <${env.SMTP_USER}>`;
+
     this.verifyConnection();
   }
 
-  private getDefaultConfig(): EmailConfig {
+  private getDefaultConfig(): SmtpConfig {
     const emailUser = env.SMTP_USER;
     const emailPass = env.SMTP_PASS;
     const emailHost = env.SMTP_HOST;
@@ -50,14 +51,23 @@ export class EmailService implements IEmailService {
     }
   }
 
-  async sendOTP(email: string, otp: string, name: string): Promise<void> {
+  async sendEmail(config: EmailConfig): Promise<void> {
+    await this.transporter.sendMail({
+      from: config.from,
+      to: config.to,
+      subject: config.subject,
+      html: config.html,
+    });
+  }
+
+  async sendOtpEmail(email: string, name: string, otp: string): Promise<void> {
     try {
       const html = this.getOTPTemplate(otp, name);
 
       const mailOptions = {
         from: this.fromAddress,
         to: email,
-        subject: "Your OTP for Registration - TackCare",
+        subject: "Your OTP for Registration - TakeCare",
         html,
       };
 
@@ -69,10 +79,10 @@ export class EmailService implements IEmailService {
     }
   }
 
-  async sendPasswordResetOTP(
+  async sendPasswordResetEmail(
     email: string,
-    otp: string,
-    name: string
+    name: string,
+    otp: string
   ): Promise<void> {
     try {
       const html = this.getPasswordResetTemplate(otp, name);
@@ -80,7 +90,7 @@ export class EmailService implements IEmailService {
       const mailOptions = {
         from: this.fromAddress,
         to: email,
-        subject: "Password Reset OTP - TackCare",
+        subject: "Password Reset OTP - TakeCare",
         html,
       };
 
@@ -99,7 +109,7 @@ export class EmailService implements IEmailService {
       const mailOptions = {
         from: this.fromAddress,
         to: email,
-        subject: "Welcome to TackCare!",
+        subject: "Welcome to TakeCare!",
         html,
       };
 
@@ -122,7 +132,7 @@ export class EmailService implements IEmailService {
       const mailOptions = {
         from: this.fromAddress,
         to: email,
-        subject: "Verify Your Email - TackCare",
+        subject: "Verify Your Email - TakeCare",
         html,
       };
 
@@ -138,13 +148,13 @@ export class EmailService implements IEmailService {
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 10px;">
         <div style="background-color: #14b8a6; padding: 20px; border-radius: 10px 10px 0 0; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">TackCare</h1>
+          <h1 style="color: white; margin: 0; font-size: 28px;">TakeCare</h1>
         </div>
         
         <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px;">
           <h2 style="color: #14b8a6; margin-top: 0;">Welcome, ${name}!</h2>
           <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
-            Thank you for registering with TackCare. To complete your registration, please use the following OTP:
+            Thank you for registering with TakeCare. To complete your registration, please use the following OTP:
           </p>
           
           <div style="background: linear-gradient(135deg, #14b8a6 0%, #0891b2 100%); margin: 30px 0; padding: 20px; text-align: center; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
@@ -168,7 +178,7 @@ export class EmailService implements IEmailService {
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
           
           <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 0;">
-            © 2025 TackCare. All rights reserved.
+            © 2025 TakeCare. All rights reserved.
           </p>
         </div>
       </div>
@@ -179,7 +189,7 @@ export class EmailService implements IEmailService {
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 10px;">
         <div style="background-color: #14b8a6; padding: 20px; border-radius: 10px 10px 0 0; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">TackCare</h1>
+          <h1 style="color: white; margin: 0; font-size: 28px;">TakeCare</h1>
         </div>
         
         <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px;">
@@ -198,7 +208,7 @@ export class EmailService implements IEmailService {
           </div>
           
           <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
-            ⏱️ This OTP will expire in <strong>10 minutes</strong>.
+            ⏱️ This OTP will expire in <strong>1 minute</strong>.
           </p>
           
           <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
@@ -212,7 +222,7 @@ export class EmailService implements IEmailService {
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
           
           <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 0;">
-            © 2025 TackCare. All rights reserved.
+            © 2025 TakeCare. All rights reserved.
           </p>
         </div>
       </div>
@@ -223,11 +233,11 @@ export class EmailService implements IEmailService {
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 10px;">
         <div style="background-color: #14b8a6; padding: 20px; border-radius: 10px 10px 0 0; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">TackCare</h1>
+          <h1 style="color: white; margin: 0; font-size: 28px;">TakeCare</h1>
         </div>
         
         <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px;">
-          <h2 style="color: #14b8a6; margin-top: 0;">Welcome to TackCare, ${name}! 🎉</h2>
+          <h2 style="color: #14b8a6; margin-top: 0;">Welcome to TakeCare, ${name}! 🎉</h2>
           <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
             We're excited to have you on board! Your account has been successfully created.
           </p>
@@ -246,7 +256,7 @@ export class EmailService implements IEmailService {
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
           
           <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 0;">
-            © 2025 TackCare. All rights reserved.
+            © 2025 TakeCare. All rights reserved.
           </p>
         </div>
       </div>
@@ -260,7 +270,7 @@ export class EmailService implements IEmailService {
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 10px;">
         <div style="background-color: #14b8a6; padding: 20px; border-radius: 10px 10px 0 0; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">TackCare</h1>
+          <h1 style="color: white; margin: 0; font-size: 28px;">TakeCare</h1>
         </div>
         
         <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px;">
@@ -289,7 +299,7 @@ export class EmailService implements IEmailService {
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
           
           <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 0;">
-            © 2025 TackCare. All rights reserved.
+            © 2025 TakeCare. All rights reserved.
           </p>
         </div>
       </div>

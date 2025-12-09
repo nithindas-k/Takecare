@@ -1,6 +1,7 @@
-// src/models/user.model.ts
+
 import mongoose, { Schema, Model } from "mongoose";
 import type { IUserDocument } from "../types/user.type";
+import type { JsonTransformReturnType } from "../types/common";
 
 const UserSchema = new Schema<IUserDocument>(
   {
@@ -12,7 +13,7 @@ const UserSchema = new Schema<IUserDocument>(
     email: {
       type: String,
       required: true,
-      unique: true, // keep unique here (creates a unique index once)
+      unique: true, 
       lowercase: true,
       trim: true,
     },
@@ -20,7 +21,7 @@ const UserSchema = new Schema<IUserDocument>(
       type: String,
       trim: true,
       index: true,
-      sparse: true, // use a sparse indexed field (declare index only here)
+      sparse: true, 
     },
     passwordHash: {
       type: String,
@@ -47,7 +48,7 @@ const UserSchema = new Schema<IUserDocument>(
     googleId: {
       type: String,
       index: true,
-      sparse: true, // declare sparse index only once here
+      sparse: true, 
     },
     isActive: {
       type: Boolean,
@@ -58,11 +59,11 @@ const UserSchema = new Schema<IUserDocument>(
     timestamps: true,
     toJSON: {
       virtuals: true,
-      transform: function (_doc, ret: Record<string, any>) {
+      transform: function (_doc, ret: Record<string, unknown>): JsonTransformReturnType {
         const { _id, __v, passwordHash, ...cleanedRet } = ret;
         return {
           ...cleanedRet,
-          id: _id,
+          id: _id as string,
         };
       },
     },
@@ -70,12 +71,12 @@ const UserSchema = new Schema<IUserDocument>(
   }
 );
 
-// Keep compound / query indexes here (only those not declared via field options)
+
 UserSchema.index({ role: 1, isActive: 1 });
 
-// Model guard to avoid re-registration in hot-reload environments
+
 const UserModel: Model<IUserDocument> =
-  (mongoose.models && (mongoose.models as any).User) ||
+  (mongoose.models && (mongoose.models.User as Model<IUserDocument>)) ||
   mongoose.model<IUserDocument>("User", UserSchema);
 
 export default UserModel;

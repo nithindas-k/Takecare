@@ -2,30 +2,67 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { googleOAuthConfig } from "../configs/googleOAuth.config";
 import { UserRepository } from "../repositories/user.repository";
+import { DoctorRepository } from "../repositories/doctor.repository";
+import { VerificationStatus } from "../dtos/doctor.dtos/doctor.dto";
 
 const userRepository = new UserRepository();
+const doctorRepository = new DoctorRepository();
+
 
 passport.use(
+  "google",
   new GoogleStrategy(
-    googleOAuthConfig,
-    async (accessToken, refreshToken, profile, done) => {
+    {
+      ...googleOAuthConfig,
+      callbackURL: "http://localhost:5000/auth/google/callback",
+      passReqToCallback: true,
+    },
+    async (req: any, accessToken, refreshToken, profile, done) => {
       try {
         const email = profile.emails?.[0]?.value;
         if (!email) {
           return done(new Error("No email in Google profile"));
         }
+
         let user = await userRepository.findByEmail(email);
+        const state = req.query.state as string;
+        const targetRole = state === "doctor" ? "doctor" : "patient";
+
         if (!user) {
           user = await userRepository.create({
-            name: profile.displayName || "Google User",
+            name: profile.displayName || `Google ${targetRole.charAt(0).toUpperCase() + targetRole.slice(1)}`,
             email,
             googleId: profile.id,
             profileImage: profile.photos?.[0]?.value || null,
             isActive: true,
-            role: "patient",
+            role: targetRole,
           });
         }
-        return done(null, user);
+
+
+        if (user.role === "doctor") {
+          const existingDoctor = await doctorRepository.findByUserId(user._id.toString());
+          if (!existingDoctor) {
+            await doctorRepository.create({
+              userId: user._id,
+              licenseNumber: null,
+              qualifications: [],
+              specialty: null,
+              experienceYears: null,
+              VideoFees: null,
+              ChatFees: null,
+              languages: [],
+              verificationStatus: VerificationStatus.Pending,
+              verificationDocuments: [],
+              rejectionReason: null,
+              ratingAvg: 0,
+              ratingCount: 0,
+              isActive: true,
+            });
+          }
+        }
+
+        return done(null, user as any);
       } catch (error) {
         return done(error);
       }
@@ -36,5 +73,5 @@ passport.use(
 passport.serializeUser((user: any, done) => done(null, user._id));
 passport.deserializeUser(async (id: string, done) => {
   const user = await userRepository.findById(id);
-  done(null, user);
+  done(null, user as any);
 });

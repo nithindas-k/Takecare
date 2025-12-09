@@ -33,6 +33,7 @@ import DoctorsListPage from "./pages/admin/DoctorsListPage";
 import DoctorDetailPage from "./pages/admin/DoctorDetailPage";
 import PatientsListPage from "./pages/admin/PatientsListPage";
 import PatientDetailPage from "./pages/admin/PatientDetailPage";
+import AuthCallback from "./pages/AuthCallback";
 
 const NotFound: React.FC = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -53,12 +54,12 @@ const App: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-      
+
         <Route path="/" element={<ProtectedRoute role="patient" >
           <Home />
         </ProtectedRoute>} />
 
- 
+
         <Route path="/doctor">
 
           <Route
@@ -84,7 +85,7 @@ const App: React.FC = () => {
           <Route path="forgot-password-otp" element={<ForgotPasswordOTP />} />
           <Route path="reset-password" element={<ResetPassword />} />
 
-    
+
           <Route
             path="dashboard"
             element={
@@ -95,7 +96,7 @@ const App: React.FC = () => {
           />
         </Route>
 
-      
+
         <Route path="/patient">
 
           <Route
@@ -124,7 +125,7 @@ const App: React.FC = () => {
           />
           <Route path="reset-password" element={<PatientResetPassword />} />
 
-      
+
           <Route
             path="home"
             element={
@@ -205,6 +206,7 @@ const App: React.FC = () => {
         </Route>
 
 
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

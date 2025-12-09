@@ -1,15 +1,10 @@
 import jwt from "jsonwebtoken";
 import { IUserDocument } from "../types/user.type";
+import { JWTPayload } from "../types/auth.type";
 import { env } from "configs/env";
 
 const ACCESS_TOKEN_SECRET = env.ACCESS_TOKEN_SECRET || "fallback-access-secret";
 const REFRESH_TOKEN_SECRET = env.REFRESH_TOKEN_SECRET || "fallback-refresh-secret";
-
-export interface JWTPayload {
-  userId: string;
-  email: string;
-  role: string;
-}
 
 
 export const generateAccessToken = (user: IUserDocument): string => {
@@ -20,7 +15,7 @@ export const generateAccessToken = (user: IUserDocument): string => {
   };
 
   return jwt.sign(payload, ACCESS_TOKEN_SECRET, {
-    expiresIn: "7d",   
+    expiresIn: "15m",
   });
 };
 

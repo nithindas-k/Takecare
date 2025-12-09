@@ -4,10 +4,10 @@ export enum Gender {
   Other = "other",
 }
 
-export enum  Role {
-  Patient="patient",
-  Doctor ="doctor",
-  Admin ="admin"
+export enum Role {
+  Patient = "patient",
+  Doctor = "doctor",
+  Admin = "admin"
 
 }
 
@@ -17,13 +17,13 @@ export enum  Role {
 export interface LoginDTO {
   email: string;
   password: string;
-  role :string
+  role: string
 }
 
 export interface VerifyOtpDTO {
   email: string;
   otp: string;
-  role : string
+  role: string
 }
 
 export interface ResendOtpDTO {
@@ -35,9 +35,9 @@ export interface RegisterDTO {
   email: string;
   phone: string;
   password: string;
-  role:Role,
+  role: Role,
   confirmPassword: string;
-  gender:Gender
+  gender: Gender
   dob?: string;
 }
 
@@ -55,7 +55,7 @@ export interface BaseUserResponseDTO {
 
 export interface ForgotPasswordDTO {
   email: string;
-  role : string
+  role: string
 }
 
 export interface ForgotPasswordVerifyOtpDTO {
@@ -74,4 +74,5 @@ export interface ResetPasswordDTO {
 export interface AuthResponseDTO<T = BaseUserResponseDTO> {
   user: T;
   token: string;
+  refreshToken?: string;
 }

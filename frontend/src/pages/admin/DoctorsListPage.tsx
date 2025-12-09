@@ -9,11 +9,10 @@ interface Doctor {
     id: string;
     name: string;
     email: string;
-    department: string;
+    specialty: string;
     profileImage: string | null;
     createdAt: string;
     experienceYears: number;
-    status: string;
     isActive: boolean;
 }
 
@@ -116,11 +115,11 @@ const DoctorsListPage: React.FC = () => {
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 text-sm text-gray-600">{doctor.department}</td>
+                                                <td className="px-6 py-4 text-sm text-gray-600">{doctor.specialty}</td>
                                                 <td className="px-6 py-4 text-sm text-gray-600">{doctor.experienceYears} Years</td>
                                                 <td className="px-6 py-4">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${doctor.status === "approved" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
-                                                        {doctor.status}
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${doctor.isActive == true ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+                                                        {doctor.isActive?"Active":"UnActive"}
                                                     </span>
                                                     {!doctor.isActive && (
                                                         <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded">Banned</span>

@@ -124,7 +124,7 @@ const DoctorLogin: React.FC = () => {
             <div className="flex items-start justify-between mb-8">
               <h1 className="text-3xl font-bold text-gray-800">Doctor Login</h1>
               <button
-                onClick={() => navigate("/user/login")}
+                onClick={() => navigate("/patient/login")}
                 className="text-teal-500 hover:text-teal-600 font-medium text-sm whitespace-nowrap ml-4 transition-colors"
               >
                 Are you a patient?

@@ -5,41 +5,44 @@ import express from "express";
 import cors from "cors";
 import session from "express-session";
 import passport from "passport";
-import morgan  from "morgan";
+import cookieParser from "cookie-parser";
+import morgan from "morgan";
 
 import { connectDB } from "./configs/database";
 import userRouter from "./routers/user.router";
 import authRouter from "./routers/auth.route";
 import doctorRouter from './routers/doctor.router';
 import adminRouter from "./routers/admin.route"
+import { errorHandler } from "./middlewares/error-handler.middleware";
 
-import "./services/passport.service"; 
+import "./services/passport.service";
 
 const app = express();
 
 const corsOptions = {
-  origin: "http://localhost:5173", 
+  origin: "http://localhost:5173", //=
   credentials: true,
   optionsSuccessStatus: 200,
 };
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads"))); 
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 app.use(cors(corsOptions));
 app.use(morgan("dev"))
 
 
 app.use(express.json());
+app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "your-session-secret-change-in-production",
+    secret: process.env.SESSION_SECRET || "your-session-secret-change-in-production", //=
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false, 
+      secure: false,
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, 
+      maxAge: 24 * 60 * 60 * 1000, //=
     },
   })
 );
@@ -59,17 +62,17 @@ app.get("/", (req, res) => {
 });
 
 
-app.use("/users", userRouter);    
+app.use("/users", userRouter);
 
 
 
 app.use("/auth", authRouter);
 app.use('/doctors', doctorRouter);
-app.use("/admin",adminRouter)
+app.use("/admin", adminRouter)
 
 
 app.use((req, res) => {
-  res.status(404).json({
+  res.status(404).json({ //=
     success: false,
     message: "Route not found",
     path: req.originalUrl,
@@ -77,22 +80,16 @@ app.use((req, res) => {
 });
 
 
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error("Error:", err);
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || "Internal server error",
-  });
-});
+app.use(errorHandler);
 
-const PORT = Number(process.env.PORT) || 5000;
+const PORT = Number(process.env.PORT) || 5000; //=
 
 const startServer = async () => {
   try {
     await connectDB();
     app.listen(PORT, () => {
-      console.log(` Server running on http://localhost:${PORT}`);
-      console.log(`API Base: http://localhost:${PORT}/api`);
+      console.log(` Server running on http://localhost:${PORT}`); //=
+      console.log(`API Base: http://localhost:${PORT}/api`); //=
 
     });
   } catch (error) {

@@ -1,19 +1,10 @@
-export interface IEmailService {
-  sendOTP(email: string, otp: string, name: string): Promise<void>;
-  sendPasswordResetOTP(email: string, otp: string, name: string): Promise<void>;
-  sendWelcomeEmail(email: string, name: string): Promise<void>;
-  sendVerificationEmail(email: string, name: string, verificationLink: string): Promise<void>;
-}
+import { EmailConfig } from "../../types/email.type";
 
-export interface EmailConfig {
-  host: string;
-  port: number;
-  secure: boolean;
-  auth: {
-    user: string;
-    pass: string;
-  };
-  tls?: {
-    rejectUnauthorized: boolean;
-  };
+export interface IEmailService {
+  sendEmail(config: EmailConfig): Promise<void>;
+  sendOtpEmail(email: string, name: string, otp: string): Promise<void>;
+  sendPasswordResetEmail(email: string, name: string, otp: string): Promise<void>;
+
+ 
+
 }

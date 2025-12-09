@@ -52,7 +52,6 @@ const PatientRegister: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [serverError, setServerError] = useState("");
 
-  // Real-time validation
   useEffect(() => {
     const newErrors: FormErrors = {};
 

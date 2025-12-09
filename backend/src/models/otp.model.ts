@@ -1,4 +1,4 @@
-// src/models/otp.model.ts
+
 import { Schema, model, Document } from "mongoose";
 
 export interface IOTPDocument extends Document {

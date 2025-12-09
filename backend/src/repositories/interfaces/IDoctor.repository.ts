@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
 import { IBaseRepository } from "./IBase.repository";
-import { IDoctorDocument } from "../../types/doctor.type";
-
+import { IDoctorDocument, DoctorRequestItem, DoctorRequestDetail } from "../../types/doctor.type";
+import { VerificationStatus } from "../../dtos/doctor.dtos/doctor.dto";
 
 export interface IDoctorRepository extends IBaseRepository<IDoctorDocument> {
 
@@ -11,8 +11,9 @@ export interface IDoctorRepository extends IBaseRepository<IDoctorDocument> {
   findAllActive(): Promise<IDoctorDocument[]>;
   findPendingVerifications(): Promise<IDoctorDocument[]>;
 
-  getPendingDoctorRequests(): Promise<any[]>;
-  getDoctorRequestDetailById(doctorId: string): Promise<any | null>;
+  getPendingDoctorRequests(): Promise<DoctorRequestItem[]>;
+  getAllDoctorRequests(): Promise<DoctorRequestItem[]>;
+  getDoctorRequestDetailById(doctorId: string): Promise<DoctorRequestDetail | null>;
   updateById(id: string | Types.ObjectId, update: Partial<IDoctorDocument>): Promise<IDoctorDocument | null>;
   getAllDoctors(skip: number, limit: number): Promise<{ doctors: IDoctorDocument[]; total: number }>;
 }

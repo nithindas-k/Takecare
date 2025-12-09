@@ -140,10 +140,10 @@ const DoctorVerification: React.FC = () => {
             certificateFile: null,
           });
           setErrors({});
-          // Redirect after a short delay
+ 
           setTimeout(() => {
             navigate("/doctor/dashboard");
-          }, 1200); // 1.2 seconds delay for UX
+          }, 1200); 
         } else {
           setServerMessage(response.message || "Verification failed.");
         }
@@ -163,7 +163,7 @@ const DoctorVerification: React.FC = () => {
         <div className="flex justify-center lg:justify-end">
           <div className="relative w-full max-w-lg px-4">
             <img
-              src="doctor.png"
+              src="/doctor.png"
               alt="Doctors Illustration"
               className="w-full h-auto object-contain"
             />

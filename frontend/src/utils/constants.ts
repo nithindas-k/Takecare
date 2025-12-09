@@ -22,7 +22,7 @@ export const DOCTOR_API_ROUTES = {
   FORGOT_PASSWORD: "/auth/forgot-password",
   RESET_PASSWORD: "/auth/reset-password",
   VERIFICATION: "/doctors/verification",
-  PROFILE: "/auth/profile",
+  PROFILE: "/doctors/profile",
 } as const;
 
 

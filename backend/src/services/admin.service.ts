@@ -1,42 +1,69 @@
-
 import { generateAccessToken } from "../utils/jwt.util";
 import { comparePassword } from "../utils/password.util";
+import { calculatePagination, buildPaginatedResponse } from "../utils/pagination.util";
+import { toggleEntityStatus } from "../utils/status-toggle.util";
 import mapAdminToResponse from "../mappers/admin.mapper/admin.mapper";
+import { mapToDoctorRequestDTO, mapToDoctorRequestDetailDTO, mapToDoctorListItem } from "../mappers/doctor.mapper/doctor.mapper";
+import { mapToPatientListItem } from "../mappers/patient.mapper/patient.mapper";
 import type {
   IAdminService,
-  DoctorRequestDTO,
-  DoctorRequestDetailDTO,
-  UserFilterDTO,
 } from "../services/interfaces/IAdminService";
+
 import type {
   LoginAdminDTO,
   AuthResponseDTO,
-} from "../dtos/admin.dtos/admin.dtos";
+  DoctorRequestDTO,
+  DoctorRequestDetailDTO,
+  UserFilterDTO,
+} from "../dtos/admin.dtos/admin.dto";
 import { IAdminRepository } from "../repositories/interfaces/IDdmin.repository";
-import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
+import {
+  IDoctorRepository,
+} from "../repositories/interfaces/IDoctor.repository";
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
+import type {
+  PatientListItem,
+  DoctorListItem,
+  UserListItem,
+} from "../types/common";
+import type { IUserDocument } from "../types/user.type";
+import type { IDoctorDocument } from "../types/doctor.type";
+import { UnauthorizedError, NotFoundError } from "../errors/AppError";
+import { LoggerService } from "./logger.service";
+import { VerificationStatus } from "../dtos/doctor.dtos/doctor.dto";
 
 export class AdminService implements IAdminService {
+  private readonly logger: LoggerService;
 
-
-  constructor(private _adminRepository: IAdminRepository, private _doctorRepository: IDoctorRepository, private _userRepository: IUserRepository) {
-
+  constructor(
+    private _adminRepository: IAdminRepository,
+    private _doctorRepository: IDoctorRepository,
+    private _userRepository: IUserRepository
+  ) {
+    this.logger = new LoggerService("AdminService");
   }
 
   async loginAdmin(data: LoginAdminDTO): Promise<AuthResponseDTO> {
+    this.logger.info("Admin login attempt", { email: data.email });
+
     const user = await this._adminRepository.findByEmail(data.email);
 
     if (!user || !user.passwordHash) {
-      throw new Error("Invalid email or password");
+      throw new UnauthorizedError("Invalid email or password");
     }
 
-    const isPasswordValid = await comparePassword(data.password, user.passwordHash);
+    const isPasswordValid = await comparePassword(
+      data.password,
+      user.passwordHash
+    );
 
     if (!isPasswordValid) {
-      throw new Error("Invalid email or password");
+      throw new UnauthorizedError("Invalid email or password");
     }
 
     const token = generateAccessToken(user);
+
+    this.logger.info("Admin login successful", { email: data.email });
 
     return {
       user: mapAdminToResponse(user),
@@ -45,162 +72,157 @@ export class AdminService implements IAdminService {
   }
 
   async getDoctorRequests(): Promise<DoctorRequestDTO[]> {
-    const doctors = await this._doctorRepository.getPendingDoctorRequests();
-    console.log("Raw doctors from repo:", JSON.stringify(doctors, null, 2));
+    this.logger.debug("Fetching all doctor requests");
 
-    return doctors.map((doc: any) => {
-      if (!doc.userId) {
-        console.warn(`Doctor request ${doc._id} has no associated user!`);
-        return null;
-      }
-      return {
-        id: doc._id.toString(),
-        name: doc.userId.name,
-        email: doc.userId.email,
-        department: doc.specialty || "",
-        profileImage: doc.userId.profileImage || null,
-        createdAt: doc.createdAt,
-        experienceYears: doc.experienceYears,
-        status: doc.verificationStatus,
-      };
-    }).filter(doc => doc !== null);
+    const doctors = await this._doctorRepository.getAllDoctorRequests();
+
+    this.logger.debug("Raw doctors from repository", { count: doctors.length });
+
+    return doctors
+      .map(mapToDoctorRequestDTO)
+      .filter((doc): doc is DoctorRequestDTO => doc !== null);
   }
 
-  async getDoctorRequestDetail(doctorId: string): Promise<DoctorRequestDetailDTO | null> {
-    const doc: any = await this._doctorRepository.getDoctorRequestDetailById(doctorId);
+  async getDoctorRequestDetail(
+    doctorId: string
+  ): Promise<DoctorRequestDetailDTO | null> {
+    this.logger.debug("Fetching doctor request detail", { doctorId });
+
+    const doc = await this._doctorRepository.getDoctorRequestDetailById(
+      doctorId
+    );
 
     if (!doc || !doc.userId) {
+      this.logger.warn("Doctor request not found", { doctorId });
       return null;
     }
 
-    return {
-      id: doc._id.toString(),
-      name: doc.userId.name,
-      email: doc.userId.email,
-      phone: doc.userId.phone,
-      department: doc.specialty || "",
-      profileImage: doc.userId.profileImage || null,
-      gender: doc.userId.gender || null,
-      dob: doc.userId.dob || null,
-      qualifications: doc.qualifications || [],
-      experienceYears: doc.experienceYears,
-      specialties: doc.specialties || [],
-      biography: doc.biography,
-      address: doc.address,
-      fees: doc.VideoFees || doc.ChatFees || 200,
-      documents: doc.verificationDocuments || [],
-      status: doc.verificationStatus,
-      isActive: doc.isActive,
-      createdAt: doc.createdAt,
-      updatedAt: doc.updatedAt,
-    };
+    return mapToDoctorRequestDetailDTO(doc);
   }
 
   async approveDoctorRequest(doctorId: string): Promise<void> {
+    this.logger.info("Approving doctor request", { doctorId });
+
     await this._doctorRepository.updateById(doctorId, {
-      verificationStatus: "approved",
+      verificationStatus: VerificationStatus.Approved,
       isActive: true,
     });
+
+    this.logger.info("Doctor request approved successfully", { doctorId });
   }
 
   async rejectDoctorRequest(doctorId: string, reason: string): Promise<void> {
-    await this._doctorRepository.updateById(doctorId, {
-      verificationStatus: "rejected",
+    this.logger.info("Rejecting doctor request", { doctorId, reason });
+
+    const result = await this._doctorRepository.updateById(doctorId, {
+      verificationStatus: VerificationStatus.Rejected,
       rejectionReason: reason,
     });
+
+    this.logger.info("Doctor request rejected successfully", { doctorId, result });
   }
 
-  async getAllUsers(filters?: UserFilterDTO): Promise<any[]> {
+  async getAllUsers(filters?: UserFilterDTO): Promise<UserListItem[]> {
+    this.logger.debug("Fetching all users", { filters });
     return [];
   }
 
-  async getAllPatients(page: number = 1, limit: number = 10): Promise<{ patients: any[]; total: number; page: number; limit: number; totalPages: number }> {
-    const skip = (page - 1) * limit;
-    const { patients, total } = await this._userRepository.getAllPatients(skip, limit);
+  async getAllPatients(
+    page: number = 1,
+    limit: number = 10
+  ): Promise<{
+    patients: PatientListItem[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    this.logger.debug("Fetching all patients", { page, limit });
 
-    const mappedPatients = patients.map((patient: any) => ({
-      id: patient._id.toString(),
-      name: patient.name,
-      email: patient.email,
-      phone: patient.phone || "N/A",
-      profileImage: patient.profileImage || null,
-      gender: patient.gender || "N/A",
-      dob: patient.dob || null,
-      createdAt: patient.createdAt,
-      isActive: patient.isActive,
-    }));
+    const { skip } = calculatePagination(page, limit);
+    const { patients, total } = await this._userRepository.getAllPatients(
+      skip,
+      limit
+    );
+
+    const mappedPatients = patients.map(mapToPatientListItem);
+    const paginatedResult = buildPaginatedResponse(mappedPatients, total, page, limit);
 
     return {
-      patients: mappedPatients,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit)
+      patients: paginatedResult.items,
+      total: paginatedResult.total,
+      page: paginatedResult.page,
+      limit: paginatedResult.limit,
+      totalPages: paginatedResult.totalPages,
     };
   }
 
-  async getPatientById(patientId: string): Promise<any | null> {
-    const patient: any = await this._userRepository.findById(patientId);
+  async getPatientById(patientId: string): Promise<PatientListItem | null> {
+    this.logger.debug("Fetching patient by ID", { patientId });
 
-    if (!patient || patient.role !== 'patient') {
+    const patient = await this._userRepository.findById(patientId);
+
+    if (!patient || patient.role !== "patient") {
+      this.logger.warn("Patient not found", { patientId });
       return null;
     }
 
-    return {
-      id: patient._id.toString(),
-      name: patient.name,
-      email: patient.email,
-      phone: patient.phone || "N/A",
-      profileImage: patient.profileImage || null,
-      gender: patient.gender || "N/A",
-      dob: patient.dob || null,
-      createdAt: patient.createdAt,
-      updatedAt: patient.updatedAt,
-      isActive: patient.isActive,
-    };
+    return mapToPatientListItem(patient);
   }
 
   async blockUser(userId: string): Promise<void> {
-    await this._userRepository.updateById(userId, { isActive: false });
+    await toggleEntityStatus(this._userRepository, userId, false, "User", this.logger);
   }
 
   async unblockUser(userId: string): Promise<void> {
-    await this._userRepository.updateById(userId, { isActive: true });
+    await toggleEntityStatus(this._userRepository, userId, true, "User", this.logger);
   }
 
-  async getAllDoctors(page: number = 1, limit: number = 10): Promise<{ doctors: any[]; total: number; page: number; limit: number; totalPages: number }> {
-    const skip = (page - 1) * limit;
-    const { doctors, total } = await this._doctorRepository.getAllDoctors(skip, limit);
+  async getAllDoctors(
+    page: number = 1,
+    limit: number = 10
+  ): Promise<{
+    doctors: DoctorListItem[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    this.logger.debug("Fetching all doctors", { page, limit });
 
-    const mappedDoctors = doctors.map((doc: any) => {
-      if (!doc.userId) return null;
-      return {
-        id: doc._id.toString(),
-        name: doc.userId.name,
-        email: doc.userId.email,
-        department: doc.specialty || "General",
-        profileImage: doc.userId.profileImage || null,
-        createdAt: doc.createdAt,
-        experienceYears: doc.experienceYears || 0,
-        status: doc.verificationStatus,
-        isActive: doc.isActive,
-      };
-    }).filter(doc => doc !== null);
+    const { skip } = calculatePagination(page, limit);
+    const { doctors, total } = await this._doctorRepository.getAllDoctors(
+      skip,
+      limit
+    );
+
+    const mappedDoctors = doctors
+      .map((doc: IDoctorDocument): DoctorListItem | null => {
+        const userId = doc.userId as unknown as IUserDocument;
+        if (!userId) {
+          this.logger.warn("Doctor has no associated user", { doctorId: doc._id.toString() });
+          return null;
+        }
+        return mapToDoctorListItem(doc, userId);
+      })
+      .filter((doc): doc is DoctorListItem => doc !== null);
+
+    const paginatedResult = buildPaginatedResponse(mappedDoctors, total, page, limit);
 
     return {
-      doctors: mappedDoctors,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit)
+      doctors: paginatedResult.items,
+      total: paginatedResult.total,
+      page: paginatedResult.page,
+      limit: paginatedResult.limit,
+      totalPages: paginatedResult.totalPages,
     };
   }
 
   async banDoctor(doctorId: string): Promise<void> {
-    await this._doctorRepository.updateById(doctorId, { isActive: false });
+    await toggleEntityStatus(this._doctorRepository, doctorId, false, "Doctor", this.logger);
   }
 
   async unbanDoctor(doctorId: string): Promise<void> {
-    await this._doctorRepository.updateById(doctorId, { isActive: true });
+    await toggleEntityStatus(this._doctorRepository, doctorId, true, "Doctor", this.logger);
   }
 }

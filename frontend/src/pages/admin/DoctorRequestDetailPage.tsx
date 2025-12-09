@@ -18,6 +18,8 @@ const DoctorRequestDetailPage: React.FC = () => {
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [isBanProcessing, setIsBanProcessing] = useState(false);
+  const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   useEffect(() => {
     const fetchDoctor = async () => {
@@ -36,7 +38,7 @@ const DoctorRequestDetailPage: React.FC = () => {
   const handleAccept = async () => {
     if (!doctor || isApproving) return;
 
-    // Custom confirmation toast
+   
     toast((t) => (
       <div className="flex flex-col gap-3">
         <p className="font-semibold">Approve Dr. {doctor.name}?</p>
@@ -85,48 +87,32 @@ const DoctorRequestDetailPage: React.FC = () => {
     setIsApproving(false);
 
     if (res.success) {
-      setTimeout(() => navigate("/admin/doctor-request"), 1000);
+
+      setDoctor({
+        ...doctor,
+        status: 'approved',
+      });
+      toast.success("Doctor has been approved!", { duration: 2000 });
     }
   };
 
-  const handleReject = async () => {
+  const handleReject = () => {
     if (!doctor || isRejecting) return;
-
-    // Custom confirmation toast
-    toast((t) => (
-      <div className="flex flex-col gap-3">
-        <p className="font-semibold">Reject Dr. {doctor.name}?</p>
-        <p className="text-sm text-gray-600">This action will deny the doctor's application.</p>
-        <div className="flex gap-2">
-          <button
-            onClick={() => {
-              toast.dismiss(t.id);
-              proceedWithRejection();
-            }}
-            className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600"
-          >
-            Yes, Reject
-          </button>
-          <button
-            onClick={() => toast.dismiss(t.id)}
-            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    ), {
-      duration: 10000,
-      position: 'top-center',
-    });
+    setRejectionReason("");
+    setIsRejectionModalOpen(true);
   };
 
   const proceedWithRejection = async () => {
     if (!doctor) return;
 
+    if (!rejectionReason.trim()) {
+      toast.error("Please provide a reason for rejection");
+      return;
+    }
+
     setIsRejecting(true);
 
-    const rejectionPromise = adminService.rejectDoctor(doctor.id);
+    const rejectionPromise = adminService.rejectDoctor(doctor.id, rejectionReason);
 
     toast.promise(
       rejectionPromise,
@@ -139,9 +125,18 @@ const DoctorRequestDetailPage: React.FC = () => {
 
     const res = await rejectionPromise;
     setIsRejecting(false);
+    setIsRejectionModalOpen(false);
 
     if (res.success) {
-      setTimeout(() => navigate("/admin/doctor-request"), 1000);
+      // Update local state to reflect rejection
+      setDoctor({
+        ...doctor,
+        status: 'rejected',
+        rejectionReason: rejectionReason,
+      });
+
+      // Show success message and stay on the page
+      toast.success("Rejection reason has been recorded", { duration: 2000 });
     }
   };
 
@@ -227,7 +222,7 @@ const DoctorRequestDetailPage: React.FC = () => {
                       </div>
                       <div className="text-sm text-gray-600 flex items-center gap-2">
                         <span className="text-base">📞</span>
-                        <span>{doctor.phone || "504 368 6874"}</span>
+                        <span>{doctor.phone || "Not provided"}</span>
                       </div>
                     </div>
                   </div>
@@ -247,42 +242,66 @@ const DoctorRequestDetailPage: React.FC = () => {
                     {doctor.experienceYears || 3} Year{doctor.experienceYears !== 1 ? "s" : ""}
                   </div>
                   <div className="flex gap-3 mt-2">
-                    <button
-                      onClick={handleAccept}
-                      disabled={isApproving || isRejecting}
-                      className={`bg-green-500 text-white px-6 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-2 ${isApproving || isRejecting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-600'
-                        }`}
-                    >
-                      {isApproving ? (
-                        <>
-                          <span className="animate-spin">⏳</span> Approving...
-                        </>
-                      ) : (
-                        <>
-                          <span>✓</span> Accept
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={handleReject}
-                      disabled={isApproving || isRejecting}
-                      className={`bg-red-500 text-white px-6 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-2 ${isApproving || isRejecting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'
-                        }`}
-                    >
-                      {isRejecting ? (
-                        <>
-                          <span className="animate-spin">⏳</span> Rejecting...
-                        </>
-                      ) : (
-                        <>
-                          <span>✗</span> Reject
-                        </>
-                      )}
-                    </button>
-                    
+                    {doctor.status === 'pending' ? (
+                      <>
+                        <button
+                          onClick={handleAccept}
+                          disabled={isApproving || isRejecting}
+                          className={`bg-green-500 text-white px-6 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-2 ${isApproving || isRejecting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-600'
+                            }`}
+                        >
+                          {isApproving ? (
+                            <>
+                              <span className="animate-spin">⏳</span> Approving...
+                            </>
+                          ) : (
+                            <>
+                              <span>✓</span> Accept
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={handleReject}
+                          disabled={isApproving || isRejecting}
+                          className={`bg-red-500 text-white px-6 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-2 ${isApproving || isRejecting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'
+                            }`}
+                        >
+                          {isRejecting ? (
+                            <>
+                              <span className="animate-spin">⏳</span> Rejecting...
+                            </>
+                          ) : (
+                            <>
+                              <span>✗</span> Reject
+                            </>
+                          )}
+                        </button>
+                      </>
+                    ) : (
+                      <div className={`px-6 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2 ${doctor.status === 'approved' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'
+                        }`}>
+                        <span className="text-xl">{doctor.status === 'approved' ? '✓' : '✗'}</span>
+                        {doctor.status.charAt(0).toUpperCase() + doctor.status.slice(1)}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
+
+              {/* Rejection Reason Display */}
+              {doctor.status === 'rejected' && doctor.rejectionReason && (
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">⚠️</span>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-red-800 mb-1">Rejection Reason:</p>
+                        <p className="text-sm text-red-700">{doctor.rejectionReason}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Information Section */}
@@ -328,12 +347,12 @@ const DoctorRequestDetailPage: React.FC = () => {
                   <label className="block text-gray-600 text-sm font-medium mb-2">
                     Speciality
                   </label>
-                  <select
+                   <input
+                    type="text"
                     className="border border-gray-300 rounded-lg px-4 py-2.5 w-full bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
-                    disabled
-                  >
-                    <option>{doctor.department}</option>
-                  </select>
+                    value={doctor.department || ""}
+                    readOnly
+                  />
                 </div>
                 <div>
                   <label className="block text-gray-600 text-sm font-medium mb-2">
@@ -342,7 +361,7 @@ const DoctorRequestDetailPage: React.FC = () => {
                   <input
                     type="text"
                     className="border border-gray-300 rounded-lg px-4 py-2.5 w-full bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
-                    value={doctor.fees || "200"}
+                    value={`ChatFees : ₹ ${doctor.ChatFees} / VideoFees : ₹ ${doctor.VideoFees}`}
                     readOnly
                   />
                 </div>
@@ -419,8 +438,42 @@ const DoctorRequestDetailPage: React.FC = () => {
             </div>
           </div>
         </div>
-      </div >
-    </div >
+      </div>
+
+      {/* Rejection Modal */}
+      {isRejectionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Reject Doctor Application</h3>
+            <p className="text-gray-600 mb-4">
+              Please provide a reason for rejecting Dr. {doctor?.name}'s application. This will be visible to the doctor.
+            </p>
+            <textarea
+              className="w-full border border-gray-300 rounded-lg p-3 mb-4 focus:outline-none focus:ring-2 focus:ring-red-500 min-h-[100px]"
+              placeholder="Enter rejection reason..."
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setIsRejectionModalOpen(false)}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={proceedWithRejection}
+                disabled={!rejectionReason.trim() || isRejecting}
+                className={`px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors ${!rejectionReason.trim() || isRejecting ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+              >
+                {isRejecting ? "Rejecting..." : "Confirm Rejection"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

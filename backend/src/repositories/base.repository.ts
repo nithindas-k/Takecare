@@ -30,14 +30,14 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
       .exec();
   }
 
-  async findOneByField(fieldName: string, value: any): Promise<T | null> {
-    const query: any = {};
+  async findOneByField(fieldName: string, value: unknown): Promise<T | null> {
+    const query: Record<string, unknown> = {};
     query[fieldName] = value;
     return await this.model.findOne(query).exec();
   }
 
-  async existsByField(fieldName: string, value: any): Promise<boolean> {
-    const query: any = {};
+  async existsByField(fieldName: string, value: unknown): Promise<boolean> {
+    const query: Record<string, unknown> = {};
     query[fieldName] = value;
     const count = await this.model.countDocuments(query);
     return count > 0;

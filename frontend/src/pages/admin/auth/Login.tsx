@@ -44,10 +44,13 @@ const AdminLogin: React.FC = () => {
     try {
       setSubmitting(true);
       setServerError("");
-      const response = await authService.adminLogin(formData);
-      if (response.success && response.token) {
-        authService.saveToken(response.token);
-        if (response.data) authService.saveUser(response.data);
+      const response = await authService.adminLogin({ ...formData, role: "admin" });
+      if (response.success && response.data?.token) {
+        authService.saveToken(response.data.token);
+        if (response.data.user) {
+          authService.saveUser(response.data.user);
+          localStorage.setItem("admin", JSON.stringify(response.data.user)); // Also save as admin for specific checks
+        }
         navigate("/admin/dashboard");
       } else {
         setServerError(response.message || "Login failed.");

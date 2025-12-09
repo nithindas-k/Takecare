@@ -61,9 +61,10 @@ const DoctorRequestPage: React.FC = () => {
 
               {/* Desktop Table Header - Hidden on mobile */}
               <div className="hidden lg:grid grid-cols-12 gap-4 py-3 px-4 bg-gray-50 rounded-lg font-semibold text-gray-600 text-sm mb-3">
-                <div className="col-span-4">Name</div>
+                <div className="col-span-3">Name</div>
                 <div className="col-span-3">Email</div>
-                <div className="col-span-3">Department</div>
+                <div className="col-span-2">Department</div>
+                <div className="col-span-2">Status</div>
                 <div className="col-span-2 text-right">Details</div>
               </div>
 
@@ -82,7 +83,7 @@ const DoctorRequestPage: React.FC = () => {
                     >
                       {/* Desktop Layout */}
                       <div className="hidden lg:grid grid-cols-12 gap-4 items-center">
-                        <div className="col-span-4 flex items-center gap-3">
+                        <div className="col-span-3 flex items-center gap-3">
                           {req.profileImage ? (
                             <img
                               src={req.profileImage}
@@ -93,12 +94,23 @@ const DoctorRequestPage: React.FC = () => {
                           ) : (
                             dummyAvatar(req.name)
                           )}
-                          <span className="font-semibold text-gray-800">{req.name}</span>
+                          <span className="font-semibold text-gray-800 truncate">{req.name}</span>
                         </div>
-                        <div className="col-span-3 text-gray-700 text-sm">{req.email}</div>
-                        <div className="col-span-3">
+                        <div className="col-span-3 text-gray-700 text-sm truncate">{req.email}</div>
+                        <div className="col-span-2">
                           <span className="inline-block bg-cyan-100 text-cyan-700 px-3 py-1 rounded-full text-sm font-medium">
                             {req.department}
+                          </span>
+                        </div>
+                        <div className="col-span-2">
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-semibold ${req.status === 'approved' ? 'bg-green-100 text-green-800' :
+                              req.status === 'rejected' ? 'bg-red-100 text-red-800 cursor-help' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}
+                            title={req.status === 'rejected' && req.rejectionReason ? `Reason: ${req.rejectionReason}` : ''}
+                          >
+                            {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
                           </span>
                         </div>
                         <div className="col-span-2 flex justify-end">

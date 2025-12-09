@@ -2,12 +2,15 @@ import { Router } from "express";
 import passport from "passport";
 import AuthController from "../controllers/auth.controller";
 import { UserRepository } from "repositories/user.repository";
+import { DoctorRepository } from "repositories/doctor.repository";
 import { AuthService } from "services/authService";
 import { OTPService } from "services/otp.service";
-const userRepository = new UserRepository()
-const otpService = new OTPService()
-const authService = new AuthService(userRepository, otpService)
-const authController = new AuthController(authService)
+
+const userRepository = new UserRepository();
+const doctorRepository = new DoctorRepository();
+const otpService = new OTPService();
+const authService = new AuthService(userRepository, otpService, doctorRepository);
+const authController = new AuthController(authService);
 const router = Router();
 
 
@@ -23,29 +26,23 @@ router.get(
 router.get(
   "/google/callback",
   passport.authenticate("google", {
-    failureRedirect: "http://localhost:5173/patient/login",
+    failureRedirect: "http://localhost:5173/patient/login", //=
     failureMessage: true
   }),
   authController.userGoogleCallback
 );
 
+
 router.get(
   "/google/doctor",
   passport.authenticate("google", {
     scope: ["profile", "email"],
-    prompt: "select_account"
+    prompt: "select_account",
+    state: "doctor"
   })
 );
 
 
-router.get(
-  "/google/doctor/callback",
-  passport.authenticate("google", {
-    failureRedirect: "http://localhost:5173/doctor/login",
-    failureMessage: true
-  }),
-  authController.doctorGoogleCallback
-);
 
 
 
@@ -61,6 +58,8 @@ router.post("/forgot-password", authController.forgotPassword);
 router.post("/forgot-password-verify-otp", authController.forgotPasswordVerify);
 router.post("/reset-password", authController.resetPassword);
 
+
+router.post("/refresh-token", authController.refreshToken);
 
 router.get("/logout", authController.logout);
 

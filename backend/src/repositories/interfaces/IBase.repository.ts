@@ -5,6 +5,6 @@ export interface IBaseRepository<T extends Document> {
   findById(id: string | Types.ObjectId): Promise<T | null>;
   updateById(id: string | Types.ObjectId, update: Partial<T>): Promise<T | null>;
   deleteById(id: string | Types.ObjectId): Promise<T | null>;
-  findOneByField(fieldName: string, value: any): Promise<T | null>;
-  existsByField(fieldName: string, value: any): Promise<boolean>;
+  findOneByField(fieldName: string, value: unknown): Promise<T | null>;
+  existsByField(fieldName: string, value: unknown): Promise<boolean>;
 }

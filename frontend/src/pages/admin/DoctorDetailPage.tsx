@@ -40,7 +40,8 @@ interface DoctorDetail {
         state?: string;
         zipCode?: string;
     } | null;
-    fees: number;
+    VideoFees: number;
+    ChatFees: number;
     documents: string[];
     status: string;
     createdAt: string;
@@ -73,8 +74,7 @@ const DoctorDetailPage: React.FC = () => {
 
     const handleBanToggle = async () => {
         if (!doctor || !doctorId) return;
-        const isBanning = doctor.isActive !== false; // true means we will ban, false means unban
-        setProcessing(true);
+        const isBanning = doctor.isActive !== false;
         toast((t) => (
             <div className="flex flex-col gap-2">
                 <p className="font-medium text-gray-800">
@@ -294,11 +294,11 @@ const DoctorDetailPage: React.FC = () => {
                                         <tbody className="bg-white divide-y divide-gray-200">
                                             <tr>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Video Consultation</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><IndianRupee className="inline w-4 h-4 mr-1" />{doctor.fees}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><IndianRupee className="inline w-4 h-4 mr-1" />{doctor.VideoFees}</td>
                                             </tr>
                                             <tr>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Chat Consultation</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><IndianRupee className="inline w-4 h-4 mr-1" />{doctor.fees}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><IndianRupee className="inline w-4 h-4 mr-1" />{doctor.ChatFees}</td>
                                             </tr>
                                         </tbody>
                                     </table>

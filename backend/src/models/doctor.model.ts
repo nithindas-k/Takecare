@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 import { IDoctor, IDoctorDocument } from "types/doctor.type";
+import { VerificationStatus } from "../dtos/doctor.dtos/doctor.dto";
 
 const DoctorSchema = new Schema<IDoctorDocument>(
   {
@@ -44,8 +45,8 @@ const DoctorSchema = new Schema<IDoctorDocument>(
     },
     verificationStatus: {
       type: String,
-      enum: ["pending", "approved", "rejected"],
-      default: "pending",
+      enum: Object.values(VerificationStatus),
+      default: VerificationStatus.Pending,
     },
     verificationDocuments: {
       type: [String],

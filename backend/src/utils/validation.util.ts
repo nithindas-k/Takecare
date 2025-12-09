@@ -7,7 +7,7 @@ export const validatePhone = (phone: string, minLength: number = 10): boolean =>
   return phone.length >= minLength;
 };
 
-export const validateRequired = (value: any, fieldName: string): void => {
+export const validateRequired = (value: unknown, fieldName: string): void => {
   if (!value || (typeof value === "string" && value.trim() === "")) {
     throw new Error(`${fieldName} is required`);
   }

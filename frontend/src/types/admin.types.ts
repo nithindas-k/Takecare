@@ -22,6 +22,7 @@ export interface DoctorRequestListItem {
   createdAt: string;
   experienceYears?: number;
   status: "pending" | "approved" | "rejected";
+  rejectionReason?: string | null;
 }
 
 export interface DoctorRequestDetails {
@@ -38,9 +39,11 @@ export interface DoctorRequestDetails {
   specialties?: string[];
   biography?: string;
   address?: string;
-  fees?: number;
+  VideoFees?: number;
+  ChatFees?: number;
   documents?: string[]; // URLs or doc names
   status: "pending" | "approved" | "rejected";
+  rejectionReason?: string | null;
   isActive?: boolean;
   createdAt: string;
   updatedAt: string;

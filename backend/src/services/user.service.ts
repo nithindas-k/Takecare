@@ -1,13 +1,15 @@
 import { UserRepository } from "../repositories/user.repository";
-import type { IUserService, UpdateUserProfileDTO } from "./interfaces/IUserService";
-import type { UserResponseDTO } from "../dtos/user.dtos/user.dto";
+import type { IUserService } from "./interfaces/IUserService";
+import type { UserResponseDTO, UpdateUserProfileDTO } from "../dtos/user.dtos/user.dto";
 import mapUserToResponse from "../mappers/user.mapper/user.mapper";
+import type { IUserDocument } from "../types/user.type";
+import type { AppointmentListItem } from "../types/common";
 
 export class UserService implements IUserService {
-  private userRepository: UserRepository;
+  private userRepository: UserRepository; //=
 
   constructor(userRepository?: UserRepository) {
-    this.userRepository = userRepository || new UserRepository();
+    this.userRepository = userRepository || new UserRepository(); //=
   }
 
 
@@ -45,9 +47,13 @@ export class UserService implements IUserService {
       throw new Error("Name must be at least 2 characters");
     }
 
-    const updateData: any = { ...data };
-    if (data.dob && typeof data.dob === 'string') {
-      updateData.dob = new Date(data.dob);
+    const updateData: Partial<IUserDocument> & { dob?: Date } = {};
+    if (data.name) updateData.name = data.name;
+    if (data.phone) updateData.phone = data.phone;
+    if (data.gender) updateData.gender = data.gender;
+    if (data.profileImage) updateData.profileImage = data.profileImage;
+    if (data.dob) {
+      updateData.dob = typeof data.dob === 'string' ? new Date(data.dob) : data.dob;
     }
 
     const updatedUser = await this.userRepository.updateById(userId, updateData);
@@ -69,7 +75,7 @@ export class UserService implements IUserService {
     await this.userRepository.updateById(userId, { isActive: false });
   }
 
-  async getUserAppointments(userId: string): Promise<any[]> {
+  async getUserAppointments(userId: string): Promise<AppointmentListItem[]> {
 
     return [];
   }

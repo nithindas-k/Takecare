@@ -12,43 +12,43 @@ import {
 
 export interface IAuthController {
   register(
-    req: Request<{}, any, RegisterDTO>,
+    req: Request<{}, unknown, RegisterDTO>,
     res: Response,
     next: NextFunction
   ): Promise<void>;
 
   verifyOtp(
-    req: Request<{}, any, VerifyOtpDTO & { role?: Role }>,
+    req: Request<{}, unknown, VerifyOtpDTO & { role?: Role }>,
     res: Response,
     next: NextFunction
   ): Promise<void>;
 
   resendOtp(
-    req: Request<{}, any, ResendOtpDTO>,
+    req: Request<{}, unknown, ResendOtpDTO>,
     res: Response,
     next: NextFunction
   ): Promise<void>;
 
   login(
-    req: Request<{}, any, LoginDTO & { role?: Role }>,
+    req: Request<{}, unknown, LoginDTO & { role?: Role }>,
     res: Response,
     next: NextFunction
   ): Promise<void>;
 
   forgotPassword(
-    req: Request<{}, any, ForgotPasswordDTO & { role?: Role }>,
+    req: Request<{}, unknown, ForgotPasswordDTO & { role?: Role }>,
     res: Response,
     next: NextFunction
   ): Promise<void>;
 
   forgotPasswordVerify(
-    req: Request<{}, any, ForgotPasswordVerifyOtpDTO>,
+    req: Request<{}, unknown, ForgotPasswordVerifyOtpDTO>,
     res: Response,
     next: NextFunction
   ): Promise<void>;
 
   resetPassword(
-    req: Request<{}, any, ResetPasswordDTO>,
+    req: Request<{}, unknown, ResetPasswordDTO>,
     res: Response,
     next: NextFunction
   ): Promise<void>;
@@ -58,4 +58,6 @@ export interface IAuthController {
   doctorGoogleCallback(req: Request, res: Response, next: NextFunction): void;
 
   logout(req: Request, res: Response, next: NextFunction): void;
+
+  refreshToken(req: Request, res: Response, next: NextFunction): void;
 }

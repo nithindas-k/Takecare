@@ -1,11 +1,13 @@
 import { env } from "configs/env";
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { JWTPayload } from "../types/auth.type";
 
-interface JWTPayload {
-  userId: string;
-  email: string;
-  role: string;
+declare global {
+  namespace Express {
+
+    interface User extends JWTPayload { }
+  }
 }
 
 export const authMiddleware = (req: Request, res: Response, next: NextFunction): void => {
@@ -28,7 +30,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction):
 
     console.log("Decoded token payload:", decoded);
 
-    (req as any).user = decoded;
+    req.user = decoded;
     next();
 
   } catch (error) {

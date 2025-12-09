@@ -12,6 +12,10 @@ export class UserRepository extends BaseRepository<IUserDocument> implements IUs
     return await this.model.findOne({ email, isActive: true });
   }
 
+  async findByEmailIncludingInactive(email: string): Promise<IUserDocument | null> {
+    return await this.model.findOne({ email });
+  }
+
   async findByPhone(phone: string): Promise<IUserDocument | null> {
     return await this.model.findOne({ phone, isActive: true });
   }

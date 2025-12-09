@@ -1,64 +1,47 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { IAdminService } from "../services/interfaces/IAdminService";
 import { IAdminController } from "./interfaces/IAdmin.controller";
+import { sendSuccess, sendError } from "../utils/response.util";
+import { AppError } from "../errors/AppError";
+import { MESSAGES } from "../constants/constants";
 
 export class AdminController implements IAdminController {
 
   constructor(private _adminservice: IAdminService) {
   }
 
-  login = async (req: Request, res: Response): Promise<void> => {
+  login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dto = req.body;
       if (!dto.email || !dto.password) {
-        res
-          .status(400)
-          .json({ success: false, message: "Email and password are required" });
-        return;
+        throw new AppError("Email and password are required", 400);
       }
       const result = await this._adminservice.loginAdmin(dto);
-      res.status(200).json({
-        success: true,
-        token: result.token,
-        message: "Login successful",
-        data: result.user,
-      });
-    } catch (err: any) {
-      res.status(401).json({
-        success: false,
-        message: err.message || "Login failed",
-      });
+      sendSuccess(res, { user: result.user, token: result.token }, "Login successful");
+    } catch (err: unknown) {
+      next(err);
     }
   };
 
-  getDoctorRequests = async (req: Request, res: Response) => {
+  getDoctorRequests = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const docs = await this._adminservice.getDoctorRequests();
-      res.status(200).json({ success: true, data: docs });
-    } catch (err: any) {
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: err.message || "Failed to fetch doctor requests",
-        });
+      sendSuccess(res, docs);
+    } catch (err: unknown) {
+      next(err);
     }
   };
 
-  getDoctorRequestDetails = async (req: Request, res: Response) => {
+  getDoctorRequestDetails = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const doctorId = req.params.doctorId;
       const doc = await this._adminservice.getDoctorRequestDetail(doctorId);
 
       if (!doc) {
-        res
-          .status(404)
-          .json({ success: false, message: "Doctor not found" });
-          return;
+        throw new AppError("Doctor not found", 404);
       }
 
       const baseURL = `${req.protocol}://${req.get("host")}`;
-
 
       if (doc.documents && doc.documents.length > 0) {
         doc.documents = doc.documents.map((p) => {
@@ -69,140 +52,109 @@ export class AdminController implements IAdminController {
         });
       }
 
-      res.status(200).json({ success: true, data: doc });
-    } catch (err: any) {
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: err.message || "Failed to fetch doctor details",
-        });
+      sendSuccess(res, doc);
+    } catch (err: unknown) {
+      next(err);
     }
   };
 
-  approveDoctor = async (req: Request, res: Response) => {
+  approveDoctor = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const doctorId = req.params.doctorId;
       await this._adminservice.approveDoctorRequest(doctorId);
-      res.status(200).json({
-        success: true,
-        message: "Doctor approved successfully"
-      });
-    } catch (err: any) {
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: err.message || "Failed to approve doctor",
-        });
+      sendSuccess(res, undefined, "Doctor approved successfully");
+    } catch (err: unknown) {
+      next(err);
     }
   };
 
-  rejectDoctor = async (req: Request, res: Response) => {
+  rejectDoctor = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const doctorId = req.params.doctorId;
       const reason = req.body.reason || "Application rejected by admin";
       await this._adminservice.rejectDoctorRequest(doctorId, reason);
-      res.status(200).json({
-        success: true,
-        message: "Doctor rejected successfully"
-      });
-    } catch (err: any) {
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: err.message || "Failed to reject doctor",
-        });
+      sendSuccess(res, undefined, "Doctor rejected successfully");
+    } catch (err: unknown) {
+      next(err);
     }
   };
 
-  getAllDoctors = async (req: Request, res: Response) => {
+  getAllDoctors = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
 
       const result = await this._adminservice.getAllDoctors(page, limit);
-      res.status(200).json({ success: true, data: result });
-    } catch (err: any) {
-      res.status(500).json({
-        success: false,
-        message: err.message || "Failed to fetch doctors",
-      });
+      sendSuccess(res, result);
+    } catch (err: unknown) {
+      next(err);
     }
   };
 
-  banDoctor = async (req: Request, res: Response) => {
+  banDoctor = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const doctorId = req.params.doctorId;
       await this._adminservice.banDoctor(doctorId);
-      res.status(200).json({ success: true, message: "Doctor banned successfully" });
-    } catch (err: any) {
-      res.status(500).json({ success: false, message: err.message || "Failed to ban doctor" });
+      sendSuccess(res, undefined, "Doctor banned successfully");
+    } catch (err: unknown) {
+      next(err);
     }
   };
 
-  unbanDoctor = async (req: Request, res: Response) => {
+  unbanDoctor = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const doctorId = req.params.doctorId;
       await this._adminservice.unbanDoctor(doctorId);
-      res.status(200).json({ success: true, message: "Doctor unbanned successfully" });
-    } catch (err: any) {
-      res.status(500).json({ success: false, message: err.message || "Failed to unban doctor" });
+      sendSuccess(res, undefined, "Doctor unbanned successfully");
+    } catch (err: unknown) {
+      next(err);
     }
   };
 
-  getAllPatients = async (req: Request, res: Response) => {
+  getAllPatients = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
 
       const result = await this._adminservice.getAllPatients(page, limit);
-      res.status(200).json({ success: true, data: result });
-    } catch (err: any) {
-      res.status(500).json({
-        success: false,
-        message: err.message || "Failed to fetch patients",
-      });
+      sendSuccess(res, result);
+    } catch (err: unknown) {
+      next(err);
     }
   };
 
-  getPatientById = async (req: Request, res: Response) => {
+  getPatientById = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const patientId = req.params.patientId;
       const patient = await this._adminservice.getPatientById(patientId);
 
       if (!patient) {
-        res.status(404).json({ success: false, message: "Patient not found" });
-        return;
+        throw new AppError("Patient not found", 404);
       }
 
-      res.status(200).json({ success: true, data: patient });
-    } catch (err: any) {
-      res.status(500).json({
-        success: false,
-        message: err.message || "Failed to fetch patient details",
-      });
+      sendSuccess(res, patient);
+    } catch (err: unknown) {
+      next(err);
     }
   };
 
-  blockPatient = async (req: Request, res: Response) => {
+  blockPatient = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const patientId = req.params.patientId;
       await this._adminservice.blockUser(patientId);
-      res.status(200).json({ success: true, message: "Patient blocked successfully" });
-    } catch (err: any) {
-      res.status(500).json({ success: false, message: err.message || "Failed to block patient" });
+      sendSuccess(res, undefined, "Patient blocked successfully");
+    } catch (err: unknown) {
+      next(err);
     }
   };
 
-  unblockPatient = async (req: Request, res: Response) => {
+  unblockPatient = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const patientId = req.params.patientId;
       await this._adminservice.unblockUser(patientId);
-      res.status(200).json({ success: true, message: "Patient unblocked successfully" });
-    } catch (err: any) {
-      res.status(500).json({ success: false, message: err.message || "Failed to unblock patient" });
+      sendSuccess(res, undefined, "Patient unblocked successfully");
+    } catch (err: unknown) {
+      next(err);
     }
   };
 }

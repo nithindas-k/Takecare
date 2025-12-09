@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import Button from "../../../components/Button";
 import { useLocation, useNavigate } from "react-router-dom";
-import authService from "../../../services/authService"; // ✅ CHANGED: Import authService instead
+import authService from "../../../services/authService";
 
 interface OTPFormData {
   otp: string[];
@@ -139,7 +139,7 @@ const PatientOTPVerify: React.FC = () => {
         const response = await authService.userVerifyOtp({
           email,
           otp: otpString,
-        }); // ✅ CHANGED
+        });
 
         console.log("OTP Response:", response);
 
@@ -176,14 +176,14 @@ const PatientOTPVerify: React.FC = () => {
     [email, otp, validate, navigate]
   );
 
-  // ✅ FIXED: Use authService.userResendOtp
+ 
   const handleResend = useCallback(async () => {
     try {
       setSubmitting(true);
       setServerError("");
       setSuccessMessage("");
 
-      const response = await authService.userResendOtp(email); // ✅ CHANGED
+      const response = await authService.userResendOtp(email); 
 
       if (response.success) {
         setSuccessMessage("New OTP sent to your email!");

@@ -54,8 +54,9 @@ axiosInstance.interceptors.response.use(
     ) {
       originalRequest._retry = true;
       try {
-        const res = await axiosInstance.post("/auth/refresh-token");
-
+        const res = await axios.post(`${API_BASE_URL}/auth/refresh-token`, {}, {
+          withCredentials: true // Ensure cookies are sent
+        });
 
         console.log("REFRESH TOKEN RESPONSE", res);
 
@@ -70,13 +71,15 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest);
       } catch (err) {
         console.error("Refresh token failed:", err);
-        // store.dispatch(logout());
         window.location.href = "/auth/login";
       }
     } else if (error.response?.status === 403) {
-      // store.dispatch(logout());
-      localStorage.clear();
-      window.location.href = "/auth/login";
+      const isLoginRequest = originalRequest.url?.includes('/login');
+
+      if (!isLoginRequest) {
+        localStorage.clear();
+        window.location.href = "/auth/login";
+      }
     }
 
     return Promise.reject(error);

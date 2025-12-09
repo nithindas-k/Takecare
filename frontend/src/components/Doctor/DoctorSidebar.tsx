@@ -10,6 +10,7 @@ import {
   FaUserMd,
   FaClock,
 } from "react-icons/fa";
+import authService from "../../services/authService";
 
 interface SidebarLink {
   label: string;
@@ -40,8 +41,7 @@ const DoctorSidebar: React.FC = () => {
   const location = useLocation();
 
   const handleLogout = () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("doctor");
+    authService.logout();
     navigate("/doctor/login");
   };
 
@@ -54,17 +54,15 @@ const DoctorSidebar: React.FC = () => {
           <li
             key={link.label}
             onClick={() => navigate(link.path)}
-            className={`group flex items-center px-4 py-3 rounded-xl gap-3 cursor-pointer transition font-medium ${
-              isActive(link.path)
+            className={`group flex items-center px-4 py-3 rounded-xl gap-3 cursor-pointer transition font-medium ${isActive(link.path)
                 ? "bg-teal-500 text-white font-bold"
                 : "text-gray-700 hover:bg-teal-100"
-            }`}
+              }`}
           >
             {link.icon && (
               <span
-                className={`text-lg ${
-                  isActive(link.path) ? "text-white" : "text-teal-500 group-hover:text-teal-600"
-                }`}
+                className={`text-lg ${isActive(link.path) ? "text-white" : "text-teal-500 group-hover:text-teal-600"
+                  }`}
               >
                 {link.icon}
               </span>
@@ -83,7 +81,7 @@ const DoctorSidebar: React.FC = () => {
             )}
           </li>
         ))}
-        
+
         {/* Logout */}
         <li
           onClick={handleLogout}

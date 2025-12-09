@@ -1,3 +1,5 @@
+import { OTPUserData, OTPData } from "../../types/otp.type";
+
 export interface IOTPService {
   createAndSendOtp(
     email: string,
@@ -11,23 +13,4 @@ export interface IOTPService {
   verifyAndCreateResetToken(email: string, otp: string): Promise<string>;
   verifyResetToken(email: string, resetToken: string): Promise<OTPData>;
   deleteOtp(email: string): Promise<void>;
-}
-
-
-export interface OTPUserData {
-  name: string;
-  email: string;
-  phone: string;
-  passwordHash: string;
-  role: string;
-  gender?: "male" | "female" | "other" | null;  
-  dob?: Date | null;
-}
-
-export interface OTPData {
-  email: string;
-  otp: string;
-  userData: OTPUserData;
-  expiresAt: Date;
-  createdAt?: Date;
 }
