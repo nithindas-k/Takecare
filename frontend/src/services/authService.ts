@@ -12,9 +12,16 @@ import type {
   AuthUser,
   RegisterRequest,
   OtpRequest,
-  ForgotPasswordRequest,
-  ResetPasswordRequest,
 } from "../types";
+
+// JWT Payload interface
+interface JwtPayload {
+  id: string;
+  role: 'patient' | 'doctor' | 'admin';
+  exp: number;
+  email: string;
+  name?: string;
+}
 
 interface ApiErrorResponse {
   response?: {
@@ -32,6 +39,53 @@ function getErrorMessage(error: unknown): string {
 class AuthService {
   private getApiRoutes(role: "user" | "doctor") {
     return role === "doctor" ? DOCTOR_API_ROUTES : USER_API_ROUTES;
+  }
+
+  private decodeToken<T = JwtPayload>(token: string): T | null {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      return JSON.parse(jsonPayload) as T;
+    } catch (error) {
+      console.error('Failed to decode token', error);
+      return null;
+    }
+  }
+
+
+  private isTokenExpired(token: string): boolean {
+    const decoded = this.decodeToken<{ exp: number }>(token);
+    if (!decoded) return true;
+    return decoded.exp * 1000 < Date.now();
+  }
+
+
+  saveToken(token: string): void {
+    localStorage.setItem("authToken", token);
+  }
+
+ 
+  getToken(): string | null {
+    return localStorage.getItem("authToken");
+  }
+
+
+  getCurrentUserInfo(): JwtPayload | null {
+    const token = this.getToken();
+    if (!token) return null;
+    return this.decodeToken<JwtPayload>(token);
+  }
+
+ 
+  isAuthenticated(): boolean {
+    const token = this.getToken();
+    return !!(token && !this.isTokenExpired(token));
   }
 
   async userRegister(userData: RegisterRequest) {
@@ -85,6 +139,11 @@ class AuthService {
         USER_API_ROUTES.LOGIN,
         credentials
       );
+      if (response.data?.data?.token) {
+        this.saveToken(response.data.data.token);
+      } else if (response.data?.token) {
+        this.saveToken(response.data.token);
+      }
       return response.data;
     } catch (error: unknown) {
       return {
@@ -148,6 +207,11 @@ class AuthService {
         DOCTOR_API_ROUTES.LOGIN,
         credentials
       );
+      if (response.data?.data?.token) {
+        this.saveToken(response.data.data.token);
+      } else if (response.data?.token) {
+        this.saveToken(response.data.token);
+      }
       return response.data;
     } catch (error: unknown) {
       return {
@@ -167,6 +231,11 @@ class AuthService {
         ADMIN_API_ROUTES.LOGIN,
         credentials
       );
+      if (response.data?.data?.token) {
+        this.saveToken(response.data.data.token);
+      } else if (response.data?.token) {
+        this.saveToken(response.data.token);
+      }
       return response.data;
     } catch (error: unknown) {
       return {
@@ -181,33 +250,30 @@ class AuthService {
       await axiosInstance.get(AUTH_ROUTES.LOGOUT);
     } catch (error) {
       console.error("Logout failed", error);
+    } finally {
+      localStorage.removeItem("authToken");
     }
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("user");
-    localStorage.removeItem("doctor");
-    localStorage.removeItem("admin");
   }
 
-  isAuthenticated(): boolean {
-    return !!localStorage.getItem("authToken");
-  }
-
+  // These methods are deprecated - use getCurrentUserInfo() instead
   getCurrentUser(): AuthUser | null {
-    const userStr = localStorage.getItem("user");
-    if (!userStr) return null;
-    try {
-      return JSON.parse(userStr) as AuthUser;
-    } catch {
-      return null;
-    }
+    console.warn('getCurrentUser is deprecated. Use getCurrentUserInfo() instead.');
+    const userInfo = this.getCurrentUserInfo();
+    if (!userInfo) return null;
+
+    // Convert to old format for backward compatibility
+    return {
+      id: userInfo.id,
+      _id: userInfo.id,
+      email: userInfo.email,
+      role: userInfo.role,
+      name: userInfo.name || '',
+    } as unknown as AuthUser;
   }
 
-  saveUser(user: AuthUser): void {
-    localStorage.setItem("user", JSON.stringify(user));
-  }
-
-  saveToken(token: string): void {
-    localStorage.setItem("authToken", token);
+  // This method is deprecated - user data should be fetched from API when needed
+  saveUser(_user: AuthUser): void {
+    console.warn('saveUser is deprecated. User data should not be stored in localStorage.');
   }
 
 

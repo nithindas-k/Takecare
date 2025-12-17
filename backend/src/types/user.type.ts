@@ -3,6 +3,7 @@
 import { Document, Types } from "mongoose";
 
 export interface IUser {
+  customId?: string;
   name: string;
   email: string;
   phone?: string;
@@ -15,6 +16,7 @@ export interface IUser {
   isActive: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+ 
 }
 
 export type IUserDocument = IUser & Document<Types.ObjectId>;

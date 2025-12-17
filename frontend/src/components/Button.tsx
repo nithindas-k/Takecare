@@ -7,9 +7,9 @@ export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const base = "inline-flex items-center justify-center rounded-lg font-semibold transition duration-150";
 const variants: Record<string, string> = {
-  primary: "bg-teal-500 text-white hover:bg-teal-600 shadow-md",
+  primary: "bg-[#00A1B0] text-white hover:bg-[#008f9c] shadow-md",
   secondary: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50",
-  ghost: "bg-transparent text-teal-600 hover:underline",
+  ghost: "bg-transparent text-[#00A1B0] hover:underline",
 };
 
 const Spinner = () => (

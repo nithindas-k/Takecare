@@ -20,6 +20,7 @@ import {
 import Sidebar from "../../components/admin/Sidebar";
 import TopNav from "../../components/admin/TopNav";
 import adminService from "../../services/adminService";
+import AlertDialog from "../../components/common/AlertDialog";
 
 interface DoctorDetail {
     id: string;
@@ -54,6 +55,7 @@ const DoctorDetailPage: React.FC = () => {
     const [doctor, setDoctor] = useState<DoctorDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
+    const [confirmOpen, setConfirmOpen] = useState(false);
 
     const fetchDoctorDetail = async () => {
         if (!doctorId) return;
@@ -75,42 +77,22 @@ const DoctorDetailPage: React.FC = () => {
     const handleBanToggle = async () => {
         if (!doctor || !doctorId) return;
         const isBanning = doctor.isActive !== false;
-        toast((t) => (
-            <div className="flex flex-col gap-2">
-                <p className="font-medium text-gray-800">
-                    Are you sure you want to {isBanning ? "ban" : "unban"} this doctor?
-                </p>
-                <div className="flex gap-2 mt-1">
-                    <button
-                        onClick={async () => {
-                            toast.dismiss(t.id);
-                            const res = isBanning
-                                ? await adminService.banDoctor(doctorId)
-                                : await adminService.unbanDoctor(doctorId);
-                            if (res.success) {
-                                toast.success(res.message);
-                                fetchDoctorDetail();
-                            } else {
-                                toast.error(res.message);
-                            }
-                            setProcessing(false);
-                        }}
-                        className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
-                    >
-                        Yes, {isBanning ? "Ban" : "Unban"}
-                    </button>
-                    <button
-                        onClick={() => {
-                            toast.dismiss(t.id);
-                            setProcessing(false);
-                        }}
-                        className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300"
-                    >
-                        Cancel
-                    </button>
-                </div>
-            </div>
-        ), { duration: 5000 });
+
+        try {
+            setProcessing(true);
+            const res = isBanning
+                ? await adminService.banDoctor(doctorId)
+                : await adminService.unbanDoctor(doctorId);
+
+            if (res.success) {
+                toast.success(res.message);
+                fetchDoctorDetail();
+            } else {
+                toast.error(res.message);
+            }
+        } finally {
+            setProcessing(false);
+        }
     };
 
     if (loading) {
@@ -132,6 +114,22 @@ const DoctorDetailPage: React.FC = () => {
     return (
         <div className="flex min-h-screen bg-gray-50 font-sans">
             <Toaster position="top-center" />
+
+            <AlertDialog
+                open={confirmOpen}
+                onOpenChange={setConfirmOpen}
+                title={doctor.isActive === false ? "Unban doctor?" : "Ban doctor?"}
+                description={
+                    doctor.isActive === false
+                        ? "This doctor will be unbanned and can access the platform again."
+                        : "This doctor will be banned and won’t be able to access the platform."
+                }
+                confirmText={doctor.isActive === false ? "Unban" : "Ban"}
+                cancelText="Cancel"
+                variant={doctor.isActive === false ? "default" : "destructive"}
+                onConfirm={handleBanToggle}
+            />
+
             <Sidebar />
             <div className="flex-1 flex flex-col h-screen overflow-hidden">
                 <TopNav />
@@ -185,7 +183,7 @@ const DoctorDetailPage: React.FC = () => {
                             </div>
                             <div className="flex gap-3">
                                 <button
-                                    onClick={handleBanToggle}
+                                    onClick={() => setConfirmOpen(true)}
                                     disabled={processing}
                                     className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white shadow-lg transition-all transform hover:scale-105 active:scale-95 ${doctor.isActive === false ? "bg-gradient-to-r from-green-500 to-emerald-600 shadow-green-500/30" : "bg-gradient-to-r from-red-500 to-rose-600 shadow-red-500/30"}`}
                                 >
@@ -300,7 +298,7 @@ const DoctorDetailPage: React.FC = () => {
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Chat Consultation</td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><IndianRupee className="inline w-4 h-4 mr-1" />{doctor.ChatFees}</td>
                                             </tr>
-                                        </tbody>
+                                        </tbody>    
                                     </table>
                                 </div>
                             </div>

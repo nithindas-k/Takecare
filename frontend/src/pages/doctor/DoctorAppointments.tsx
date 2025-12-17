@@ -1,0 +1,365 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import DoctorNavbar from '../../components/Doctor/DoctorNavbar';
+import DoctorLayout from '../../components/Doctor/DoctorLayout';
+import Breadcrumbs from '../../components/common/Breadcrumbs';
+import { FaVideo, FaComments, FaEye, FaSearch } from 'react-icons/fa';
+import { appointmentService } from '../../services/appointmentService';
+import { toast } from 'react-hot-toast';
+import { Loader2 } from 'lucide-react';
+
+
+
+const DoctorAppointments: React.FC = () => {
+    const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState<'upcoming' | 'cancelled' | 'completed'>('upcoming');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [appointments, setAppointments] = useState<any[]>([]);
+    const [tabCounts, setTabCounts] = useState<{ upcoming: number; cancelled: number; completed: number }>({
+        upcoming: 0,
+        cancelled: 0,
+        completed: 0,
+    });
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        const fetchCounts = async () => {
+            try {
+                const [upcomingRes, cancelledRes, completedRes] = await Promise.all([
+                    appointmentService.getDoctorAppointments('confirmed', 1, 1),
+                    appointmentService.getDoctorAppointments('cancelled', 1, 1),
+                    appointmentService.getDoctorAppointments('completed', 1, 1),
+                ]);
+
+                setTabCounts({
+                    upcoming: upcomingRes?.success ? upcomingRes?.data?.total || 0 : 0,
+                    cancelled: cancelledRes?.success ? cancelledRes?.data?.total || 0 : 0,
+                    completed: completedRes?.success ? completedRes?.data?.total || 0 : 0,
+                });
+            } catch {
+
+            }
+        };
+
+        const fetchAppointments = async () => {
+            try {
+                if (!hasLoadedOnce) {
+                    setLoading(true);
+                } else {
+                    setRefreshing(true);
+                }
+                setError('');
+                let status = activeTab === 'upcoming' ? 'confirmed' : activeTab;
+                const response = await appointmentService.getDoctorAppointments(status, 1, 100);
+
+                if (response?.success) {
+                    const nextAppointments = response.data.appointments || [];
+                    setAppointments(nextAppointments);
+
+                    if (typeof response?.data?.total === 'number') {
+                        setTabCounts((prev) => {
+                            if (activeTab === 'upcoming') return { ...prev, upcoming: response.data.total };
+                            if (activeTab === 'cancelled') return { ...prev, cancelled: response.data.total };
+                            return { ...prev, completed: response.data.total };
+                        });
+                    }
+                } else {
+                    throw new Error(response?.message || 'Failed to fetch appointments');
+                }
+            } catch (err: any) {
+                console.error('Failed to fetch appointments:', err);
+                setError(err?.response?.data?.message || err?.message || 'Failed to fetch appointments');
+                toast.error('Failed to load appointments');
+            } finally {
+                setLoading(false);
+                setRefreshing(false);
+                setHasLoadedOnce(true);
+            }
+        };
+
+        fetchCounts();
+        fetchAppointments();
+    }, [activeTab, hasLoadedOnce]);
+
+    const filteredAppointments = appointments.filter(
+        (apt) => apt.patientId?.name && apt.patientId.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const getTabCount = (status: string) => {
+        if (status === 'upcoming') return tabCounts.upcoming;
+        if (status === 'cancelled') return tabCounts.cancelled;
+        return tabCounts.completed;
+    };
+
+    const handleViewDetails = (id: string) => {
+        navigate(`/doctor/appointments/${id}`);
+    };
+
+    const breadcrumbItems = [
+        { label: 'Home', path: '/doctor/dashboard' },
+        { label: 'Appointments' },
+    ];
+
+    return (
+        <div className="min-h-screen bg-gray-50">
+            <DoctorNavbar />
+
+            <Breadcrumbs
+                items={breadcrumbItems}
+                title="My Appointments"
+                subtitle="Manage your patient appointments"
+            />
+
+            <DoctorLayout>
+                {/* Loading State */}
+                {loading && !hasLoadedOnce && (
+                    <div className="flex justify-center items-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00A1B0]"></div>
+                    </div>
+                )}
+
+                {/* Error State */}
+                {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                        {error}
+                    </div>
+                )}
+
+                {(!loading || hasLoadedOnce) && !error && (
+                    <>
+                        {/* Stats Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm text-gray-600 mb-1">Upcoming</p>
+                                        <h3 className="text-2xl font-bold text-[#00A1B0]">{getTabCount('upcoming')}</h3>
+                                    </div>
+                                    <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                                        <FaVideo className="text-blue-600" size={20} />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm text-gray-600 mb-1">Completed</p>
+                                        <h3 className="text-2xl font-bold text-green-600">{getTabCount('completed')}</h3>
+                                    </div>
+                                    <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm text-gray-600 mb-1">Cancelled</p>
+                                        <h3 className="text-2xl font-bold text-red-600">{getTabCount('cancelled')}</h3>
+                                    </div>
+                                    <div className="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center">
+                                        <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Search Bar */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
+                            <div className="relative">
+                                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder="Search patients..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A1B0] focus:border-transparent"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Tabs */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
+                            <div className="border-b border-gray-100">
+                                <div className="flex gap-1 p-2">
+                                    <button
+                                        onClick={() => setActiveTab('upcoming')}
+                                        className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'upcoming'
+                                            ? 'bg-[#00A1B0] text-white'
+                                            : 'text-gray-600 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        Upcoming ({getTabCount('upcoming')})
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('completed')}
+                                        className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'completed'
+                                            ? 'bg-[#00A1B0] text-white'
+                                            : 'text-gray-600 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        Completed ({getTabCount('completed')})
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('cancelled')}
+                                        className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'cancelled'
+                                            ? 'bg-[#00A1B0] text-white'
+                                            : 'text-gray-600 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        Cancelled ({getTabCount('cancelled')})
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Appointments List */}
+                            <div className="p-4">
+                                {refreshing && (
+                                    <div className="mb-4 flex items-center justify-center gap-2 text-sm text-gray-500">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Updating...
+                                    </div>
+                                )}
+                                {filteredAppointments.length === 0 ? (
+                                    <div className="text-center py-12">
+                                        <div className="w-20 h-20 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+                                            <FaVideo className="text-gray-400" size={32} />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                                            No {activeTab} appointments
+                                        </h3>
+                                        <p className="text-gray-600 text-sm">
+                                            You don't have any {activeTab} appointments at the moment.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {filteredAppointments.map((appointment) => (
+                                            <div
+                                                key={appointment.customId || appointment._id}
+                                                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100 overflow-hidden"
+                                            >
+                                                {/* Card Header */}
+                                                <div className="p-4 border-b border-gray-100">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex items-start gap-3 flex-1">
+                                                            <img
+                                                                src={appointment.patientId?.profileImage || '/patient-placeholder.jpg'}
+                                                                alt={appointment.patientId?.name || 'Patient'}
+                                                                className="w-14 h-14 rounded-full object-cover border-2 border-gray-200"
+                                                                onError={(e) => {
+                                                                    e.currentTarget.src =
+                                                                        'https://via.placeholder.com/100x100?text=Patient';
+                                                                }}
+                                                            />
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-xs text-gray-500 font-medium mb-1">
+                                                                    {appointment.customId || appointment._id}
+                                                                </p>
+                                                                <h3 className="font-semibold text-gray-800 mb-1 truncate">
+                                                                    {appointment.patientId?.name || 'Unknown Patient'}
+                                                                </h3>
+                                                                <p className="text-sm text-gray-600">
+                                                                    {appointment.appointmentType === 'video'
+                                                                        ? 'Video Call'
+                                                                        : 'Chat'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Type Icon */}
+                                                        <div
+                                                            className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center bg-[#00A1B0]/10 text-[#00A1B0]`}
+                                                        >
+                                                            {appointment.appointmentType === 'video' ? (
+                                                                <FaVideo size={18} />
+                                                            ) : (
+                                                                <FaComments size={18} />
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Card Body */}
+                                                <div className="p-4 bg-gray-50">
+                                                    <div className="flex items-center justify-between gap-4 text-sm mb-4">
+                                                        <div className="flex items-center gap-2 text-gray-600">
+                                                            <svg
+                                                                className="w-4 h-4"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                                                />
+                                                            </svg>
+                                                            <span>
+                                                                {new Date(appointment.appointmentDate).toLocaleDateString('en-US', {
+                                                                    month: 'short',
+                                                                    day: 'numeric',
+                                                                    year: 'numeric',
+                                                                })}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 text-gray-600">
+                                                            <svg
+                                                                className="w-4 h-4"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                                />
+                                                            </svg>
+                                                            <span>{appointment.appointmentTime}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Fees */}
+                                                    <div className="flex-shrink-0 mb-4">
+                                                        <p className="text-sm text-gray-500">Consultation Fees</p>
+                                                        <p className="text-lg font-bold text-[#00A1B0]">
+                                                            ₹{appointment.consultationFees}
+                                                        </p>
+                                                    </div>
+
+                                                    {/* Action Buttons */}
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => handleViewDetails(appointment.customId || appointment._id)}
+                                                            className="w-full px-4 py-2 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                                                        >
+                                                            <FaEye size={14} />
+                                                            Details
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                )}
+            </DoctorLayout>
+        </div>
+    );
+};
+
+export default DoctorAppointments;

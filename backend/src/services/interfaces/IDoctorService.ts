@@ -4,11 +4,27 @@ export interface IDoctorService {
   submitVerification(
     userId: string,
     data: SubmitVerificationDTO,
-    files: Express.Multer.File[]
+    files: Express.Multer.File[],
+    hasExistingDocuments?: boolean,
+    existingDocuments?: string[]
   ): Promise<VerificationResponseDTO>;
 
-  validateDoctorRegistrationData(data: any): void;
-  validateVerificationData(data: SubmitVerificationDTO, files: Express.Multer.File[]): void;
-  validateDoctorProfileUpdate(data: UpdateDoctorProfileDTO): void;
+  getVerificationFormData(userId: string): Promise<any>;
+
+
   getProfile(userId: string): Promise<any>;
+  updateProfile(
+    userId: string,
+    data: UpdateDoctorProfileDTO,
+    profileImage?: Express.Multer.File
+  ): Promise<any>;
+  getVerifiedDoctors(
+    query?: string,
+    specialty?: string,
+    page?: number,
+    limit?: number,
+    sort?: string
+  ): Promise<{ doctors: any[]; total: number; page: number; totalPages: number }>;
+  getDoctorById(doctorId: string): Promise<any>;
+  getRelatedDoctors(doctorId: string): Promise<any[]>;
 }

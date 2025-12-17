@@ -13,7 +13,7 @@ export interface AuthUser {
 export interface LoginRequest {
   email: string;
   password: string;
-  role : string
+  role: string
 }
 export interface LoginResponse {
   user: AuthUser;
@@ -28,13 +28,14 @@ export interface RegisterRequest {
   confirmPassword: string;
   gender?: "male" | "female" | "other";
   dob?: string;
-  role?:"patient" | "doctor" 
+  role?: "patient" | "doctor"
 }
 
 
 export interface OtpRequest {
   email: string;
   otp: string;
+  role?: "patient" | "doctor" | "admin";
 }
 
 
@@ -50,13 +51,13 @@ export interface ResendOtpDTO {
 
 export interface ForgotPasswordRequest {
   email: string;
-  
+
 }
 export interface ForgotPasswordResponse {
   message: string;
 }
 export interface ResetPasswordRequest {
-  email:string;
+  email: string;
   resetToken: string;
   newPassword: string;
   confirmPassword: string;

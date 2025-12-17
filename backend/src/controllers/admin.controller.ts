@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import { IAdminService } from "../services/interfaces/IAdminService";
 import { IAdminController } from "./interfaces/IAdmin.controller";
-import { sendSuccess, sendError } from "../utils/response.util";
+import { sendSuccess } from "../utils/response.util";
 import { AppError } from "../errors/AppError";
-import { MESSAGES } from "../constants/constants";
+import { MESSAGES, HttpStatus, PAGINATION } from "../constants/constants";
 
 export class AdminController implements IAdminController {
 
@@ -14,10 +14,10 @@ export class AdminController implements IAdminController {
     try {
       const dto = req.body;
       if (!dto.email || !dto.password) {
-        throw new AppError("Email and password are required", 400);
+        throw new AppError(MESSAGES.EMAIL_PASSWORD_REQUIRED, HttpStatus.BAD_REQUEST);
       }
       const result = await this._adminservice.loginAdmin(dto);
-      sendSuccess(res, { user: result.user, token: result.token }, "Login successful");
+      sendSuccess(res, { user: result.user, token: result.token }, MESSAGES.LOGIN_SUCCESS);
     } catch (err: unknown) {
       next(err);
     }
@@ -35,21 +35,11 @@ export class AdminController implements IAdminController {
   getDoctorRequestDetails = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const doctorId = req.params.doctorId;
-      const doc = await this._adminservice.getDoctorRequestDetail(doctorId);
+      const baseURL = `${req.protocol}://${req.get("host")}`;
+      const doc = await this._adminservice.getDoctorRequestDetail(doctorId, baseURL);
 
       if (!doc) {
-        throw new AppError("Doctor not found", 404);
-      }
-
-      const baseURL = `${req.protocol}://${req.get("host")}`;
-
-      if (doc.documents && doc.documents.length > 0) {
-        doc.documents = doc.documents.map((p) => {
-          if (p.startsWith("http") || p.startsWith("https")) {
-            return p;
-          }
-          return baseURL + p;
-        });
+        throw new AppError(MESSAGES.DOCTOR_NOT_FOUND, HttpStatus.NOT_FOUND);
       }
 
       sendSuccess(res, doc);
@@ -62,7 +52,7 @@ export class AdminController implements IAdminController {
     try {
       const doctorId = req.params.doctorId;
       await this._adminservice.approveDoctorRequest(doctorId);
-      sendSuccess(res, undefined, "Doctor approved successfully");
+      sendSuccess(res, undefined, MESSAGES.DOCTOR_APPROVED_SUCCESS);
     } catch (err: unknown) {
       next(err);
     }
@@ -71,9 +61,9 @@ export class AdminController implements IAdminController {
   rejectDoctor = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const doctorId = req.params.doctorId;
-      const reason = req.body.reason || "Application rejected by admin";
+      const reason = req.body.reason || MESSAGES.DOCTOR_APPLICATION_REJECTED;
       await this._adminservice.rejectDoctorRequest(doctorId, reason);
-      sendSuccess(res, undefined, "Doctor rejected successfully");
+      sendSuccess(res, undefined, MESSAGES.DOCTOR_REJECTED_SUCCESS);
     } catch (err: unknown) {
       next(err);
     }
@@ -81,8 +71,8 @@ export class AdminController implements IAdminController {
 
   getAllDoctors = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 10;
+      const page = parseInt(req.query.page as string) || PAGINATION.DEFAULT_PAGE;
+      const limit = parseInt(req.query.limit as string) || PAGINATION.DEFAULT_LIMIT;
 
       const result = await this._adminservice.getAllDoctors(page, limit);
       sendSuccess(res, result);
@@ -95,7 +85,7 @@ export class AdminController implements IAdminController {
     try {
       const doctorId = req.params.doctorId;
       await this._adminservice.banDoctor(doctorId);
-      sendSuccess(res, undefined, "Doctor banned successfully");
+      sendSuccess(res, undefined, MESSAGES.DOCTOR_BANNED_SUCCESS);
     } catch (err: unknown) {
       next(err);
     }
@@ -105,7 +95,7 @@ export class AdminController implements IAdminController {
     try {
       const doctorId = req.params.doctorId;
       await this._adminservice.unbanDoctor(doctorId);
-      sendSuccess(res, undefined, "Doctor unbanned successfully");
+      sendSuccess(res, undefined, MESSAGES.DOCTOR_UNBANNED_SUCCESS);
     } catch (err: unknown) {
       next(err);
     }
@@ -113,8 +103,8 @@ export class AdminController implements IAdminController {
 
   getAllPatients = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 10;
+      const page = parseInt(req.query.page as string) || PAGINATION.DEFAULT_PAGE;
+      const limit = parseInt(req.query.limit as string) || PAGINATION.DEFAULT_LIMIT;
 
       const result = await this._adminservice.getAllPatients(page, limit);
       sendSuccess(res, result);
@@ -129,7 +119,7 @@ export class AdminController implements IAdminController {
       const patient = await this._adminservice.getPatientById(patientId);
 
       if (!patient) {
-        throw new AppError("Patient not found", 404);
+        throw new AppError(MESSAGES.PATIENT_NOT_FOUND, HttpStatus.NOT_FOUND);
       }
 
       sendSuccess(res, patient);
@@ -142,7 +132,7 @@ export class AdminController implements IAdminController {
     try {
       const patientId = req.params.patientId;
       await this._adminservice.blockUser(patientId);
-      sendSuccess(res, undefined, "Patient blocked successfully");
+      sendSuccess(res, undefined, MESSAGES.PATIENT_BLOCKED_SUCCESS);
     } catch (err: unknown) {
       next(err);
     }
@@ -152,7 +142,7 @@ export class AdminController implements IAdminController {
     try {
       const patientId = req.params.patientId;
       await this._adminservice.unblockUser(patientId);
-      sendSuccess(res, undefined, "Patient unblocked successfully");
+      sendSuccess(res, undefined, MESSAGES.PATIENT_UNBLOCKED_SUCCESS);
     } catch (err: unknown) {
       next(err);
     }

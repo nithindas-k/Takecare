@@ -2,10 +2,12 @@ import React, { useCallback, useMemo, useState } from "react";
 import Button from "../../../components/Button";
 import Input from "../../../components/Input";
 import { Link, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { setUser } from "../../../redux/user/userSlice";
 import authService from "../../../services/authService";
 import type { LoginRequest, ApiResponse, LoginResponse } from "../../../types";
 
-interface FormData extends LoginRequest {}
+interface FormData extends LoginRequest { }
 
 type Errors = Partial<Record<keyof FormData, string>>;
 
@@ -17,6 +19,7 @@ const PatientLogin: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
     email: "",
     password: "",
+    role: "patient",
   });
 
   const [errors, setErrors] = useState<Errors>({});
@@ -45,6 +48,9 @@ const PatientLogin: React.FC = () => {
     setServerError("");
   }, []);
 
+  // Redux
+  const dispatch = useDispatch();
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -56,6 +62,7 @@ const PatientLogin: React.FC = () => {
         setSubmitting(true);
         setServerError("");
 
+
         // Call authService.userLogin
         const response: ApiResponse<LoginResponse> = await authService.userLogin(formData);
 
@@ -64,23 +71,36 @@ const PatientLogin: React.FC = () => {
           authService.saveToken(response.data.token);
           authService.saveUser(response.data.user);
 
+          // Only store essential user fields in Redux
+          dispatch(setUser({
+            name: response.data.user.name,
+            email: response.data.user.email,
+            role: response.data.user.role as 'patient' | 'doctor' | 'admin',
+            phone: response.data.user.phone,
+            profileImage: response.data.user.profileImage,
+          }));
+
           // Clear form
-          setFormData({ email: "", password: "" });
+          setFormData({ email: "", password: "", role: "patient" });
           setErrors({});
 
           // Navigate to dashboard
           navigate("/");
         } else {
-          setServerError(response.message || "Login failed");
+          const errorMsg = response.message || "Login failed";
+          setServerError(errorMsg);
+
         }
       } catch (err: any) {
         console.error("Login error:", err);
-        setServerError(err.message || "An error occurred. Please try again.");
+        const errorMsg = err.message || "An error occurred. Please try again.";
+        setServerError(errorMsg);
+
       } finally {
         setSubmitting(false);
       }
     },
-    [formData, validate, navigate]
+    [formData, validate, navigate, dispatch]
   );
 
   const handleGoogleSignIn = useCallback(() => {
@@ -96,7 +116,7 @@ const PatientLogin: React.FC = () => {
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
         <div className="flex justify-center lg:justify-end">
           <div className="relative w-full max-w-lg px-4">
-             <img
+            <img
               src="/interfaceUser.png"
               alt="Patient Illustration"
               className="w-full h-auto object-contain"

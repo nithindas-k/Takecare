@@ -1,31 +1,15 @@
-import { generateAccessToken, verifyRefreshToken } from "../utils/jwt.util";
-import {
-  hashPassword,
-  comparePassword,
-  validatePassword,
-  validatePasswordMatch,
-} from "../utils/password.util";
-import { MESSAGES, STATUS } from "../constants/constants";
-import type { IAuthService } from "./interfaces/IAuthService";
-import type {
-  RegisterDTO,
-  LoginDTO,
-  VerifyOtpDTO,
-  ResendOtpDTO,
-  ForgotPasswordDTO,
-  ForgotPasswordVerifyOtpDTO,
-  ResetPasswordDTO,
-  AuthResponseDTO,
-  BaseUserResponseDTO,
-  Gender,
-} from "../dtos/common.dto";
-import type { IUserDocument } from "../types/user.type";
-import { IUserRepository } from "repositories/interfaces/IUser.repository";
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/jwt.util";
+import { hashPassword, comparePassword, validatePassword, validatePasswordMatch } from "../utils/password.util";
+import { MESSAGES, ROLES, GENDER, CONFIG } from "../constants/constants";
+import { IAuthService } from "./interfaces/IAuthService";
+import { RegisterDTO, LoginDTO, VerifyOtpDTO, ResendOtpDTO, ForgotPasswordDTO, ForgotPasswordVerifyOtpDTO, ResetPasswordDTO, AuthResponseDTO, BaseUserResponseDTO, Gender } from "../dtos/common.dto";
+import { IUserDocument } from "../types/user.type";
+import { IUserRepository } from "../repositories/interfaces/IUser.repository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
 import { IOTPService } from "./interfaces/IOtpService";
-import { AuthValidator } from "../validators/auth.validator";
 import { ConflictError, UnauthorizedError, NotFoundError, ForbiddenError } from "../errors/AppError";
 import { LoggerService } from "./logger.service";
+import { UserMapper } from "../mappers/user.mapper";
 import { VerificationStatus } from "../dtos/doctor.dtos/doctor.dto";
 
 export class AuthService implements IAuthService {
@@ -40,10 +24,6 @@ export class AuthService implements IAuthService {
   }
 
   async register(data: RegisterDTO): Promise<{ email: string }> {
-    this.logger.info("User registration attempt", { email: data.email, role: data.role });
-
-
-    AuthValidator.validateRegisterInput(data);
     validatePasswordMatch(data.password, data.confirmPassword);
     validatePassword(data.password);
 
@@ -64,19 +44,13 @@ export class AuthService implements IAuthService {
         gender,
         dob: data.dob ? new Date(data.dob) : null,
       },
-      1
+      CONFIG.OTP_EXPIRY_MINUTES
     );
-
-    this.logger.info("Registration OTP sent successfully", { email: data.email });
 
     return { email: data.email };
   }
 
-  async verifyOtp(
-    data: VerifyOtpDTO & { role: "patient" | "doctor" | "admin" }
-  ): Promise<AuthResponseDTO<BaseUserResponseDTO>> {
-    this.logger.info("OTP verification attempt", { email: data.email });
-
+  async verifyOtp(data: VerifyOtpDTO & { role: "patient" | "doctor" | "admin" }): Promise<AuthResponseDTO<BaseUserResponseDTO>> {
     const otpRecord = await this._otpService.verifyOtp(data.email, data.otp);
 
     const user = await this._userRepository.create({
@@ -90,84 +64,57 @@ export class AuthService implements IAuthService {
       isActive: true,
     });
 
-
-    if (String(user.role).toLowerCase() === "doctor") {
-      const existingDoctor = await this._doctorRepository.findByUserId(user._id.toString());
-
-      if (!existingDoctor) {
-        await this._doctorRepository.create({
-          userId: user._id,
-          licenseNumber: null,
-          qualifications: [],
-          specialty: null,
-          experienceYears: null,
-          VideoFees: null,
-          ChatFees: null,
-          languages: [],
-          verificationStatus: VerificationStatus.Pending,
-          verificationDocuments: [],
-          rejectionReason: null,
-          ratingAvg: 0,
-          ratingCount: 0,
-          isActive: true,
-        });
-
-        this.logger.info("Doctor profile created", { userId: user._id.toString() });
-      }
+    let doctorId: string | undefined;
+    if (String(user.role).toLowerCase() === ROLES.DOCTOR) {
+      const existingDoctor = await this.ensureDoctorProfile(user);
+      doctorId = existingDoctor._id.toString();
     }
 
-    const token = generateAccessToken(user);
+    const token = generateAccessToken(user, doctorId);
     await this._otpService.deleteOtp(data.email);
 
-    this.logger.info("OTP verification successful", { email: data.email, role: user.role });
-
     return {
-      user: this.mapUserResponse(user),
+      user: UserMapper.toDTO(user),
       token,
     };
   }
 
   async resendOtp(data: ResendOtpDTO): Promise<void> {
-    this.logger.info("Resend OTP request", { email: data.email });
-
     const existingUser = await this._userRepository.findByEmail(data.email);
-
     if (existingUser) {
-      throw new ConflictError("This email is already registered. Please login instead.");
+      throw new ConflictError(MESSAGES.EMAIL_ALREADY_REGISTERED);
     }
-
-    await this._otpService.resendOtp(data.email, 1, 30);
-    this.logger.info("OTP resent successfully", { email: data.email });
+    await this._otpService.resendOtp(data.email, CONFIG.OTP_EXPIRY_MINUTES, CONFIG.OTP_RESEND_DELAY_SECONDS);
   }
 
   async login(data: LoginDTO): Promise<AuthResponseDTO<BaseUserResponseDTO>> {
-    this.logger.info("Login attempt", { email: data.email, role: data.role });
-
     const user = await this.validateLogin(data.email, data.password, data.role);
+    let doctorId: string | undefined;
 
-    const token = generateAccessToken(user);
+    if (String(user.role).toLowerCase() === ROLES.DOCTOR) {
+      const doctor = await this._doctorRepository.findByUserId(user._id.toString());
+      doctorId = doctor?._id.toString();
+    }
 
-    this.logger.info("Login successful", { email: data.email, role: user.role });
+    const token = generateAccessToken(user, doctorId);
+    const refreshToken = generateRefreshToken(user, doctorId);
 
     return {
-      user: this.mapUserResponse(user),
+      user: UserMapper.toDTO(user),
       token,
+      refreshToken,
     };
   }
 
-  async forgotPassword(
-    data: ForgotPasswordDTO & { role: "patient" | "doctor" | "admin" }
-  ): Promise<void> {
-    this.logger.info("Forgot password request", { email: data.email });
-
+  async forgotPassword(data: ForgotPasswordDTO & { role: "patient" | "doctor" | "admin" }): Promise<void> {
     const user = await this._userRepository.findByEmail(data.email);
 
     if (!user) {
-      throw new NotFoundError("No account found with this email");
+      throw new NotFoundError(MESSAGES.NO_ACCOUNT_FOUND);
     }
 
     if (data.role && user.role !== data.role) {
-      throw new NotFoundError("No account found with this email");
+      throw new NotFoundError(MESSAGES.NO_ACCOUNT_FOUND);
     }
 
     const gender = this.normalizeGender(user.gender ?? undefined);
@@ -181,49 +128,37 @@ export class AuthService implements IAuthService {
       gender,
       dob: user.dob || null,
     });
-
-    this.logger.info("Password reset OTP sent", { email: data.email });
   }
 
-  async forgotPasswordVerifyOtp(
-    data: ForgotPasswordVerifyOtpDTO
-  ): Promise<{ resetToken: string }> {
-    this.logger.info("Forgot password OTP verification", { email: data.email });
-
-    const resetToken = await this._otpService.verifyAndCreateResetToken(
-      data.email,
-      data.otp
-    );
-
-    this.logger.info("Reset token created", { email: data.email });
-
+  async forgotPasswordVerifyOtp(data: ForgotPasswordVerifyOtpDTO): Promise<{ resetToken: string }> {
+    const resetToken = await this._otpService.verifyAndCreateResetToken(data.email, data.otp);
     return { resetToken };
   }
 
   async resetPassword(data: ResetPasswordDTO): Promise<void> {
-    this.logger.info("Password reset attempt", { email: data.email });
-
     validatePasswordMatch(data.newPassword, data.confirmPassword);
     validatePassword(data.newPassword);
 
     await this._otpService.verifyResetToken(data.email, data.resetToken);
-
     const passwordHash = await hashPassword(data.newPassword);
     const user = await this._userRepository.findByEmail(data.email);
 
     if (!user) {
-      throw new NotFoundError("User not found");
+      throw new NotFoundError(MESSAGES.NOT_FOUND);
     }
 
     await this._userRepository.updateById(user._id, { passwordHash });
     await this._otpService.deleteOtp(data.email);
-
-    this.logger.info("Password reset successful", { email: data.email });
   }
 
   async getDoctorStatus(userId: string): Promise<string> {
     const doctor = await this._doctorRepository.findByUserId(userId);
-    return doctor?.verificationStatus || "pending";
+    return doctor?.verificationStatus || VerificationStatus.Pending;
+  }
+
+  async getDoctorId(userId: string): Promise<string | undefined> {
+    const doctor = await this._doctorRepository.findByUserId(userId);
+    return doctor?._id.toString();
   }
 
   async refreshToken(token: string): Promise<{ accessToken: string }> {
@@ -232,94 +167,92 @@ export class AuthService implements IAuthService {
       const user = await this._userRepository.findById(decoded.userId);
 
       if (!user) {
-        throw new UnauthorizedError("User not found");
+        throw new UnauthorizedError(MESSAGES.NOT_FOUND);
       }
 
       if (!user.isActive) {
         throw new ForbiddenError(MESSAGES.USER_BLOCKED);
       }
 
-      const accessToken = generateAccessToken(user);
+      let doctorId: string | undefined;
+      if (String(user.role).toLowerCase() === ROLES.DOCTOR) {
+        const doctor = await this._doctorRepository.findByUserId(user._id.toString());
+        doctorId = doctor?._id.toString();
+      }
+
+      const accessToken = generateAccessToken(user, doctorId);
       return { accessToken };
     } catch (error) {
       if (error instanceof ForbiddenError) {
         throw error;
       }
-      throw new UnauthorizedError("Invalid or expired refresh token");
+      throw new UnauthorizedError(MESSAGES.INVALID_REFRESH_TOKEN);
     }
   }
 
   private normalizeGender(gender?: string | Gender): Gender | null {
     if (!gender) return null;
-
-    const normalized =
-      typeof gender === "string"
-        ? gender.toLowerCase().trim()
-        : String(gender).toLowerCase().trim();
-
-    if (normalized === "male") return "male" as Gender;
-    if (normalized === "female") return "female" as Gender;
-    if (normalized === "other") return "other" as Gender;
-
+    const normalized = String(gender).toLowerCase().trim();
+    if (normalized === GENDER.MALE) return GENDER.MALE as Gender;
+    if (normalized === GENDER.FEMALE) return GENDER.FEMALE as Gender;
+    if (normalized === GENDER.OTHER) return GENDER.OTHER as Gender;
     return null;
   }
 
-  private async checkUserDoesNotExist(
-    email: string,
-    phone: string
-  ): Promise<void> {
+  private async checkUserDoesNotExist(email: string, phone: string): Promise<void> {
     const existingUser = await this._userRepository.findByEmail(email);
     if (existingUser) {
-      throw new ConflictError("User with this email already exists");
+      throw new ConflictError(MESSAGES.USER_EXISTS_EMAIL);
     }
-
     const existingPhone = await this._userRepository.findByPhone(phone);
     if (existingPhone) {
-      throw new ConflictError("User with this phone number already exists");
+      throw new ConflictError(MESSAGES.USER_EXISTS_PHONE);
     }
   }
 
-  private async validateLogin(
-    email: string,
-    password: string,
-    role: string
-  ): Promise<IUserDocument> {
-
+  private async validateLogin(email: string, password: string, role: string): Promise<IUserDocument> {
     const user = await this._userRepository.findByEmailIncludingInactive(email);
 
-    if (!user) {
-      throw new UnauthorizedError("Invalid email or password");
+    if (!user || user.role !== role) {
+      throw new UnauthorizedError(MESSAGES.INVALID_CREDENTIALS);
     }
-
-    if (user.role !== role) {
-      throw new UnauthorizedError("Invalid email or password");
-    }
-
 
     if (!user.isActive) {
       throw new ForbiddenError(MESSAGES.USER_BLOCKED);
     }
 
     if (!user.passwordHash) {
-      throw new UnauthorizedError("Please use Google Sign-In for this account");
+      throw new UnauthorizedError(MESSAGES.GOOGLE_SIGNIN_REQUIRED);
     }
 
     const isValid = await comparePassword(password, user.passwordHash);
     if (!isValid) {
-      throw new UnauthorizedError("Invalid email or password");
+      throw new UnauthorizedError(MESSAGES.INVALID_CREDENTIALS);
     }
 
     return user;
   }
 
-  private mapUserResponse(user: IUserDocument): BaseUserResponseDTO {
-    return {
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      phone: user.phone,
-      profileImage: user.profileImage,
-    };
+  private async ensureDoctorProfile(user: IUserDocument) {
+    let existingDoctor = await this._doctorRepository.findByUserId(user._id.toString());
+    if (!existingDoctor) {
+      existingDoctor = await this._doctorRepository.create({
+        userId: user._id,
+        licenseNumber: null,
+        qualifications: [],
+        specialty: null,
+        experienceYears: null,
+        VideoFees: null,
+        ChatFees: null,
+        languages: [],
+        verificationStatus: VerificationStatus.Pending,
+        verificationDocuments: [],
+        rejectionReason: null,
+        ratingAvg: 0,
+        ratingCount: 0,
+        isActive: true,
+      });
+    }
+    return existingDoctor;
   }
 }

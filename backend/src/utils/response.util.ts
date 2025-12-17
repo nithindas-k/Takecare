@@ -1,12 +1,13 @@
 import { Response } from "express";
 import { ApiResponse } from "../types/response.type";
 import { PaginatedResponse } from "../types/common";
+import { HttpStatus } from "../constants/constants";
 
 export const sendSuccess = <T = any>(
     res: Response,
     data?: T,
     message?: string,
-    statusCode: number = 200
+    statusCode: number = HttpStatus.OK
 ): void => {
     const response: ApiResponse<T> = {
         success: true,
@@ -27,7 +28,7 @@ export const sendSuccess = <T = any>(
 export const sendError = (
     res: Response,
     message: string,
-    statusCode: number = 500
+    statusCode: number = HttpStatus.INTERNAL_ERROR
 ): void => {
     res.status(statusCode).json({
         success: false,
@@ -42,7 +43,7 @@ export const sendPaginatedResponse = <T = any>(
     total: number,
     page: number,
     limit: number,
-    statusCode: number = 200
+    statusCode: number = HttpStatus.OK
 ): void => {
     const response: PaginatedResponse<T> = {
         success: true,

@@ -4,7 +4,7 @@ import axiosInstance from "../api/axiosInstance";
 import type { UserData } from "../api/types";
 
 class UserService {
-  async getProfile(){
+  async getProfile() {
     try {
       const response = await axiosInstance.get("/users/profile");
       return response.data;
@@ -16,9 +16,12 @@ class UserService {
     }
   }
 
-  async updateProfile(userData: Partial<UserData>) {
+  async updateProfile(userData: Partial<UserData> | FormData) {
     try {
-      const response = await axiosInstance.put("/users/profile", userData);
+      const isFormData = userData instanceof FormData;
+      const config = isFormData ? { headers: { "Content-Type": "multipart/form-data" } } : {};
+
+      const response = await axiosInstance.put("/users/profile", userData, config);
       return response.data;
     } catch (error: any) {
       return {
@@ -42,8 +45,8 @@ class UserService {
     }
   }
 
-  // Admin operations (if needed)
-  async getAllUsers(){
+ 
+  async getAllUsers() {
     try {
       const response = await axiosInstance.get("/admin/users");
       return response.data;

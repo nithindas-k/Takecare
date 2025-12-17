@@ -9,18 +9,26 @@ import cookieParser from "cookie-parser";
 import morgan from "morgan";
 
 import { connectDB } from "./configs/database";
+import { env } from "./configs/env";
+import { MESSAGES, CONFIG, HttpStatus } from "./constants/constants";
+import { BASE_ROUTES } from "./constants/routes.constants";
 import userRouter from "./routers/user.router";
 import authRouter from "./routers/auth.route";
 import doctorRouter from './routers/doctor.router';
-import adminRouter from "./routers/admin.route"
+import adminRouter from "./routers/admin.route";
+import appointmentRouter from "./routers/appointment.router";
+import paymentRouter from "./routers/payment.router";
 import { errorHandler } from "./middlewares/error-handler.middleware";
+import { LoggerService } from "./services/logger.service";
 
 import "./services/passport.service";
+
+const logger = new LoggerService("App");
 
 const app = express();
 
 const corsOptions = {
-  origin: "http://localhost:5173", //=
+  origin: env.CLIENT_URL, //=
   credentials: true,
   optionsSuccessStatus: 200,
 };
@@ -36,13 +44,13 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "your-session-secret-change-in-production", //=
+    secret: env.SESSION_SECRET, //=
     resave: false,
     saveUninitialized: false,
     cookie: {
       secure: false,
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, //=
+      maxAge: CONFIG.SESSION_MAX_AGE, //=
     },
   })
 );
@@ -62,19 +70,21 @@ app.get("/", (req, res) => {
 });
 
 
-app.use("/users", userRouter);
+app.use(BASE_ROUTES.USERS, userRouter);
 
 
 
-app.use("/auth", authRouter);
-app.use('/doctors', doctorRouter);
-app.use("/admin", adminRouter)
+app.use(BASE_ROUTES.AUTH, authRouter);
+app.use(BASE_ROUTES.DOCTORS, doctorRouter);
+app.use(BASE_ROUTES.ADMIN, adminRouter);
+app.use(BASE_ROUTES.APPOINTMENTS, appointmentRouter);
+app.use(BASE_ROUTES.PAYMENTS, paymentRouter);
 
 
 app.use((req, res) => {
-  res.status(404).json({ //=
+  res.status(HttpStatus.NOT_FOUND).json({ //=
     success: false,
-    message: "Route not found",
+    message: MESSAGES.ROUTE_NOT_FOUND,
     path: req.originalUrl,
   });
 });
@@ -82,18 +92,17 @@ app.use((req, res) => {
 
 app.use(errorHandler);
 
-const PORT = Number(process.env.PORT) || 5000; //=
+const PORT = Number(env.PORT); //=
 
 const startServer = async () => {
   try {
     await connectDB();
     app.listen(PORT, () => {
-      console.log(` Server running on http://localhost:${PORT}`); //=
-      console.log(`API Base: http://localhost:${PORT}/api`); //=
-
+      logger.info(`Server running on http://localhost:${PORT}`);
+      logger.info(`API Base: http://localhost:${PORT}/api`);
     });
   } catch (error) {
-
+    logger.error("Server startup failed", error);
     process.exit(1);
   }
 };

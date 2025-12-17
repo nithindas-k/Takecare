@@ -1,6 +1,9 @@
-// src/App.tsx
-import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import React, { useEffect } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { setUser } from "./redux/user/userSlice";
+import authService from "./services/authService";
+import Lenis from 'lenis';
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 import PublicRoute from "./routes/PublicRoute";
@@ -14,6 +17,11 @@ import ForgotPassword from "./pages/doctor/auth/ForgotPassword";
 import ForgotPasswordOTP from "./pages/doctor/auth/ForgotPasswordOTP";
 import ResetPassword from "./pages/doctor/auth/ResetPassword";
 import DoctorDashboard from "./pages/doctor/Dashboard";
+import DoctorProfileSettings from "./pages/doctor/DoctorProfileSettings";
+import DoctorAppointments from "./pages/doctor/DoctorAppointments";
+import DoctorAppointmentDetails from "./pages/doctor/DoctorAppointmentDetails";
+import DoctorAppointmentRequests from "./pages/doctor/DoctorAppointmentRequests";
+import DoctorSchedule from "./pages/doctor/DoctorSchedule";
 
 // Patient Routes
 import PatientLogin from "./pages/user/auth/Login";
@@ -22,7 +30,17 @@ import PatientOTPVerify from "./pages/user/auth/OTPVerify";
 import PatientForgotPassword from "./pages/user/auth/ForgotPassword";
 import PatientForgotPasswordOTP from "./pages/user/auth/ForgotPasswordOTP";
 import PatientResetPassword from "./pages/user/auth/ResetPassword";
-import Home from "./pages/user/Home"; // patient home (protected)
+import Home from "./pages/user/Home";
+import Doctors from "./pages/user/Doctors";
+import DoctorProfile from "./pages/user/DoctorProfile";
+import BookingPage from "./pages/user/BookingPage";
+import PatientDetails from "./pages/user/PatientDetails";
+import ConsultationType from "./pages/user/ConsultationType";
+import PaymentPage from "./pages/user/PaymentPage";
+import BookingSuccess from "./pages/user/BookingSuccess";
+import PatientProfileSettings from "./pages/user/PatientProfileSettings";
+import Appointments from "./pages/user/Appointments";
+import AppointmentDetails from "./pages/user/AppointmentDetails";
 
 // Admin Routes
 import AdminLogin from "./pages/admin/auth/Login";
@@ -33,6 +51,8 @@ import DoctorsListPage from "./pages/admin/DoctorsListPage";
 import DoctorDetailPage from "./pages/admin/DoctorDetailPage";
 import PatientsListPage from "./pages/admin/PatientsListPage";
 import PatientDetailPage from "./pages/admin/PatientDetailPage";
+import AdminAppointmentsListPage from "./pages/admin/AppointmentsListPage";
+import AdminAppointmentDetailsPage from "./pages/admin/AdminAppointmentDetailsPage";
 import AuthCallback from "./pages/AuthCallback";
 
 const NotFound: React.FC = () => (
@@ -42,7 +62,7 @@ const NotFound: React.FC = () => (
       <p className="text-xl text-gray-600 mt-4">Page Not Found</p>
       <a
         href="/"
-        className="mt-6 inline-block px-6 py-3 bg-teal-500 text-white rounded-lg hover:bg-teal-600"
+        className="mt-6 inline-block px-6 py-3 bg-[#00A1B0] text-white rounded-lg hover:bg-[#008f9c]"
       >
         Go Home
       </a>
@@ -50,15 +70,55 @@ const NotFound: React.FC = () => (
   </div>
 );
 
+import { Toaster } from 'react-hot-toast';
+import userService from "./services/userService";
+
 const App: React.FC = () => {
+   const dispatch =  useDispatch()
+
+  useEffect(() => {
+    const lenis = new Lenis()
+
+    function raf(time: number) {
+      lenis.raf(time)
+      requestAnimationFrame(raf)
+    }
+
+    requestAnimationFrame(raf)
+   
+
+    console.log("global fetching..........")
+    
+    async function userFetch(){
+        const response = await userService.getProfile()
+        const user =  response.data;
+
+        dispatch(setUser(user))
+    } 
+    userFetch()
+    
+    return () => {
+      lenis.destroy()
+    }
+  }, [])
+
   return (
     <BrowserRouter>
+      <Toaster position="top-right" />
       <Routes>
 
         <Route path="/" element={<ProtectedRoute role="patient" >
           <Home />
         </ProtectedRoute>} />
 
+        <Route path="/doctors" element={<Doctors />} />
+        <Route path="/doctors/:id" element={<DoctorProfile />} />
+        <Route path="/doctor-profile" element={<DoctorProfile />} />
+        <Route path="/booking/:id" element={<BookingPage />} />
+        <Route path="/patient-details" element={<PatientDetails />} />
+        <Route path="/consultation-type" element={<ConsultationType />} />
+        <Route path="/payment" element={<PaymentPage />} />
+        <Route path="/booking-success" element={<BookingSuccess />} />
 
         <Route path="/doctor">
 
@@ -91,6 +151,46 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute role="doctor">
                 <DoctorDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="profile-settings"
+            element={
+              <ProtectedRoute role="doctor">
+                <DoctorProfileSettings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="appointments"
+            element={
+              <ProtectedRoute role="doctor">
+                <DoctorAppointments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="appointment-requests"
+            element={
+              <ProtectedRoute role="doctor">
+                <DoctorAppointmentRequests />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="appointments/:id"
+            element={
+              <ProtectedRoute role="doctor">
+                <DoctorAppointmentDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="schedule"
+            element={
+              <ProtectedRoute role="doctor">
+                <DoctorSchedule />
               </ProtectedRoute>
             }
           />
@@ -131,6 +231,30 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute role="patient">
                 <Home />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="profile-settings"
+            element={
+              <ProtectedRoute role="patient">
+                <PatientProfileSettings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="appointments"
+            element={
+              <ProtectedRoute role="patient">
+                <Appointments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="appointments/:id"
+            element={
+              <ProtectedRoute role="patient">
+                <AppointmentDetails />
               </ProtectedRoute>
             }
           />
@@ -203,6 +327,26 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
           />
+
+          <Route
+            path="appointments"
+            element={
+              <ProtectedRoute role="admin">
+                <AdminAppointmentsListPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="appointment/:appointmentId"
+            element={
+              <ProtectedRoute role="admin">
+                <AdminAppointmentDetailsPage />
+              </ProtectedRoute>
+            }
+
+          />
+
         </Route>
 
 

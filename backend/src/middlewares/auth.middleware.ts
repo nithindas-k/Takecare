@@ -2,41 +2,42 @@ import { env } from "configs/env";
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { JWTPayload } from "../types/auth.type";
+import { HttpStatus, MESSAGES } from "../constants/constants";
 
 declare global {
   namespace Express {
 
-    interface User extends JWTPayload { }
+    interface User extends JWTPayload {
+      _id?: any;
+      id?: string;
+    }
   }
 }
 
 export const authMiddleware = (req: Request, res: Response, next: NextFunction): void => {
   try {
-    console.log("Auth Middleware - headers:", req.headers);
-    console.log("Authorization header:", req.headers.authorization);
-
     const token = req.headers.authorization?.split(" ")[1];
-    console.log("Extracted token:", token);
 
     if (!token) {
-      res.status(401).json({
+      res.status(HttpStatus.UNAUTHORIZED).json({
         success: false,
-        message: "No token provided",
+        message: MESSAGES.ACCESS_TOKEN_MISSING,
       });
       return;
     }
 
-    const decoded = jwt.verify(token, env.ACCESS_TOKEN_SECRET || "your-secret-key") as JWTPayload;
-
-    console.log("Decoded token payload:", decoded);
-
+    const decoded = jwt.verify(
+      token,
+      env.ACCESS_TOKEN_SECRET
+    ) as JWTPayload;
+  console.log("==========="+decoded.role)
     req.user = decoded;
     next();
 
   } catch (error) {
-    res.status(401).json({
+    res.status(HttpStatus.UNAUTHORIZED).json({
       success: false,
-      message: "Invalid token",
+      message: MESSAGES.INVALID_ACCESS_TOKEN,
     });
   }
 };

@@ -7,13 +7,14 @@ export interface RegisterUserDTO extends RegisterDTO {
 }
 
 export interface UserResponseDTO extends BaseUserResponseDTO {
+  gender?: "male" | "female" | "other" | null;
+  dob?: Date | string | null;
+  customId?: string;
 }
 
 export type UserAuthResponseDTO = AuthResponseDTO<UserResponseDTO>;
 
-/**
- * Update User Profile DTO
- */
+
 export interface UpdateUserProfileDTO {
   name?: string;
   phone?: string;
@@ -21,3 +22,24 @@ export interface UpdateUserProfileDTO {
   dob?: string | Date;
   profileImage?: string;
 }
+
+export interface DoctorAdditionalInfoDTO {
+  specialty?: string | null;
+  qualifications?: string[];
+  experienceYears?: number | null;
+  VideoFees?: number | null;
+  ChatFees?: number | null;
+  languages?: string[];
+  licenseNumber?: string | null;
+  about?: string | null;
+}
+
+export interface UnifiedUpdateProfileDTO {
+  information: UpdateUserProfileDTO;
+  additionalInformation?: DoctorAdditionalInfoDTO;
+}
+
+export type UnifiedUserProfileResponseDTO = UserResponseDTO & Partial<DoctorAdditionalInfoDTO> & {
+  doctorProfileId?: string;
+  verificationStatus?: string;
+};

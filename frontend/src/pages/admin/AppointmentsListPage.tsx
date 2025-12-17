@@ -1,0 +1,446 @@
+import React, { useEffect, useMemo, useState } from "react";
+import toast, { Toaster } from "react-hot-toast";
+import Sidebar from "../../components/admin/Sidebar";
+import TopNav from "../../components/admin/TopNav";
+import { appointmentService } from "../../services/appointmentService";
+import { ChevronLeft, ChevronRight, Eye, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+type Gender = "male" | "female" | "other";
+
+interface PopulatedUser {
+  id?: string;
+  customId?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  profileImage?: string | null;
+  gender?: Gender | null;
+  dob?: string | null;
+}
+
+interface PopulatedDoctor {
+  id?: string;
+  customId?: string;
+  specialty?: string;
+  userId?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    profileImage?: string | null;
+  } | null;
+}
+
+interface Appointment {
+  id?: string;
+  customId?: string;
+  patientId?: PopulatedUser | null;
+  doctorId?: PopulatedDoctor | null;
+  appointmentDate?: string;
+  appointmentTime?: string;
+  consultationFees?: number;
+  status?: string;
+}
+
+const calcAge = (dob?: string | null): number | null => {
+  if (!dob) return null;
+  const d = new Date(dob);
+  if (Number.isNaN(d.getTime())) return null;
+  const diff = Date.now() - d.getTime();
+  const ageDt = new Date(diff);
+  return Math.abs(ageDt.getUTCFullYear() - 1970);
+};
+
+const getInitials = (name?: string) => {
+  if (!name) return "??";
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((s) => s[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+};
+
+const getStatusBadgeClasses = (status?: string) => {
+  const s = (status || "").toLowerCase();
+  if (s === "confirmed") return "bg-green-100 text-green-700";
+  if (s === "completed") return "bg-blue-100 text-blue-700";
+  if (s === "cancelled") return "bg-gray-200 text-gray-700";
+  if (s === "rejected") return "bg-red-100 text-red-700";
+  return "bg-yellow-100 text-yellow-700";
+};
+
+const formatStatus = (status?: string) => {
+  if (!status) return "Pending";
+  return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
+const AdminAppointmentsListPage: React.FC = () => {
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const limit = 10;
+  const navigate = useNavigate()
+
+  const navigateToAppointmentDetails = (apt: Appointment) => {
+    const appointmentId = apt.id || apt.customId;
+    if (!appointmentId) {
+      toast.error("Missing appointment id");
+      return;
+    }
+    navigate(`/admin/appointment/${appointmentId}`);
+  };
+
+  const fetchAppointments = async (currentPage: number) => {
+    setLoading(true);
+    try {
+      const res = await appointmentService.getAllAppointments(undefined, currentPage, limit);
+      if (res?.success && res?.data) {
+        const data = res.data;
+        setAppointments(data.appointments || []);
+        setTotalPages(data.totalPages || 1);
+      } else {
+        toast.error(res?.message || "Failed to fetch appointments");
+      }
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || e?.message || "Error fetching appointments");
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchAppointments(page);
+  }, [page]);
+
+  const pagesToShow = useMemo(() => {
+    const items: number[] = [];
+    const start = Math.max(1, page - 2);
+    const end = Math.min(totalPages, page + 2);
+    for (let p = start; p <= end; p++) items.push(p);
+    return items;
+  }, [page, totalPages]);
+
+  const formatDate = (value?: string) => {
+    if (!value) return "-";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "-";
+    return d.toLocaleDateString(undefined, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  return (
+    <div className="flex min-h-screen bg-gray-50">
+      <Toaster position="top-center" />
+      <div className="hidden lg:block">
+        <Sidebar />
+      </div>
+
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <div className="absolute left-0 top-0 h-full w-72 max-w-[85vw] bg-white shadow-2xl">
+            <div className="flex justify-end p-3">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(false)}
+                className="w-9 h-9 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                title="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <Sidebar />
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 flex flex-col">
+        <TopNav onMenuClick={() => setSidebarOpen(true)} />
+
+        <main className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-5 md:py-6">
+          <div className="w-full max-w-7xl mx-auto">
+
+            <div className="bg-primary/10 rounded-lg py-6 sm:py-8 md:py-10 mb-4 sm:mb-5 md:mb-6 text-center">
+              <h1 className="text-2xl sm:text-3xl font-bold text-primary">Appointments</h1>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            {loading ? (
+              <div className="p-12 text-center text-gray-500">Loading appointments...</div>
+            ) : appointments.length === 0 ? (
+              <div className="p-12 text-center text-gray-500">No appointments found.</div>
+            ) : (
+              <>
+                <div className="lg:hidden p-3 sm:p-4 space-y-3">
+                  {appointments.map((apt, idx) => {
+                    const patient = apt.patientId || null;
+                    const doctor = apt.doctorId || null;
+
+                    const patientName = patient?.name || "-";
+                    const patientEmail = patient?.email || "-";
+                    const age = calcAge(patient?.dob);
+                    const gender = patient?.gender ? String(patient.gender) : "-";
+                    const department = doctor?.specialty || "-";
+                    const doctorName = doctor?.userId?.name || "-";
+                    const fees = typeof apt.consultationFees === "number" ? `₹${apt.consultationFees}` : "-";
+                    const statusLabel = formatStatus(apt.status);
+                    const serial = (page - 1) * limit + (idx + 1);
+
+                    return (
+                      <div
+                        key={apt.id || apt.customId || idx}
+                        className="border border-gray-100 rounded-xl p-4 shadow-sm"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-center gap-3 min-w-0">
+                            {patient?.profileImage ? (
+                              <img
+                                src={patient.profileImage}
+                                alt={patientName}
+                                className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-teal-500 text-white flex items-center justify-center font-bold text-xs">
+                                {getInitials(patientName)}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-semibold text-gray-400">#{serial}</span>
+                                <h3 className="font-semibold text-gray-800 text-sm truncate">{patientName}</h3>
+                              </div>
+                              <p className="text-xs text-gray-500 truncate">{patientEmail}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => navigateToAppointmentDetails(apt)}
+                              className="w-9 h-9 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center hover:bg-cyan-200 transition-colors"
+                              title="View details"
+                            >
+                              <Eye size={16} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between">
+                          <span className="text-xs text-gray-500">Status</span>
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClasses(
+                              apt.status
+                            )}`}
+                          >
+                            {statusLabel}
+                          </span>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                          <div className="text-xs text-gray-500">Age</div>
+                          <div className="text-xs text-gray-800 text-right">{age ?? "-"}</div>
+
+                          <div className="text-xs text-gray-500">Gender</div>
+                          <div className="text-xs text-gray-800 text-right capitalize">{gender}</div>
+
+                          <div className="text-xs text-gray-500">Department</div>
+                          <div className="text-xs text-gray-800 text-right">{department}</div>
+
+                          <div className="text-xs text-gray-500">Date</div>
+                          <div className="text-xs text-gray-800 text-right">{formatDate(apt.appointmentDate)}</div>
+
+                          <div className="text-xs text-gray-500">Time</div>
+                          <div className="text-xs text-gray-800 text-right">{apt.appointmentTime || "-"}</div>
+
+                          <div className="text-xs text-gray-500">Doctor</div>
+                          <div className="text-xs text-gray-800 text-right">{doctorName}</div>
+
+                          <div className="text-xs text-gray-500">Fees</div>
+                          <div className="text-xs text-gray-800 text-right">{fees}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="hidden lg:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-100 text-[11px] uppercase text-gray-500 font-semibold">
+                        <th className="px-6 py-4 w-10">#</th>
+                        <th className="px-6 py-4">Name</th>
+                        <th className="px-6 py-4">Email</th>
+                        <th className="px-6 py-4">Age</th>
+                        <th className="px-6 py-4">Gender</th>
+                        <th className="px-6 py-4">Department</th>
+                        <th className="px-6 py-4">Date</th>
+                        <th className="px-6 py-4">Time</th>
+                        <th className="px-6 py-4">Doctor</th>
+                        <th className="px-6 py-4">Fees</th>
+                        <th className="px-6 py-4">Status</th>
+                        <th className="px-6 py-4 text-center">Details</th>
+                      </tr>
+                    </thead>
+
+                    <tbody className="divide-y divide-gray-50">
+                      {appointments.map((apt, idx) => {
+                        const patient = apt.patientId || null;
+                        const doctor = apt.doctorId || null;
+
+                        const patientName = patient?.name || "-";
+                        const patientEmail = patient?.email || "-";
+                        const age = calcAge(patient?.dob);
+                        const gender = patient?.gender ? String(patient.gender) : "-";
+                        const department = doctor?.specialty || "-";
+                        const doctorName = doctor?.userId?.name || "-";
+                        const fees =
+                          typeof apt.consultationFees === "number" ? `₹${apt.consultationFees}` : "-";
+                        const statusLabel = formatStatus(apt.status);
+
+                        return (
+                          <tr key={apt.id || apt.customId || idx} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-6 py-4 text-sm text-gray-600">
+                              {(page - 1) * limit + (idx + 1)}
+                            </td>
+
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                {patient?.profileImage ? (
+                                  <img
+                                    src={patient.profileImage}
+                                    alt={patientName}
+                                    className="w-9 h-9 rounded-full object-cover border border-gray-200"
+                                  />
+                                ) : (
+                                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-400 to-teal-500 text-white flex items-center justify-center font-bold text-xs">
+                                    {getInitials(patientName)}
+                                  </div>
+                                )}
+                                <span className="font-medium text-gray-800 text-sm">{patientName}</span>
+                              </div>
+                            </td>
+
+                            <td className="px-6 py-4 text-sm text-gray-600">{patientEmail}</td>
+                            <td className="px-6 py-4 text-sm text-gray-600">{age ?? "-"}</td>
+                            <td className="px-6 py-4 text-sm text-gray-600 capitalize">{gender}</td>
+                            <td className="px-6 py-4 text-sm text-gray-600">{department}</td>
+                            <td className="px-6 py-4 text-sm text-gray-600">{formatDate(apt.appointmentDate)}</td>
+                            <td className="px-6 py-4 text-sm text-gray-600">{apt.appointmentTime || "-"}</td>
+
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                {doctor?.userId?.profileImage ? (
+                                  <img
+                                    src={doctor.userId.profileImage}
+                                    alt={doctorName}
+                                    className="w-9 h-9 rounded-full object-cover border border-gray-200"
+                                  />
+                                ) : (
+                                  <div className="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-bold text-xs">
+                                    {getInitials(doctorName)}
+                                  </div>
+                                )}
+                                <span className="font-medium text-gray-800 text-sm">{doctorName}</span>
+                              </div>
+                            </td>
+
+                            <td className="px-6 py-4 text-sm text-gray-600">{fees}</td>
+
+                            <td className="px-6 py-4">
+                              <span
+                                className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClasses(
+                                  apt.status
+                                )}`}
+                              >
+                                {statusLabel}
+                              </span>
+                            </td>
+
+                            <td className="px-6 py-4">
+                              <div className="flex items-center justify-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => navigateToAppointmentDetails(apt)}
+                                  className="w-8 h-8 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center hover:bg-cyan-200 transition-colors"
+                                  title="View details"
+                                >
+                                  <Eye size={16} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            {!loading && totalPages > 1 && (
+              <div className="px-4 sm:px-6 py-4 border-t border-gray-100 bg-white flex items-center justify-center">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border transition-colors ${
+                      page === 1
+                        ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                    }`}
+                    title="Previous"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+
+                  {pagesToShow.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPage(p)}
+                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full text-xs sm:text-sm font-semibold transition-colors ${
+                        p === page
+                          ? "bg-gradient-to-r from-cyan-400 to-teal-500 text-white shadow"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+                      }`}
+                      title={`Page ${p}`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border transition-colors ${
+                      page === totalPages
+                        ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                    }`}
+                    title="Next"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default AdminAppointmentsListPage;

@@ -126,9 +126,13 @@ const ResetPassword: React.FC = () => {
 
             <div className="text-center mt-6">
               <span className="text-gray-600">Remember your password? </span>
-              <a href="/doctor/login" className="text-teal-500 hover:text-teal-600 font-medium hover:underline">
+              <button
+                type="button"
+                onClick={() => navigate("/doctor/login")}
+                className="text-teal-500 hover:text-teal-600 font-medium hover:underline"
+              >
                 Login
-              </a>
+              </button>
             </div>
           </div>
         </div>

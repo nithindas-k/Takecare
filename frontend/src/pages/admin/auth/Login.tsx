@@ -1,8 +1,10 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import Button from "../../../components/Button";
-import Input from "../../../components/Input";
+import { useDispatch } from "react-redux";
 import authService from "../../../services/authService";
+import { setUser } from "../../../redux/user/userSlice";
+import Input from "../../../components/Input";
+import Button from "../../../components/Button";
 
 interface FormData { email: string; password: string; }
 type Errors = Partial<Record<keyof FormData, string>>;
@@ -10,6 +12,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const AdminLogin: React.FC = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [formData, setFormData] = useState<FormData>({ email: "", password: "" });
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -46,10 +49,16 @@ const AdminLogin: React.FC = () => {
       setServerError("");
       const response = await authService.adminLogin({ ...formData, role: "admin" });
       if (response.success && response.data?.token) {
-        authService.saveToken(response.data.token);
-        if (response.data.user) {
-          authService.saveUser(response.data.user);
-          localStorage.setItem("admin", JSON.stringify(response.data.user)); // Also save as admin for specific checks
+       
+        if (response.data?.user) {
+          const user = response.data.user;
+         
+          dispatch(setUser({
+            _id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+          }));
         }
         navigate("/admin/dashboard");
       } else {
@@ -60,7 +69,7 @@ const AdminLogin: React.FC = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [formData, validate, navigate]);
+  }, [formData, validate, navigate, dispatch]);
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">

@@ -2,16 +2,22 @@ import nodemailer, { Transporter } from "nodemailer";
 import { env } from "../configs/env";
 import type { IEmailService } from "../services/interfaces/IEmailService";
 import type { EmailConfig, SmtpConfig } from "../types/email.type";
+import { CONFIG, HttpStatus, MESSAGES } from "../constants/constants";
+import { AppError } from "../errors/AppError";
+import { LoggerService } from "./logger.service";
 
 export class EmailService implements IEmailService {
   private transporter: Transporter;
   private readonly fromAddress: string;
+  private readonly logger: LoggerService;
 
   constructor(config?: SmtpConfig) {
     const emailConfig = config || this.getDefaultConfig();
 
     this.transporter = nodemailer.createTransport(emailConfig);
     this.fromAddress = `"TakeCare" <${env.SMTP_USER}>`;
+
+    this.logger = new LoggerService("EmailService");
 
     this.verifyConnection();
   }
@@ -23,9 +29,7 @@ export class EmailService implements IEmailService {
     const emailPort = Number(env.SMTP_PORT) || 587;
 
     if (!emailUser || !emailPass) {
-      throw new Error(
-        "Email credentials not configured. Please set SMTP_USER and SMTP_PASS in your .env file"
-      );
+      throw new AppError(MESSAGES.EMAIL_CREDENTIALS_NOT_CONFIGURED, HttpStatus.INTERNAL_ERROR);
     }
 
     return {
@@ -45,9 +49,9 @@ export class EmailService implements IEmailService {
   private async verifyConnection(): Promise<void> {
     try {
       await this.transporter.verify();
-      console.log("✅ Email server is ready");
+      this.logger.info("Email server is ready");
     } catch (error: any) {
-      console.error("❌ Email server connection failed:", error.message);
+      this.logger.error("Email server connection failed", error);
     }
   }
 
@@ -72,10 +76,13 @@ export class EmailService implements IEmailService {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      console.log("📧 OTP email sent successfully:", info.messageId);
+      this.logger.info("OTP email sent successfully", { messageId: info.messageId });
     } catch (error: any) {
-      console.error("❌ OTP email sending failed:", error.message);
-      throw new Error(`Failed to send OTP email: ${error.message}`);
+      this.logger.error("OTP email sending failed", error);
+      throw new AppError(
+        MESSAGES.EMAIL_SEND_FAILED.replace("{error}", String(error?.message || error)),
+        HttpStatus.INTERNAL_ERROR
+      );
     }
   }
 
@@ -95,10 +102,13 @@ export class EmailService implements IEmailService {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      console.log("📧 Password reset email sent successfully:", info.messageId);
+      this.logger.info("Password reset email sent successfully", { messageId: info.messageId });
     } catch (error: any) {
-      console.error("❌ Password reset email sending failed:", error.message);
-      throw new Error(`Failed to send password reset email: ${error.message}`);
+      this.logger.error("Password reset email sending failed", error);
+      throw new AppError(
+        MESSAGES.EMAIL_SEND_FAILED.replace("{error}", String(error?.message || error)),
+        HttpStatus.INTERNAL_ERROR
+      );
     }
   }
 
@@ -114,10 +124,13 @@ export class EmailService implements IEmailService {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      console.log("📧 Welcome email sent successfully:", info.messageId);
+      this.logger.info("Welcome email sent successfully", { messageId: info.messageId });
     } catch (error: any) {
-      console.error("❌ Welcome email sending failed:", error.message);
-      throw new Error(`Failed to send welcome email: ${error.message}`);
+      this.logger.error("Welcome email sending failed", error);
+      throw new AppError(
+        MESSAGES.EMAIL_SEND_FAILED.replace("{error}", String(error?.message || error)),
+        HttpStatus.INTERNAL_ERROR
+      );
     }
   }
 
@@ -137,14 +150,18 @@ export class EmailService implements IEmailService {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      console.log("📧 Verification email sent successfully:", info.messageId);
+      this.logger.info("Verification email sent successfully", { messageId: info.messageId });
     } catch (error: any) {
-      console.error("❌ Verification email sending failed:", error.message);
-      throw new Error(`Failed to send verification email: ${error.message}`);
+      this.logger.error("Verification email sending failed", error);
+      throw new AppError(
+        MESSAGES.EMAIL_SEND_FAILED.replace("{error}", String(error?.message || error)),
+        HttpStatus.INTERNAL_ERROR
+      );
     }
   }
 
   private getOTPTemplate(otp: string, name: string): string {
+    const expiryText = `${CONFIG.OTP_EXPIRY_MINUTES} minute${CONFIG.OTP_EXPIRY_MINUTES === 1 ? "" : "s"}`;
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 10px;">
         <div style="background-color: #14b8a6; padding: 20px; border-radius: 10px 10px 0 0; text-align: center;">
@@ -164,7 +181,7 @@ export class EmailService implements IEmailService {
           </div>
           
           <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
-            ⏱️ This OTP will expire in <strong>1 minute</strong>.
+            ⏱️ This OTP will expire in <strong>${expiryText}</strong>.
           </p>
           
           <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
@@ -186,6 +203,7 @@ export class EmailService implements IEmailService {
   }
 
   private getPasswordResetTemplate(otp: string, name: string): string {
+    const expiryText = `${CONFIG.OTP_EXPIRY_MINUTES} minute${CONFIG.OTP_EXPIRY_MINUTES === 1 ? "" : "s"}`;
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 10px;">
         <div style="background-color: #14b8a6; padding: 20px; border-radius: 10px 10px 0 0; text-align: center;">
@@ -230,6 +248,7 @@ export class EmailService implements IEmailService {
   }
 
   private getWelcomeTemplate(name: string): string {
+    const dashboardUrl = `${env.CLIENT_URL}/dashboard`;
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 10px;">
         <div style="background-color: #14b8a6; padding: 20px; border-radius: 10px 10px 0 0; text-align: center;">
@@ -247,7 +266,7 @@ export class EmailService implements IEmailService {
           </p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${"http://localhost:3000"}/dashboard" 
+            <a href="${dashboardUrl}" 
                style="background-color: #14b8a6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
               Go to Dashboard
             </a>

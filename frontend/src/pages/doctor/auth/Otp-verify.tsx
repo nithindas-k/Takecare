@@ -3,6 +3,8 @@ import React, { useCallback, useMemo, useState, useRef, useEffect } from "react"
 import { useLocation, useNavigate } from "react-router-dom";
 import Button from "../../../components/Button";
 import authService from "../../../services/authService";
+import { useDispatch } from "react-redux";
+import { setUser } from "../../../redux/user/userSlice";
 
 const OTP_LENGTH = 6;
 const RESEND_OTP_INTERVAL = 60; // seconds
@@ -10,6 +12,7 @@ const RESEND_OTP_INTERVAL = 60; // seconds
 const DoctorOTPVerify: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const email = (location.state as any)?.email || "";
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
@@ -119,34 +122,48 @@ const DoctorOTPVerify: React.FC = () => {
       try {
         setSubmitting(true);
         setServerMessage("");
+
         const otpString = otp.join("");
-        const response = await authService.doctorVerifyOtp({ email, otp: otpString });
+        const response = await authService.doctorVerifyOtp({ email, otp: otpString, role: "doctor" });
         // response shape depends on your API; adjust checks accordingly
         console.log("Doctor OTP response:", response);
 
         if (response?.success && response?.data?.token && response?.data?.user) {
           authService.saveToken(response.data.token);
           authService.saveUser(response.data.user);
+
+          // Only store essential user fields in Redux
+          dispatch(setUser({
+            _id: response.data.user._id,
+            name: response.data.user.name,
+            email: response.data.user.email,
+            role: response.data.user.role as 'patient' | 'doctor' | 'admin',
+            phone: response.data.user.phone,
+            profileImage: response.data.user.profileImage,
+          }));
+
           setServerMessage("Verification successful. Redirecting...");
           setOtp(Array(OTP_LENGTH).fill(""));
           setErrors({});
           // navigate to the doctor verification page to complete profile
           setTimeout(() => navigate("/doctor/verification"), 800);
         } else {
-          setErrors({ otp: response?.message || "Invalid OTP. Please try again." });
+          const errorMsg = response?.message || "Invalid OTP. Please try again.";
+          setErrors({ otp: errorMsg });
           setOtp(Array(OTP_LENGTH).fill(""));
           inputRefs.current[0]?.focus();
         }
       } catch (err: any) {
         console.error("Doctor OTP error:", err);
-        setErrors({ otp: err?.message || "Verification failed. Please try again." });
+        const errorMsg = err?.message || "Verification failed. Please try again.";
+        setErrors({ otp: errorMsg });
         setOtp(Array(OTP_LENGTH).fill(""));
         inputRefs.current[0]?.focus();
       } finally {
         setSubmitting(false);
       }
     },
-    [otp, validate, email, navigate]
+    [otp, validate, email, navigate, dispatch]
   );
 
   const handleResend = useCallback(async () => {
@@ -214,9 +231,8 @@ const DoctorOTPVerify: React.FC = () => {
                     onChange={(e) => handleChange(index, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(index, e)}
                     onPaste={index === 0 ? handlePaste : undefined}
-                    className={`w-12 h-12 sm:w-14 sm:h-14 text-center text-xl font-semibold border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all ${
-                      errors.otp ? "border-red-500" : digit ? "border-teal-500 bg-teal-50" : "border-gray-300"
-                    }`}
+                    className={`w-12 h-12 sm:w-14 sm:h-14 text-center text-xl font-semibold border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all ${errors.otp ? "border-red-500" : digit ? "border-teal-500 bg-teal-50" : "border-gray-300"
+                      }`}
                     aria-label={`OTP digit ${index + 1}`}
                     disabled={submitting}
                   />

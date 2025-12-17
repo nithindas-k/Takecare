@@ -39,6 +39,10 @@ const DoctorSchema = new Schema<IDoctorDocument>(
       default: null,
       min: 0,
     },
+    about: {
+      type: String,
+      default: null
+    },
     languages: {
       type: [String],
       default: [],

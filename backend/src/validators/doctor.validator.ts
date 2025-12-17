@@ -1,6 +1,7 @@
 import { ValidationError } from "../errors/AppError";
 import type { DoctorRegistrationData } from "../types/doctor.type";
 import type { SubmitVerificationDTO, UpdateDoctorProfileDTO } from "../dtos/doctor.dtos/doctor.dto";
+import { MESSAGES, UPLOAD_DEFAULTS } from "../constants/constants";
 
 export class DoctorValidator {
     static validateRegistrationData(data: DoctorRegistrationData): void {
@@ -26,7 +27,11 @@ export class DoctorValidator {
         }
     }
 
-    static validateVerificationData(data: SubmitVerificationDTO, files: Express.Multer.File[]): void {
+    static validateVerificationData(
+        data: SubmitVerificationDTO,
+        files: Express.Multer.File[],
+        hasExistingDocuments: boolean = false
+    ): void {
         if (!data.degree || data.degree.trim().length < 2) {
             throw new ValidationError("Medical degree is required");
         }
@@ -36,7 +41,7 @@ export class DoctorValidator {
         const isValidDegree = validDegrees.some((valid) => degreeUpper.includes(valid));
 
         if (!isValidDegree) {
-            throw new ValidationError("Please provide a valid medical degree (MBBS, MD, MS, BDS, etc.)");
+            throw new ValidationError(MESSAGES.DOCTOR_INVALID_DEGREE);
         }
 
         if (data.experience < 0) {
@@ -44,11 +49,11 @@ export class DoctorValidator {
         }
 
         if (data.experience > 60) {
-            throw new ValidationError("Invalid experience years");
+            throw new ValidationError(MESSAGES.DOCTOR_INVALID_EXPERIENCE);
         }
 
         if (!data.speciality || data.speciality.trim().length < 2) {
-            throw new ValidationError("Medical speciality is required");
+            throw new ValidationError(MESSAGES.DOCTOR_INVALID_SPECIALITY);
         }
 
         const validSpecialities = [
@@ -68,13 +73,9 @@ export class DoctorValidator {
             "Homeopathy",
         ];
 
-        const isValidSpeciality = validSpecialities.some((valid) =>
+        validSpecialities.some((valid) =>
             valid.toLowerCase().includes(data.speciality.toLowerCase())
         );
-
-        if (!isValidSpeciality) {
-            console.warn(`Warning: Uncommon speciality provided: ${data.speciality}`);
-        }
 
         if (data.videoFees < 0) {
             throw new ValidationError("Video consultation fees cannot be negative");
@@ -85,34 +86,40 @@ export class DoctorValidator {
         }
 
         if (data.videoFees < 100 || data.chatFees < 50) {
-            throw new ValidationError("Consultation fees seem too low. Please verify.");
+            throw new ValidationError(MESSAGES.DOCTOR_MIN_FEES);
         }
 
         if (data.videoFees > 10000 || data.chatFees > 5000) {
-            throw new ValidationError("Consultation fees seem too high. Please verify.");
+            throw new ValidationError(MESSAGES.DOCTOR_MAX_FEES);
         }
 
         if (data.licenseNumber && data.licenseNumber.length < 5) {
-            throw new ValidationError("Invalid medical license number format");
-        }
-        if (!files || files.length === 0) {
-            throw new ValidationError("Please upload at least one verification document (degree certificate, license, etc.)");
+            throw new ValidationError(MESSAGES.DOCTOR_LICENSE_INVALID);
         }
 
-        if (files.length > 10) {
-            throw new ValidationError("Maximum 10 documents can be uploaded");
+        // Check if we have at least one document (new files OR existing documents)
+        const hasDocuments = files.length > 0 || hasExistingDocuments;
+        if (!hasDocuments) {
+            throw new ValidationError(MESSAGES.DOCTOR_MISSING_DOCUMENTS);
         }
 
-        const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
-        const maxFileSize = 5 * 1024 * 1024; // 5MB
-
-        for (const file of files) {
-            if (!allowedTypes.includes(file.mimetype)) {
-                throw new ValidationError(`Invalid file type: ${file.originalname}. Only JPEG, PNG, and PDF files are allowed`);
+        // Only validate new files if any were uploaded
+        if (files.length > 0) {
+            if (files.length > 10) {
+                throw new ValidationError(MESSAGES.DOCTOR_TOO_MANY_DOCUMENTS);
             }
 
-            if (file.size > maxFileSize) {
-                throw new ValidationError(`File too large: ${file.originalname}. Maximum size is 5MB`);
+            const allowedTypes = UPLOAD_DEFAULTS.ALLOWED_MIMETYPES as readonly string[];
+            const maxFileSize = UPLOAD_DEFAULTS.MAX_FILE_SIZE_BYTES;
+
+            for (const file of files) {
+                if (!allowedTypes.includes(file.mimetype)) {
+                    throw new ValidationError(MESSAGES.DOCTOR_INVALID_FILE_TYPE);
+                }
+
+                if (file.size > maxFileSize) {
+                    throw new ValidationError(MESSAGES.DOCTOR_FILE_TOO_LARGE);
+                }
             }
         }
     }
@@ -125,6 +132,18 @@ export class DoctorValidator {
 
             if (data.experienceYears > 60) {
                 throw new ValidationError("Invalid experience years");
+            }
+        }
+
+        if (data.dob) {
+            const birthDate = new Date(data.dob);
+            const age = DoctorValidator.calculateAge(birthDate);
+
+            if (age < 24) {
+                throw new ValidationError("Doctors must be at least 24 years old");
+            }
+            if (age > 80) {
+                throw new ValidationError("Invalid date of birth");
             }
         }
 
@@ -156,22 +175,28 @@ export class DoctorValidator {
             }
         }
 
-        if (data.biography !== undefined) {
-            if (data.biography.length > 1000) {
-                throw new ValidationError("Biography cannot exceed 1000 characters");
+        if (data.name !== undefined) {
+            if (data.name.trim().length < 2) {
+                throw new ValidationError("Name must be at least 2 characters");
             }
-
-            if (data.biography.length < 50) {
-                throw new ValidationError("Biography must be at least 50 characters");
+            if (data.name.length > 100) {
+                throw new ValidationError("Name cannot exceed 100 characters");
             }
+        }
 
-            const inappropriateWords = ["fake", "fraud", "scam"];
-            const bioLower = data.biography.toLowerCase();
+        if (data.phone !== undefined) {
+            if (!/^\d{10}$/.test(data.phone)) {
+                throw new ValidationError("Phone number must be 10 digits");
+            }
+        }
 
-            for (const word of inappropriateWords) {
-                if (bioLower.includes(word)) {
-                    throw new ValidationError("Biography contains inappropriate content");
-                }
+        if (data.specialty !== undefined && data.specialty.trim().length < 2) {
+            throw new ValidationError("Specialty must be at least 2 characters");
+        }
+
+        if (data.qualifications !== undefined) {
+            if (!Array.isArray(data.qualifications) || data.qualifications.length === 0) {
+                throw new ValidationError("At least one qualification is required");
             }
         }
 

@@ -10,6 +10,7 @@ export interface IDoctor {
   experienceYears?: number | null;
   VideoFees?: number | null;
   ChatFees?: number | null;
+  about?:string;
   languages: string[];
   verificationStatus: VerificationStatus;
   verificationDocuments: string[];
@@ -23,6 +24,7 @@ export type IDoctorDocument = IDoctor & Document & {
   _id: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  customId :string
 }
 
 export interface DoctorRegistrationData {
@@ -59,11 +61,10 @@ export interface DoctorProfileResponse {
   dob?: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  about?:string
 }
 
-/**
- * Doctor request list item
- */
+
 export interface DoctorRequestItem {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
@@ -78,9 +79,7 @@ export interface DoctorRequestItem {
   profileImage?: string | null;
 }
 
-/**
- * Doctor request detail (extends list item with additional fields)
- */
+  
 export interface DoctorRequestDetail extends DoctorRequestItem {
   qualifications: string[];
   VideoFees?: number | null;

@@ -9,34 +9,38 @@ import {
   ResetPasswordDTO,
   Role,
 } from "../dtos/common.dto";
-import { STATUS, MESSAGES } from "../constants/constants";
+import { HttpStatus, MESSAGES, ROLES, COOKIE_OPTIONS } from "../constants/constants";
+import { env } from "../configs/env";
 import { IAuthService } from "../services/interfaces/IAuthService";
 import { IAuthController } from "./interfaces/IAuth.controller";
 import { AppError } from "../types/error.type";
-import { sendSuccess } from "../utils/response.util";
+import { sendSuccess, sendError } from "../utils/response.util";
 import { generateAccessToken, generateRefreshToken } from "../utils/jwt.util";
+import { LoggerService } from "../services/logger.service";
 
 export class AuthController implements IAuthController {
 
-  constructor(private _authService: IAuthService) { }
+  private readonly logger = new LoggerService("AuthController");
 
+  constructor(private _authService: IAuthService) { }
 
   private parseRole(role?: string): Role {
     if (!role) return Role.Patient as Role;
     const r = String(role).toLowerCase();
-    if (r === Role.Patient) return Role.Patient as Role;
-    if (r === Role.Doctor) return Role.Doctor as Role;
-    if (r === Role.Admin) return Role.Admin as Role;
-    if (r === Role.Admin) return Role.Admin as Role;
-    throw new AppError(MESSAGES.INVALID_ROLE, STATUS.BAD_REQUEST);
+    if (r === ROLES.PATIENT) return ROLES.PATIENT as Role;
+    if (r === ROLES.DOCTOR) return ROLES.DOCTOR as Role;
+    if (r === ROLES.ADMIN) return ROLES.ADMIN as Role;
+    throw new AppError(MESSAGES.INVALID_ROLE, HttpStatus.BAD_REQUEST);
   }
 
   private setRefreshTokenCookie(res: Response, token: string) {
-    res.cookie('refreshToken', token, {
+    const isProduction = env.NODE_ENV === COOKIE_OPTIONS.ENV_PRODUCTION;
+    res.cookie(COOKIE_OPTIONS.REFRESH_TOKEN, token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000 //=
+      secure: isProduction,
+      sameSite: isProduction ? COOKIE_OPTIONS.SAME_SITE_NONE : COOKIE_OPTIONS.SAME_SITE_STRICT,
+      maxAge: COOKIE_OPTIONS.MAX_AGE,
+      path: '/'
     });
   }
 
@@ -45,16 +49,12 @@ export class AuthController implements IAuthController {
       const dto: RegisterDTO = req.body;
       const role = this.parseRole(dto.role as string);
 
-      if (!dto.name || !dto.email || !dto.phone || !dto.password || !dto.confirmPassword) {
-        throw new AppError(MESSAGES.MISSING_FIELDS, STATUS.BAD_REQUEST);
-      }
-
       const result = await this._authService.register({
         ...dto,
         role,
       });
 
-      sendSuccess(res, result, MESSAGES.OTP_SENT, STATUS.OK);
+      sendSuccess(res, result, MESSAGES.OTP_SENT, HttpStatus.OK);
     } catch (err: unknown) {
       next(err);
     }
@@ -65,19 +65,14 @@ export class AuthController implements IAuthController {
       const dto: VerifyOtpDTO & { role?: string } = req.body;
       const role = this.parseRole(dto.role);
 
-      if (!dto.email || !dto.otp) {
-        throw new AppError(MESSAGES.MISSING_FIELDS, STATUS.BAD_REQUEST);
-      }
-
       const result = await this._authService.verifyOtp({ email: dto.email, otp: dto.otp, role });
 
       if (result.refreshToken) {
         this.setRefreshTokenCookie(res, result.refreshToken);
-      
         delete result.refreshToken;
       }
 
-      sendSuccess(res, result, MESSAGES.REGISTRATION_COMPLETE, STATUS.CREATED);
+      sendSuccess(res, result, MESSAGES.REGISTRATION_COMPLETE, HttpStatus.CREATED);
     } catch (err: unknown) {
       next(err);
     }
@@ -85,14 +80,9 @@ export class AuthController implements IAuthController {
 
   resendOtp = async (req: Request, res: Response, next: NextFunction) => {
     try {
-
       const dto: ResendOtpDTO = req.body;
-      if (!dto.email) {
-        throw new AppError("Email is required", STATUS.BAD_REQUEST);
-      }
-
       await this._authService.resendOtp(dto);
-      sendSuccess(res, undefined, MESSAGES.OTP_RESENT, STATUS.OK);
+      sendSuccess(res, undefined, MESSAGES.OTP_RESENT, HttpStatus.OK);
     } catch (err: unknown) {
       return next(err);
     }
@@ -103,18 +93,13 @@ export class AuthController implements IAuthController {
       const dto: LoginDTO & { role?: string } = req.body;
       const role = this.parseRole(dto.role);
 
-      if (!dto.email || !dto.password) {
-        throw new AppError(MESSAGES.MISSING_FIELDS, STATUS.BAD_REQUEST);
-      }
-
       const result = await this._authService.login({ email: dto.email, password: dto.password, role });
-
       if (result.refreshToken) {
         this.setRefreshTokenCookie(res, result.refreshToken);
         delete result.refreshToken;
       }
 
-      sendSuccess(res, result, MESSAGES.LOGIN_SUCCESS, STATUS.OK);
+      sendSuccess(res, result, MESSAGES.LOGIN_SUCCESS, HttpStatus.OK);
     } catch (err: unknown) {
       next(err);
     }
@@ -122,15 +107,15 @@ export class AuthController implements IAuthController {
 
   refreshToken = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const token = req.cookies.refreshToken;
+      const token = req.cookies?.[COOKIE_OPTIONS.REFRESH_TOKEN];
 
       if (!token) {
-        throw new AppError("Refresh token missing", STATUS.UNAUTHORIZED);
+        throw new AppError(MESSAGES.REFRESH_TOKEN_MISSING, HttpStatus.UNAUTHORIZED);
       }
 
       const result = await this._authService.refreshToken(token);
 
-      sendSuccess(res, result, "Token refreshed successfully", STATUS.OK);
+      sendSuccess(res, result, MESSAGES.TOKEN_REFRESHED, HttpStatus.OK);
     } catch (err: unknown) {
       next(err);
     }
@@ -141,12 +126,8 @@ export class AuthController implements IAuthController {
       const dto: ForgotPasswordDTO & { role?: string } = req.body;
       const role = this.parseRole(dto.role);
 
-      if (!dto.email) {
-        throw new AppError("Email is required", STATUS.BAD_REQUEST);
-      }
-
       await this._authService.forgotPassword({ email: dto.email, role });
-      sendSuccess(res, undefined, MESSAGES.PASSWORD_RESET_OTP, STATUS.OK);
+      sendSuccess(res, undefined, MESSAGES.PASSWORD_RESET_OTP, HttpStatus.OK);
     } catch (err: unknown) {
       next(err);
     }
@@ -155,11 +136,8 @@ export class AuthController implements IAuthController {
   forgotPasswordVerify = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const dto: ForgotPasswordVerifyOtpDTO = req.body;
-      if (!dto.email || !dto.otp) {
-        throw new AppError(MESSAGES.MISSING_FIELDS, STATUS.BAD_REQUEST);
-      }
       const result = await this._authService.forgotPasswordVerifyOtp(dto);
-      sendSuccess(res, result, MESSAGES.OTP_VERIFIED, STATUS.OK);
+      sendSuccess(res, result, MESSAGES.OTP_VERIFIED, HttpStatus.OK);
     } catch (err: unknown) {
       next(err);
     }
@@ -168,35 +146,34 @@ export class AuthController implements IAuthController {
   resetPassword = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const dto: ResetPasswordDTO = req.body;
-      if (!dto.email || !dto.resetToken || !dto.newPassword || !dto.confirmPassword) {
-        throw new AppError(MESSAGES.MISSING_FIELDS, STATUS.BAD_REQUEST);
-      }
       await this._authService.resetPassword(dto);
-      sendSuccess(res, undefined, MESSAGES.PASSWORD_RESET_SUCCESS, STATUS.OK);
+      sendSuccess(res, undefined, MESSAGES.PASSWORD_RESET_SUCCESS, HttpStatus.OK);
     } catch (err: unknown) {
       next(err);
     }
   };
 
-
   userGoogleCallback = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {
         return res.redirect(
-          "http://localhost:5173/patient/login?error=authentication_failed"
+          `${env.CLIENT_URL}/patient/login?error=${MESSAGES.AUTH_FAILED}`
         );
       }
 
       const user = req.user as any;
-      const token = generateAccessToken(user);
-      const refreshToken = generateRefreshToken(user);
+
+      let doctorId: string | undefined;
+      let verificationStatus;
+      if (user.role === ROLES.DOCTOR) {
+        verificationStatus = await this._authService.getDoctorStatus(user._id.toString());
+        doctorId = await this._authService.getDoctorId(user._id.toString());
+      }
+
+      const token = generateAccessToken(user, doctorId);
+      const refreshToken = generateRefreshToken(user, doctorId);
 
       this.setRefreshTokenCookie(res, refreshToken);
-
-      let verificationStatus;
-      if (user.role === "doctor") {
-        verificationStatus = await this._authService.getDoctorStatus(user._id.toString());
-      }
 
       const userData = encodeURIComponent(JSON.stringify({
         id: user._id,
@@ -207,12 +184,12 @@ export class AuthController implements IAuthController {
         verificationStatus
       }));
 
-      return res.redirect(`http://localhost:5173/auth/callback?token=${token}&user=${userData}`);
+      return res.redirect(`${env.CLIENT_URL}/auth/callback?token=${token}&user=${userData}`);
 
     } catch (err: unknown) {
-      console.error("Google User Callback Error:", err);
+      this.logger.error("Google user callback error", err);
       return res.redirect(
-        "http://localhost:5173/patient/login?error=server_error"
+        `${env.CLIENT_URL}/patient/login?error=${MESSAGES.SERVER_ERROR_CODE}`
       );
     }
   };
@@ -221,17 +198,19 @@ export class AuthController implements IAuthController {
     try {
       if (!req.user) {
         return res.redirect(
-          "http://localhost:5173/doctor/login?error=authentication_failed"
+          `${env.CLIENT_URL}/doctor/login?error=${MESSAGES.AUTH_FAILED}`
         );
       }
 
       const user = req.user as any;
-      const token = generateAccessToken(user);
-      const refreshToken = generateRefreshToken(user);
-
-      this.setRefreshTokenCookie(res, refreshToken);
 
       const verificationStatus = await this._authService.getDoctorStatus(user._id.toString());
+      const doctorId = await this._authService.getDoctorId(user._id.toString());
+
+      const token = generateAccessToken(user, doctorId);
+      const refreshToken = generateRefreshToken(user, doctorId);
+
+      this.setRefreshTokenCookie(res, refreshToken);
 
       const userData = encodeURIComponent(JSON.stringify({
         id: user._id,
@@ -242,47 +221,38 @@ export class AuthController implements IAuthController {
         verificationStatus
       }));
 
-      return res.redirect(`http://localhost:5173/auth/callback?token=${token}&user=${userData}`);
+      return res.redirect(`${env.CLIENT_URL}/auth/callback?token=${token}&user=${userData}`);
 
     } catch (err: unknown) {
-      console.error("Google Doctor Callback Error:", err);
+      this.logger.error("Google doctor callback error", err);
       return res.redirect(
-        "http://localhost:5173/doctor/login?error=server_error"
+        `${env.CLIENT_URL}/doctor/login?error=${MESSAGES.SERVER_ERROR_CODE}`
       );
     }
   };
 
-
   logout = (req: Request, res: Response, next: NextFunction): void => {
     req.logout((err) => {
       if (err) {
-        console.error("Logout error:", err);
-        return res.status(500).json({
-          success: false,
-          message: MESSAGES.LOGOUT_FAILED,
-        });
+        this.logger.error("Logout error", err);
+        return sendError(res, MESSAGES.LOGOUT_FAILED, HttpStatus.INTERNAL_ERROR);
       }
 
-      res.clearCookie('refreshToken', {
+      res.clearCookie(COOKIE_OPTIONS.REFRESH_TOKEN, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
+        secure: env.NODE_ENV === COOKIE_OPTIONS.ENV_PRODUCTION,
+        sameSite: env.NODE_ENV === COOKIE_OPTIONS.ENV_PRODUCTION ? COOKIE_OPTIONS.SAME_SITE_NONE : COOKIE_OPTIONS.SAME_SITE_STRICT
       });
 
       req.session.destroy((err) => {
         if (err) {
-          console.error("Session destroy error:", err);
+          this.logger.error("Session destroy error", err);
         }
 
-        return res.status(200).json({
-          success: true,
-          message: MESSAGES.LOGOUT_SUCCESS,
-        });
+        return sendSuccess(res, undefined, MESSAGES.LOGOUT_SUCCESS, HttpStatus.OK);
       });
     });
   };
-
-
 
 }
 

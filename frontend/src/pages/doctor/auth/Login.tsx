@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import Button from "../../../components/Button";
 import Input from "../../../components/Input";
 import authService from "../../../services/authService";
+import { useDispatch } from "react-redux";
+import { setUser } from "../../../redux/user/userSlice";
 
 interface FormData {
   email: string;
@@ -15,6 +17,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const DoctorLogin: React.FC = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const [formData, setFormData] = useState<FormData>({
     email: "",
@@ -67,28 +70,37 @@ const DoctorLogin: React.FC = () => {
         const response = await authService.doctorLogin({
           email: formData.email.trim().toLowerCase(),
           password: formData.password,
-          role :"doctor"
+          role: "doctor"
         });
 
         if (response.success && response.data.token) {
-          localStorage.setItem("authToken", response.data.token);
+          // Token is automatically saved in authService
+          const userInfo = authService.getCurrentUserInfo();
           
-          if (response.data) {
-            localStorage.setItem("doctor", JSON.stringify(response.data));
+          if (userInfo) {
+            // Update Redux with minimal user info from token
+            dispatch(setUser({
+              _id: userInfo.id,
+              name: userInfo.name || '',
+              email: userInfo.email,
+              role: userInfo.role,
+            }));
           }
 
           navigate("/doctor/dashboard");
         } else {
-          setServerError(response.message || "Login failed. Please try again.");
+          const errorMsg = response.message || "Login failed. Please try again.";
+          setServerError(errorMsg);
         }
       } catch (error: any) {
         console.error("Login error:", error);
-        setServerError(error.message || "Login failed. Please try again.");
+        const errorMsg = error.message || "Login failed. Please try again.";
+        setServerError(errorMsg);
       } finally {
         setSubmitting(false);
       }
     },
-    [formData, validate, navigate]
+    [formData, validate, navigate, dispatch]
   );
 
   const handleGoogleSignIn = useCallback(() => {
@@ -110,10 +122,10 @@ const DoctorLogin: React.FC = () => {
         {/* Illustration */}
         <div className="flex justify-center lg:justify-end">
           <div className="relative w-full max-w-lg px-4">
-            <img 
-              src="/doctor.png" 
-              alt="Doctors Illustration" 
-              className="w-full h-auto object-contain" 
+            <img
+              src="/doctor.png"
+              alt="Doctors Illustration"
+              className="w-full h-auto object-contain"
             />
           </div>
         </div>
@@ -182,10 +194,10 @@ const DoctorLogin: React.FC = () => {
                 />
               </div>
 
-              <Button 
-                type="submit" 
-                loading={submitting} 
-                disabled={!isValid || submitting} 
+              <Button
+                type="submit"
+                loading={submitting}
+                disabled={!isValid || submitting}
                 className="w-full py-3 mt-6"
               >
                 {submitting ? "Logging in..." : "Login"}

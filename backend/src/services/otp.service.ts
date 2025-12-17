@@ -3,14 +3,19 @@ import { EmailService } from "./email.service";
 import { generateOtp, getOtpExpiry, isOtpExpired } from "../utils/otp.util";
 import type { IOTPService } from "./interfaces/IOtpService";
 import type { OTPData, OTPUserData } from "../types/otp.type";
+import { LoggerService } from "./logger.service";
+import { AppError, ValidationError } from "../errors/AppError";
+import { HttpStatus, MESSAGES } from "../constants/constants";
 
 export class OTPService implements IOTPService {
   private otpRepository: OTPRepository;
   private emailService: EmailService;
+  private readonly logger: LoggerService;
 
   constructor(otpRepository?: OTPRepository, emailService?: EmailService) {
     this.otpRepository = otpRepository || new OTPRepository();
     this.emailService = emailService || new EmailService();
+    this.logger = new LoggerService("OTPService");
   }
 
   async createAndSendOtp(
@@ -20,7 +25,7 @@ export class OTPService implements IOTPService {
     expiryMinutes: number = 1
   ): Promise<string> {
     const otp = generateOtp(6);
-    console.log(otp)
+    this.logger.debug("OTP generated", { email });
     const expiresAt = getOtpExpiry(expiryMinutes);
 
     await this.otpRepository.create({
@@ -38,12 +43,12 @@ export class OTPService implements IOTPService {
     const otpRecord = await this.otpRepository.findByEmailAndOtp(email, otp);
 
     if (!otpRecord) {
-      throw new Error("Invalid or expired OTP");
+      throw new ValidationError(MESSAGES.OTP_INVALID_OR_EXPIRED);
     }
 
     if (isOtpExpired(otpRecord.expiresAt)) {
       await this.otpRepository.updateOtp(email, { otp: null, expiresAt: new Date() });
-      throw new Error("Invalid or expired OTP");
+      throw new ValidationError(MESSAGES.OTP_INVALID_OR_EXPIRED);
     }
 
     return otpRecord;
@@ -53,7 +58,7 @@ export class OTPService implements IOTPService {
     const otpRecord = await this.otpRepository.findOneByField("email", email);
 
     if (!otpRecord) {
-      throw new Error("Registration session expired. Please register again to receive a new OTP.");
+      throw new AppError(MESSAGES.OTP_SESSION_EXPIRED_RESEND, HttpStatus.GONE);
     }
 
     const sessionAge = Date.now() - new Date(otpRecord.createdAt!).getTime();
@@ -61,7 +66,7 @@ export class OTPService implements IOTPService {
 
     if (sessionAge > maxSessionAgeMs) {
       await this.otpRepository.updateOtp(email, { otp: null, expiresAt: new Date() });
-      throw new Error("Registration session expired. Please register again.");
+      throw new AppError(MESSAGES.OTP_SESSION_EXPIRED, HttpStatus.GONE);
     }
 
     const newOtp = generateOtp(6);
@@ -101,12 +106,12 @@ export class OTPService implements IOTPService {
     const otpRecord = await this.otpRepository.findByEmailAndOtp(email, resetToken);
 
     if (!otpRecord) {
-      throw new Error("Invalid or expired reset token");
+      throw new ValidationError(MESSAGES.RESET_TOKEN_INVALID);
     }
 
     if (isOtpExpired(otpRecord.expiresAt)) {
       await this.otpRepository.deleteByEmail(email);
-      throw new Error("Invalid or expired reset token");
+      throw new ValidationError(MESSAGES.RESET_TOKEN_INVALID);
     }
 
     return otpRecord;

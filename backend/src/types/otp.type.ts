@@ -15,9 +15,6 @@ export interface IOtp {
   createdAt?: Date;
 }
 
-/**
- * OTP User Data structure
- */
 export interface OTPUserData {
   name: string;
   email: string;

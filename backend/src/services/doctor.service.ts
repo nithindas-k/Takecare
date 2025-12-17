@@ -1,11 +1,12 @@
-import type { IDoctorService } from "./interfaces/IDoctorService";
-import { SubmitVerificationDTO, VerificationStatus, UpdateDoctorProfileDTO, VerificationResponseDTO } from "../dtos/doctor.dtos/doctor.dto";
+import { IDoctorService } from "./interfaces/IDoctorService";
+import { SubmitVerificationDTO, VerificationStatus, UpdateDoctorProfileDTO, VerificationResponseDTO, VerificationFormDataDTO } from "../dtos/doctor.dtos/doctor.dto";
+import { MESSAGES, PAGINATION, ROLES, STATUS } from "../constants/constants";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
-import type { DoctorRegistrationData, DoctorProfileResponse } from "../types/doctor.type";
 import { DoctorValidator } from "../validators/doctor.validator";
-import { NotFoundError, UnauthorizedError } from "../errors/AppError";
+import { AppError, NotFoundError, UnauthorizedError } from "../errors/AppError";
 import { LoggerService } from "./logger.service";
+import { DoctorMapper } from "../mappers/doctor.mapper";
 
 export class DoctorService implements IDoctorService {
   private readonly logger: LoggerService;
@@ -17,103 +18,215 @@ export class DoctorService implements IDoctorService {
     this.logger = new LoggerService("DoctorService");
   }
 
-  async submitVerification(
-    userId: string,
-    data: SubmitVerificationDTO,
-    files: Express.Multer.File[]
-  ): Promise<VerificationResponseDTO> {
-    this.logger.info("Submitting doctor verification", { userId });
+async submitVerification(
+  userId: string,
+  data: SubmitVerificationDTO,
+  files: Express.Multer.File[],
+  hasExistingDocuments: boolean = false,
+  existingDocuments: string[] = []
+): Promise<VerificationResponseDTO> {
+  const user = await this._userRepository.findById(userId);
+  if (!user) {
+    throw new NotFoundError(MESSAGES.USER_NOT_FOUND);
+  }
 
-    const user = await this._userRepository.findById(userId);
-    if (!user) {
-      throw new NotFoundError("User not found");
-    }
+  if (user.role !== ROLES.DOCTOR) {
+    throw new UnauthorizedError(MESSAGES.DOCTOR_ONLY_VERIFICATION);
+  }
 
-    if (user.role !== "doctor") {
-      throw new UnauthorizedError("Only doctors can submit verification");
-    }
+  const doctor = await this._doctorRepository.findByUserId(userId);
+  if (!doctor) {
+    throw new NotFoundError(MESSAGES.DOCTOR_PROFILE_NOT_FOUND);
+  }
 
-    const doctor = await this._doctorRepository.findByUserId(userId);
-    if (!doctor) {
-      throw new NotFoundError("Doctor profile not found");
-    }
+  // Validate that we have at least one document
+  const hasDocuments = files.length > 0 || hasExistingDocuments;
+  DoctorValidator.validateVerificationData(data, files, hasDocuments);
 
+  // Determine which documents to use
+  let documentUrls: string[];
   
-    DoctorValidator.validateVerificationData(data, files);
-
-    const documentUrls: string[] = files.map((file) => file.path);
-
-    await this._doctorRepository.updateById(doctor._id, {
-      licenseNumber: data.licenseNumber || null,
-      qualifications: [data.degree],
-      experienceYears: data.experience,
-      specialty: data.speciality,
-      VideoFees: data.videoFees,
-      ChatFees: data.chatFees,
-      languages: data.languages || [],
-      verificationDocuments: documentUrls,
-      verificationStatus: VerificationStatus.Pending,
-      rejectionReason: null,
-    });
-
-    this.logger.info("Verification submitted successfully", { userId, doctorId: doctor._id.toString() });
-
-    return {
-      message: "Verification submitted successfully. Awaiting admin approval.",
-      verificationStatus: VerificationStatus.Pending,
-      verificationDocuments: documentUrls,
-    };
+  if (files.length > 0) {
+    // New files uploaded - use both new and existing
+    const newFileUrls = files.map((file) => file.path);
+    const existingUrls = hasExistingDocuments ? existingDocuments : [];
+    documentUrls = [...existingUrls, ...newFileUrls];
+  } else if (hasExistingDocuments) {
+    // No new files, but has existing documents (resubmission case)
+    documentUrls = existingDocuments.length > 0 
+      ? existingDocuments 
+      : (doctor.verificationDocuments || []);
+  } else {
+    throw new AppError(MESSAGES.DOCTOR_MISSING_DOCUMENTS,STATUS.BAD_REQUEST);
   }
 
-  async getProfile(userId: string): Promise<DoctorProfileResponse> {
-    this.logger.debug("Fetching doctor profile", { userId });
+  const updateData = {
+    licenseNumber: data.licenseNumber || null,
+    qualifications: [data.degree],
+    experienceYears: data.experience,
+    specialty: data.speciality,
+    VideoFees: data.videoFees,
+    ChatFees: data.chatFees,
+    languages: data.languages || [],
+    verificationDocuments: documentUrls,
+    verificationStatus: VerificationStatus.Pending,
+    rejectionReason: null,
+  };
 
+  await this._doctorRepository.updateById(doctor._id, updateData);
+
+  return {
+    message: MESSAGES.DOCTOR_VERIFICATION_SUBMITTED,
+    verificationStatus: VerificationStatus.Pending,
+    verificationDocuments: documentUrls,
+  };
+}
+
+  async getVerificationFormData(userId: string): Promise<VerificationFormDataDTO> {
     const doctor = await this._doctorRepository.findByUserId(userId);
     if (!doctor) {
-      throw new NotFoundError("Doctor profile not found");
+      throw new NotFoundError(MESSAGES.DOCTOR_PROFILE_NOT_FOUND);
+    }
+
+    return DoctorMapper.toVerificationFormData(doctor);
+  }
+
+  async getProfile(userId: string): Promise<any> {
+    const doctor = await this._doctorRepository.findByUserId(userId);
+    if (!doctor) {
+      throw new NotFoundError(MESSAGES.DOCTOR_PROFILE_NOT_FOUND);
     }
 
     const user = await this._userRepository.findById(userId);
     if (!user) {
-      throw new NotFoundError("User not found");
+      throw new NotFoundError(MESSAGES.USER_NOT_FOUND);
     }
 
+    return DoctorMapper.toProfileDTO(doctor, user);
+  }
+
+  async updateProfile(
+    userId: string,
+    data: UpdateDoctorProfileDTO,
+    profileImage?: Express.Multer.File
+  ): Promise<any> {
+    DoctorValidator.validateProfileUpdate(data);
+
+    const doctor = await this._doctorRepository.findByUserId(userId);
+    if (!doctor) {
+      throw new NotFoundError(MESSAGES.DOCTOR_PROFILE_NOT_FOUND);
+    }
+
+    const user = await this._userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundError(MESSAGES.USER_NOT_FOUND);
+    }
+
+    const userUpdates: any = {};
+    if (data.name) userUpdates.name = data.name;
+    if (data.phone) userUpdates.phone = data.phone;
+    if (data.gender) userUpdates.gender = data.gender;
+    if (data.dob) userUpdates.dob = data.dob;
+    if (profileImage) userUpdates.profileImage = profileImage.path;
+
+    if (Object.keys(userUpdates).length > 0) {
+      await this._userRepository.updateById(userId, userUpdates);
+    }
+
+    const doctorUpdates: any = {};
+    if (data.specialty) doctorUpdates.specialty = data.specialty;
+    if (data.qualifications) doctorUpdates.qualifications = data.qualifications;
+    if (data.experienceYears !== undefined) doctorUpdates.experienceYears = data.experienceYears;
+    if (data.VideoFees !== undefined) doctorUpdates.VideoFees = data.VideoFees;
+    if (data.ChatFees !== undefined) doctorUpdates.ChatFees = data.ChatFees;
+    if (data.languages) doctorUpdates.languages = data.languages;
+    if (data.licenseNumber) doctorUpdates.licenseNumber = data.licenseNumber;
+    if (data.about) doctorUpdates.about = data.about;
+
+    if (Object.keys(doctorUpdates).length > 0) {
+      await this._doctorRepository.updateById(doctor._id, doctorUpdates);
+    }
+
+    return this.getProfile(userId);
+  }
+
+  async getDoctorById(doctorId: string): Promise<any> {
+    const doctor = await this._doctorRepository.findById(doctorId);
+    if (!doctor) {
+      throw new NotFoundError(MESSAGES.DOCTOR_NOT_FOUND);
+    }
+
+    if (doctor.verificationStatus !== VerificationStatus.Approved) {
+      throw new NotFoundError(MESSAGES.DOCTOR_PROFILE_NOT_AVAILABLE);
+    }
+
+    const user = await this._userRepository.findById(doctor.userId.toString());
+    if (!user) {
+      throw new NotFoundError(MESSAGES.USER_NOT_FOUND);
+    }
+
+    return DoctorMapper.toPublicDTO(doctor, user);
+  }
+
+  async getVerifiedDoctors(
+    query?: string,
+    specialty?: string,
+    page: number = PAGINATION.DEFAULT_PAGE,
+    limit: number = PAGINATION.DEFAULT_LIMIT,
+    sort?: string
+  ): Promise<{ doctors: any[]; total: number; page: number; totalPages: number }> {
+    const skip = (page - 1) * limit;
+
+    let sortOptions: any = { createdAt: -1 };
+    if (sort === "price_asc") sortOptions = { VideoFees: 1 };
+    else if (sort === "price_desc") sortOptions = { VideoFees: -1 };
+
+    const result = await this._doctorRepository.getAllDoctors(skip, limit, sortOptions, specialty);
+
+    let filteredDoctors = result.doctors;
+
+    if (query && query.trim()) {
+      const queryLower = query.toLowerCase();
+      filteredDoctors = filteredDoctors.filter((doc) => {
+        const user = doc.userId as any;
+        const nameMatch = (user?.name?.toLowerCase() || "").includes(queryLower);
+        const specialtyMatch = (doc.specialty?.toLowerCase() || "").includes(queryLower);
+        return nameMatch || specialtyMatch;
+      });
+    }
+
+    const mappedDoctors = filteredDoctors.map(doc =>
+      DoctorMapper.toListDTO(doc, doc.userId as any)
+    );
+
+    const hasFilters = (query && query.trim());
+    const filteredTotal = hasFilters ? filteredDoctors.length : result.total;
+    const totalPages = Math.ceil(filteredTotal / limit);
+
     return {
-      id: doctor._id.toString(),
-      userId: doctor.userId.toString(),
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      licenseNumber: doctor.licenseNumber,
-      qualifications: doctor.qualifications,
-      specialty: doctor.specialty,
-      experienceYears: doctor.experienceYears,
-      VideoFees: doctor.VideoFees,
-      ChatFees: doctor.ChatFees,
-      languages: doctor.languages,
-      verificationStatus: doctor.verificationStatus,
-      verificationDocuments: doctor.verificationDocuments,
-      rejectionReason: doctor.rejectionReason,
-      ratingAvg: doctor.ratingAvg,
-      ratingCount: doctor.ratingCount,
-      isActive: doctor.isActive,
-      profileImage: user.profileImage,
-      gender: user.gender,
-      dob: user.dob,
-      createdAt: doctor.createdAt,
-      updatedAt: doctor.updatedAt,
+      doctors: mappedDoctors,
+      total: filteredTotal,
+      page: page,
+      totalPages: totalPages,
     };
   }
 
-  validateDoctorRegistrationData(data: DoctorRegistrationData): void {
-    DoctorValidator.validateRegistrationData(data);
-  }
+  async getRelatedDoctors(doctorId: string): Promise<any[]> {
+    const currentDoctor = await this._doctorRepository.findById(doctorId);
+    if (!currentDoctor) {
+      throw new NotFoundError(MESSAGES.DOCTOR_NOT_FOUND);
+    }
 
-  validateVerificationData(data: SubmitVerificationDTO, files: Express.Multer.File[]): void {
-    DoctorValidator.validateVerificationData(data, files);
-  }
+    if (!currentDoctor.specialty) {
+      return [];
+    }
 
-  validateDoctorProfileUpdate(data: UpdateDoctorProfileDTO): void {
-    DoctorValidator.validateProfileUpdate(data);
+
+    const relatedDocs = await this._doctorRepository.findRelatedDoctors(currentDoctor.specialty, doctorId, 4);
+
+    return relatedDocs.map(doc => {
+      const user = doc.userId as any;
+      return DoctorMapper.toListDTO(doc, user);
+    });
   }
 }

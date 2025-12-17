@@ -1,7 +1,7 @@
 import React from "react";
 
 const Footer: React.FC = () => (
-  <footer className="w-full bg-teal-700 text-white mt-12">
+  <footer className="w-full bg-[#007a85] text-white mt-12">
     <div className="max-w-7xl mx-auto py-10 px-4 grid grid-cols-1 md:grid-cols-3 gap-12">
       {/* Brand & socials */}
       <div>
@@ -16,15 +16,15 @@ const Footer: React.FC = () => (
           Phone: +01 2222 365 / +91 091 2345 6789
         </div>
         <div className="flex space-x-2">
-          <a href="#" className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-teal-700">
+          <a href="#" className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#007a85]">
             {/* Twitter */}
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="..." /></svg>
           </a>
-          <a href="#" className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-teal-700">
+          <a href="#" className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#007a85]">
             {/* Facebook */}
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="..." /></svg>
           </a>
-          <a href="#" className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-teal-700">
+          <a href="#" className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#007a85]">
             {/* Instagram */}
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="..." /></svg>
           </a>
@@ -61,7 +61,7 @@ const Footer: React.FC = () => (
         </div>
       </div>
     </div>
-    <div className="text-center text-xs bg-teal-800 py-3 border-t border-teal-900">
+    <div className="text-center text-xs bg-[#005f69] py-3 border-t border-[#00474f]">
       Copyright &copy; 2025 take-care.com | All Rights Reserved
       <span className="mx-2">|</span>
       <a href="/privacy-policy" className="underline">Privacy Policy</a>
@@ -72,3 +72,4 @@ const Footer: React.FC = () => (
 );
 
 export default Footer;
+

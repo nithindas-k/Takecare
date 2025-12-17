@@ -11,7 +11,7 @@ import type { Address, PatientListItem, DoctorListItem, UserListItem } from "../
 export interface IAdminService {
   loginAdmin(data: LoginAdminDTO): Promise<AdminAuthResponseDTO>;
   getDoctorRequests(): Promise<DoctorRequestDTO[]>;
-  getDoctorRequestDetail(doctorId: string): Promise<DoctorRequestDetailDTO | null>;
+  getDoctorRequestDetail(doctorId: string, baseUrl?: string): Promise<DoctorRequestDetailDTO | null>;
   approveDoctorRequest(doctorId: string): Promise<void>;
   rejectDoctorRequest(doctorId: string, reason: string): Promise<void>;
   getAllUsers(filters?: UserFilterDTO): Promise<UserListItem[]>;

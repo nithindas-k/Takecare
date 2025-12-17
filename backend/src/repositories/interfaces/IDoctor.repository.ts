@@ -15,5 +15,6 @@ export interface IDoctorRepository extends IBaseRepository<IDoctorDocument> {
   getAllDoctorRequests(): Promise<DoctorRequestItem[]>;
   getDoctorRequestDetailById(doctorId: string): Promise<DoctorRequestDetail | null>;
   updateById(id: string | Types.ObjectId, update: Partial<IDoctorDocument>): Promise<IDoctorDocument | null>;
-  getAllDoctors(skip: number, limit: number): Promise<{ doctors: IDoctorDocument[]; total: number }>;
+  getAllDoctors(skip: number, limit: number, sort?: any, specialty?: string): Promise<{ doctors: IDoctorDocument[]; total: number }>;
+  findRelatedDoctors(specialty: string, currentDoctorId: string, limit: number): Promise<IDoctorDocument[]>;
 }

@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import { AppError } from "../errors/AppError";
 import { LoggerService } from "../services/logger.service";
+import { HttpStatus, MESSAGES } from "../constants/constants";
 
 const logger = new LoggerService("ErrorHandler");
-
 
 export const errorHandler = (
     err: Error | AppError,
@@ -19,7 +19,7 @@ export const errorHandler = (
         method: req.method,
     });
 
-   
+
     if (err instanceof AppError) {
         res.status(err.statusCode).json({
             success: false,
@@ -30,7 +30,7 @@ export const errorHandler = (
 
 
     if (err.name === "ValidationError") {
-        res.status(400).json({
+        res.status(HttpStatus.BAD_REQUEST).json({
             success: false,
             message: err.message,
         });
@@ -38,15 +38,15 @@ export const errorHandler = (
     }
 
     if (err.name === "CastError") {
-        res.status(400).json({
+        res.status(HttpStatus.BAD_REQUEST).json({
             success: false,
-            message: "Invalid ID format",
+            message: MESSAGES.INVALID_ID_FORMAT,
         });
         return;
     }
 
-    const message = err instanceof Error ? err.message : "An unexpected error occurred";
-    res.status(500).json({
+    const message = err instanceof Error ? err.message : MESSAGES.SERVER_ERROR;
+    res.status(HttpStatus.INTERNAL_ERROR).json({
         success: false,
         message,
     });

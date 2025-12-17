@@ -1,10 +1,14 @@
 import { Router } from "express";
+import { env } from "../configs/env";
 import passport from "passport";
 import AuthController from "../controllers/auth.controller";
 import { UserRepository } from "repositories/user.repository";
 import { DoctorRepository } from "repositories/doctor.repository";
 import { AuthService } from "services/authService";
 import { OTPService } from "services/otp.service";
+import { AUTH_ROUTES } from "../constants/routes.constants";
+import { AuthValidator } from "../validators/auth.validator";
+import { validate } from "../middlewares/validation.middleware";
 
 const userRepository = new UserRepository();
 const doctorRepository = new DoctorRepository();
@@ -15,7 +19,7 @@ const router = Router();
 
 
 router.get(
-  "/google",
+  AUTH_ROUTES.GOOGLE,
   passport.authenticate("google", {
     scope: ["profile", "email"],
     prompt: "select_account"
@@ -24,9 +28,9 @@ router.get(
 
 
 router.get(
-  "/google/callback",
+  AUTH_ROUTES.GOOGLE_CALLBACK,
   passport.authenticate("google", {
-    failureRedirect: "http://localhost:5173/patient/login", //=
+    failureRedirect: `${env.CLIENT_URL}/patient/login`, //=
     failureMessage: true
   }),
   authController.userGoogleCallback
@@ -34,7 +38,7 @@ router.get(
 
 
 router.get(
-  "/google/doctor",
+  AUTH_ROUTES.GOOGLE_DOCTOR,
   passport.authenticate("google", {
     scope: ["profile", "email"],
     prompt: "select_account",
@@ -48,19 +52,19 @@ router.get(
 
 
 
-router.post("/register", authController.register);
-router.post("/verify-otp", authController.verifyOtp);
-router.post("/resend-otp", authController.resendOtp);
-router.post("/login", authController.login);
+router.post(AUTH_ROUTES.REGISTER, validate(AuthValidator.validateRegisterInput), authController.register);
+router.post(AUTH_ROUTES.VERIFY_OTP, validate(AuthValidator.validateVerifyOtpInput), authController.verifyOtp);
+router.post(AUTH_ROUTES.RESEND_OTP, validate(AuthValidator.validateResendOtpInput), authController.resendOtp);
+router.post(AUTH_ROUTES.LOGIN, validate(AuthValidator.validateLoginInput), authController.login);
 
 
-router.post("/forgot-password", authController.forgotPassword);
-router.post("/forgot-password-verify-otp", authController.forgotPasswordVerify);
-router.post("/reset-password", authController.resetPassword);
+router.post(AUTH_ROUTES.FORGOT_PASSWORD, validate(AuthValidator.validateForgotPasswordInput), authController.forgotPassword);
+router.post(AUTH_ROUTES.FORGOT_PASSWORD_VERIFY_OTP, validate(AuthValidator.validateForgotPasswordVerifyOtpInput), authController.forgotPasswordVerify);
+router.post(AUTH_ROUTES.RESET_PASSWORD, validate(AuthValidator.validateResetPasswordInput), authController.resetPassword);
 
 
-router.post("/refresh-token", authController.refreshToken);
+router.post(AUTH_ROUTES.REFRESH_TOKEN, authController.refreshToken);
 
-router.get("/logout", authController.logout);
+router.get(AUTH_ROUTES.LOGOUT, authController.logout);
 
 export default router;

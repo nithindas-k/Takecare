@@ -1,4 +1,6 @@
 import bcrypt from "bcrypt";
+import { ValidationError } from "../errors/AppError";
+import { MESSAGES } from "../constants/constants";
 
 const SALT_ROUNDS = 10;
 
@@ -15,7 +17,7 @@ export const comparePassword = async (
 
 export const validatePassword = (password: string): void => {
   if (password.length < 6) {
-    throw new Error("Password must be at least 6 characters");
+    throw new ValidationError(MESSAGES.PASSWORD_TOO_WEAK);
   }
 };
 
@@ -24,6 +26,6 @@ export const validatePasswordMatch = (
   confirmPassword: string
 ): void => {
   if (password !== confirmPassword) {
-    throw new Error("Passwords do not match");
+    throw new ValidationError(MESSAGES.PASSWORDS_NOT_MATCH);
   }
 };

@@ -11,6 +11,10 @@ export const env = {
     return process.env.PORT || "5000";
   },
 
+  get CLIENT_URL() {
+    return process.env.CLIENT_URL || "http://localhost:5173";
+  },
+
   get NODE_ENV() {
     return process.env.NODE_ENV || "development";
   },
@@ -84,4 +88,12 @@ export const env = {
   get CLOUDINARY_API_SECRET() {
     return process.env.CLOUDINARY_API_SECRET || "Sgl7yYchZIpYIl83gni3H86SSwo";
   },
+
+  get RAZORPAY_API_KEY(){
+    return  process.env.RAZORPAY_API_KEY || process.env.RAZORPAY_KEY_ID || "rzp_test_RrS9ZYGEKdBbng";
+  },
+
+  get RAZORPAY_API_SECRET(){
+    return  process.env.RAZORPAY_API_SECRET || process.env.RAZORPAY_KEY_SECRET || "bV5EhCsws3DaYkMDo7t1Fe6q";
+  }
 };

@@ -1,6 +1,9 @@
 import axios from "axios";
 import type { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import { API_BASE_URL } from "../utils/constants";
+import authService from "../services/authService";
+
+
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -48,20 +51,34 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      console.error('401 Unauthorized on:', originalRequest.method?.toUpperCase(), originalRequest.url);
+      console.error('401 Response:', error.response.data);
+    }
+
     if (
       error.response?.status === 401 &&
       !originalRequest._retry
     ) {
       originalRequest._retry = true;
       try {
+        
+        console.log('Cookies before refresh:', document.cookie);
         const res = await axios.post(`${API_BASE_URL}/auth/refresh-token`, {}, {
-          withCredentials: true // Ensure cookies are sent
+          withCredentials: true,  
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
 
         console.log("REFRESH TOKEN RESPONSE", res);
 
 
-        const newToken = res.data.result.accessToken;
+        const newToken = res.data?.data?.accessToken;
+        if (!newToken) {
+          throw new Error("Refresh token response missing accessToken");
+        }
+
         localStorage.setItem("authToken", newToken);
         originalRequest.headers["Authorization"] = `Bearer ${newToken}`;
 
@@ -71,14 +88,18 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest);
       } catch (err) {
         console.error("Refresh token failed:", err);
-        window.location.href = "/auth/login";
+        
+        return Promise.reject(error);
       }
     } else if (error.response?.status === 403) {
       const isLoginRequest = originalRequest.url?.includes('/login');
 
+      console.error('403 Forbidden on:', originalRequest.method?.toUpperCase(), originalRequest.url);
+      console.error('403 Response:', error.response.data);
+
       if (!isLoginRequest) {
-        localStorage.clear();
-        window.location.href = "/auth/login";
+        
+        console.error('403: Would redirect to login, but suppressed for debugging');
       }
     }
 

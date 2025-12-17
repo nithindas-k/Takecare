@@ -19,5 +19,6 @@ export interface IAuthService {
   forgotPasswordVerifyOtp(data: ForgotPasswordVerifyOtpDTO): Promise<{ resetToken: string }>;
   resetPassword(data: ResetPasswordDTO): Promise<void>;
   getDoctorStatus(userId: string): Promise<string>;
+  getDoctorId(userId: string): Promise<string | undefined>;
   refreshToken(token: string): Promise<{ accessToken: string }>;
 }

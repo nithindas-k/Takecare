@@ -1,7 +1,7 @@
 import UserModel from "../models/user.model";
-import  {IUserDocument}  from "../types/user.type";
+import { IUserDocument } from "../types/user.type";
 import { BaseRepository } from "./base.repository";
-import { IAdminRepository } from "./interfaces/IDdmin.repository";
+import { IAdminRepository } from "./interfaces/IAdmin.repository";
 
 export class AdminRepository extends BaseRepository<IUserDocument> implements IAdminRepository {
   constructor() {

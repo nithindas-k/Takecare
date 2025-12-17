@@ -2,9 +2,17 @@
 import mongoose, { Schema, Model } from "mongoose";
 import type { IUserDocument } from "../types/user.type";
 import type { JsonTransformReturnType } from "../types/common";
+import { IDGenerator, IDPrefix } from "../utils/idGenerator.util";
 
 const UserSchema = new Schema<IUserDocument>(
   {
+    customId: {
+      type: String,
+      required: false,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
     name: {
       type: String,
       required: true,
@@ -74,6 +82,19 @@ const UserSchema = new Schema<IUserDocument>(
 
 UserSchema.index({ role: 1, isActive: 1 });
 
+UserSchema.pre('save', async function (next) {
+  if (this.isNew && !this.customId) {
+    if (this.role === 'patient') {
+      this.customId = IDGenerator.generatePatientId();
+    } else if (this.role === 'doctor') {
+      this.customId = IDGenerator.generateDoctorId();
+    } else if (this.role === 'admin') {
+
+      this.customId = IDGenerator.generatePatientId();
+    }
+  }
+  next();
+});
 
 const UserModel: Model<IUserDocument> =
   (mongoose.models && (mongoose.models.User as Model<IUserDocument>)) ||

@@ -4,13 +4,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { CloudinaryStorage, Options } from "multer-storage-cloudinary";
 import { Request } from "express";
 import { env } from "../configs/env";
-
-console.log("hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh" + env.CLOUDINARY_CLOUD_NAME)
-
-console.log("Cloudinary Config Debug:");
-console.log("Cloud Name:", env.CLOUDINARY_CLOUD_NAME ? "Exists" : "Missing");
-console.log("API Key:", env.CLOUDINARY_API_KEY ? "Exists" : "Missing");
-console.log("API Secret:", env.CLOUDINARY_API_SECRET ? "Exists" : "Missing");
+import { MESSAGES, UPLOAD_DEFAULTS } from "../constants/constants";
 
 cloudinary.config({
   cloud_name: env.CLOUDINARY_CLOUD_NAME,
@@ -21,8 +15,8 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: "doctor-certificates",
-    allowed_formats: ["jpg", "jpeg", "png", "pdf"],
+    folder: UPLOAD_DEFAULTS.CLOUDINARY_FOLDER,
+    allowed_formats: UPLOAD_DEFAULTS.ALLOWED_FORMATS,
     public_id: (req: Request, file: Express.Multer.File) => {
       const name = file.originalname.split(".")[0].replace(/\s+/g, "-");
       return `${Date.now()}-${name}`;
@@ -30,14 +24,12 @@ const storage = new CloudinaryStorage({
   } as Options["params"],
 });
 
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
-
 const fileFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
-  const ALLOWED_MIMETYPES = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
-  if (ALLOWED_MIMETYPES.includes(file.mimetype)) {
+  const allowedMimeTypes = UPLOAD_DEFAULTS.ALLOWED_MIMETYPES as readonly string[];
+  if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Invalid file type. Only JPEG, PNG and PDF are allowed."));
+    cb(new Error(MESSAGES.DOCTOR_INVALID_FILE_TYPE));
   }
 };
 
@@ -45,7 +37,7 @@ export const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: MAX_FILE_SIZE_BYTES,
+    fileSize: UPLOAD_DEFAULTS.MAX_FILE_SIZE_BYTES,
   },
 });
 

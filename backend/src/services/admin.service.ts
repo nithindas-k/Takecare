@@ -2,33 +2,18 @@ import { generateAccessToken } from "../utils/jwt.util";
 import { comparePassword } from "../utils/password.util";
 import { calculatePagination, buildPaginatedResponse } from "../utils/pagination.util";
 import { toggleEntityStatus } from "../utils/status-toggle.util";
-import mapAdminToResponse from "../mappers/admin.mapper/admin.mapper";
-import { mapToDoctorRequestDTO, mapToDoctorRequestDetailDTO, mapToDoctorListItem } from "../mappers/doctor.mapper/doctor.mapper";
-import { mapToPatientListItem } from "../mappers/patient.mapper/patient.mapper";
-import type {
-  IAdminService,
-} from "../services/interfaces/IAdminService";
-
-import type {
-  LoginAdminDTO,
-  AuthResponseDTO,
-  DoctorRequestDTO,
-  DoctorRequestDetailDTO,
-  UserFilterDTO,
-} from "../dtos/admin.dtos/admin.dto";
-import { IAdminRepository } from "../repositories/interfaces/IDdmin.repository";
-import {
-  IDoctorRepository,
-} from "../repositories/interfaces/IDoctor.repository";
+import { AdminMapper } from "../mappers/admin.mapper";
+import { DoctorMapper } from "../mappers/doctor.mapper";
+import { UserMapper } from "../mappers/user.mapper";
+import { IAdminService } from "../services/interfaces/IAdminService";
+import { LoginAdminDTO, AuthResponseDTO, DoctorRequestDTO, DoctorRequestDetailDTO, UserFilterDTO } from "../dtos/admin.dtos/admin.dto";
+import { IAdminRepository } from "../repositories/interfaces/IAdmin.repository";
+import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
-import type {
-  PatientListItem,
-  DoctorListItem,
-  UserListItem,
-} from "../types/common";
-import type { IUserDocument } from "../types/user.type";
-import type { IDoctorDocument } from "../types/doctor.type";
-import { UnauthorizedError, NotFoundError } from "../errors/AppError";
+import { PatientListItem, DoctorListItem, UserListItem } from "../types/common";
+import { IUserDocument } from "../types/user.type";
+import { IDoctorDocument } from "../types/doctor.type";
+import { UnauthorizedError } from "../errors/AppError";
 import { LoggerService } from "./logger.service";
 import { VerificationStatus } from "../dtos/doctor.dtos/doctor.dto";
 
@@ -44,18 +29,13 @@ export class AdminService implements IAdminService {
   }
 
   async loginAdmin(data: LoginAdminDTO): Promise<AuthResponseDTO> {
-    this.logger.info("Admin login attempt", { email: data.email });
-
     const user = await this._adminRepository.findByEmail(data.email);
 
     if (!user || !user.passwordHash) {
       throw new UnauthorizedError("Invalid email or password");
     }
 
-    const isPasswordValid = await comparePassword(
-      data.password,
-      user.passwordHash
-    );
+    const isPasswordValid = await comparePassword(data.password, user.passwordHash);
 
     if (!isPasswordValid) {
       throw new UnauthorizedError("Invalid email or password");
@@ -63,67 +43,48 @@ export class AdminService implements IAdminService {
 
     const token = generateAccessToken(user);
 
-    this.logger.info("Admin login successful", { email: data.email });
-
     return {
-      user: mapAdminToResponse(user),
+      user: AdminMapper.toResponseDTO(user),
       token,
     };
   }
 
   async getDoctorRequests(): Promise<DoctorRequestDTO[]> {
-    this.logger.debug("Fetching all doctor requests");
-
     const doctors = await this._doctorRepository.getAllDoctorRequests();
-
-    this.logger.debug("Raw doctors from repository", { count: doctors.length });
-
-    return doctors
-      .map(mapToDoctorRequestDTO)
-      .filter((doc): doc is DoctorRequestDTO => doc !== null);
+    return doctors.map(DoctorMapper.toDoctorRequestDTO).filter((doc): doc is DoctorRequestDTO => doc !== null);
   }
 
-  async getDoctorRequestDetail(
-    doctorId: string
-  ): Promise<DoctorRequestDetailDTO | null> {
-    this.logger.debug("Fetching doctor request detail", { doctorId });
-
-    const doc = await this._doctorRepository.getDoctorRequestDetailById(
-      doctorId
-    );
+  async getDoctorRequestDetail(doctorId: string, baseUrl?: string): Promise<DoctorRequestDetailDTO | null> {
+    const doc = await this._doctorRepository.getDoctorRequestDetailById(doctorId);
 
     if (!doc || !doc.userId) {
-      this.logger.warn("Doctor request not found", { doctorId });
       return null;
     }
 
-    return mapToDoctorRequestDetailDTO(doc);
+    const dto = DoctorMapper.toDoctorRequestDetailDTO(doc);
+
+    if (baseUrl && dto.documents && dto.documents.length > 0) {
+      dto.documents = dto.documents.map((p) => (p.startsWith("http") ? p : baseUrl + p));
+    }
+
+    return dto;
   }
 
   async approveDoctorRequest(doctorId: string): Promise<void> {
-    this.logger.info("Approving doctor request", { doctorId });
-
     await this._doctorRepository.updateById(doctorId, {
       verificationStatus: VerificationStatus.Approved,
       isActive: true,
     });
-
-    this.logger.info("Doctor request approved successfully", { doctorId });
   }
 
   async rejectDoctorRequest(doctorId: string, reason: string): Promise<void> {
-    this.logger.info("Rejecting doctor request", { doctorId, reason });
-
-    const result = await this._doctorRepository.updateById(doctorId, {
+    await this._doctorRepository.updateById(doctorId, {
       verificationStatus: VerificationStatus.Rejected,
       rejectionReason: reason,
     });
-
-    this.logger.info("Doctor request rejected successfully", { doctorId, result });
   }
 
   async getAllUsers(filters?: UserFilterDTO): Promise<UserListItem[]> {
-    this.logger.debug("Fetching all users", { filters });
     return [];
   }
 
@@ -137,15 +98,10 @@ export class AdminService implements IAdminService {
     limit: number;
     totalPages: number;
   }> {
-    this.logger.debug("Fetching all patients", { page, limit });
-
     const { skip } = calculatePagination(page, limit);
-    const { patients, total } = await this._userRepository.getAllPatients(
-      skip,
-      limit
-    );
+    const { patients, total } = await this._userRepository.getAllPatients(skip, limit);
 
-    const mappedPatients = patients.map(mapToPatientListItem);
+    const mappedPatients = patients.map(UserMapper.toPatientListItem);
     const paginatedResult = buildPaginatedResponse(mappedPatients, total, page, limit);
 
     return {
@@ -158,16 +114,13 @@ export class AdminService implements IAdminService {
   }
 
   async getPatientById(patientId: string): Promise<PatientListItem | null> {
-    this.logger.debug("Fetching patient by ID", { patientId });
-
     const patient = await this._userRepository.findById(patientId);
 
     if (!patient || patient.role !== "patient") {
-      this.logger.warn("Patient not found", { patientId });
       return null;
     }
 
-    return mapToPatientListItem(patient);
+    return UserMapper.toPatientListItem(patient);
   }
 
   async blockUser(userId: string): Promise<void> {
@@ -188,22 +141,16 @@ export class AdminService implements IAdminService {
     limit: number;
     totalPages: number;
   }> {
-    this.logger.debug("Fetching all doctors", { page, limit });
-
     const { skip } = calculatePagination(page, limit);
-    const { doctors, total } = await this._doctorRepository.getAllDoctors(
-      skip,
-      limit
-    );
+    const { doctors, total } = await this._doctorRepository.getAllDoctors(skip, limit);
 
     const mappedDoctors = doctors
       .map((doc: IDoctorDocument): DoctorListItem | null => {
-        const userId = doc.userId as unknown as IUserDocument;
-        if (!userId) {
-          this.logger.warn("Doctor has no associated user", { doctorId: doc._id.toString() });
+        const user = doc.userId as unknown as IUserDocument;
+        if (!user) {
           return null;
         }
-        return mapToDoctorListItem(doc, userId);
+        return DoctorMapper.toDoctorListItem(doc, user);
       })
       .filter((doc): doc is DoctorListItem => doc !== null);
 

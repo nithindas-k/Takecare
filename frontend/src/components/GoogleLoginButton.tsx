@@ -1,11 +1,11 @@
-// src/components/GoogleLoginButton.tsx
+
 import React from "react";
 
 const GOOGLE_LOGIN_URL = "http://localhost:5000/auth/google";
 
 const GoogleLoginButton: React.FC = () => {
   const handleGoogleLogin = () => {
-    window.location.href = GOOGLE_LOGIN_URL; // Redirect to backend for Google OAuth
+    window.location.href = GOOGLE_LOGIN_URL;
   };
 
   return (

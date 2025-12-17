@@ -1,0 +1,100 @@
+import { Router } from "express";
+import { AppointmentController } from "../controllers/appointment.controller";
+import { AppointmentService } from "services/appointment.service";
+import { AppointmentRepository } from "../repositories/appointment.repository";
+import { DoctorRepository } from "../repositories/doctor.repository";
+import { UserRepository } from "../repositories/user.repository";
+import { ScheduleRepository } from "../repositories/schedule.repository";
+import { authMiddleware } from "../middlewares/auth.middleware";
+import { requireAdmin, requireRole } from "../middlewares/role.middleware";
+import { APPOINTMENT_ROUTES } from "../constants/routes.constants";
+
+const appointmentRouter = Router();
+
+
+const appointmentRepository = new AppointmentRepository();
+const doctorRepository = new DoctorRepository();
+const userRepository = new UserRepository();
+const scheduleRepository = new ScheduleRepository();
+
+const appointmentService = new AppointmentService(
+    appointmentRepository,
+    userRepository,
+    doctorRepository,
+    scheduleRepository
+);
+
+const appointmentController = new AppointmentController(appointmentService);
+
+
+appointmentRouter.post(
+    APPOINTMENT_ROUTES.CREATE,
+    authMiddleware,
+    appointmentController.createAppointment
+);
+
+
+appointmentRouter.get(
+    APPOINTMENT_ROUTES.MY_APPOINTMENTS,
+    authMiddleware,
+    appointmentController.getMyAppointments
+);
+
+
+appointmentRouter.get(
+    APPOINTMENT_ROUTES.DOCTOR_REQUESTS,
+    authMiddleware,
+    appointmentController.getDoctorAppointmentRequests
+);
+
+
+appointmentRouter.get(
+    APPOINTMENT_ROUTES.DOCTOR_APPOINTMENTS,
+    authMiddleware,
+    appointmentController.getDoctorAppointments
+);
+
+
+appointmentRouter.get(
+    APPOINTMENT_ROUTES.ADMIN_ALL,
+    authMiddleware,
+    requireAdmin,
+    appointmentController.getAllAppointments
+);
+
+appointmentRouter.put(
+    APPOINTMENT_ROUTES.CANCEL,
+    authMiddleware,
+    requireRole("admin", "doctor", "patient"),
+    appointmentController.cancelAppointment
+);
+
+
+appointmentRouter.put(
+    APPOINTMENT_ROUTES.APPROVE,
+    authMiddleware,
+    appointmentController.approveAppointmentRequest
+);
+
+
+appointmentRouter.put(
+    APPOINTMENT_ROUTES.REJECT,
+    authMiddleware,
+    appointmentController.rejectAppointmentRequest
+);
+
+
+appointmentRouter.put(
+    APPOINTMENT_ROUTES.COMPLETE,
+    authMiddleware,
+    appointmentController.completeAppointment
+);
+
+
+appointmentRouter.get(
+    APPOINTMENT_ROUTES.GET_BY_ID,
+    authMiddleware,
+    appointmentController.getAppointmentById
+);
+
+export default appointmentRouter;

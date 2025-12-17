@@ -11,6 +11,8 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
     super(DoctorModel);
   }
 
+
+
   async create(data: Partial<IDoctorDocument>): Promise<IDoctorDocument> {
     const userId = typeof data.userId === "string"
       ? new Types.ObjectId(data.userId)
@@ -18,27 +20,58 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
     return await DoctorModel.create({ ...data, userId });
   }
 
-  async findByUserId(userId: string): Promise<IDoctorDocument | null> {
-    return await this.model.findOne({ userId }).exec();
-  }
 
+
+
+  async findByUserId(userId: string): Promise<IDoctorDocument | null> {
+    if (!userId || typeof userId !== 'string') {
+      return null;
+    }
+    try {
+      const userIdObjectId = new Types.ObjectId(userId);
+      return await this.model.findOne({ userId: userIdObjectId }).exec();
+    } catch (error) {
+      return null;
+    }
+  }
   async findAllActive(): Promise<IDoctorDocument[]> {
     return await this.model.find({ isActive: true }).exec();
   }
 
-  async getAllDoctors(skip: number, limit: number): Promise<{ doctors: IDoctorDocument[]; total: number }> {
-    const query = { verificationStatus: VerificationStatus.Approved };
+
+
+  async getAllDoctors(skip: number, limit: number, sort: any = { createdAt: -1 }, specialty?: string): Promise<{ doctors: IDoctorDocument[]; total: number }> {
+    const query: any = { verificationStatus: VerificationStatus.Approved };
+
+    if (specialty) {
+      query.specialty = { $regex: new RegExp(specialty, "i") };
+    }
+
     const doctors = await this.model
       .find(query)
       .populate("userId")
       .skip(skip)
       .limit(limit)
-      .sort({ createdAt: -1 })
+      .sort(sort)
       .exec();
 
     const total = await this.model.countDocuments(query);
 
     return { doctors, total };
+  }
+
+  async findRelatedDoctors(specialty: string, currentDoctorId: string, limit: number): Promise<IDoctorDocument[]> {
+    const query: any = {
+      verificationStatus: VerificationStatus.Approved,
+      specialty: { $regex: new RegExp(specialty, "i") },
+      _id: { $ne: new Types.ObjectId(currentDoctorId) }
+    };
+
+    return await this.model
+      .find(query)
+      .populate("userId")
+      .limit(limit)
+      .exec();
   }
 
   async findPendingVerifications(): Promise<IDoctorDocument[]> {
@@ -51,7 +84,11 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
       .populate("userId")
       .lean();
 
-    return docs.map(doc => this.mapDoctorRequestItem(doc));
+    const result: DoctorRequestItem[] = [];
+    for (let i = 0; i < docs.length; i++) {
+      result.push(this.mapDoctorRequestItem(docs[i]));
+    }
+    return result;
   }
 
   async getAllDoctorRequests(): Promise<DoctorRequestItem[]> {
@@ -61,7 +98,11 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
       .sort({ createdAt: -1 })
       .lean();
 
-    return docs.map(doc => this.mapDoctorRequestItem(doc));
+    const result: DoctorRequestItem[] = [];
+    for (let i = 0; i < docs.length; i++) {
+      result.push(this.mapDoctorRequestItem(docs[i]));
+    }
+    return result;
   }
 
   async getDoctorRequestDetailById(doctorId: string): Promise<DoctorRequestDetail | null> {
@@ -98,16 +139,12 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
   }
 
   async updateById(id: string | Types.ObjectId, update: Partial<IDoctorDocument>): Promise<IDoctorDocument | null> {
-    console.log(`DoctorRepository.updateById called for ${id} with update:`, update);
-    const result = await this.model.findByIdAndUpdate(id, update, { new: true }).exec();
-    console.log("DoctorRepository.updateById result:", result);
-    return result;
+    return await this.model.findByIdAndUpdate(id, update, { new: true }).exec();
   }
 
-  /**
-   * Private helper method to map doctor document to DoctorRequestItem
-   * Eliminates duplicate mapping logic
-   */
+
+
+
   private mapDoctorRequestItem(doc: any): DoctorRequestItem {
     const user = doc.userId as unknown as IUserDocument;
     return {

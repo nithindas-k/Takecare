@@ -11,6 +11,7 @@ export const USER_API_ROUTES = {
   RESEND_OTP: "/auth/resend-otp",
   FORGOT_PASSWORD: "/auth/forgot-password",
   RESET_PASSWORD: "/auth/reset-password",
+  PROFILE: "/users/profile",
 } as const;
 
 export const DOCTOR_API_ROUTES = {
@@ -22,7 +23,14 @@ export const DOCTOR_API_ROUTES = {
   FORGOT_PASSWORD: "/auth/forgot-password",
   RESET_PASSWORD: "/auth/reset-password",
   VERIFICATION: "/doctors/verification",
-  PROFILE: "/doctors/profile",
+  SUBMIT_VERIFICATION: "/doctors/submit-verification", 
+  PROFILE: "/users/profile",
+  SCHEDULE: "/doctors/schedule",
+  SCHEDULE_BY_ID: (doctorId: string): string => `/doctors/schedule/${doctorId}`,
+  BLOCK_DATE: (doctorId?: string): string => doctorId ? `/doctors/schedule/${doctorId}/block-date` : "/doctors/schedule/block-date",
+  UNBLOCK_DATE: (doctorId?: string): string => doctorId ? `/doctors/schedule/${doctorId}/block-date` : "/doctors/schedule/block-date",
+  AVAILABLE_SLOTS: (doctorId: string): string => `/doctors/schedule/${doctorId}/available-slots`,
+  RELATED_DOCTORS: (doctorId: string): string => `/doctors/${doctorId}/related`,
 } as const;
 
 
@@ -79,6 +87,23 @@ export const USER_ROLES = {
   ADMIN: "admin",
 } as const;
 
+export const APPOINTMENT_API_ROUTES = {
+  CREATE: "/appointments",
+  MY_APPOINTMENTS: "/appointments/my-appointments",
+  GET_BY_ID: (id: string): string => `/appointments/${id}`,
+  CANCEL: (id: string): string => `/appointments/${id}/cancel`,
+  DOCTOR_REQUESTS: "/appointments/doctor/requests",
+  DOCTOR_LIST: "/appointments/doctor/list",
+  APPROVE: (id: string): string => `/appointments/${id}/approve`,
+  REJECT: (id: string): string => `/appointments/${id}/reject`,
+  COMPLETE: (id: string): string => `/appointments/${id}/complete`,
+  ADMIN_ALL: "/appointments/admin/all",
+} as const;
+
+export const PAYMENT_API_ROUTES = {
+  RAZORPAY_ORDER: "/payments/razorpay/order",
+  RAZORPAY_VERIFY: "/payments/razorpay/verify",
+} as const;
 
 export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
 export type HttpStatus = (typeof HTTP_STATUS)[keyof typeof HTTP_STATUS];

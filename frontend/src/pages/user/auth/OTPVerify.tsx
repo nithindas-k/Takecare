@@ -7,11 +7,11 @@ import React, {
 } from "react";
 import Button from "../../../components/Button";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { setUser } from "../../../redux/user/userSlice";
 import authService from "../../../services/authService";
 
-interface OTPFormData {
-  otp: string[];
-}
+
 type Errors = {
   otp?: string;
 };
@@ -22,6 +22,7 @@ const RESEND_OTP_INTERVAL = 60;
 const PatientOTPVerify: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const email = (location.state as any)?.email || "";
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
@@ -135,10 +136,13 @@ const PatientOTPVerify: React.FC = () => {
         setServerError("");
         setSuccessMessage("");
 
+        // dispatch(signInStart()); // Removed as requested by user for simple slice
+
         const otpString = otp.join("");
         const response = await authService.userVerifyOtp({
           email,
           otp: otpString,
+          role: "patient",
         });
 
         console.log("OTP Response:", response);
@@ -152,7 +156,17 @@ const PatientOTPVerify: React.FC = () => {
           setErrors({});
 
           authService.saveToken(response.data.token);
-          authService.saveUser(response.data);
+          authService.saveUser(response.data.user);
+
+          // Only store essential user fields in Redux
+          dispatch(setUser({
+            _id: response.data.user.id,
+            name: response.data.user.name,
+            email: response.data.user.email,
+            role: response.data.user.role as 'patient' | 'doctor' | 'admin',
+            phone: response.data.user.phone,
+            profileImage: response.data.user.profileImage,
+          }));
 
           setTimeout(() => {
             navigate("/");
@@ -167,6 +181,7 @@ const PatientOTPVerify: React.FC = () => {
         setServerError(
           error.message || "Verification failed. Please try again."
         );
+        // dispatch(signInFailure(...));
         setOtp(Array(OTP_LENGTH).fill(""));
         inputRefs.current[0]?.focus();
       } finally {
@@ -176,14 +191,14 @@ const PatientOTPVerify: React.FC = () => {
     [email, otp, validate, navigate]
   );
 
- 
+
   const handleResend = useCallback(async () => {
     try {
       setSubmitting(true);
       setServerError("");
       setSuccessMessage("");
 
-      const response = await authService.userResendOtp(email); 
+      const response = await authService.userResendOtp(email);
 
       if (response.success) {
         setSuccessMessage("New OTP sent to your email!");
@@ -292,13 +307,12 @@ const PatientOTPVerify: React.FC = () => {
                     onChange={(e) => handleChange(index, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(index, e)}
                     onPaste={index === 0 ? handlePaste : undefined}
-                    className={`w-12 h-12 sm:w-14 sm:h-14 text-center text-xl font-semibold border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all ${
-                      errors.otp
-                        ? "border-red-500"
-                        : digit
+                    className={`w-12 h-12 sm:w-14 sm:h-14 text-center text-xl font-semibold border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all ${errors.otp
+                      ? "border-red-500"
+                      : digit
                         ? "border-teal-500 bg-teal-50"
                         : "border-gray-300"
-                    }`}
+                      }`}
                     aria-label={`OTP digit ${index + 1}`}
                     disabled={submitting}
                   />
@@ -321,11 +335,10 @@ const PatientOTPVerify: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleResend}
-                  className={`text-teal-500 font-medium transition-all ${
-                    timer > 0 || submitting
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:text-teal-600 hover:underline"
-                  }`}
+                  className={`text-teal-500 font-medium transition-all ${timer > 0 || submitting
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:text-teal-600 hover:underline"
+                    }`}
                   disabled={timer > 0 || submitting}
                 >
                   {timer > 0 ? (

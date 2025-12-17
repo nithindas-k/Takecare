@@ -38,25 +38,39 @@ export interface DoctorResponseDTO extends BaseUserResponseDTO {
 
 export type DoctorAuthResponseDTO = AuthResponseDTO<DoctorResponseDTO>;
 
-/**
- * Update Doctor Profile DTO
- */
+
 export interface UpdateDoctorProfileDTO {
-  biography?: string;
+  name?: string;
+  phone?: string;
+  specialty?: string;
+  qualifications?: string[];
   experienceYears?: number;
   VideoFees?: number;
   ChatFees?: number;
   languages?: string[];
+  licenseNumber?: string;
+  gender?: "male" | "female" | "other";
+  dob?: string | Date;
+  about?:string
 }
 
-/**
- * Verification Response DTO
- */
 export interface VerificationResponseDTO {
   message: string;
   verificationStatus: VerificationStatus;
-  /**
-   * URLs of the uploaded verification documents (e.g., certificates, licenses).
-   */
   verificationDocuments?: string[];
+}
+
+
+export interface VerificationFormDataDTO {
+  degree: string;
+  experience: number;
+  speciality: string;
+  videoFees: number;
+  chatFees: number;
+  licenseNumber?: string | null;
+  languages: string[];
+  verificationStatus: VerificationStatus;
+  rejectionReason?: string | null;
+  verificationDocuments: string[];
+  canResubmit: boolean;
 }

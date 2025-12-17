@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaUserCircle } from "react-icons/fa";
-import { LogOut, User } from "lucide-react";
+import { Bell, LogOut, User } from "lucide-react";
 import authService from "../../services/authService";
 
 const DoctorNavbar: React.FC = () => {
@@ -15,20 +15,30 @@ const DoctorNavbar: React.FC = () => {
   };
 
   return (
-    <nav className="bg-white shadow flex items-center px-8 py-3 justify-between">
-      <div className="flex items-center gap-2">
-        <img src="/logo.svg" alt="DOCCURE" className="w-36 h-12 object-contain" />
+    <nav className="w-full bg-[#00A1B0] shadow-md flex items-center px-6 py-3 justify-between">
+      <div
+        className="flex items-center gap-2 cursor-pointer"
+        onClick={() => navigate("/doctor/dashboard")}
+      >
+        <img src="/doctor.png" alt="Takecare Logo" className="h-7 w-auto" />
+        <span className="text-white font-extrabold text-xl tracking-wide">TAKECARE</span>
       </div>
 
-      <div className="flex items-center gap-6 relative">
-        {/* User Profile Dropdown */}
+      <div className="flex items-center gap-4 relative">
+        <button
+          className="w-9 h-9 bg-white text-[#00A1B0] rounded-full flex items-center justify-center hover:bg-white/90 transition-colors"
+          title="Notifications"
+        >
+          <Bell size={18} />
+        </button>
+
         <div className="relative">
           <button
             onClick={() => setShowLogoutMenu(!showLogoutMenu)}
-            className="cursor-pointer hover:text-teal-500 transition"
+            className="cursor-pointer transition"
             title="Profile Menu"
           >
-            <FaUserCircle className="w-10 h-10 text-gray-400 hover:text-teal-500 transition" />
+            <FaUserCircle className="w-10 h-10 text-white transition" />
           </button>
 
           {/* Dropdown Menu */}
@@ -39,7 +49,7 @@ const DoctorNavbar: React.FC = () => {
                   setShowLogoutMenu(false);
                   navigate("/doctor/profile");
                 }}
-                className="w-full px-4 py-2 text-left text-gray-700 hover:bg-teal-50 hover:text-teal-600 flex items-center gap-2 transition-colors"
+                className="w-full px-4 py-2 text-left text-gray-700 hover:bg-[#00A1B0]/10 hover:text-[#00A1B0] flex items-center gap-2 transition-colors"
               >
                 <User size={18} />
                 <span className="font-medium">Profile</span>

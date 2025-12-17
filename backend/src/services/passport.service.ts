@@ -4,6 +4,7 @@ import { googleOAuthConfig } from "../configs/googleOAuth.config";
 import { UserRepository } from "../repositories/user.repository";
 import { DoctorRepository } from "../repositories/doctor.repository";
 import { VerificationStatus } from "../dtos/doctor.dtos/doctor.dto";
+import { MESSAGES, ROLES } from "../constants/constants";
 
 const userRepository = new UserRepository();
 const doctorRepository = new DoctorRepository();
@@ -14,19 +15,18 @@ passport.use(
   new GoogleStrategy(
     {
       ...googleOAuthConfig,
-      callbackURL: "http://localhost:5000/auth/google/callback",
       passReqToCallback: true,
     },
     async (req: any, accessToken, refreshToken, profile, done) => {
       try {
         const email = profile.emails?.[0]?.value;
         if (!email) {
-          return done(new Error("No email in Google profile"));
+          return done(new Error(MESSAGES.GOOGLE_PROFILE_EMAIL_MISSING));
         }
 
         let user = await userRepository.findByEmail(email);
         const state = req.query.state as string;
-        const targetRole = state === "doctor" ? "doctor" : "patient";
+        const targetRole = state === ROLES.DOCTOR ? ROLES.DOCTOR : ROLES.PATIENT;
 
         if (!user) {
           user = await userRepository.create({
@@ -40,7 +40,7 @@ passport.use(
         }
 
 
-        if (user.role === "doctor") {
+        if (user.role === ROLES.DOCTOR) {
           const existingDoctor = await doctorRepository.findByUserId(user._id.toString());
           if (!existingDoctor) {
             await doctorRepository.create({
