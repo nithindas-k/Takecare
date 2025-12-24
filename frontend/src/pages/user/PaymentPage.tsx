@@ -4,7 +4,7 @@ import { FaCheckCircle, FaArrowLeft, FaCreditCard, FaLock } from 'react-icons/fa
 import NavBar from '../../components/common/NavBar';
 import Footer from '../../components/common/Footer';
 import { Button } from '../../components/ui/button';
-import { X } from 'lucide-react';
+import { ChevronRight } from "lucide-react";
 import {
     Dialog,
     DialogBody,
@@ -17,7 +17,7 @@ import {
 } from '../../components/ui/dialog';
 import { appointmentService } from '../../services/appointmentService';
 import { paymentService } from '../../services/paymentService';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 
 const PaymentPage: React.FC = () => {
     const navigate = useNavigate();
@@ -25,7 +25,7 @@ const PaymentPage: React.FC = () => {
     const [policyOpen, setPolicyOpen] = useState(false);
     const [bookingData, setBookingData] = useState<any>(null);
     const [processing, setProcessing] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'test'>('test');
+    const [paymentMethod, setPaymentMethod] = useState<'razorpay'>('razorpay');
 
     useEffect(() => {
         const token = localStorage.getItem('authToken');
@@ -62,7 +62,7 @@ const PaymentPage: React.FC = () => {
             return;
         }
 
-        if (!window.Razorpay) {
+        if (!(window as any).Razorpay) {
             toast.error('Razorpay SDK not loaded. Please refresh the page.');
             return;
         }
@@ -143,7 +143,7 @@ const PaymentPage: React.FC = () => {
                 }
             };
 
-            const rzp = new window.Razorpay(options);
+            const rzp = new (window as any).Razorpay(options);
             rzp.on('payment.failed', (resp: any) => {
                 console.error('Razorpay payment failed:', resp);
                 toast.error(resp?.error?.description || 'Payment failed');
@@ -158,70 +158,15 @@ const PaymentPage: React.FC = () => {
         }
     };
 
-    const handleTestPay = async () => {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-            toast.error('Session expired. Please login again');
-            navigate('/patient/login');
-            return;
-        }
-
-        if (!acceptedTerms) {
-            toast.error('Please accept the terms and conditions');
-            return;
-        }
-
-        if (!bookingData) {
-            toast.error('Booking data not found');
-            navigate('/');
-            return;
-        }
-
-        setProcessing(true);
-        try {
-            
-            const appointmentPayload = {
-                doctorId: bookingData.doctorId,
-                appointmentDate: bookingData.appointmentDate,
-                appointmentTime: bookingData.appointmentTime,
-                slotId: bookingData.slotId, // Include slotId from bookingData
-                appointmentType: bookingData.appointmentType,
-                reason: bookingData.patientDetails?.reason || bookingData.patientDetails?.symptoms || ''
-            };
-
-            const response = await appointmentService.createAppointment(appointmentPayload);
-
-            if (response && response.success) {
-                // Store appointment ID for success page
-                const appointmentId = response.data?.id || response.data?._id;
-                sessionStorage.setItem('appointmentId', appointmentId);
-                sessionStorage.setItem('appointmentData', JSON.stringify(response.data));
-                
-                // Clear booking data
-                sessionStorage.removeItem('bookingData');
-                
-                toast.success('Appointment created successfully!');
-                navigate('/booking-success');
-            } else {
-                throw new Error(response?.message || 'Failed to create appointment');
-            }
-        } catch (error: any) {
-            console.error('Payment error:', error);
-            toast.error(error?.response?.data?.message || error?.message || 'Failed to create appointment. Please try again.');
-        } finally {
-            setProcessing(false);
-        }
-    };
-
     if (!bookingData) {
         return null;
     }
 
-    const consultationFee = bookingData.appointmentType === 'video' 
+    const consultationFee = bookingData.appointmentType === 'video'
         ? (bookingData.doctor.videoFees || bookingData.doctor.fees || 0)
         : (bookingData.doctor.chatFees || bookingData.doctor.fees || 0);
-    const bookingFee = 10;
-    const total = consultationFee + bookingFee;
+
+    const total = consultationFee;
 
     return (
         <div className="bg-gray-50 min-h-screen font-sans">
@@ -234,7 +179,7 @@ const PaymentPage: React.FC = () => {
                             className="absolute right-4 top-4 w-9 h-9 rounded-full bg-white/80 text-gray-700 border border-gray-200 flex items-center justify-center hover:bg-white transition"
                             aria-label="Close"
                         >
-                            <X size={18} />
+                            <ChevronRight size={18} />
                         </DialogClose>
 
                         <div className="flex items-start gap-3">
@@ -262,7 +207,7 @@ const PaymentPage: React.FC = () => {
                                         </span>
                                         <p>
                                             <span className="font-semibold">Doctor/Admin cancels or rejects:</span>{" "}
-                                            You will get a <span className="font-semibold">full refund</span>.
+                                            You will get a <span className="font-semibold">full refund (100%)</span>.
                                         </p>
                                     </div>
 
@@ -272,7 +217,7 @@ const PaymentPage: React.FC = () => {
                                         </span>
                                         <p>
                                             <span className="font-semibold">Patient cancels:</span>{" "}
-                                            <span className="font-semibold">20%</span> of the amount will be deducted and the rest will be refunded.
+                                            A <span className="font-semibold">30%</span> cancellation fee applies. You will receive a <span className="font-semibold">70% refund</span>.
                                         </p>
                                     </div>
 
@@ -342,47 +287,13 @@ const PaymentPage: React.FC = () => {
 
                             {/* Razorpay (Dummy) */}
                             <div
-                                onClick={() => setPaymentMethod('razorpay')}
-                                className={`border rounded-md p-4 flex items-center justify-between cursor-pointer mb-3 transition-all shadow-sm ${
-                                    paymentMethod === 'razorpay'
-                                        ? 'border-[#00A1B0] bg-[#f0f9ff]'
-                                        : 'border-gray-200 bg-white hover:bg-gray-50'
-                                }`}
+                                className={`border rounded-md p-4 flex items-center justify-between cursor-pointer mb-6 transition-all shadow-sm border-[#00A1B0] bg-[#f0f9ff]`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'razorpay' ? 'border-[#00A1B0]' : 'border-gray-300'}`}
-                                    >
-                                        {paymentMethod === 'razorpay' && (
-                                            <div className="w-2.5 h-2.5 rounded-full bg-[#00A1B0]"></div>
-                                        )}
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center border-[#00A1B0]`}>
+                                        <div className="w-2.5 h-2.5 rounded-full bg-[#00A1B0]"></div>
                                     </div>
-                                    <span className="font-semibold text-gray-800">Razorpay</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold text-gray-600 tracking-tighter">Dummy Button</span>
-                                </div>
-                            </div>
-
-                            {/* Test Payment */}
-                            <div
-                                onClick={() => setPaymentMethod('test')}
-                                className={`border rounded-md p-4 flex items-center justify-between cursor-pointer mb-6 transition-all shadow-sm ${
-                                    paymentMethod === 'test'
-                                        ? 'border-[#00A1B0] bg-[#f0f9ff]'
-                                        : 'border-gray-200 bg-white hover:bg-gray-50'
-                                }`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'test' ? 'border-[#00A1B0]' : 'border-gray-300'}`}
-                                    >
-                                        {paymentMethod === 'test' && (
-                                            <div className="w-2.5 h-2.5 rounded-full bg-[#00A1B0]"></div>
-                                        )}
-                                    </div>
-                                    <span className="font-semibold text-gray-800">Test Payment</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold text-blue-800 tracking-tighter">Test Mode</span>
+                                    <span className="font-semibold text-gray-800">Online Payment</span>
                                 </div>
                             </div>
 
@@ -390,10 +301,6 @@ const PaymentPage: React.FC = () => {
                                 <div className="flex justify-between items-center mb-2">
                                     <span className="text-gray-600 text-sm">Consultation Fee</span>
                                     <span className="text-gray-800 font-semibold">₹{consultationFee.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-gray-600 text-sm">Booking Fee</span>
-                                    <span className="text-gray-800 font-semibold">₹{bookingFee.toFixed(2)}</span>
                                 </div>
                                 <div className="border-t border-gray-200 my-2"></div>
                                 <div className="flex justify-between items-center">
@@ -439,24 +346,13 @@ const PaymentPage: React.FC = () => {
                             </div>
 
                             {/* Pay Button */}
-                            {paymentMethod === 'test' ? (
-                                <Button
-                                    onClick={handleTestPay}
-                                    disabled={!acceptedTerms || processing}
-                                    className="w-full"
-                                >
-                                    {processing ? 'Processing...' : (<><FaLock className="w-3 h-3" /> Test Pay & Book Appointment</>)}
-                                </Button>
-                            ) : (
-                                <Button
-                                    onClick={handleRazorpayPay}
-                                    disabled={!acceptedTerms || processing}
-                                    variant="outline"
-                                    className="w-full"
-                                >
-                                    Pay with Razorpay
-                                </Button>
-                            )}
+                            <Button
+                                onClick={handleRazorpayPay}
+                                disabled={!acceptedTerms || processing}
+                                className="w-full"
+                            >
+                                {processing ? 'Processing...' : 'Pay with Online Payment'}
+                            </Button>
                         </div>
                     </div>
 
@@ -471,10 +367,10 @@ const PaymentPage: React.FC = () => {
                                     <div className="flex items-center gap-3">
                                         <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-100">
                                             <img
-                                                src={bookingData.doctor.image || '/doctor.png'}
+                                                src={bookingData.doctor.image || 'https://via.placeholder.com/150'}
                                                 alt={bookingData.doctor.name}
                                                 className="w-full h-full object-cover"
-                                                onError={(e) => (e.target as HTMLImageElement).src = '/doctor.png'}
+                                                onError={(e) => (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150'}
                                             />
                                         </div>
                                         <div>

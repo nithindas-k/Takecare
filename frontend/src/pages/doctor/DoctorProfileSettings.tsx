@@ -6,7 +6,7 @@ import DoctorLayout from "../../components/Doctor/DoctorLayout";
 import doctorService from "../../services/doctorService";
 import Button from "../../components/Button";
 import { FaUpload, FaTimes } from "react-icons/fa";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 
 interface DoctorProfile {
   name: string;

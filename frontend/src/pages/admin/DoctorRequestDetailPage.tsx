@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import toast, { Toaster } from "react-hot-toast";
+
+import { toast } from "sonner";
 import Sidebar from "../../components/admin/Sidebar";
 import TopNav from "../../components/admin/TopNav";
 import adminService from "../../services/adminService";
@@ -38,24 +39,24 @@ const DoctorRequestDetailPage: React.FC = () => {
   const handleAccept = async () => {
     if (!doctor || isApproving) return;
 
-   
-    toast((t) => (
-      <div className="flex flex-col gap-3">
-        <p className="font-semibold">Approve Dr. {doctor.name}?</p>
+
+    toast.custom((id) => (
+      <div className="flex flex-col gap-3 bg-white p-4 rounded-xl shadow-lg border border-gray-100 w-full max-w-sm">
+        <p className="font-semibold text-gray-800">Approve Dr. {doctor.name}?</p>
         <p className="text-sm text-gray-600">This will grant the doctor access to the system.</p>
         <div className="flex gap-2">
           <button
             onClick={() => {
-              toast.dismiss(t.id);
+              toast.dismiss(id);
               proceedWithApproval();
             }}
-            className="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600"
+            className="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition-colors"
           >
             Yes, Approve
           </button>
           <button
-            onClick={() => toast.dismiss(t.id)}
-            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300"
+            onClick={() => toast.dismiss(id)}
+            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
           >
             Cancel
           </button>
@@ -78,8 +79,8 @@ const DoctorRequestDetailPage: React.FC = () => {
       approvalPromise,
       {
         loading: 'Approving doctor...',
-        success: '✅ Doctor approved successfully!',
-        error: (err) => `❌ ${err.message || 'Failed to approve doctor'}`,
+        success: 'Doctor approved successfully!',
+        error: (err: any) => err.message || 'Failed to approve doctor',
       }
     );
 
@@ -92,7 +93,7 @@ const DoctorRequestDetailPage: React.FC = () => {
         ...doctor,
         status: 'approved',
       });
-      toast.success("Doctor has been approved!", { duration: 2000 });
+      // toast.success("Doctor has been approved!", { duration: 2000 }); // Redundant with promise success
     }
   };
 
@@ -118,8 +119,8 @@ const DoctorRequestDetailPage: React.FC = () => {
       rejectionPromise,
       {
         loading: 'Rejecting doctor...',
-        success: '✅ Doctor rejected successfully!',
-        error: (err) => `❌ ${err.message || 'Failed to reject doctor'}`,
+        success: 'Doctor rejected successfully!',
+        error: (err: any) => err.message || 'Failed to reject doctor',
       }
     );
 
@@ -136,7 +137,7 @@ const DoctorRequestDetailPage: React.FC = () => {
       });
 
       // Show success message and stay on the page
-      toast.success("Rejection reason has been recorded", { duration: 2000 });
+      // toast.success("Rejection reason has been recorded", { duration: 2000 }); // Redundant
     }
   };
 
@@ -162,7 +163,7 @@ const DoctorRequestDetailPage: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Toaster position="top-center" />
+
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <TopNav />
@@ -347,7 +348,7 @@ const DoctorRequestDetailPage: React.FC = () => {
                   <label className="block text-gray-600 text-sm font-medium mb-2">
                     Speciality
                   </label>
-                   <input
+                  <input
                     type="text"
                     className="border border-gray-300 rounded-lg px-4 py-2.5 w-full bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
                     value={doctor.department || ""}

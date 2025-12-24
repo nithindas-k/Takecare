@@ -24,6 +24,12 @@ export interface CompleteAppointmentDTO {
     prescriptionUrl?: string;
 }
 
+export interface RescheduleAppointmentDTO {
+    appointmentDate: Date | string;
+    appointmentTime: string;
+    slotId?: string;
+}
+
 // ==================== RESPONSE DTOs ====================
 
 export interface AppointmentResponseDTO {

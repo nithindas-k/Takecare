@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import toast, { Toaster } from "react-hot-toast";
+import { toast } from "sonner";
 import Sidebar from "../../components/admin/Sidebar";
 import TopNav from "../../components/admin/TopNav";
 import { X, Eye, ChevronLeft, ChevronRight } from "lucide-react";
@@ -25,12 +25,29 @@ const DoctorsListPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalDoctors, setTotalDoctors] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const limit = 10;
+  const [search, setSearch] = useState("");
+  const [specialty, setSpecialty] = useState("");
+  const [isActive, setIsActive] = useState<string>("all");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const limit = 5;
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const fetchDoctors = async (currentPage: number) => {
     setLoading(true);
     try {
-      const res = await adminService.getAllDoctors(currentPage, limit);
+      const filters: any = {};
+      if (debouncedSearch) filters.search = debouncedSearch;
+      if (specialty) filters.specialty = specialty;
+      if (isActive !== "all") filters.isActive = isActive;
+
+      const res = await adminService.getAllDoctors(currentPage, limit, filters);
       if (res.success && res.data) {
         setDoctors(res.data.doctors || []);
         setTotalPages(res.data.totalPages || 1);
@@ -47,7 +64,7 @@ const DoctorsListPage: React.FC = () => {
 
   useEffect(() => {
     fetchDoctors(page);
-  }, [page]);
+  }, [page, debouncedSearch, specialty, isActive]);
 
   const pagesToShow = useMemo(() => {
     const items: number[] = [];
@@ -60,16 +77,16 @@ const DoctorsListPage: React.FC = () => {
   const getInitials = (name?: string) =>
     name
       ? name
-          .split(" ")
-          .map((n) => n[0])
-          .join("")
-          .slice(0, 2)
-          .toUpperCase()
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
       : "??";
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Toaster position="top-center" />
+
 
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
@@ -104,15 +121,43 @@ const DoctorsListPage: React.FC = () => {
           <div className="max-w-7xl mx-auto">
 
             {/* Header */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-800">All Doctors</h1>
-                <p className="text-sm text-gray-500">
-                  Manage all registered doctors
-                </p>
-              </div>
-              <div className="bg-cyan-50 text-cyan-700 px-4 py-2 rounded-lg font-medium text-sm">
-                Total: {totalDoctors}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+              <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-800">Doctors</h1>
+                  <p className="text-sm text-gray-500">Manage all registered doctors ({totalDoctors})</p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+                  <input
+                    type="text"
+                    placeholder="Search name, email..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full sm:w-64 pl-4 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 focus:outline-none text-sm"
+                  />
+
+                  <input
+                    type="text"
+                    placeholder="Specialty..."
+                    value={specialty}
+                    onChange={(e) => setSpecialty(e.target.value)}
+                    className="w-full sm:w-40 pl-4 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 focus:outline-none text-sm"
+                  />
+
+                  <select
+                    value={isActive}
+                    onChange={(e) => {
+                      setIsActive(e.target.value);
+                      setPage(1);
+                    }}
+                    className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 focus:outline-none text-sm bg-white"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="true">Active</option>
+                    <option value="false">Blocked</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -130,7 +175,7 @@ const DoctorsListPage: React.FC = () => {
                 <>
                   {/* Mobile Cards */}
                   <div className="lg:hidden p-4 space-y-4">
-                    {doctors.map((doctor, idx) => (
+                    {doctors.map((doctor) => (
                       <div
                         key={doctor.id}
                         className="border rounded-xl p-4 shadow-sm"
@@ -181,11 +226,10 @@ const DoctorsListPage: React.FC = () => {
 
                           <span className="text-gray-500">Status</span>
                           <span
-                            className={`text-right font-semibold ${
-                              doctor.isActive
-                                ? "text-green-600"
-                                : "text-yellow-600"
-                            }`}
+                            className={`text-right font-semibold ${doctor.isActive
+                              ? "text-green-600"
+                              : "text-yellow-600"
+                              }`}
                           >
                             {doctor.isActive ? "Active" : "Inactive"}
                           </span>
@@ -247,11 +291,10 @@ const DoctorsListPage: React.FC = () => {
 
                             <td className="px-6 py-4">
                               <span
-                                className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                  doctor.isActive
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-yellow-100 text-yellow-700"
-                                }`}
+                                className={`px-3 py-1 rounded-full text-xs font-medium ${doctor.isActive
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-yellow-100 text-yellow-700"
+                                  }`}
                               >
                                 {doctor.isActive ? "Active" : "Inactive"}
                               </span>
@@ -297,11 +340,10 @@ const DoctorsListPage: React.FC = () => {
                       <button
                         key={p}
                         onClick={() => setPage(p)}
-                        className={`w-8 h-8 rounded-full text-sm font-semibold ${
-                          p === page
-                            ? "bg-cyan-500 text-white"
-                            : "border hover:bg-gray-100"
-                        }`}
+                        className={`w-8 h-8 rounded-full text-sm font-semibold ${p === page
+                          ? "bg-cyan-500 text-white"
+                          : "border hover:bg-gray-100"
+                          }`}
                       >
                         {p}
                       </button>

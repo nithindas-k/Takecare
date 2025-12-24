@@ -36,13 +36,30 @@ export class UserRepository extends BaseRepository<IUserDocument> implements IUs
     return await this.model.find({ role, isActive: true });
   }
 
-  async getAllPatients(skip: number, limit: number): Promise<{ patients: IUserDocument[]; total: number }> {
+  async getAllPatients(skip: number, limit: number, filter?: { search?: string; isActive?: boolean }): Promise<{ patients: IUserDocument[]; total: number }> {
+    const query: any = { role: "patient" };
+
+    if (filter) {
+      if (typeof filter.isActive === 'boolean') {
+        query.isActive = filter.isActive;
+      }
+
+      if (filter.search) {
+        const searchRegex = new RegExp(filter.search, "i");
+        query.$or = [
+          { name: searchRegex },
+          { email: searchRegex },
+          { customId: searchRegex }
+        ];
+      }
+    }
+
     const patients = await this.model
-      .find({ role: "patient" })
+      .find(query)
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
-    const total = await this.model.countDocuments({ role: "patient" });
+    const total = await this.model.countDocuments(query);
     return { patients, total };
   }
 }

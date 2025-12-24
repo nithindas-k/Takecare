@@ -11,7 +11,7 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
             sparse: true,
             index: true,
         },
-        
+
         patientId: {
             type: Schema.Types.ObjectId,
             ref: "User",
@@ -19,7 +19,7 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
             index: true,
         },
 
-    
+
         doctorId: {
             type: Schema.Types.ObjectId,
             ref: "Doctor",
@@ -27,21 +27,21 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
             index: true,
         },
 
-        
+
         appointmentType: {
             type: String,
             enum: ["video", "chat"],
             required: true,
         },
 
-        
+
         appointmentDate: {
             type: Date,
             required: true,
             index: true,
         },
         appointmentTime: {
-            type: String, 
+            type: String,
             required: true,
         },
         slotId: {
@@ -49,7 +49,7 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
             required: false,
         },
 
-        
+
         status: {
             type: String,
             enum: ["pending", "confirmed", "cancelled", "completed", "rejected"],
@@ -58,21 +58,36 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
             index: true,
         },
 
-        
+
         consultationFees: {
             type: Number,
             required: true,
             min: 0,
         },
+        adminCommission: {
+            type: Number,
+            required: true,
+            default: 0,
+        },
+        doctorEarnings: {
+            type: Number,
+            required: true,
+            default: 0,
+        },
 
-        
+
         reason: {
             type: String,
             default: null,
             trim: true,
         },
 
-        
+        rescheduleCount: {
+            type: Number,
+            default: 0,
+        },
+
+
         cancelledBy: {
             type: String,
             enum: ["patient", "doctor", "admin", null],
@@ -88,14 +103,14 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
             default: null,
         },
 
-        
+
         rejectionReason: {
             type: String,
             default: null,
             trim: true,
         },
 
-        
+
         paymentStatus: {
             type: String,
             enum: ["pending", "paid", "refunded", "failed"],
@@ -111,7 +126,7 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
             default: null,
         },
 
-        
+
         sessionStartTime: {
             type: Date,
             default: null,
@@ -121,18 +136,18 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
             default: null,
         },
         sessionDuration: {
-            type: Number, 
+            type: Number,
             default: null,
         },
 
-        
+
         doctorNotes: {
             type: String,
             default: null,
             trim: true,
         },
 
-        
+
         prescriptionUrl: {
             type: String,
             default: null,
@@ -162,10 +177,10 @@ AppointmentSchema.index({ status: 1, appointmentDate: 1 });
 
 
 AppointmentSchema.pre('save', async function (next) {
-  if (this.isNew && !this.customId) {
-    this.customId = IDGenerator.generateAppointmentId();
-  }
-  next();
+    if (this.isNew && !this.customId) {
+        this.customId = IDGenerator.generateAppointmentId();
+    }
+    next();
 });
 
 AppointmentSchema.virtual("patient", {

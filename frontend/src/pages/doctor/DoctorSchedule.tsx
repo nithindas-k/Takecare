@@ -5,7 +5,7 @@ import Breadcrumbs from '../../components/common/Breadcrumbs';
 import AlertDialog from '../../components/common/AlertDialog';
 import { FaPlus, FaTrash, FaClock, FaToggleOn, FaToggleOff } from 'react-icons/fa';
 import doctorService from '../../services/doctorService';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface TimeSlot {
     id: string;
@@ -56,7 +56,7 @@ const DoctorSchedule: React.FC = () => {
                 console.log('Schedule data:', JSON.stringify(scheduleData, null, 2));
                 setHasSchedule(true);
 
-                // Create a map of backend days for quick lookup
+                
                 const scheduleMap = new Map();
                 if (scheduleData.weeklySchedule && Array.isArray(scheduleData.weeklySchedule)) {
                     scheduleData.weeklySchedule.forEach((daySchedule: any) => {
@@ -70,13 +70,13 @@ const DoctorSchedule: React.FC = () => {
 
                 console.log('Schedule map size:', scheduleMap.size);
 
-                // Transform backend data to frontend format
+                
                 const transformedSchedule = DAYS_OF_WEEK.map((day) => {
                     const backendDay = scheduleMap.get(day);
                     if (backendDay) {
                         const slots = (backendDay.slots || []).map((slot: any, slotIndex: number) => {
                             const slotData = {
-                                // Use stable ID based on day and slot time
+                               
                                 id: `slot-${day}-${slot.startTime || '09:00'}-${slot.endTime || '10:00'}-${slotIndex}`,
                                 startTime: slot.startTime || '09:00',
                                 endTime: slot.endTime || '10:00',
@@ -94,7 +94,7 @@ const DoctorSchedule: React.FC = () => {
                             slots: slots,
                         };
                     } else {
-                        // Day not found in backend, use default
+                      
                         console.log(`Day ${day} not found in backend, using default`);
                         return {
                             day,
@@ -107,7 +107,7 @@ const DoctorSchedule: React.FC = () => {
                 console.log('Transformed schedule:', JSON.stringify(transformedSchedule, null, 2));
                 setSchedule(transformedSchedule);
             } else {
-                // No schedule exists, use default
+     
                 console.log('No schedule found, using default. Response:', response);
                 setHasSchedule(false);
                 setSchedule(getDefaultSchedule());
@@ -125,13 +125,10 @@ const DoctorSchedule: React.FC = () => {
         const updatedSchedule = [...schedule];
         updatedSchedule[dayIndex].enabled = !updatedSchedule[dayIndex].enabled;
 
-        // Preserve slots when toggling - don't clear them
-        // This allows users to temporarily disable a day without losing their slot configuration
-        // When they re-enable the day, their slots will still be there
+  
 
         setSchedule(updatedSchedule);
 
-        // Auto-save when toggling a day (only if schedule exists)
         if (hasSchedule) {
             setSaving(true);
             try {
@@ -139,8 +136,7 @@ const DoctorSchedule: React.FC = () => {
                     weeklySchedule: updatedSchedule.map(daySchedule => ({
                         day: daySchedule.day,
                         enabled: daySchedule.enabled,
-                        // Preserve ALL slots even for disabled days, including enabled status
-                        // This ensures no data is lost when toggling
+                        
                         slots: (daySchedule.slots || []).map(slot => ({
                             startTime: slot.startTime,
                             endTime: slot.endTime,
@@ -155,18 +151,16 @@ const DoctorSchedule: React.FC = () => {
 
                 if (response?.success) {
                     setHasSchedule(true);
-                    // Don't replace schedule with backend response - keep local state
-                    // The local state already has the correct enabled status and all slots
-                    // This prevents data loss when toggling days
+                  
                     toast.success('Schedule updated successfully');
                 } else {
-                    // Revert on error
+                 
                     setSchedule(schedule);
                     toast.error(response?.message || 'Failed to update schedule');
                 }
             } catch (error) {
                 console.error('Error toggling day:', error);
-                // Revert on error
+              
                 setSchedule(schedule);
                 toast.error('Failed to update schedule');
             } finally {
@@ -180,7 +174,7 @@ const DoctorSchedule: React.FC = () => {
         const daySchedule = updatedSchedule[dayIndex];
         const slotIndex = daySchedule.slots.length;
         const newSlot: TimeSlot = {
-            // Use stable ID based on day and slot index
+      
             id: `slot-${daySchedule.day}-09:00-10:00-${slotIndex}`,
             startTime: '09:00',
             endTime: '10:00',
@@ -217,10 +211,10 @@ const DoctorSchedule: React.FC = () => {
     const confirmDeleteSlot = async () => {
         if (!slotToDelete) return;
 
-        // Store previous schedule for potential revert
+      
         const previousSchedule = [...schedule];
 
-        // Update local state first
+     
         const updatedSchedule = [...schedule];
         updatedSchedule[slotToDelete.dayIndex].slots = updatedSchedule[slotToDelete.dayIndex].slots.filter(
             slot => slot.id !== slotToDelete.slotId
@@ -232,7 +226,6 @@ const DoctorSchedule: React.FC = () => {
 
         setSchedule(updatedSchedule);
 
-        // Save to database immediately
         if (!hasSchedule) {
             setSlotToDelete(null);
             toast.success('Time slot deleted');
@@ -241,7 +234,7 @@ const DoctorSchedule: React.FC = () => {
 
         setSaving(true);
         try {
-            // Transform the updated schedule for backend
+     
             const scheduleData = {
                 weeklySchedule: updatedSchedule.map(daySchedule => ({
                     day: daySchedule.day,
@@ -259,16 +252,15 @@ const DoctorSchedule: React.FC = () => {
             if (response?.success) {
                 toast.success('Time slot deleted successfully');
                 setHasSchedule(true);
-                // Keep local state - it already has the correct data after deletion
-                // Don't replace with backend response to avoid data loss
+                
             } else {
-                // Revert on error
+                
                 setSchedule(previousSchedule);
                 toast.error(response?.message || 'Failed to delete time slot');
             }
         } catch (error) {
             console.error('Error deleting slot:', error);
-            // Revert on error
+         
             setSchedule(previousSchedule);
             toast.error('Failed to delete time slot');
         } finally {
@@ -280,7 +272,7 @@ const DoctorSchedule: React.FC = () => {
     const handleClearAllClick = (dayIndex: number) => {
         const daySchedule = schedule[dayIndex];
 
-        // Check if there are any slots to clear
+     
         if (daySchedule.slots.length === 0) {
             toast.error('No slots to clear');
             return;
@@ -298,7 +290,6 @@ const DoctorSchedule: React.FC = () => {
 
         const dayIndex = dayToClear.dayIndex;
 
-        // Store previous schedule for potential revert
         const previousSchedule = [...schedule];
 
 
@@ -307,7 +298,6 @@ const DoctorSchedule: React.FC = () => {
         updatedSchedule[dayIndex].enabled = false;
         setSchedule(updatedSchedule);
 
-        // Save to database immediately
         if (!hasSchedule) {
             setDayToClear(null);
             toast.success('All slots cleared. Day has been disabled.');
@@ -316,7 +306,7 @@ const DoctorSchedule: React.FC = () => {
 
         setSaving(true);
         try {
-            // Transform the updated schedule for backend
+           
             const scheduleData = {
                 weeklySchedule: updatedSchedule.map(daySchedule => ({
                     day: daySchedule.day,
@@ -334,8 +324,7 @@ const DoctorSchedule: React.FC = () => {
             if (response?.success) {
                 toast.success('All slots cleared successfully. Day has been disabled.');
                 setHasSchedule(true);
-                // Keep local state - it already has the correct data after clearing
-                // Don't replace with backend response to avoid data loss
+           
             } else {
 
                 setSchedule(previousSchedule);

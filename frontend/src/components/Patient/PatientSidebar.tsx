@@ -23,15 +23,15 @@ interface SidebarLink {
     label: string;
     icon?: React.ReactNode;
     path: string;
-    badge?: "notification" | "dot";
+
 }
 
 const sidebarLinks: SidebarLink[] = [
-    { label: "Dashboard", icon: <FaThLarge />, path: "/patient/dashboard" },
+    { label: "Dashboard", icon: <FaThLarge />, path: "/patient/home" },
     { label: "My Appointments", icon: <FaCalendarCheck />, path: "/patient/appointments" },
     { label: "Wallet", icon: <FaWallet />, path: "/patient/wallet" },
     { label: "Invoices", icon: <FaFileInvoice />, path: "/patient/invoices" },
-    { label: "Message", icon: <FaComments />, path: "/patient/messages", badge: "dot" },
+    { label: "Message", icon: <FaComments />, path: "/patient/messages" },
     { label: "Settings", icon: <FaCog />, path: "/patient/profile-settings" },
     { label: "Change Password", icon: <FaLock />, path: "/patient/change-password" },
 ];
@@ -114,17 +114,7 @@ const PatientSidebar: React.FC = () => {
                             </span>
                         )}
                         <span className="truncate text-sm">{link.label}</span>
-                        {link.badge === "notification" && (
-                            <span className="ml-auto flex h-3 w-3">
-                                <span className="animate-ping absolute h-3 w-3 rounded-full bg-yellow-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-400"></span>
-                            </span>
-                        )}
-                        {link.badge === "dot" && (
-                            <span className="ml-auto flex h-3 w-3">
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-400"></span>
-                            </span>
-                        )}
+
                     </li>
                 ))}
 

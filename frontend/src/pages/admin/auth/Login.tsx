@@ -5,6 +5,7 @@ import authService from "../../../services/authService";
 import { setUser } from "../../../redux/user/userSlice";
 import Input from "../../../components/Input";
 import Button from "../../../components/Button";
+import { toast } from "sonner";
 
 interface FormData { email: string; password: string; }
 type Errors = Partial<Record<keyof FormData, string>>;
@@ -16,7 +17,6 @@ const AdminLogin: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({ email: "", password: "" });
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState(false);
-  const [serverError, setServerError] = useState("");
 
   const validate = useCallback((data: FormData): Errors => {
     const e: Errors = {};
@@ -35,7 +35,6 @@ const AdminLogin: React.FC = () => {
     setErrors((prev) => {
       const next = { ...prev }; delete next[name as keyof FormData]; return next;
     });
-    setServerError("");
   }, []);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
@@ -46,26 +45,26 @@ const AdminLogin: React.FC = () => {
 
     try {
       setSubmitting(true);
-      setServerError("");
       const response = await authService.adminLogin({ ...formData, role: "admin" });
       if (response.success && response.data?.token) {
-       
+
         if (response.data?.user) {
           const user = response.data.user;
-         
+
           dispatch(setUser({
             _id: user.id,
             name: user.name,
             email: user.email,
-            role: user.role,
+            role: user.role as any,
           }));
         }
+        toast.success("Admin login successful!");
         navigate("/admin/dashboard");
       } else {
-        setServerError(response.message || "Login failed.");
+        toast.error(response.message || "Login failed.");
       }
     } catch {
-      setServerError("Login failed. Please try again.");
+      toast.error("Login failed. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -90,7 +89,6 @@ const AdminLogin: React.FC = () => {
               {Object.keys(errors).length > 0 && (
                 <div id="formErrors" className="text-sm text-red-600">Please fix the highlighted fields.</div>
               )}
-              {serverError && (<div className="text-sm text-red-600">{serverError}</div>)}
               <Input
                 label="Email"
                 name="email"

@@ -150,7 +150,7 @@ class DoctorService {
     }
   }
 
-  async getAllDoctors(params: { page?: number; limit?: number; query?: string; specialty?: string; sort?: string }) {
+  async getAllDoctors(params: { page?: number; limit?: number; query?: string; specialty?: string; sort?: string; experience?: number; rating?: number }) {
     try {
       const response = await axiosInstance.get('/doctors', {
         params: {
@@ -159,6 +159,8 @@ class DoctorService {
           query: params.query || '',
           specialty: params.specialty || '',
           sort: params.sort || '',
+          experience: params.experience,
+          rating: params.rating,
         },
       });
       return response.data;

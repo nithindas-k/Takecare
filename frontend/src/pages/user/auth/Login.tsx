@@ -6,6 +6,7 @@ import { useDispatch } from "react-redux";
 import { setUser } from "../../../redux/user/userSlice";
 import authService from "../../../services/authService";
 import type { LoginRequest, ApiResponse, LoginResponse } from "../../../types";
+import { toast } from "sonner";
 
 interface FormData extends LoginRequest { }
 
@@ -24,7 +25,6 @@ const PatientLogin: React.FC = () => {
 
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState<boolean>(false);
-  const [serverError, setServerError] = useState<string>("");
 
   const validate = useCallback((data: FormData): Errors => {
     const e: Errors = {};
@@ -45,7 +45,6 @@ const PatientLogin: React.FC = () => {
       delete next[name as keyof FormData];
       return next;
     });
-    setServerError("");
   }, []);
 
   // Redux
@@ -60,10 +59,7 @@ const PatientLogin: React.FC = () => {
 
       try {
         setSubmitting(true);
-        setServerError("");
 
-
-        // Call authService.userLogin
         const response: ApiResponse<LoginResponse> = await authService.userLogin(formData);
 
         if (response.success && response.data) {
@@ -73,12 +69,15 @@ const PatientLogin: React.FC = () => {
 
           // Only store essential user fields in Redux
           dispatch(setUser({
+            _id: response.data.user.id,
             name: response.data.user.name,
             email: response.data.user.email,
             role: response.data.user.role as 'patient' | 'doctor' | 'admin',
             phone: response.data.user.phone,
             profileImage: response.data.user.profileImage,
           }));
+
+          toast.success("Login successful! Welcome back.");
 
           // Clear form
           setFormData({ email: "", password: "", role: "patient" });
@@ -87,15 +86,11 @@ const PatientLogin: React.FC = () => {
           // Navigate to dashboard
           navigate("/");
         } else {
-          const errorMsg = response.message || "Login failed";
-          setServerError(errorMsg);
-
+          toast.error(response.message || "Login failed");
         }
       } catch (err: any) {
         console.error("Login error:", err);
-        const errorMsg = err.message || "An error occurred. Please try again.";
-        setServerError(errorMsg);
-
+        toast.error(err.message || "An error occurred. Please try again.");
       } finally {
         setSubmitting(false);
       }
@@ -138,22 +133,6 @@ const PatientLogin: React.FC = () => {
               {Object.keys(errors).length > 0 && (
                 <div id="formErrors" className="text-sm text-red-600">
                   Please fix the highlighted fields.
-                </div>
-              )}
-
-              {/* Server error */}
-              {serverError && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-800 rounded-lg">
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <p className="text-sm font-medium">{serverError}</p>
-                  </div>
                 </div>
               )}
 

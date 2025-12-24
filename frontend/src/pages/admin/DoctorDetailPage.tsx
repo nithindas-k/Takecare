@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import toast, { Toaster } from "react-hot-toast";
+import { toast } from "sonner";
 import {
     ArrowLeft,
     Mail,
@@ -113,7 +113,7 @@ const DoctorDetailPage: React.FC = () => {
 
     return (
         <div className="flex min-h-screen bg-gray-50 font-sans">
-            <Toaster position="top-center" />
+
 
             <AlertDialog
                 open={confirmOpen}
@@ -298,7 +298,7 @@ const DoctorDetailPage: React.FC = () => {
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Chat Consultation</td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><IndianRupee className="inline w-4 h-4 mr-1" />{doctor.ChatFees}</td>
                                             </tr>
-                                        </tbody>    
+                                        </tbody>
                                     </table>
                                 </div>
                             </div>

@@ -6,16 +6,17 @@ import { AdminMapper } from "../mappers/admin.mapper";
 import { DoctorMapper } from "../mappers/doctor.mapper";
 import { UserMapper } from "../mappers/user.mapper";
 import { IAdminService } from "../services/interfaces/IAdminService";
-import { LoginAdminDTO, AuthResponseDTO, DoctorRequestDTO, DoctorRequestDetailDTO, UserFilterDTO } from "../dtos/admin.dtos/admin.dto";
+import { LoginAdminDTO, AuthResponseDTO, DoctorRequestDTO, DoctorRequestDetailDTO, UserFilterDTO, DoctorFilterDTO } from "../dtos/admin.dtos/admin.dto";
 import { IAdminRepository } from "../repositories/interfaces/IAdmin.repository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
 import { PatientListItem, DoctorListItem, UserListItem } from "../types/common";
 import { IUserDocument } from "../types/user.type";
 import { IDoctorDocument } from "../types/doctor.type";
-import { UnauthorizedError } from "../errors/AppError";
+import { AppError, UnauthorizedError } from "../errors/AppError";
 import { LoggerService } from "./logger.service";
 import { VerificationStatus } from "../dtos/doctor.dtos/doctor.dto";
+import { HttpStatus } from "../constants/constants";
 
 export class AdminService implements IAdminService {
   private readonly logger: LoggerService;
@@ -89,8 +90,7 @@ export class AdminService implements IAdminService {
   }
 
   async getAllPatients(
-    page: number = 1,
-    limit: number = 10
+    filters: UserFilterDTO
   ): Promise<{
     patients: PatientListItem[];
     total: number;
@@ -98,8 +98,16 @@ export class AdminService implements IAdminService {
     limit: number;
     totalPages: number;
   }> {
+    const page = filters.page || 1;
+    const limit = filters.limit || 10;
     const { skip } = calculatePagination(page, limit);
-    const { patients, total } = await this._userRepository.getAllPatients(skip, limit);
+
+    const repoFilter = {
+      search: filters.search,
+      isActive: typeof filters.isActive === 'string' ? filters.isActive === 'true' : (filters.isActive as boolean | undefined)
+    };
+
+    const { patients, total } = await this._userRepository.getAllPatients(skip, limit, repoFilter);
 
     const mappedPatients = patients.map(UserMapper.toPatientListItem);
     const paginatedResult = buildPaginatedResponse(mappedPatients, total, page, limit);
@@ -132,8 +140,7 @@ export class AdminService implements IAdminService {
   }
 
   async getAllDoctors(
-    page: number = 1,
-    limit: number = 10
+    filters: DoctorFilterDTO
   ): Promise<{
     doctors: DoctorListItem[];
     total: number;
@@ -141,8 +148,18 @@ export class AdminService implements IAdminService {
     limit: number;
     totalPages: number;
   }> {
+    const page = filters.page || 1;
+    const limit = filters.limit || 10;
     const { skip } = calculatePagination(page, limit);
-    const { doctors, total } = await this._doctorRepository.getAllDoctors(skip, limit);
+
+    const repoFilter = {
+      specialty: filters.specialty,
+      search: filters.search,
+      verificationStatus: filters.verificationStatus,
+      isActive: typeof filters.isActive === 'string' ? filters.isActive === 'true' : (filters.isActive as boolean | undefined)
+    };
+
+    const { doctors, total } = await this._doctorRepository.getAllDoctors(skip, limit, repoFilter);
 
     const mappedDoctors = doctors
       .map((doc: IDoctorDocument): DoctorListItem | null => {

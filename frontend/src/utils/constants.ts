@@ -23,7 +23,7 @@ export const DOCTOR_API_ROUTES = {
   FORGOT_PASSWORD: "/auth/forgot-password",
   RESET_PASSWORD: "/auth/reset-password",
   VERIFICATION: "/doctors/verification",
-  SUBMIT_VERIFICATION: "/doctors/submit-verification", 
+  SUBMIT_VERIFICATION: "/doctors/submit-verification",
   PROFILE: "/users/profile",
   SCHEDULE: "/doctors/schedule",
   SCHEDULE_BY_ID: (doctorId: string): string => `/doctors/schedule/${doctorId}`,
@@ -97,12 +97,19 @@ export const APPOINTMENT_API_ROUTES = {
   APPROVE: (id: string): string => `/appointments/${id}/approve`,
   REJECT: (id: string): string => `/appointments/${id}/reject`,
   COMPLETE: (id: string): string => `/appointments/${id}/complete`,
+  RESCHEDULE: (id: string): string => `/appointments/${id}/reschedule`,
   ADMIN_ALL: "/appointments/admin/all",
 } as const;
 
 export const PAYMENT_API_ROUTES = {
   RAZORPAY_ORDER: "/payments/razorpay/order",
   RAZORPAY_VERIFY: "/payments/razorpay/verify",
+} as const;
+
+export const WALLET_API_ROUTES = {
+  MY_WALLET: "/wallet/my-wallet",
+  ADMIN_EARNINGS: "/wallet/admin/earnings-overview",
+  ADMIN_TRANSACTIONS: "/wallet/admin/transactions",
 } as const;
 
 export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];

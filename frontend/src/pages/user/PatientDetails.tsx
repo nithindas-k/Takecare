@@ -4,7 +4,7 @@ import { FaCheckCircle, FaArrowLeft } from 'react-icons/fa';
 import NavBar from '../../components/common/NavBar';
 import Footer from '../../components/common/Footer';
 import userService from '../../services/userService';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 
 const PatientDetails: React.FC = () => {
     const navigate = useNavigate();

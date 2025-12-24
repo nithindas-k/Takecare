@@ -97,13 +97,13 @@ export class DoctorValidator {
             throw new ValidationError(MESSAGES.DOCTOR_LICENSE_INVALID);
         }
 
-        // Check if we have at least one document (new files OR existing documents)
+       
         const hasDocuments = files.length > 0 || hasExistingDocuments;
         if (!hasDocuments) {
             throw new ValidationError(MESSAGES.DOCTOR_MISSING_DOCUMENTS);
         }
 
-        // Only validate new files if any were uploaded
+  
         if (files.length > 0) {
             if (files.length > 10) {
                 throw new ValidationError(MESSAGES.DOCTOR_TOO_MANY_DOCUMENTS);

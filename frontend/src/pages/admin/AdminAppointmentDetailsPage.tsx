@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import toast, { Toaster } from "react-hot-toast";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   Calendar,
@@ -127,10 +127,10 @@ const AdminAppointmentDetailsPage: React.FC = () => {
       setAppointment((prev: any) =>
         prev
           ? {
-              ...prev,
-              status: "cancelled",
-              cancellationReason: cancelReason.trim(),
-            }
+            ...prev,
+            status: "cancelled",
+            cancellationReason: cancelReason.trim(),
+          }
           : prev
       );
       setCancelDialogOpen(false);
@@ -145,7 +145,7 @@ const AdminAppointmentDetailsPage: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Toaster position="top-center" />
+
 
       <Dialog
         open={cancelDialogOpen}
@@ -262,236 +262,236 @@ const AdminAppointmentDetailsPage: React.FC = () => {
             )}
 
             {!loading && appointment && (
-            <div className="mt-5 sm:mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-              <div className="lg:col-span-12">
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                  <div className="p-5 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#00A1B0]/10 text-[#00A1B0] flex items-center justify-center font-bold flex-shrink-0">
-                        #
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-sm text-gray-500">Appointment ID</div>
-                        <div className="font-semibold text-gray-900 truncate font-mono">{appointmentDisplayId}</div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusStyles(
-                          appointment?.status
-                        )}`}
-                      >
-                        {formatStatus(appointment?.status)}
-                      </span>
-                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#00A1B0]/10 text-[#00A1B0]">
-                        {String(appointment?.appointmentType || appointment?.type || "").toLowerCase() === "video" ? "Video call" : "Chat"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-5 sm:p-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-                      <div className="lg:col-span-4">
-                        <div className="rounded-2xl border border-gray-100 p-4 sm:p-5 h-full">
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                              <Stethoscope size={16} className="text-[#00A1B0]" />
-                              Doctor
-                            </div>
-                            <span className="text-xs font-semibold text-gray-400">#{doctor?.customId || doctor?.id || doctor?._id || "-"}</span>
-                          </div>
-
-                          <div className="flex items-center gap-4">
-                            {doctorUser?.profileImage ? (
-                              <img
-                                src={doctorUser.profileImage}
-                                alt={doctorUser?.name || "Doctor"}
-                                className="w-14 h-14 rounded-2xl object-cover border border-gray-200"
-                              />
-                            ) : (
-                              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-teal-500 text-white flex items-center justify-center font-bold">
-                                {getInitials(doctorUser?.name || "-")}
-                              </div>
-                            )}
-
-                            <div className="min-w-0">
-                              <div className="font-semibold text-gray-900 truncate">
-                                {doctorUser?.name || "-"}
-                              </div>
-                              <div className="text-xs text-gray-500 truncate">
-                                {doctor?.specialty || doctorUser?.specialty || "Doctor"}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="mt-4 space-y-2 text-sm">
-                            <div className="flex items-center gap-2 text-gray-600">
-                              <Mail size={14} className="text-gray-400" />
-                              <span className="truncate">{doctorUser?.email || "-"}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-gray-600">
-                              <Phone size={14} className="text-gray-400" />
-                              <span className="truncate">{doctorUser?.phone || "-"}</span>
-                            </div>
-                          </div>
+              <div className="mt-5 sm:mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-12">
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="p-5 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-[#00A1B0]/10 text-[#00A1B0] flex items-center justify-center font-bold flex-shrink-0">
+                          #
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm text-gray-500">Appointment ID</div>
+                          <div className="font-semibold text-gray-900 truncate font-mono">{appointmentDisplayId}</div>
                         </div>
                       </div>
 
-                      <div className="lg:col-span-4">
-                        <div className="rounded-2xl border border-gray-100 p-4 sm:p-5 h-full">
-                          <div className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                            <ShieldCheck size={16} className="text-[#00A1B0]" />
-                            Appointment Info
-                          </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusStyles(
+                            appointment?.status
+                          )}`}
+                        >
+                          {formatStatus(appointment?.status)}
+                        </span>
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#00A1B0]/10 text-[#00A1B0]">
+                          {String(appointment?.appointmentType || appointment?.type || "").toLowerCase() === "video" ? "Video call" : "Chat"}
+                        </span>
+                      </div>
+                    </div>
 
-                          <div className="grid grid-cols-2 gap-3 text-sm">
-                            <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
-                              <div className="text-xs text-gray-500 mb-1 flex items-center gap-2">
-                                <Calendar size={14} className="text-gray-400" />
-                                Date
+                    <div className="p-5 sm:p-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                        <div className="lg:col-span-4">
+                          <div className="rounded-2xl border border-gray-100 p-4 sm:p-5 h-full">
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                <Stethoscope size={16} className="text-[#00A1B0]" />
+                                Doctor
                               </div>
-                              <div className="font-semibold text-gray-900">
-                                {appointment?.appointmentDate
-                                  ? new Date(appointment.appointmentDate).toLocaleDateString(undefined, {
+                              <span className="text-xs font-semibold text-gray-400">#{doctor?.customId}</span>
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                              {doctorUser?.profileImage ? (
+                                <img
+                                  src={doctorUser.profileImage}
+                                  alt={doctorUser?.name || "Doctor"}
+                                  className="w-14 h-14 rounded-2xl object-cover border border-gray-200"
+                                />
+                              ) : (
+                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-teal-500 text-white flex items-center justify-center font-bold">
+                                  {getInitials(doctorUser?.name || "-")}
+                                </div>
+                              )}
+
+                              <div className="min-w-0">
+                                <div className="font-semibold text-gray-900 truncate">
+                                  {doctorUser?.name || "-"}
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  {doctor?.specialty || doctorUser?.specialty || "Doctor"}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="mt-4 space-y-2 text-sm">
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <Mail size={14} className="text-gray-400" />
+                                <span className="truncate">{doctorUser?.email || "-"}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <Phone size={14} className="text-gray-400" />
+                                <span className="truncate">{doctorUser?.phone || "-"}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="lg:col-span-4">
+                          <div className="rounded-2xl border border-gray-100 p-4 sm:p-5 h-full">
+                            <div className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                              <ShieldCheck size={16} className="text-[#00A1B0]" />
+                              Appointment Info
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                                <div className="text-xs text-gray-500 mb-1 flex items-center gap-2">
+                                  <Calendar size={14} className="text-gray-400" />
+                                  Date
+                                </div>
+                                <div className="font-semibold text-gray-900">
+                                  {appointment?.appointmentDate
+                                    ? new Date(appointment.appointmentDate).toLocaleDateString(undefined, {
                                       day: "2-digit",
                                       month: "short",
                                       year: "numeric",
                                     })
-                                  : "-"}
+                                    : "-"}
+                                </div>
+                              </div>
+
+                              <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                                <div className="text-xs text-gray-500 mb-1 flex items-center gap-2">
+                                  <Clock size={14} className="text-gray-400" />
+                                  Time
+                                </div>
+                                <div className="font-semibold text-gray-900">{appointment?.appointmentTime || appointment?.time || "-"}</div>
+                              </div>
+
+                              <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                                <div className="text-xs text-gray-500 mb-1">Department</div>
+                                <div className="font-semibold text-gray-900">{doctor.specialty}</div>
+                              </div>
+
+                              <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                                <div className="text-xs text-gray-500 mb-1">Visit Type</div>
+                                <div className="font-semibold text-gray-900">{appointment?.visitType || appointment?.consultationType || "-"}</div>
+                              </div>
+
+                              <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                                <div className="text-xs text-gray-500 mb-1 flex items-center gap-2">
+                                  <BadgeIndianRupee size={14} className="text-gray-400" />
+                                  Price
+                                </div>
+                                <div className="font-semibold text-gray-900">₹{appointment?.consultationFees ?? appointment?.fees ?? 0}</div>
+                              </div>
+
+                              <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                                <div className="text-xs text-gray-500 mb-1 flex items-center gap-2">
+                                  <CreditCard size={14} className="text-gray-400" />
+                                  Payment
+                                </div>
+                                <div className="font-semibold text-gray-900 capitalize">
+                                  {appointment?.paymentStatus || appointment?.payment?.status || "-"}
+                                </div>
                               </div>
                             </div>
 
-                            <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
-                              <div className="text-xs text-gray-500 mb-1 flex items-center gap-2">
-                                <Clock size={14} className="text-gray-400" />
-                                Time
-                              </div>
-                              <div className="font-semibold text-gray-900">{appointment?.appointmentTime || appointment?.time || "-"}</div>
-                            </div>
-
-                            <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
-                              <div className="text-xs text-gray-500 mb-1">Department</div>
-                              <div className="font-semibold text-gray-900">{doctor.specialty}</div>
-                            </div>
-
-                            <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
-                              <div className="text-xs text-gray-500 mb-1">Visit Type</div>
-                              <div className="font-semibold text-gray-900">{appointment?.visitType || appointment?.consultationType || "-"}</div>
-                            </div>
-
-                            <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
-                              <div className="text-xs text-gray-500 mb-1 flex items-center gap-2">
-                                <BadgeIndianRupee size={14} className="text-gray-400" />
-                                Price
-                              </div>
-                              <div className="font-semibold text-gray-900">₹{appointment?.consultationFees ?? appointment?.fees ?? 0}</div>
-                            </div>
-
-                            <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
-                              <div className="text-xs text-gray-500 mb-1 flex items-center gap-2">
-                                <CreditCard size={14} className="text-gray-400" />
-                                Payment
-                              </div>
-                              <div className="font-semibold text-gray-900 capitalize">
-                                {appointment?.paymentStatus || appointment?.payment?.status || "-"}
-                              </div>
+                            <div className="mt-4">
+                              <Button
+                                type="button"
+                                onClick={() => {
+                                  setCancelReason("");
+                                  setCancelDialogOpen(true);
+                                }}
+                                disabled={!canCancel}
+                                className="w-full bg-red-500 text-white hover:bg-red-600"
+                              >
+                                Cancel
+                              </Button>
                             </div>
                           </div>
+                        </div>
 
-                          <div className="mt-4">
-                            <Button
-                              type="button"
-                              onClick={() => {
-                                setCancelReason("");
-                                setCancelDialogOpen(true);
-                              }}
-                              disabled={!canCancel}
-                              className="w-full bg-red-500 text-white hover:bg-red-600"
-                            >
-                              Cancel
-                            </Button>
+                        <div className="lg:col-span-4">
+                          <div className="rounded-2xl border border-gray-100 p-4 sm:p-5 h-full">
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                <User size={16} className="text-[#00A1B0]" />
+                                Patient
+                              </div>
+                              <span className="text-xs font-semibold text-gray-400">#{patient?.customId || patient?.id || patient?._id || "-"}</span>
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                              {patientUser?.profileImage ? (
+                                <img
+                                  src={patientUser.profileImage}
+                                  alt={patientUser?.name || "Patient"}
+                                  className="w-14 h-14 rounded-2xl object-cover border border-gray-200"
+                                />
+                              ) : (
+                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 text-white flex items-center justify-center font-bold">
+                                  {getInitials(patientUser?.name || "-")}
+                                </div>
+                              )}
+
+                              <div className="min-w-0">
+                                <div className="font-semibold text-gray-900 truncate">
+                                  {patientUser?.name || "-"}
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  {"Patient"}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="mt-4 space-y-2 text-sm">
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <Mail size={14} className="text-gray-400" />
+                                <span className="truncate">{patientUser?.email || "-"}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <Phone size={14} className="text-gray-400" />
+                                <span className="truncate">{patientUser?.phone || "-"}</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      <div className="lg:col-span-4">
-                        <div className="rounded-2xl border border-gray-100 p-4 sm:p-5 h-full">
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                              <User size={16} className="text-[#00A1B0]" />
-                              Patient
-                            </div>
-                            <span className="text-xs font-semibold text-gray-400">#{patient?.customId || patient?.id || patient?._id || "-"}</span>
-                          </div>
-
-                          <div className="flex items-center gap-4">
-                            {patientUser?.profileImage ? (
-                              <img
-                                src={patientUser.profileImage}
-                                alt={patientUser?.name || "Patient"}
-                                className="w-14 h-14 rounded-2xl object-cover border border-gray-200"
-                              />
-                            ) : (
-                              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 text-white flex items-center justify-center font-bold">
-                                {getInitials(patientUser?.name || "-")}
-                              </div>
-                            )}
-
-                            <div className="min-w-0">
-                              <div className="font-semibold text-gray-900 truncate">
-                                {patientUser?.name || "-"}
-                              </div>
-                              <div className="text-xs text-gray-500 truncate">
-                                {"Patient"}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="mt-4 space-y-2 text-sm">
-                            <div className="flex items-center gap-2 text-gray-600">
-                              <Mail size={14} className="text-gray-400" />
-                              <span className="truncate">{patientUser?.email || "-"}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-gray-600">
-                              <Phone size={14} className="text-gray-400" />
-                              <span className="truncate">{patientUser?.phone || "-"}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                        <div className="text-xs text-gray-500 mb-1">Appointment Date & Time</div>
-                        <div className="font-semibold text-gray-900">
-                          {appointment?.appointmentDate
-                            ? new Date(appointment.appointmentDate).toLocaleDateString(undefined, {
+                      <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                          <div className="text-xs text-gray-500 mb-1">Appointment Date & Time</div>
+                          <div className="font-semibold text-gray-900">
+                            {appointment?.appointmentDate
+                              ? new Date(appointment.appointmentDate).toLocaleDateString(undefined, {
                                 day: "2-digit",
                                 month: "short",
                                 year: "numeric",
                               })
-                            : "-"}
-                          {" · "}
-                          {appointment?.appointmentTime || appointment?.time || "-"}
+                              : "-"}
+                            {" · "}
+                            {appointment?.appointmentTime || appointment?.time || "-"}
+                          </div>
                         </div>
-                      </div>
-                      <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                        <div className="text-xs text-gray-500 mb-1">Type of Appointment</div>
-                        <div className="font-semibold text-gray-900 capitalize">
-                          {appointment?.appointmentType || appointment?.type || "-"}
+                        <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                          <div className="text-xs text-gray-500 mb-1">Type of Appointment</div>
+                          <div className="font-semibold text-gray-900 capitalize">
+                            {appointment?.appointmentType || appointment?.type || "-"}
+                          </div>
                         </div>
-                      </div>
-                      <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                        <div className="text-xs text-gray-500 mb-1">Department</div>
-                        <div className="font-semibold text-gray-900">{doctor?.specialty || appointment?.department || "-"}</div>
+                        <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                          <div className="text-xs text-gray-500 mb-1">Department</div>
+                          <div className="font-semibold text-gray-900">{doctor?.specialty || appointment?.department || "-"}</div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
             )}
           </div>
         </main>

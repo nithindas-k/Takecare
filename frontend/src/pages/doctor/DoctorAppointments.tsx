@@ -5,7 +5,7 @@ import DoctorLayout from '../../components/Doctor/DoctorLayout';
 import Breadcrumbs from '../../components/common/Breadcrumbs';
 import { FaVideo, FaComments, FaEye, FaSearch } from 'react-icons/fa';
 import { appointmentService } from '../../services/appointmentService';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 

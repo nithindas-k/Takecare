@@ -18,6 +18,8 @@ import doctorRouter from './routers/doctor.router';
 import adminRouter from "./routers/admin.route";
 import appointmentRouter from "./routers/appointment.router";
 import paymentRouter from "./routers/payment.router";
+import walletRouter from "./routers/wallet.router";
+
 import { errorHandler } from "./middlewares/error-handler.middleware";
 import { LoggerService } from "./services/logger.service";
 
@@ -79,6 +81,8 @@ app.use(BASE_ROUTES.DOCTORS, doctorRouter);
 app.use(BASE_ROUTES.ADMIN, adminRouter);
 app.use(BASE_ROUTES.APPOINTMENTS, appointmentRouter);
 app.use(BASE_ROUTES.PAYMENTS, paymentRouter);
+app.use(BASE_ROUTES.WALLET, walletRouter);
+
 
 
 app.use((req, res) => {
@@ -92,7 +96,11 @@ app.use((req, res) => {
 
 app.use(errorHandler);
 
-const PORT = Number(env.PORT); //=
+import { createServer } from "http";
+
+const PORT = Number(env.PORT);
+
+// const httpServer = createServer(app);
 
 const startServer = async () => {
   try {

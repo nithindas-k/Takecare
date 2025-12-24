@@ -3,7 +3,7 @@ import { IAppointmentController } from "./interfaces/IAppointment.controller";
 import { IAppointmentService } from "../services/interfaces/IAppointmentService";
 import { sendSuccess } from "../utils/response.util";
 import { AppError } from "../errors/AppError";
-import { MESSAGES, HttpStatus, PAGINATION, ROLES } from "../constants/constants";
+import { MESSAGES, HttpStatus, PAGINATION, ROLES, APPOINTMENT_STATUS } from "../constants/constants";
 
 export class AppointmentController implements IAppointmentController {
     constructor(private _appointmentService: IAppointmentService) { }
@@ -74,12 +74,10 @@ export class AppointmentController implements IAppointmentController {
             const page = parseInt(req.query.page as string) || PAGINATION.DEFAULT_PAGE;
             const limit = parseInt(req.query.limit as string) || PAGINATION.DEFAULT_LIMIT;
 
-            const result = await this._appointmentService.getMyAppointments(
+            const result = await this._appointmentService.listAppointments(
                 userId,
                 userRole,
-                status,
-                page,
-                limit
+                { status, page, limit }
             );
 
             sendSuccess(res, result);
@@ -157,6 +155,42 @@ export class AppointmentController implements IAppointmentController {
         }
     };
 
+    rescheduleAppointment = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+            const appointmentId = req.params.id;
+
+            const { appointmentDate, appointmentTime, slotId } = req.body;
+
+            if (!userId || !userRole) {
+                throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+            }
+
+            if (!appointmentDate || !appointmentTime) {
+                throw new AppError(
+                    "Appointment date and time are required for rescheduling",
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+
+            const updatedAppointment = await this._appointmentService.rescheduleAppointment(
+                appointmentId,
+                userId,
+                userRole,
+                { appointmentDate, appointmentTime, slotId }
+            );
+
+            sendSuccess(res, updatedAppointment, "Appointment rescheduled successfully. Waiting for doctor approval.");
+        } catch (err: unknown) {
+            next(err);
+        }
+    };
+
     getDoctorAppointmentRequests = async (
         req: Request,
         res: Response,
@@ -173,10 +207,10 @@ export class AppointmentController implements IAppointmentController {
             const page = parseInt(req.query.page as string) || PAGINATION.DEFAULT_PAGE;
             const limit = parseInt(req.query.limit as string) || PAGINATION.DEFAULT_LIMIT;
 
-            const result = await this._appointmentService.getDoctorAppointmentRequests(
+            const result = await this._appointmentService.listAppointments(
                 userId,
-                page,
-                limit
+                userRole,
+                { status: APPOINTMENT_STATUS.PENDING, page, limit }
             );
 
             sendSuccess(res, result);
@@ -202,11 +236,10 @@ export class AppointmentController implements IAppointmentController {
             const page = parseInt(req.query.page as string) || PAGINATION.DEFAULT_PAGE;
             const limit = parseInt(req.query.limit as string) || PAGINATION.DEFAULT_LIMIT;
 
-            const result = await this._appointmentService.getDoctorAppointments(
+            const result = await this._appointmentService.listAppointments(
                 userId,
-                status,
-                page,
-                limit
+                userRole,
+                { status, page, limit }
             );
 
             sendSuccess(res, result);
@@ -308,15 +341,25 @@ export class AppointmentController implements IAppointmentController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const status = req.query.status as string | undefined;
-            const page = parseInt(req.query.page as string) || PAGINATION.DEFAULT_PAGE;
-            const limit = parseInt(req.query.limit as string) || PAGINATION.DEFAULT_LIMIT;
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
 
-            const result = await this._appointmentService.getAllAppointments(
-                status,
-                page,
-                limit
-            );
+            if (!userId || !userRole) {
+                throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+            }
+
+            const filters = {
+                status: req.query.status as string,
+                search: req.query.search as string,
+                startDate: req.query.startDate as string,
+                endDate: req.query.endDate as string,
+                doctorId: req.query.doctorId as string,
+                patientId: req.query.patientId as string,
+                page: parseInt(req.query.page as string) || PAGINATION.DEFAULT_PAGE,
+                limit: parseInt(req.query.limit as string) || PAGINATION.DEFAULT_LIMIT,
+            };
+
+            const result = await this._appointmentService.listAppointments(userId, userRole, filters);
 
             sendSuccess(res, result);
         } catch (err: unknown) {

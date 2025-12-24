@@ -1,9 +1,11 @@
-// src/components/Doctor/DoctorNavbar.tsx
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaUserCircle } from "react-icons/fa";
-import { Bell, LogOut, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import authService from "../../services/authService";
+
+
 
 const DoctorNavbar: React.FC = () => {
   const navigate = useNavigate();
@@ -25,12 +27,7 @@ const DoctorNavbar: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-4 relative">
-        <button
-          className="w-9 h-9 bg-white text-[#00A1B0] rounded-full flex items-center justify-center hover:bg-white/90 transition-colors"
-          title="Notifications"
-        >
-          <Bell size={18} />
-        </button>
+
 
         <div className="relative">
           <button

@@ -2,7 +2,6 @@ import React, { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { setUser } from "./redux/user/userSlice";
-import authService from "./services/authService";
 import Lenis from 'lenis';
 
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -55,6 +54,11 @@ import AdminAppointmentsListPage from "./pages/admin/AppointmentsListPage";
 import AdminAppointmentDetailsPage from "./pages/admin/AdminAppointmentDetailsPage";
 import AuthCallback from "./pages/AuthCallback";
 
+// Wallet and Earnings
+import UserWallet from "./pages/user/Wallet";
+import DoctorWallet from "./pages/doctor/Wallet";
+import AdminEarnings from "./pages/admin/Earnings";
+
 const NotFound: React.FC = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-100">
     <div className="text-center">
@@ -70,11 +74,11 @@ const NotFound: React.FC = () => (
   </div>
 );
 
-import { Toaster } from 'react-hot-toast';
+import { Toaster } from "./components/ui/sonner";
 import userService from "./services/userService";
 
 const App: React.FC = () => {
-   const dispatch =  useDispatch()
+  const dispatch = useDispatch()
 
   useEffect(() => {
     const lenis = new Lenis()
@@ -85,18 +89,15 @@ const App: React.FC = () => {
     }
 
     requestAnimationFrame(raf)
-   
 
-    console.log("global fetching..........")
-    
-    async function userFetch(){
-        const response = await userService.getProfile()
-        const user =  response.data;
+    async function userFetch() {
+      const response = await userService.getProfile()
+      const user = response.data;
 
-        dispatch(setUser(user))
-    } 
+      dispatch(setUser(user))
+    }
     userFetch()
-    
+
     return () => {
       lenis.destroy()
     }
@@ -104,7 +105,7 @@ const App: React.FC = () => {
 
   return (
     <BrowserRouter>
-      <Toaster position="top-right" />
+      <Toaster />
       <Routes>
 
         <Route path="/" element={<ProtectedRoute role="patient" >
@@ -194,6 +195,14 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="wallet"
+            element={
+              <ProtectedRoute role="doctor">
+                <DoctorWallet />
+              </ProtectedRoute>
+            }
+          />
         </Route>
 
 
@@ -255,6 +264,14 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute role="patient">
                 <AppointmentDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="wallet"
+            element={
+              <ProtectedRoute role="patient">
+                <UserWallet />
               </ProtectedRoute>
             }
           />
@@ -345,6 +362,15 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
 
+          />
+
+          <Route
+            path="earnings"
+            element={
+              <ProtectedRoute role="admin">
+                <AdminEarnings />
+              </ProtectedRoute>
+            }
           />
 
         </Route>

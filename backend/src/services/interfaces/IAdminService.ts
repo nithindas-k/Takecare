@@ -5,6 +5,7 @@ import type {
   DoctorRequestDTO,
   DoctorRequestDetailDTO,
   UserFilterDTO,
+  DoctorFilterDTO,
 } from "../../dtos/admin.dtos/admin.dto";
 import type { Address, PatientListItem, DoctorListItem, UserListItem } from "../../types/common";
 
@@ -17,9 +18,9 @@ export interface IAdminService {
   getAllUsers(filters?: UserFilterDTO): Promise<UserListItem[]>;
   blockUser(userId: string): Promise<void>;
   unblockUser(userId: string): Promise<void>;
-  getAllDoctors(page?: number, limit?: number): Promise<{ doctors: DoctorListItem[]; total: number; page: number; limit: number; totalPages: number }>;
+  getAllDoctors(filters: DoctorFilterDTO): Promise<{ doctors: DoctorListItem[]; total: number; page: number; limit: number; totalPages: number }>;
   banDoctor(doctorId: string): Promise<void>;
   unbanDoctor(doctorId: string): Promise<void>;
-  getAllPatients(page?: number, limit?: number): Promise<{ patients: PatientListItem[]; total: number; page: number; limit: number; totalPages: number }>;
+  getAllPatients(filters: UserFilterDTO): Promise<{ patients: PatientListItem[]; total: number; page: number; limit: number; totalPages: number }>;
   getPatientById(patientId: string): Promise<PatientListItem | null>;
 }

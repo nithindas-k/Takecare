@@ -73,6 +73,34 @@ export interface DoctorRequestDetailDTO {
  * User Filter DTO
  */
 export interface UserFilterDTO {
-    role?: string;
-    isActive?: boolean;
+    search?: string;
+    isActive?: boolean | string;
+    page?: number;
+    limit?: number;
+}
+
+/**
+ * Doctor Filter DTO
+ */
+export interface DoctorFilterDTO {
+    search?: string;
+    specialty?: string;
+    verificationStatus?: string;
+    isActive?: boolean | string;
+    page?: number;
+    limit?: number;
+}
+
+/**
+ * Appointment Filter DTO
+ */
+export interface AppointmentFilterDTO {
+    status?: string;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+    doctorId?: string;
+    patientId?: string;
+    page?: number;
+    limit?: number;
 }

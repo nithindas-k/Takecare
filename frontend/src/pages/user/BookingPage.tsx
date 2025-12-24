@@ -4,7 +4,7 @@ import { FaCheckCircle, FaArrowLeft } from 'react-icons/fa';
 import NavBar from '../../components/common/NavBar';
 import Footer from '../../components/common/Footer';
 import doctorService from '../../services/doctorService';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface AvailableSlot {
     startTime: string;
@@ -14,7 +14,7 @@ interface AvailableSlot {
     bookedCount?: number;
     maxPatients?: number;
     slotId?: string;
-    booked:boolean
+    booked: boolean
 }
 
 const getSlotKey = (slot: AvailableSlot) => {
@@ -122,6 +122,19 @@ const BookingPage: React.FC = () => {
             daysArr.push(formatDate(d));
         }
         return daysArr;
+    };
+
+    const formatTimeTo12h = (timeStr: string) => {
+        if (!timeStr) return 'N/A';
+        return timeStr.split('-').map(part => {
+            const [hours, minutes] = part.trim().split(':');
+            let h = parseInt(hours);
+            const m = minutes || '00';
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12;
+            h = h ? h : 12;
+            return `${h}:${m} ${ampm}`;
+        }).join(' - ');
     };
 
     const days = generateDays(startDate);
@@ -269,7 +282,6 @@ const BookingPage: React.FC = () => {
                                             <h4 className="text-[#002f33] font-semibold text-sm mb-4">{period}</h4>
                                             <div className="flex flex-wrap gap-4">
                                                 {slots.map((slot) => {
-                                                    const slotTime = `${slot.startTime} - ${slot.endTime}`;
                                                     const isSelected =
                                                         !!selectedSlot && getSlotKey(selectedSlot) === getSlotKey(slot);
                                                     const isFullyBooked = !slot?.available;
@@ -287,7 +299,7 @@ const BookingPage: React.FC = () => {
                                                                         : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
                                                                     }`}
                                                             >
-                                                                {slotTime}
+                                                                {formatTimeTo12h(slot.startTime)} - {formatTimeTo12h(slot.endTime)}
                                                             </button>
                                                         </div>
                                                     );

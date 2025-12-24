@@ -6,7 +6,7 @@ import Breadcrumbs from '../../components/common/Breadcrumbs';
 import { FaVideo, FaComments, FaPhone, FaTimes, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import { appointmentService } from '../../services/appointmentService';
 import { API_BASE_URL } from '../../utils/constants';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 

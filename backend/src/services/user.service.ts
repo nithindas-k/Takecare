@@ -80,7 +80,7 @@ export class UserService implements IUserService {
       }
     }
 
-    // Re-fetch to return latest data
+
     const updatedUser = await this.userRepository.findById(userId);
     if (user.role === ROLES.DOCTOR) {
       doctor = await this.doctorRepository.findByUserId(userId);

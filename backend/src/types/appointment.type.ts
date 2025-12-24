@@ -3,9 +3,9 @@ import { Document, Types } from "mongoose";
 export type AppointmentType = "video" | "chat";
 
 export type AppointmentStatus =
-    | "pending" 
-    | "confirmed" 
-    | "completed" 
+    | "pending"
+    | "confirmed"
+    | "completed"
     | "rejected"
     | "cancelled";
 
@@ -18,17 +18,20 @@ export type CancelledBy = "patient" | "doctor" | "admin" | null;
 
 export interface IAppointment {
     customId?: string;
-    
+
     patientId: Types.ObjectId;
     doctorId: Types.ObjectId;
 
     appointmentType: AppointmentType;
     appointmentDate: Date;
-    appointmentTime: string; 
-    slotId?: string; 
+    appointmentTime: string;
+    slotId?: string;
     status: AppointmentStatus;
     consultationFees: number;
+    adminCommission: number;
+    doctorEarnings: number;
     reason?: string | null;
+    rescheduleCount?: number;
 
     cancelledBy?: CancelledBy;
     cancellationReason?: string | null;
@@ -42,7 +45,7 @@ export interface IAppointment {
 
     sessionStartTime?: Date | null;
     sessionEndTime?: Date | null;
-    sessionDuration?: number | null; 
+    sessionDuration?: number | null;
 
     doctorNotes?: string | null;
     prescriptionUrl?: string | null;

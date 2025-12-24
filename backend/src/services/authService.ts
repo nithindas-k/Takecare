@@ -71,11 +71,13 @@ export class AuthService implements IAuthService {
     }
 
     const token = generateAccessToken(user, doctorId);
+    const refreshToken = generateRefreshToken(user, doctorId);
     await this._otpService.deleteOtp(data.email);
 
     return {
       user: UserMapper.toDTO(user),
       token,
+      refreshToken,
     };
   }
 

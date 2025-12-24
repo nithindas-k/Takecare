@@ -6,11 +6,28 @@ import { PAYMENT_ROUTES } from "../constants/routes.constants";
 import { PaymentController } from "../controllers/payment.controller";
 import { PaymentService } from "../services/payment.service";
 import { AppointmentRepository } from "../repositories/appointment.repository";
+import { DoctorRepository } from "../repositories/doctor.repository";
+import { UserRepository } from "../repositories/user.repository";
+import { WalletRepository } from "../repositories/wallet.repository";
+import { WalletService } from "../services/wallet.service";
 
 const paymentRouter = Router();
 
 const appointmentRepository = new AppointmentRepository();
-const paymentService = new PaymentService(appointmentRepository);
+const doctorRepository = new DoctorRepository();
+const userRepository = new UserRepository();
+const walletRepository = new WalletRepository();
+const walletService = new WalletService(walletRepository);
+
+
+
+const paymentService = new PaymentService(
+    appointmentRepository,
+    doctorRepository,
+    userRepository,
+    walletService,
+
+);
 const paymentController = new PaymentController(paymentService);
 
 paymentRouter.post(

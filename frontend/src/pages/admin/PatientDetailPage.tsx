@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import toast, { Toaster } from "react-hot-toast";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   Mail,
@@ -86,7 +86,7 @@ const PatientDetailPage: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Toaster position="top-center" />
+
 
       <AlertDialog
         open={confirmOpen}
@@ -173,17 +173,16 @@ const PatientDetailPage: React.FC = () => {
                 <button
                   onClick={() => setConfirmOpen(true)}
                   disabled={processing}
-                  className={`w-full md:w-auto px-6 py-3 rounded-xl font-semibold text-white transition ${
-                    patient.isActive
+                  className={`w-full md:w-auto px-6 py-3 rounded-xl font-semibold text-white transition ${patient.isActive
                       ? "bg-red-500 hover:bg-red-600"
                       : "bg-green-500 hover:bg-green-600"
-                  }`}
+                    }`}
                 >
                   {processing
                     ? "Processing..."
                     : patient.isActive
-                    ? "Block Patient"
-                    : "Unblock Patient"}
+                      ? "Block Patient"
+                      : "Unblock Patient"}
                 </button>
               </div>
             </div>
@@ -254,11 +253,10 @@ const PatientDetailPage: React.FC = () => {
                   <div>
                     <p className="text-xs text-gray-500">Status</p>
                     <p
-                      className={`font-bold ${
-                        patient.isActive
+                      className={`font-bold ${patient.isActive
                           ? "text-green-600"
                           : "text-red-600"
-                      }`}
+                        }`}
                     >
                       {patient.isActive ? "Active" : "Blocked"}
                     </p>

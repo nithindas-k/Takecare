@@ -37,7 +37,7 @@ export class UserController {
         throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
       }
 
-      let dto: UnifiedUpdateProfileDTO = req.body;
+      const dto: UnifiedUpdateProfileDTO = req.body;
 
       if (typeof req.body.information === 'string') {
         try {

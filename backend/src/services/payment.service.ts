@@ -2,9 +2,13 @@ import crypto from "crypto";
 import Razorpay from "razorpay";
 import { env } from "../configs/env";
 import { AppError } from "../errors/AppError";
-import { HttpStatus, MESSAGES, PAYMENT_DEFAULTS, PAYMENT_STATUS } from "../constants/constants";
+import { HttpStatus, MESSAGES, PAYMENT_DEFAULTS, PAYMENT_STATUS, ROLES } from "../constants/constants";
 import type { IAppointmentRepository } from "../repositories/interfaces/IAppointmentRepository";
+import type { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
+import type { IUserRepository } from "../repositories/interfaces/IUser.repository";
 import type { IPaymentService } from "./interfaces/IPaymentService";
+import type { IWalletService } from "./interfaces/IWalletService";
+
 import type { CreateRazorpayOrderDTO, VerifyRazorpayPaymentDTO } from "../dtos/payment.dtos/razorpay.dto";
 import { LoggerService } from "./logger.service";
 
@@ -12,7 +16,13 @@ export class PaymentService implements IPaymentService {
     private readonly logger: LoggerService;
     private readonly razorpay: any;
 
-    constructor(private _appointmentRepository: IAppointmentRepository) {
+    constructor(
+        private _appointmentRepository: IAppointmentRepository,
+        private _doctorRepository: IDoctorRepository,
+        private _userRepository: IUserRepository,
+        private _walletService: IWalletService,
+
+    ) {
         this.logger = new LoggerService("PaymentService");
 
         this.razorpay = new (Razorpay as any)({
@@ -123,9 +133,39 @@ export class PaymentService implements IPaymentService {
             paymentId: razorpay_payment_id,
         });
 
-        this.logger.info("Razorpay payment verified", {
+    
+        const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
+        const patient = await this._userRepository.findById(appointment.patientId.toString());
+
+        if (doctor) {
+            await this._walletService.addMoney(
+                doctor.userId.toString(),
+                appointment.doctorEarnings,
+                `Consultation Earnings from ${appointment.customId || appointmentId}`,
+                appointment._id.toString(),
+                "Consultation Fee"
+            );
+
+
+        }
+
+        const admins = await this._userRepository.findByRole(ROLES.ADMIN);
+        const adminUser = admins[0];
+        if (adminUser) {
+            await this._walletService.addMoney(
+                adminUser._id.toString(),
+                appointment.adminCommission,
+                `Commission from ${appointment.customId || appointmentId}`,
+                appointment._id.toString(),
+                "Consultation Fee"
+            );
+        }
+
+        this.logger.info("Razorpay payment verified and split performed", {
             appointmentId,
             paymentId: razorpay_payment_id,
+            doctorEarnings: appointment.doctorEarnings,
+            adminCommission: appointment.adminCommission,
         });
 
         return {

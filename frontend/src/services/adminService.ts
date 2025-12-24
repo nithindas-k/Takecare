@@ -38,9 +38,11 @@ class AdminService {
     }
   }
 
-  async getAllDoctors(page: number = 1, limit: number = 10) {
+  async getAllDoctors(page: number = 1, limit: number = 10, filters: { search?: string; specialty?: string; verificationStatus?: string; isActive?: boolean | string } = {}) {
     try {
-      const res = await axiosInstance.get(`${ADMIN_API_ROUTES.GET_ALL_DOCTORS}?page=${page}&limit=${limit}`);
+      const res = await axiosInstance.get(ADMIN_API_ROUTES.GET_ALL_DOCTORS, {
+        params: { page, limit, ...filters }
+      });
       return res.data;
     } catch (error: any) {
       return { success: false, message: error.response?.data?.message || "Error", data: [] };
@@ -66,9 +68,11 @@ class AdminService {
     }
   }
 
-  async getAllPatients(page: number = 1, limit: number = 10) {
+  async getAllPatients(page: number = 1, limit: number = 10, filters: { search?: string; isActive?: boolean | string } = {}) {
     try {
-      const res = await axiosInstance.get(`${ADMIN_API_ROUTES.GET_ALL_PATIENTS}?page=${page}&limit=${limit}`);
+      const res = await axiosInstance.get(ADMIN_API_ROUTES.GET_ALL_PATIENTS, {
+        params: { page, limit, ...filters }
+      });
       return res.data;
     } catch (error: any) {
       return { success: false, message: error.response?.data?.message || "Error fetching patients", data: [] };

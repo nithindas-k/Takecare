@@ -5,6 +5,8 @@ import { AppointmentRepository } from "../repositories/appointment.repository";
 import { DoctorRepository } from "../repositories/doctor.repository";
 import { UserRepository } from "../repositories/user.repository";
 import { ScheduleRepository } from "../repositories/schedule.repository";
+import { WalletService } from "../services/wallet.service";
+import { WalletRepository } from "../repositories/wallet.repository";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireAdmin, requireRole } from "../middlewares/role.middleware";
 import { APPOINTMENT_ROUTES } from "../constants/routes.constants";
@@ -16,12 +18,19 @@ const appointmentRepository = new AppointmentRepository();
 const doctorRepository = new DoctorRepository();
 const userRepository = new UserRepository();
 const scheduleRepository = new ScheduleRepository();
+const walletRepository = new WalletRepository();
+
+const walletService = new WalletService(walletRepository);
+
+
 
 const appointmentService = new AppointmentService(
     appointmentRepository,
     userRepository,
     doctorRepository,
-    scheduleRepository
+    scheduleRepository,
+    walletService,
+
 );
 
 const appointmentController = new AppointmentController(appointmentService);
@@ -67,6 +76,13 @@ appointmentRouter.put(
     authMiddleware,
     requireRole("admin", "doctor", "patient"),
     appointmentController.cancelAppointment
+);
+
+appointmentRouter.put(
+    APPOINTMENT_ROUTES.RESCHEDULE,
+    authMiddleware,
+    requireRole("admin", "patient"),
+    appointmentController.rescheduleAppointment
 );
 
 

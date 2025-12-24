@@ -18,69 +18,67 @@ export class DoctorService implements IDoctorService {
     this.logger = new LoggerService("DoctorService");
   }
 
-async submitVerification(
-  userId: string,
-  data: SubmitVerificationDTO,
-  files: Express.Multer.File[],
-  hasExistingDocuments: boolean = false,
-  existingDocuments: string[] = []
-): Promise<VerificationResponseDTO> {
-  const user = await this._userRepository.findById(userId);
-  if (!user) {
-    throw new NotFoundError(MESSAGES.USER_NOT_FOUND);
+  async submitVerification(
+    userId: string,
+    data: SubmitVerificationDTO,
+    files: Express.Multer.File[],
+    hasExistingDocuments: boolean = false,
+    existingDocuments: string[] = []
+  ): Promise<VerificationResponseDTO> {
+    const user = await this._userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundError(MESSAGES.USER_NOT_FOUND);
+    }
+
+    if (user.role !== ROLES.DOCTOR) {
+      throw new UnauthorizedError(MESSAGES.DOCTOR_ONLY_VERIFICATION);
+    }
+
+    const doctor = await this._doctorRepository.findByUserId(userId);
+    if (!doctor) {
+      throw new NotFoundError(MESSAGES.DOCTOR_PROFILE_NOT_FOUND);
+    }
+
+    const hasDocuments = files.length > 0 || hasExistingDocuments;
+    DoctorValidator.validateVerificationData(data, files, hasDocuments);
+
+    let documentUrls: string[];
+
+    if (files.length > 0) {
+     
+      const newFileUrls = files.map((file) => file.path);
+      const existingUrls = hasExistingDocuments ? existingDocuments : [];
+      documentUrls = [...existingUrls, ...newFileUrls];
+    } else if (hasExistingDocuments) {
+    
+      documentUrls = existingDocuments.length > 0
+        ? existingDocuments
+        : (doctor.verificationDocuments || []);
+    } else {
+      throw new AppError(MESSAGES.DOCTOR_MISSING_DOCUMENTS, STATUS.BAD_REQUEST);
+    }
+
+    const updateData = {
+      licenseNumber: data.licenseNumber || null,
+      qualifications: [data.degree],
+      experienceYears: data.experience,
+      specialty: data.speciality,
+      VideoFees: data.videoFees,
+      ChatFees: data.chatFees,
+      languages: data.languages || [],
+      verificationDocuments: documentUrls,
+      verificationStatus: VerificationStatus.Pending,
+      rejectionReason: null,
+    };
+
+    await this._doctorRepository.updateById(doctor._id, updateData);
+
+    return {
+      message: MESSAGES.DOCTOR_VERIFICATION_SUBMITTED,
+      verificationStatus: VerificationStatus.Pending,
+      verificationDocuments: documentUrls,
+    };
   }
-
-  if (user.role !== ROLES.DOCTOR) {
-    throw new UnauthorizedError(MESSAGES.DOCTOR_ONLY_VERIFICATION);
-  }
-
-  const doctor = await this._doctorRepository.findByUserId(userId);
-  if (!doctor) {
-    throw new NotFoundError(MESSAGES.DOCTOR_PROFILE_NOT_FOUND);
-  }
-
-  // Validate that we have at least one document
-  const hasDocuments = files.length > 0 || hasExistingDocuments;
-  DoctorValidator.validateVerificationData(data, files, hasDocuments);
-
-  // Determine which documents to use
-  let documentUrls: string[];
-  
-  if (files.length > 0) {
-    // New files uploaded - use both new and existing
-    const newFileUrls = files.map((file) => file.path);
-    const existingUrls = hasExistingDocuments ? existingDocuments : [];
-    documentUrls = [...existingUrls, ...newFileUrls];
-  } else if (hasExistingDocuments) {
-    // No new files, but has existing documents (resubmission case)
-    documentUrls = existingDocuments.length > 0 
-      ? existingDocuments 
-      : (doctor.verificationDocuments || []);
-  } else {
-    throw new AppError(MESSAGES.DOCTOR_MISSING_DOCUMENTS,STATUS.BAD_REQUEST);
-  }
-
-  const updateData = {
-    licenseNumber: data.licenseNumber || null,
-    qualifications: [data.degree],
-    experienceYears: data.experience,
-    specialty: data.speciality,
-    VideoFees: data.videoFees,
-    ChatFees: data.chatFees,
-    languages: data.languages || [],
-    verificationDocuments: documentUrls,
-    verificationStatus: VerificationStatus.Pending,
-    rejectionReason: null,
-  };
-
-  await this._doctorRepository.updateById(doctor._id, updateData);
-
-  return {
-    message: MESSAGES.DOCTOR_VERIFICATION_SUBMITTED,
-    verificationStatus: VerificationStatus.Pending,
-    verificationDocuments: documentUrls,
-  };
-}
 
   async getVerificationFormData(userId: string): Promise<VerificationFormDataDTO> {
     const doctor = await this._doctorRepository.findByUserId(userId);
@@ -173,7 +171,9 @@ async submitVerification(
     specialty?: string,
     page: number = PAGINATION.DEFAULT_PAGE,
     limit: number = PAGINATION.DEFAULT_LIMIT,
-    sort?: string
+    sort?: string,
+    experience?: number,
+    rating?: number
   ): Promise<{ doctors: any[]; total: number; page: number; totalPages: number }> {
     const skip = (page - 1) * limit;
 
@@ -181,33 +181,25 @@ async submitVerification(
     if (sort === "price_asc") sortOptions = { VideoFees: 1 };
     else if (sort === "price_desc") sortOptions = { VideoFees: -1 };
 
-    const result = await this._doctorRepository.getAllDoctors(skip, limit, sortOptions, specialty);
+    const result = await this._doctorRepository.getAllDoctors(skip, limit, {
+      specialty,
+      search: query,
+      sort: sortOptions,
+      verificationStatus: VerificationStatus.Approved,
+      isActive: true,
+      minExperience: experience,
+      minRating: rating
+    });
 
-    let filteredDoctors = result.doctors;
-
-    if (query && query.trim()) {
-      const queryLower = query.toLowerCase();
-      filteredDoctors = filteredDoctors.filter((doc) => {
-        const user = doc.userId as any;
-        const nameMatch = (user?.name?.toLowerCase() || "").includes(queryLower);
-        const specialtyMatch = (doc.specialty?.toLowerCase() || "").includes(queryLower);
-        return nameMatch || specialtyMatch;
-      });
-    }
-
-    const mappedDoctors = filteredDoctors.map(doc =>
+    const mappedDoctors = result.doctors.map(doc =>
       DoctorMapper.toListDTO(doc, doc.userId as any)
     );
 
-    const hasFilters = (query && query.trim());
-    const filteredTotal = hasFilters ? filteredDoctors.length : result.total;
-    const totalPages = Math.ceil(filteredTotal / limit);
-
     return {
       doctors: mappedDoctors,
-      total: filteredTotal,
+      total: result.total,
       page: page,
-      totalPages: totalPages,
+      totalPages: Math.ceil(result.total / limit),
     };
   }
 

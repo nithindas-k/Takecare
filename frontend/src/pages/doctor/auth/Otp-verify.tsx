@@ -1,4 +1,4 @@
-// src/pages/doctor/OTPVerify.tsx (replace your current file)
+
 import React, { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Button from "../../../components/Button";
@@ -29,16 +29,16 @@ const DoctorOTPVerify: React.FC = () => {
     }
   }, [email, navigate]);
 
-  // Start and manage timer similar to patient OTP page
+  
   useEffect(() => {
-    // if timer hits 0, clear interval
+
     if (timer === 0 && timerRef.current !== null) {
       window.clearInterval(timerRef.current);
       timerRef.current = null;
       return;
     }
 
-    // if timer > 0 and no interval running, start it
+   
     if (timer > 0 && timerRef.current === null) {
       timerRef.current = window.setInterval(() => {
         setTimer((prev) => prev - 1);
@@ -53,7 +53,7 @@ const DoctorOTPVerify: React.FC = () => {
     };
   }, [timer]);
 
-  // initialize timer on mount (same as patient page)
+
   useEffect(() => {
     setTimer(RESEND_OTP_INTERVAL);
   }, []);
@@ -125,14 +125,13 @@ const DoctorOTPVerify: React.FC = () => {
 
         const otpString = otp.join("");
         const response = await authService.doctorVerifyOtp({ email, otp: otpString, role: "doctor" });
-        // response shape depends on your API; adjust checks accordingly
+
         console.log("Doctor OTP response:", response);
 
         if (response?.success && response?.data?.token && response?.data?.user) {
           authService.saveToken(response.data.token);
           authService.saveUser(response.data.user);
 
-          // Only store essential user fields in Redux
           dispatch(setUser({
             _id: response.data.user._id,
             name: response.data.user.name,
@@ -145,7 +144,6 @@ const DoctorOTPVerify: React.FC = () => {
           setServerMessage("Verification successful. Redirecting...");
           setOtp(Array(OTP_LENGTH).fill(""));
           setErrors({});
-          // navigate to the doctor verification page to complete profile
           setTimeout(() => navigate("/doctor/verification"), 800);
         } else {
           const errorMsg = response?.message || "Invalid OTP. Please try again.";

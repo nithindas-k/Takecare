@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import toast, { Toaster } from "react-hot-toast";
+import { toast } from "sonner";
 import Sidebar from "../../components/admin/Sidebar";
 import TopNav from "../../components/admin/TopNav";
 import adminService from "../../services/adminService";
@@ -36,12 +36,27 @@ const PatientsListPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const limit = 10;
+  const [search, setSearch] = useState("");
+  const [isActive, setIsActive] = useState<string>("all");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const limit = 5;
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const fetchPatients = async (currentPage: number) => {
     setLoading(true);
     try {
-      const res = await adminService.getAllPatients(currentPage, limit);
+      const filters: any = {};
+      if (debouncedSearch) filters.search = debouncedSearch;
+      if (isActive !== "all") filters.isActive = isActive;
+
+      const res = await adminService.getAllPatients(currentPage, limit, filters);
       if (res?.success && res?.data) {
         setPatients(res.data.patients || []);
         setTotalPages(res.data.totalPages || 1);
@@ -56,7 +71,7 @@ const PatientsListPage: React.FC = () => {
 
   useEffect(() => {
     fetchPatients(page);
-  }, [page]);
+  }, [page, debouncedSearch, isActive]);
 
   const pagesToShow = useMemo(() => {
     const pages: number[] = [];
@@ -68,7 +83,7 @@ const PatientsListPage: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Toaster position="top-center" />
+
 
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
@@ -103,10 +118,38 @@ const PatientsListPage: React.FC = () => {
           <div className="max-w-7xl mx-auto">
 
             {/* Header */}
-            <div className="bg-primary/10 rounded-lg py-6 sm:py-8 mb-6 text-center">
-              <h1 className="text-2xl sm:text-3xl font-bold text-primary">
-                Patients
-              </h1>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-800">Patients</h1>
+                  <p className="text-sm text-gray-500">Manage all registered patients</p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search name, email..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="w-full sm:w-64 pl-4 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 focus:outline-none text-sm"
+                    />
+                  </div>
+
+                  <select
+                    value={isActive}
+                    onChange={(e) => {
+                      setIsActive(e.target.value);
+                      setPage(1);
+                    }}
+                    className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 focus:outline-none text-sm bg-white"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="true">Active</option>
+                    <option value="false">Blocked</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -122,7 +165,7 @@ const PatientsListPage: React.FC = () => {
                 <>
                   {/* ================= MOBILE VIEW ================= */}
                   <div className="lg:hidden p-4 space-y-3">
-                    {patients.map((patient, idx) => (
+                    {patients.map((patient) => (
                       <div
                         key={patient.id}
                         className="border border-gray-100 rounded-xl p-4 shadow-sm"
@@ -167,11 +210,10 @@ const PatientsListPage: React.FC = () => {
 
                           <span className="text-gray-500">Status</span>
                           <span
-                            className={`text-right font-semibold ${
-                              patient.isActive
-                                ? "text-green-600"
-                                : "text-red-600"
-                            }`}
+                            className={`text-right font-semibold ${patient.isActive
+                              ? "text-green-600"
+                              : "text-red-600"
+                              }`}
                           >
                             {patient.isActive ? "Active" : "Blocked"}
                           </span>
@@ -226,11 +268,10 @@ const PatientsListPage: React.FC = () => {
                             </td>
                             <td className="px-6 py-4">
                               <span
-                                className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                  patient.isActive
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-red-100 text-red-700"
-                                }`}
+                                className={`px-3 py-1 rounded-full text-xs font-semibold ${patient.isActive
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-red-100 text-red-700"
+                                  }`}
                               >
                                 {patient.isActive ? "Active" : "Blocked"}
                               </span>
@@ -266,11 +307,10 @@ const PatientsListPage: React.FC = () => {
                     <button
                       key={p}
                       onClick={() => setPage(p)}
-                      className={`w-8 h-8 rounded-full text-sm font-semibold ${
-                        p === page
-                          ? "bg-gradient-to-r from-cyan-400 to-teal-500 text-white"
-                          : "border"
-                      }`}
+                      className={`w-8 h-8 rounded-full text-sm font-semibold ${p === page
+                        ? "bg-gradient-to-r from-cyan-400 to-teal-500 text-white"
+                        : "border"
+                        }`}
                     >
                       {p}
                     </button>

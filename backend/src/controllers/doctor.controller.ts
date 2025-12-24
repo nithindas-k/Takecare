@@ -13,64 +13,64 @@ export class DoctorController implements IDoctorController {
     return req.user?.userId;
   }
 
-submitVerification = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const userId = this.getUserIdFromReq(req);
-    if (!userId) {
-      throw new AppError(MESSAGES.UNAUTHORIZED, STATUS.UNAUTHORIZED);
+  submitVerification = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = this.getUserIdFromReq(req);
+      if (!userId) {
+        throw new AppError(MESSAGES.UNAUTHORIZED, STATUS.UNAUTHORIZED);
+      }
+
+      console.log("=== CONTROLLER DEBUG ===");
+      console.log("req.files:", req.files);
+      console.log("req.files type:", typeof req.files);
+      console.log("Is Array:", Array.isArray(req.files));
+
+      const dto: SubmitVerificationDTO = {
+        degree: String(req.body.degree || ""),
+        experience: Number.parseInt(String(req.body.experience || "0"), 10),
+        speciality: String(req.body.speciality || ""),
+        videoFees: Number.parseFloat(String(req.body.videoFees || "0")),
+        chatFees: Number.parseFloat(String(req.body.chatFees || "0")),
+        licenseNumber: req.body.licenseNumber ? String(req.body.licenseNumber) : undefined,
+        languages: req.body.languages ? JSON.parse(String(req.body.languages)) : [],
+      };
+
+      const files = (req.files as Express.Multer.File[]) || [];
+
+      console.log("Parsed files length:", files.length);
+      if (files.length > 0) {
+        console.log("File paths:", files.map(f => f.path));
+      }
+
+      const hasExistingDocuments = req.body.hasExistingDocuments === 'true';
+      const existingDocuments = req.body.existingDocuments
+        ? JSON.parse(req.body.existingDocuments)
+        : [];
+
+      console.log("hasExistingDocuments:", hasExistingDocuments);
+      console.log("existingDocuments:", existingDocuments);
+
+      if (!files.length && !hasExistingDocuments) {
+        throw new AppError(MESSAGES.DOCTOR_MISSING_DOCUMENTS, STATUS.BAD_REQUEST);
+      }
+
+      const result = await this._doctorService.submitVerification(
+        userId,
+        dto,
+        files,
+        hasExistingDocuments,
+        existingDocuments
+      );
+
+      sendSuccess(res, {
+        verificationStatus: result.verificationStatus,
+        documents: result.verificationDocuments,
+      }, result.message || MESSAGES.VERIFICATION_SUBMITTED, STATUS.OK);
+    } catch (error: unknown) {
+      console.error("=== CONTROLLER ERROR ===", error);
+      return next(error);
     }
-
-    console.log("=== CONTROLLER DEBUG ===");
-    console.log("req.files:", req.files);
-    console.log("req.files type:", typeof req.files);
-    console.log("Is Array:", Array.isArray(req.files));
-
-    const dto: SubmitVerificationDTO = {
-      degree: String(req.body.degree || ""),
-      experience: Number.parseInt(String(req.body.experience || "0"), 10),
-      speciality: String(req.body.speciality || ""),
-      videoFees: Number.parseFloat(String(req.body.videoFees || "0")),
-      chatFees: Number.parseFloat(String(req.body.chatFees || "0")),
-      licenseNumber: req.body.licenseNumber ? String(req.body.licenseNumber) : undefined,
-      languages: req.body.languages ? JSON.parse(String(req.body.languages)) : [],
-    };
-
-    const files = (req.files as Express.Multer.File[]) || [];
-
-    console.log("Parsed files length:", files.length);
-    if (files.length > 0) {
-      console.log("File paths:", files.map(f => f.path));
-    }
-
-    const hasExistingDocuments = req.body.hasExistingDocuments === 'true';
-    const existingDocuments = req.body.existingDocuments 
-      ? JSON.parse(req.body.existingDocuments) 
-      : [];
-      
-    console.log("hasExistingDocuments:", hasExistingDocuments);
-    console.log("existingDocuments:", existingDocuments);
-
-    if (!files.length && !hasExistingDocuments) {
-      throw new AppError(MESSAGES.DOCTOR_MISSING_DOCUMENTS, STATUS.BAD_REQUEST);
-    }
-
-    const result = await this._doctorService.submitVerification(
-      userId, 
-      dto, 
-      files, 
-      hasExistingDocuments,
-      existingDocuments
-    );
-
-    sendSuccess(res, {
-      verificationStatus: result.verificationStatus,
-      documents: result.verificationDocuments,
-    }, result.message || MESSAGES.VERIFICATION_SUBMITTED, STATUS.OK);
-  } catch (error: unknown) {
-    console.error("=== CONTROLLER ERROR ===", error);
-    return next(error);
-  }
-};
+  };
   getVerificationFormData = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = this.getUserIdFromReq(req);
@@ -139,8 +139,10 @@ submitVerification = async (req: Request, res: Response, next: NextFunction): Pr
       const page = req.query.page ? Number.parseInt(String(req.query.page), 10) : 1;
       const limit = req.query.limit ? Number.parseInt(String(req.query.limit), 10) : 10;
       const sort = req.query.sort as string | undefined;
+      const experience = req.query.experience ? Number.parseInt(String(req.query.experience), 10) : undefined;
+      const rating = req.query.rating ? Number.parseFloat(String(req.query.rating)) : undefined;
 
-      const result = await this._doctorService.getVerifiedDoctors(query, specialty, page, limit, sort);
+      const result = await this._doctorService.getVerifiedDoctors(query, specialty, page, limit, sort, experience, rating);
 
       sendSuccess(res, result, MESSAGES.DOCTOR_FETCHED, STATUS.OK);
     } catch (error: unknown) {

@@ -71,10 +71,16 @@ export class AdminController implements IAdminController {
 
   getAllDoctors = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const page = parseInt(req.query.page as string) || PAGINATION.DEFAULT_PAGE;
-      const limit = parseInt(req.query.limit as string) || PAGINATION.DEFAULT_LIMIT;
+      const filters = {
+        search: req.query.search as string,
+        specialty: req.query.specialty as string,
+        verificationStatus: req.query.verificationStatus as string,
+        isActive: req.query.isActive as any,
+        page: parseInt(req.query.page as string) || PAGINATION.DEFAULT_PAGE,
+        limit: parseInt(req.query.limit as string) || PAGINATION.DEFAULT_LIMIT,
+      };
 
-      const result = await this._adminservice.getAllDoctors(page, limit);
+      const result = await this._adminservice.getAllDoctors(filters);
       sendSuccess(res, result);
     } catch (err: unknown) {
       next(err);
@@ -103,10 +109,14 @@ export class AdminController implements IAdminController {
 
   getAllPatients = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const page = parseInt(req.query.page as string) || PAGINATION.DEFAULT_PAGE;
-      const limit = parseInt(req.query.limit as string) || PAGINATION.DEFAULT_LIMIT;
+      const filters = {
+        search: req.query.search as string,
+        isActive: req.query.isActive as any,
+        page: parseInt(req.query.page as string) || PAGINATION.DEFAULT_PAGE,
+        limit: parseInt(req.query.limit as string) || PAGINATION.DEFAULT_LIMIT,
+      };
 
-      const result = await this._adminservice.getAllPatients(page, limit);
+      const result = await this._adminservice.getAllPatients(filters);
       sendSuccess(res, result);
     } catch (err: unknown) {
       next(err);

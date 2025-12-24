@@ -62,10 +62,10 @@ axiosInstance.interceptors.response.use(
     ) {
       originalRequest._retry = true;
       try {
-        
+
         console.log('Cookies before refresh:', document.cookie);
         const res = await axios.post(`${API_BASE_URL}/auth/refresh-token`, {}, {
-          withCredentials: true,  
+          withCredentials: true,
           headers: {
             'Content-Type': 'application/json',
           },
@@ -88,8 +88,7 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest);
       } catch (err) {
         console.error("Refresh token failed:", err);
-        
-        return Promise.reject(error);
+        return Promise.reject(err);
       }
     } else if (error.response?.status === 403) {
       const isLoginRequest = originalRequest.url?.includes('/login');
@@ -98,7 +97,7 @@ axiosInstance.interceptors.response.use(
       console.error('403 Response:', error.response.data);
 
       if (!isLoginRequest) {
-        
+
         console.error('403: Would redirect to login, but suppressed for debugging');
       }
     }

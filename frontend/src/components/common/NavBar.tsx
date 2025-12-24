@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, User, Bell, Menu, X } from "lucide-react";
+import { LogOut, User, Menu, X } from "lucide-react";
 import authService from "../../services/authService";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../../redux/store";
 import { logout } from "../../redux/user/userSlice";
+
+
 
 const NavBar: React.FC = () => {
   const navigate = useNavigate();
@@ -85,12 +87,7 @@ const NavBar: React.FC = () => {
             </>
           ) : (
             <>
-              <button
-                className="w-9 h-9 bg-white text-[#00A1B0] rounded-full flex items-center justify-center hover:bg-[#00A1B0]/10 transition-colors"
-                title="Notifications"
-              >
-                <Bell size={18} />
-              </button>
+
 
               <div className="relative">
                 <button

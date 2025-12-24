@@ -1,18 +1,27 @@
 export interface IAppointmentService {
-
-
     createAppointment(
         patientId: string,
         appointmentData: {
             doctorId: string,
             appointmentDate: Date | string,
             appointmentTime: string,
+            slotId?: string,
             appointmentType: "video" | "chat",
-            reason: string
+            reason?: string
         }
-    ): Promise<any>
+    ): Promise<any>;
 
-    getMyAppointments(userId: string, userRole: string, status?: string, page?: number, limit?: number): Promise<{ appointments: any[], total: number, page: number, limit: number, totalPages: number }>
+    listAppointments(
+        userId: string,
+        userRole: string,
+        filters: import("../../dtos/admin.dtos/admin.dto").AppointmentFilterDTO
+    ): Promise<{
+        appointments: any[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+    }>;
 
     getAppointmentById(
         appointmentId: string,
@@ -27,34 +36,16 @@ export interface IAppointmentService {
         cancellationReason: string
     ): Promise<void>;
 
-
-
-    // for doctor
-
-    getDoctorAppointmentRequests(
-        doctorUserId: string,
-        page: number,
-        limit: number
-    ): Promise<{
-        appointments: any[];
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-    }>;
-
-    getDoctorAppointments(
-        doctorUserId: string,
-        status?: string,
-        page?: number,
-        limit?: number
-    ): Promise<{
-        appointments: any[];
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-    }>;
+    rescheduleAppointment(
+        appointmentId: string,
+        userId: string,
+        userRole: string,
+        rescheduleData: {
+            appointmentDate: Date | string,
+            appointmentTime: string,
+            slotId?: string
+        }
+    ): Promise<any>;
 
     approveAppointmentRequest(
         appointmentId: string,
@@ -73,19 +64,4 @@ export interface IAppointmentService {
         doctorNotes?: string,
         prescriptionUrl?: string
     ): Promise<void>;
-
-    getAllAppointments(
-        status?: string,
-        page?: number,
-        limit?: number
-    ): Promise<{
-        appointments: any[];
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-    }>;
-
-    
-
 }

@@ -2,36 +2,32 @@ import { IAppointmentRepository } from "./interfaces/IAppointmentRepository";
 import { IAppointmentDocument } from "../types/appointment.type";
 import AppointmentModel from "../models/appointment.model";
 import { Types } from "mongoose";
+import { BaseRepository } from "./base.repository";
 
-export class AppointmentRepository implements IAppointmentRepository {
-    private model = AppointmentModel;
+export class AppointmentRepository extends BaseRepository<IAppointmentDocument> implements IAppointmentRepository {
+    constructor() {
+        super(AppointmentModel);
+    }
 
     async create(appointmentData: any): Promise<IAppointmentDocument> {
-        const appointment = await this.model.create(appointmentData);
-        return appointment;
+        return await this.model.create(appointmentData);
     }
 
     async findById(appointmentId: string): Promise<IAppointmentDocument | null> {
-
         const appointment = await this.model.findOne({ customId: appointmentId });
         if (appointment) return appointment;
 
         if (!Types.ObjectId.isValid(appointmentId)) {
             return null;
         }
-        return await this.model.findById(appointmentId);
+        return await super.findById(appointmentId);
     }
 
 
-    async validate(Id: Types.ObjectId): Promise<any> {
-        const data = await this.model.aggregate([{ $group: { _id: Id, count: { $sum: 1 } } }])
 
-        return data.length > 0 ? data[0].count : 0
-    }
 
     async findByIdPopulated(appointmentId: string): Promise<any> {
-
-        let appointment = await this.model
+        const appointment = await this.model
             .findOne({ customId: appointmentId })
             .populate({
                 path: "patientId",
@@ -48,7 +44,6 @@ export class AppointmentRepository implements IAppointmentRepository {
             .lean();
 
         if (appointment) return appointment;
-
 
         if (!Types.ObjectId.isValid(appointmentId)) {
             return null;
@@ -148,14 +143,48 @@ export class AppointmentRepository implements IAppointmentRepository {
     }
 
     async findAll(
-        status?: string,
+        filters: {
+            status?: string;
+            search?: string;
+            startDate?: Date;
+            endDate?: Date;
+            doctorId?: string;
+            patientId?: string;
+        },
         skip: number = 0,
         limit: number = 10
     ): Promise<{ appointments: any[]; total: number }> {
         const query: any = {};
 
-        if (status) {
-            query.status = status;
+        if (filters.status) {
+            query.status = filters.status;
+        }
+
+        if (filters.doctorId) {
+            query.doctorId = new Types.ObjectId(filters.doctorId);
+        }
+
+        if (filters.patientId) {
+            query.patientId = new Types.ObjectId(filters.patientId);
+        }
+
+        if (filters.startDate || filters.endDate) {
+            query.appointmentDate = {};
+            if (filters.startDate) {
+                query.appointmentDate.$gte = filters.startDate;
+            }
+            if (filters.endDate) {
+                query.appointmentDate.$lte = filters.endDate;
+            }
+        }
+
+        if (filters.search) {
+            const searchRegex = new RegExp(filters.search, "i");
+            query.$or = [
+                { customId: searchRegex },
+                { status: searchRegex },
+                { appointmentTime: searchRegex }
+            ];
         }
 
         const [appointments, total] = await Promise.all([
@@ -199,20 +228,16 @@ export class AppointmentRepository implements IAppointmentRepository {
             return null;
         }
 
-        return await this.model.findByIdAndUpdate(
-            appointmentId,
-            { $set: updateData },
-            { new: true, runValidators: true }
-        );
+        return await super.updateById(appointmentId, updateData);
     }
 
-    async deleteById(appointmentId: string): Promise<boolean> {
-        if (!Types.ObjectId.isValid(appointmentId)) {
-            return false;
-        }
 
-        const result = await this.model.findByIdAndDelete(appointmentId);
-        return result !== null;
+    async deleteById(appointmentId: string): Promise<any> {
+        
+        if (!Types.ObjectId.isValid(appointmentId)) {
+            return null;
+        }
+        return await this.model.findByIdAndDelete(appointmentId).exec();
     }
 
     async countByStatus(status: string): Promise<number> {
@@ -221,21 +246,16 @@ export class AppointmentRepository implements IAppointmentRepository {
 
     async countByDoctorId(doctorId: string, status?: string): Promise<number> {
         const query: any = { doctorId: new Types.ObjectId(doctorId) };
-
-        if (status) {
-            query.status = status;
-        }
-
+        if (status) query.status = status;
         return await this.model.countDocuments(query);
     }
 
     async countByPatientId(patientId: string, status?: string): Promise<number> {
         const query: any = { patientId: new Types.ObjectId(patientId) };
-
-        if (status) {
-            query.status = status;
-        }
-
+        if (status) query.status = status;
         return await this.model.countDocuments(query);
     }
+
+
 }
+

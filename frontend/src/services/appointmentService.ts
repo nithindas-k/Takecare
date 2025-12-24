@@ -2,7 +2,7 @@ import axiosInstance from "../api/axiosInstance";
 import { APPOINTMENT_API_ROUTES } from "../utils/constants";
 
 export const appointmentService = {
-    
+
     createAppointment: async (appointmentData: any) => {
         const response = await axiosInstance.post(
             APPOINTMENT_API_ROUTES.CREATE,
@@ -11,7 +11,7 @@ export const appointmentService = {
         return response.data;
     },
 
-    
+
     getMyAppointments: async (status?: string, page: number = 1, limit: number = 10) => {
         const response = await axiosInstance.get(APPOINTMENT_API_ROUTES.MY_APPOINTMENTS, {
             params: { status, page, limit },
@@ -19,19 +19,19 @@ export const appointmentService = {
         return response.data;
     },
 
-    
+
     getAppointmentById: async (id: string) => {
         const response = await axiosInstance.get(APPOINTMENT_API_ROUTES.GET_BY_ID(id));
         return response.data;
     },
 
-    
+
     cancelAppointment: async (id: string, cancellationReason: string) => {
         const response = await axiosInstance.put(APPOINTMENT_API_ROUTES.CANCEL(id), {
-          cancellationReason,
+            cancellationReason,
         });
         return response.data;
-      },  
+    },
 
     getDoctorRequests: async (page: number = 1, limit: number = 10) => {
         const response = await axiosInstance.get(APPOINTMENT_API_ROUTES.DOCTOR_REQUESTS, {
@@ -40,7 +40,7 @@ export const appointmentService = {
         return response.data;
     },
 
-    
+
     getDoctorAppointments: async (status?: string, page: number = 1, limit: number = 10) => {
         const response = await axiosInstance.get(APPOINTMENT_API_ROUTES.DOCTOR_LIST, {
             params: { status, page, limit },
@@ -67,10 +67,15 @@ export const appointmentService = {
         return response.data;
     },
 
+    rescheduleAppointment: async (id: string, rescheduleData: { appointmentDate: Date | string, appointmentTime: string, slotId?: string }) => {
+        const response = await axiosInstance.put(APPOINTMENT_API_ROUTES.RESCHEDULE(id), rescheduleData);
+        return response.data;
+    },
+
     // Admin: Get All
-    getAllAppointments: async (status?: string, page: number = 1, limit: number = 10) => {
+    getAllAppointments: async (page: number = 1, limit: number = 10, filters: any = {}) => {
         const response = await axiosInstance.get(APPOINTMENT_API_ROUTES.ADMIN_ALL, {
-            params: { status, page, limit },
+            params: { page, limit, ...filters },
         });
         return response.data;
     }

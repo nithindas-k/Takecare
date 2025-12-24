@@ -5,9 +5,11 @@ import { IUserRepository } from "../repositories/interfaces/IUser.repository";
 import { IScheduleRepository } from "../repositories/interfaces/ISchedule.repository";
 import { AppError } from "../errors/AppError";
 import { LoggerService } from "./logger.service";
-import { APPOINTMENT_STATUS, MESSAGES, HttpStatus, PAYMENT_STATUS } from "../constants/constants";
+import { APPOINTMENT_STATUS, MESSAGES, HttpStatus, PAYMENT_STATUS, PAYMENT_COMMISSION, CANCELLATION_RULES, ROLES } from "../constants/constants";
 import { Types } from "mongoose";
 import { AppointmentMapper } from "../mappers/appointment.mapper";
+import { IWalletService } from "./interfaces/IWalletService";
+
 
 export class AppointmentService implements IAppointmentService {
     private readonly logger: LoggerService;
@@ -16,7 +18,9 @@ export class AppointmentService implements IAppointmentService {
         private _appointmentRepository: IAppointmentRepository,
         private _userRepository: IUserRepository,
         private _doctorRepository: IDoctorRepository,
-        private _scheduleRepository: IScheduleRepository
+        private _scheduleRepository: IScheduleRepository,
+        private _walletService: IWalletService,
+
     ) {
         this.logger = new LoggerService("AppointmentService");
     }
@@ -56,6 +60,9 @@ export class AppointmentService implements IAppointmentService {
             throw new AppError(MESSAGES.DOCTOR_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
         }
 
+
+
+
         const consultationFees = appointmentData.appointmentType === "video"
             ? doctor.VideoFees || 0
             : doctor.ChatFees || 0;
@@ -67,6 +74,11 @@ export class AppointmentService implements IAppointmentService {
             );
         }
 
+
+
+        const adminCommission = (consultationFees * PAYMENT_COMMISSION.ADMIN_PERCENT) / 100;
+        const doctorEarnings = (consultationFees * PAYMENT_COMMISSION.DOCTOR_PERCENT) / 100;
+
         const appointment = await this._appointmentRepository.create({
             patientId: new Types.ObjectId(patientId),
             doctorId: new Types.ObjectId(appointmentData.doctorId),
@@ -76,11 +88,16 @@ export class AppointmentService implements IAppointmentService {
             slotId: appointmentData.slotId || null,
             status: APPOINTMENT_STATUS.PENDING,
             consultationFees,
+            adminCommission,
+            doctorEarnings,
             reason: appointmentData.reason || null,
             paymentStatus: PAYMENT_STATUS.PENDING,
             paymentId: null,
             paymentMethod: null,
         });
+
+
+
 
         if (appointmentData.slotId) {
             try {
@@ -101,12 +118,10 @@ export class AppointmentService implements IAppointmentService {
         return AppointmentMapper.toResponseDTO(populatedAppointment);
     }
 
-    async getMyAppointments(
+    async listAppointments(
         userId: string,
         userRole: string,
-        status?: string,
-        page: number = 1,
-        limit: number = 10
+        filters: import("../dtos/admin.dtos/admin.dto").AppointmentFilterDTO
     ): Promise<{
         appointments: any[];
         total: number;
@@ -114,32 +129,40 @@ export class AppointmentService implements IAppointmentService {
         limit: number;
         totalPages: number;
     }> {
+        const page = filters.page || 1;
+        const limit = filters.limit || 10;
         const skip = (page - 1) * limit;
-        let appointments: any[] = [];
-        let total = 0;
 
-        if (userRole === "patient") {
-            const result = await this._appointmentRepository.findByPatientId(userId, status, skip, limit);
-            appointments = result.appointments;
-            total = result.total;
-        } else if (userRole === "doctor") {
+        const repoFilters: any = {
+            status: filters.status,
+            search: filters.search,
+            startDate: filters.startDate ? new Date(filters.startDate) : undefined,
+            endDate: filters.endDate ? new Date(filters.endDate) : undefined,
+            doctorId: filters.doctorId,
+            patientId: filters.patientId,
+        };
+
+        
+        if (userRole === ROLES.PATIENT) {
+            repoFilters.patientId = userId;
+        } else if (userRole === ROLES.DOCTOR) {
             const doctor = await this._doctorRepository.findByUserId(userId);
             if (!doctor) {
                 throw new AppError(MESSAGES.DOCTOR_NOT_FOUND, HttpStatus.NOT_FOUND);
             }
-            const result = await this._appointmentRepository.findByDoctorId(doctor._id.toString(), status, skip, limit);
-            appointments = result.appointments;
-            total = result.total;
-        } else {
+            repoFilters.doctorId = doctor._id.toString();
+        } else if (userRole !== ROLES.ADMIN) {
             throw new AppError(MESSAGES.INVALID_ROLE, HttpStatus.FORBIDDEN);
         }
 
+        const result = await this._appointmentRepository.findAll(repoFilters, skip, limit);
+
         return {
-            appointments: appointments.map(AppointmentMapper.toResponseDTO),
-            total,
+            appointments: result.appointments.map(AppointmentMapper.toResponseDTO),
+            total: result.total,
             page,
             limit,
-            totalPages: Math.ceil(total / limit),
+            totalPages: Math.ceil(result.total / limit),
         };
     }
 
@@ -199,6 +222,9 @@ export class AppointmentService implements IAppointmentService {
         if (appointment.status === APPOINTMENT_STATUS.COMPLETED) {
             throw new AppError(MESSAGES.APPOINTMENT_ALREADY_COMPLETED, HttpStatus.BAD_REQUEST);
         }
+        if (appointment.status === APPOINTMENT_STATUS.REJECTED) {
+            throw new AppError("Cannot cancel an appointment that has already been rejected", HttpStatus.BAD_REQUEST);
+        }
 
         const getIdString = (value: any): string | null => {
             if (!value) return null;
@@ -232,6 +258,52 @@ export class AppointmentService implements IAppointmentService {
             cancelledAt: new Date(),
         });
 
+        // refund
+        if (appointment.paymentStatus === PAYMENT_STATUS.PAID) {
+            const totalFee = appointment.consultationFees;
+            const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
+            const patient = await this._userRepository.findById(appointment.patientId.toString());
+
+            if (userRole === 'patient') {
+                  //user Cancel
+                const refundAmount = (totalFee * CANCELLATION_RULES.USER_CANCEL_REFUND_PERCENT) / 100;
+                const adminKeeps = (totalFee * CANCELLATION_RULES.USER_CANCEL_ADMIN_COMMISSION) / 100;
+                const doctorKeeps = (totalFee * CANCELLATION_RULES.USER_CANCEL_DOCTOR_COMMISSION) / 100;
+
+       
+                const doctorDeduction = appointment.doctorEarnings - doctorKeeps;
+                const adminDeduction = appointment.adminCommission - adminKeeps;
+
+                if (doctor) await this._walletService.deductMoney(doctor.userId.toString(), doctorDeduction, `Cancellation: patient cancelled #${appointment.customId || appointment.id}`, appointment._id.toString());
+
+
+                const admins = await this._userRepository.findByRole(ROLES.ADMIN);
+                const adminUser = admins[0];
+                if (adminUser) await this._walletService.deductMoney(adminUser._id.toString(), adminDeduction, `Commission Reversal: patient cancelled #${appointment.customId || appointment.id}`, appointment._id.toString());
+
+             
+                if (patient) await this._walletService.addMoney(patient._id.toString(), refundAmount, `Refund: appointment #${appointment.customId || appointment.id} cancelled (30% fee applied)`, appointment._id.toString());
+
+            } else {
+             
+                const refundAmount = totalFee;
+
+                if (doctor) await this._walletService.deductMoney(doctor.userId.toString(), appointment.doctorEarnings, `Cancellation: appointment #${appointment.customId || appointment.id} cancelled by ${userRole}`, appointment._id.toString());
+
+                const admins = await this._userRepository.findByRole(ROLES.ADMIN);
+                const adminUser = admins[0];
+                if (adminUser) await this._walletService.deductMoney(adminUser._id.toString(), appointment.adminCommission, `Commission Reversal: appointment #${appointment.customId || appointment.id} cancelled by ${userRole}`, appointment._id.toString());
+
+                if (patient) await this._walletService.addMoney(patient._id.toString(), refundAmount, `Refund: appointment #${appointment.customId || appointment.id} cancelled by ${userRole}`, appointment._id.toString());
+            }
+
+            await this._appointmentRepository.updateById(appointmentId, {
+                paymentStatus: PAYMENT_STATUS.REFUNDED
+            });
+
+
+        }
+
         if (appointment.slotId) {
             try {
                 const [startTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
@@ -250,62 +322,96 @@ export class AppointmentService implements IAppointmentService {
         return updatedAppointment;
     }
 
+    async rescheduleAppointment(
+        appointmentId: string,
+        userId: string,
+        userRole: string,
+        rescheduleData: {
+            appointmentDate: Date | string,
+            appointmentTime: string,
+            slotId?: string
+        }
+    ): Promise<any> {
+
+
+
+        const appointment = await this._appointmentRepository.findById(appointmentId);
+
+
+
+
+        if (!appointment) {
+            throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
+        }
+
+        if ((appointment.rescheduleCount ?? 0) >= 1) {
+            throw new AppError(MESSAGES.APPOINTMENT_CANNOT_RESCHEDULE, HttpStatus.BAD_REQUEST);
+        }
+
+
+        const isPatient = appointment.patientId.toString() === userId;
+        if (!isPatient && userRole !== "admin") {
+            throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+
+        const allowedStatuses = [APPOINTMENT_STATUS.PENDING, APPOINTMENT_STATUS.CONFIRMED, APPOINTMENT_STATUS.UPCOMING];
+        if (!allowedStatuses.includes(appointment.status as any)) {
+            throw new AppError(MESSAGES.APPOINTMENT_CANNOT_MODIFY, HttpStatus.BAD_REQUEST);
+        }
+
+
+        if (appointment.slotId) {
+            try {
+                const [oldStartTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
+                await this._scheduleRepository.updateSlotBookedStatus(
+                    appointment.doctorId.toString(),
+                    appointment.slotId,
+                    false,
+                    new Date(appointment.appointmentDate),
+                    oldStartTime
+                );
+            } catch (error) {
+                this.logger.error("Failed to release old slot during reschedule", { error, appointmentId });
+            }
+        }
+
+
+        if (rescheduleData.slotId) {
+            try {
+                const [newStartTime] = rescheduleData.appointmentTime.split("-").map((t: string) => t.trim());
+                await this._scheduleRepository.updateSlotBookedStatus(
+                    appointment.doctorId.toString(),
+                    rescheduleData.slotId,
+                    true,
+                    new Date(rescheduleData.appointmentDate),
+                    newStartTime
+                );
+            } catch (error) {
+                this.logger.error("Failed to book new slot during reschedule", { error, appointmentId });
+                throw new AppError("Failed to book selected slot", HttpStatus.BAD_REQUEST);
+            }
+        }
+
+
+        const updatedAppointment = await this._appointmentRepository.updateById(appointmentId, {
+            appointmentDate: new Date(rescheduleData.appointmentDate),
+            appointmentTime: rescheduleData.appointmentTime,
+            slotId: rescheduleData.slotId || null,
+            status: APPOINTMENT_STATUS.PENDING,
+            rescheduleCount: (appointment.rescheduleCount || 0) + 1,
+        });
+
+
+
+
+        const populated = await this._appointmentRepository.findByIdPopulated(appointmentId);
+        return AppointmentMapper.toResponseDTO(populated);
+    }
+
     // ==================== DOCTOR SIDE ====================
 
-    async getDoctorAppointmentRequests(
-        doctorUserId: string,
-        page: number = 1,
-        limit: number = 10
-    ): Promise<{
-        appointments: any[];
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-    }> {
-        const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
-        const skip = (page - 1) * limit;
 
-        const result = await this._appointmentRepository.findByDoctorId(
-            doctorId,
-            APPOINTMENT_STATUS.PENDING,
-            skip,
-            limit
-        );
-
-        return {
-            appointments: result.appointments.map(AppointmentMapper.toResponseDTO),
-            total: result.total,
-            page,
-            limit,
-            totalPages: Math.ceil(result.total / limit),
-        };
-    }
-
-    async getDoctorAppointments(
-        doctorUserId: string,
-        status?: string,
-        page: number = 1,
-        limit: number = 10
-    ): Promise<{
-        appointments: any[];
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-    }> {
-        const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
-        const skip = (page - 1) * limit;
-        const result = await this._appointmentRepository.findByDoctorId(doctorId, status, skip, limit);
-
-        return {
-            appointments: result.appointments.map(AppointmentMapper.toResponseDTO),
-            total: result.total,
-            page,
-            limit,
-            totalPages: Math.ceil(result.total / limit),
-        };
-    }
 
     async approveAppointmentRequest(appointmentId: string, doctorUserId: string): Promise<void> {
         const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
@@ -324,6 +430,8 @@ export class AppointmentService implements IAppointmentService {
         await this._appointmentRepository.updateById(appointmentId, {
             status: APPOINTMENT_STATUS.CONFIRMED,
         });
+
+
     }
 
     async rejectAppointmentRequest(
@@ -333,6 +441,7 @@ export class AppointmentService implements IAppointmentService {
     ): Promise<void> {
         const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
         const appointment = await this._appointmentRepository.findById(appointmentId);
+
 
         if (!appointment) {
             throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
@@ -344,10 +453,35 @@ export class AppointmentService implements IAppointmentService {
             throw new AppError(MESSAGES.APPOINTMENT_NOT_PENDING, HttpStatus.BAD_REQUEST);
         }
 
+
         await this._appointmentRepository.updateById(appointmentId, {
             status: APPOINTMENT_STATUS.REJECTED,
             rejectionReason,
         });
+
+
+
+        // refund reject
+        if (appointment.paymentStatus === PAYMENT_STATUS.PAID) {
+            const patient = await this._userRepository.findById(appointment.patientId.toString());
+
+          
+            if (patient) await this._walletService.addMoney(patient._id.toString(), appointment.consultationFees, `Refund: appointment #${appointment.customId || appointment.id} rejected by doctor`, appointment._id.toString());
+
+          
+            const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
+            if (doctor) await this._walletService.deductMoney(doctor.userId.toString(), appointment.doctorEarnings, `Reversal: appointment #${appointment.customId || appointment.id} rejected`, appointment._id.toString());
+
+            const admins = await this._userRepository.findByRole(ROLES.ADMIN);
+            const adminUser = admins[0];
+            if (adminUser) await this._walletService.deductMoney(adminUser._id.toString(), appointment.adminCommission, `Commission Reversal: appointment #${appointment.customId || appointment.id} rejected`, appointment._id.toString());
+
+            await this._appointmentRepository.updateById(appointmentId, {
+                paymentStatus: PAYMENT_STATUS.REFUNDED
+            });
+
+
+        }
 
         if (appointment.slotId) {
             try {
@@ -392,28 +526,4 @@ export class AppointmentService implements IAppointmentService {
         });
     }
 
-    // ==================== ADMIN SIDE ====================
-
-    async getAllAppointments(
-        status?: string,
-        page: number = 1,
-        limit: number = 10
-    ): Promise<{
-        appointments: any[];
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-    }> {
-        const skip = (page - 1) * limit;
-        const result = await this._appointmentRepository.findAll(status, skip, limit);
-
-        return {
-            appointments: result.appointments.map(AppointmentMapper.toResponseDTO),
-            total: result.total,
-            page,
-            limit,
-            totalPages: Math.ceil(result.total / limit),
-        };
-    }
 }

@@ -5,6 +5,7 @@ import Input from "../../../components/Input";
 import authService from "../../../services/authService";
 import { useDispatch } from "react-redux";
 import { setUser } from "../../../redux/user/userSlice";
+import { toast } from "sonner";
 
 interface FormData {
   email: string;
@@ -26,7 +27,6 @@ const DoctorLogin: React.FC = () => {
 
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState<boolean>(false);
-  const [serverError, setServerError] = useState<string>("");
 
   const validate = useCallback((data: FormData): Errors => {
     const e: Errors = {};
@@ -52,7 +52,6 @@ const DoctorLogin: React.FC = () => {
       delete next[name as keyof FormData];
       return next;
     });
-    setServerError("");
   }, []);
 
   const handleSubmit = useCallback(
@@ -64,7 +63,6 @@ const DoctorLogin: React.FC = () => {
 
       try {
         setSubmitting(true);
-        setServerError("");
 
         // Call backend login API
         const response = await authService.doctorLogin({
@@ -76,26 +74,25 @@ const DoctorLogin: React.FC = () => {
         if (response.success && response.data.token) {
           // Token is automatically saved in authService
           const userInfo = authService.getCurrentUserInfo();
-          
+
           if (userInfo) {
-            // Update Redux with minimal user info from token
+            // Update Redux with user info from response or token
             dispatch(setUser({
               _id: userInfo.id,
               name: userInfo.name || '',
               email: userInfo.email,
-              role: userInfo.role,
+              role: userInfo.role as any,
             }));
           }
 
+          toast.success("Login successful!");
           navigate("/doctor/dashboard");
         } else {
-          const errorMsg = response.message || "Login failed. Please try again.";
-          setServerError(errorMsg);
+          toast.error(response.message || "Login failed. Please try again.");
         }
       } catch (error: any) {
         console.error("Login error:", error);
-        const errorMsg = error.message || "Login failed. Please try again.";
-        setServerError(errorMsg);
+        toast.error(error.message || "Login failed. Please try again.");
       } finally {
         setSubmitting(false);
       }
@@ -108,7 +105,7 @@ const DoctorLogin: React.FC = () => {
       authService.doctorGoogleLogin();
     } catch (error) {
       console.error("Google sign-in error:", error);
-      setServerError("Failed to initiate Google sign-in.");
+      toast.error("Failed to initiate Google sign-in.");
     }
   }, []);
 
@@ -148,13 +145,6 @@ const DoctorLogin: React.FC = () => {
               {Object.keys(errors).length > 0 && (
                 <div id="formErrors" className="text-sm text-red-600 p-3 bg-red-50 rounded-lg border border-red-200">
                   Please fix the highlighted fields.
-                </div>
-              )}
-
-              {/* Server error */}
-              {serverError && (
-                <div className="text-sm text-red-600 p-3 bg-red-50 rounded-lg border border-red-200">
-                  {serverError}
                 </div>
               )}
 

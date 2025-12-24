@@ -6,7 +6,7 @@ import { sendSuccess } from "../utils/response.util";
 import { HttpStatus, MESSAGES } from "../constants/constants";
 
 export class PaymentController implements IPaymentController {
-    constructor(private _paymentService: IPaymentService) {}
+    constructor(private _paymentService: IPaymentService) { }
 
     createRazorpayOrder = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {

@@ -97,8 +97,7 @@ export class ScheduleRepository
                 }
             );
 
-            // Fallback: If customId update failed and we have date/time, try updating by Day and StartTime
-            // This handles cases for slots created before customId was guaranteed or if slotId passed is actually just a time string
+
             if (result.modifiedCount === 0 && appointmentDate && startTime) {
                 const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
                 const dayOfWeek = days[appointmentDate.getDay()];

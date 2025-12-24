@@ -12,7 +12,6 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
   }
 
 
-
   async create(data: Partial<IDoctorDocument>): Promise<IDoctorDocument> {
     const userId = typeof data.userId === "string"
       ? new Types.ObjectId(data.userId)
@@ -40,11 +39,44 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
 
 
 
-  async getAllDoctors(skip: number, limit: number, sort: any = { createdAt: -1 }, specialty?: string): Promise<{ doctors: IDoctorDocument[]; total: number }> {
-    const query: any = { verificationStatus: VerificationStatus.Approved };
+  async getAllDoctors(skip: number, limit: number, filter?: { specialty?: string; search?: string; verificationStatus?: string; isActive?: boolean; sort?: any; minExperience?: number; minRating?: number }): Promise<{ doctors: IDoctorDocument[]; total: number }> {
+    const query: any = {};
 
-    if (specialty) {
-      query.specialty = { $regex: new RegExp(specialty, "i") };
+    if (filter) {
+      if (filter.verificationStatus) {
+        query.verificationStatus = filter.verificationStatus;
+      }
+
+      if (typeof filter.isActive === 'boolean') {
+        query.isActive = filter.isActive;
+      }
+
+      if (filter.specialty) {
+        query.specialty = { $regex: new RegExp(filter.specialty, "i") };
+      }
+
+      if (filter.minExperience !== undefined) {
+        query.experienceYears = { $gte: filter.minExperience };
+      }
+
+      if (filter.minRating !== undefined) {
+        query.ratingAvg = { $gte: filter.minRating };
+      }
+
+      if (filter.search) {
+        const searchRegex = new RegExp(filter.search, "i");
+
+
+        const matchingUsers = await this.model.db.model('User').find({
+          name: searchRegex
+        }).select('_id');
+
+        const userIds = matchingUsers.map(u => u._id);
+
+        query.userId = { $in: userIds };
+      }
+    } else {
+      query.verificationStatus = VerificationStatus.Approved;
     }
 
     const doctors = await this.model
@@ -52,7 +84,7 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
       .populate("userId")
       .skip(skip)
       .limit(limit)
-      .sort(sort)
+      .sort(filter?.sort || { createdAt: -1 })
       .exec();
 
     const total = await this.model.countDocuments(query);

@@ -16,7 +16,7 @@ import {
 
 const sidebarItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/admin/dashboard" },
-  { label: "Doctor Request", icon: Zap, path: "/admin/doctor-request", hasNotification: true },
+  { label: "Doctor Request", icon: Zap, path: "/admin/doctor-request" },
   { label: "Doctors", icon: Stethoscope, path: "/admin/doctors" },
   { label: "Patients", icon: Users, path: "/admin/patients" },
   { label: "Appointments", icon: Calendar, path: "/admin/appointments" },
@@ -59,9 +59,7 @@ const Sidebar: React.FC = () => {
             >
               <Icon className="w-5 h-5 mr-3 flex-shrink-0" strokeWidth={2} />
               <span className="text-sm font-medium flex-1">{item.label}</span>
-              {item.hasNotification && (
-                <span className="w-2 h-2 bg-yellow-400 rounded-full shadow-lg shadow-yellow-400/50 animate-pulse"></span>
-              )}
+
             </NavLink>
           );
         })}

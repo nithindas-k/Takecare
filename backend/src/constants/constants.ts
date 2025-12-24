@@ -58,6 +58,17 @@ export const PAYMENT_STATUS = {
   FAILED: "failed",
 } as const;
 
+export const PAYMENT_COMMISSION = {
+  ADMIN_PERCENT: 20,
+  DOCTOR_PERCENT: 80,
+} as const;
+
+export const CANCELLATION_RULES = {
+  USER_CANCEL_REFUND_PERCENT: 70,
+  USER_CANCEL_ADMIN_COMMISSION: 10,
+  USER_CANCEL_DOCTOR_COMMISSION: 20,
+} as const;
+
 export const PAYMENT_DEFAULTS = {
   CURRENCY: "INR",
   PAISE_MULTIPLIER: 100,
@@ -119,7 +130,8 @@ export const MESSAGES = {
   USER_NOT_ACTIVE: "User is not active",
   USER_NOT_FOUND: "User not found",
   USER_BLOCKED: "Your account has been blocked",
-DOCTOR_SPECIALITY_LIMIT_EXCEEDED :"limit is 2",
+  APPOINTMENT_CANNOT_RESCHEDULE:"You can only reschedule an appointment once.",
+  DOCTOR_SPECIALITY_LIMIT_EXCEEDED: "limit is 2",
   INVALID_CREDENTIALS: "Invalid email or password",
   LOGIN_SUCCESS: "Login successful",
   OTP_SENT: "OTP sent to your email. Please verify to complete registration.",

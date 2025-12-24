@@ -1,4 +1,4 @@
-// src/components/Doctor/DoctorSidebar.tsx
+
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -26,7 +26,7 @@ interface SidebarLink {
   label: string;
   icon?: React.ReactNode;
   path: string;
-  badge?: "notification" | "dot";
+
 }
 
 const sidebarLinks: SidebarLink[] = [
@@ -37,7 +37,7 @@ const sidebarLinks: SidebarLink[] = [
   { label: "My Patients", icon: <FaUserMd />, path: "/doctor/patients" },
   { label: "Wallet", icon: <FaMoneyBillWave />, path: "/doctor/wallet" },
   { label: "Profile Settings", icon: <FaCog />, path: "/doctor/profile-settings" },
-  { label: "Messages", icon: <FaComments />, path: "/doctor/messages", badge: "dot" },
+  { label: "Messages", icon: <FaComments />, path: "/doctor/messages" },
 ];
 
 interface DoctorSidebarProps {
@@ -152,16 +152,7 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
 
               <span className="truncate text-sm">{link.label}</span>
 
-              {link.badge === "notification" && (
-                <span className="ml-auto flex h-3 w-3 relative">
-                  <span className="animate-ping absolute h-3 w-3 rounded-full bg-yellow-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-400"></span>
-                </span>
-              )}
 
-              {link.badge === "dot" && (
-                <span className="ml-auto h-2 w-2 rounded-full bg-yellow-400"></span>
-              )}
             </li>
           ))}
 
@@ -180,14 +171,13 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
     </>
   );
 
-  // Desktop Sidebar
+
   const DesktopSidebar = () => (
     <aside className="hidden lg:flex col-span-12 lg:col-span-3 bg-white rounded-3xl shadow flex-col h-fit lg:min-w-[265px] max-w-xs sticky top-4 overflow-hidden">
       <SidebarContent />
     </aside>
   );
 
-  // Mobile Sidebar (Drawer)
   const MobileSidebar = () => (
     <>
       {/* Backdrop */}
@@ -216,5 +206,4 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
   );
 };
 
-// Export default component
 export default DoctorSidebar;

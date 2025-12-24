@@ -23,7 +23,9 @@ export interface IDoctorService {
     specialty?: string,
     page?: number,
     limit?: number,
-    sort?: string
+    sort?: string,
+    experience?: number,
+    rating?: number
   ): Promise<{ doctors: any[]; total: number; page: number; totalPages: number }>;
   getDoctorById(doctorId: string): Promise<any>;
   getRelatedDoctors(doctorId: string): Promise<any[]>;

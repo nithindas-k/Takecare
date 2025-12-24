@@ -6,6 +6,7 @@ export const BASE_ROUTES = {
     USERS: "/users",
     APPOINTMENTS: "/appointments",
     PAYMENTS: "/payments",
+    WALLET: "/wallet",
 } as const;
 
 
@@ -73,12 +74,19 @@ export const APPOINTMENT_ROUTES = {
     APPROVE: "/:id/approve",
     REJECT: "/:id/reject",
     COMPLETE: "/:id/complete",
+    RESCHEDULE: "/:id/reschedule",
     ADMIN_ALL: "/admin/all",
 } as const;
 
 export const PAYMENT_ROUTES = {
     RAZORPAY_ORDER: "/razorpay/order",
     RAZORPAY_VERIFY: "/razorpay/verify",
+} as const;
+
+export const WALLET_ROUTES = {
+    MY_WALLET: "/my-wallet",
+    ADMIN_EARNINGS: "/admin/earnings-overview",
+    ADMIN_TRANSACTIONS: "/admin/transactions",
 } as const;
 
 
