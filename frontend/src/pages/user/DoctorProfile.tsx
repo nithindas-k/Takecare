@@ -12,6 +12,8 @@ import {
 import NavBar from "../../components/common/NavBar";
 import Footer from "../../components/common/Footer";
 import doctorService from "../../services/doctorService";
+import ReviewsList from "../../components/reviews/ReviewsList";
+
 import { API_BASE_URL } from "../../utils/constants";
 
 type DoctorDTO = {
@@ -41,6 +43,8 @@ const DoctorProfile: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [relatedDoctors, setRelatedDoctors] = useState<DoctorDTO[]>([]);
+  const [activeTab, setActiveTab] = useState<'overview' | 'reviews'>('overview');
+
 
   useEffect(() => {
     if (!doctorId) {
@@ -104,7 +108,7 @@ const DoctorProfile: React.FC = () => {
     const fetchRelatedDoctors = async () => {
       try {
         const result = await doctorService.getRelatedDoctors(doctorId);
-        
+
         if (result?.success === false) {
           console.warn("Failed to fetch related doctors:", result.message);
           if (mounted) setRelatedDoctors([]);
@@ -253,13 +257,13 @@ const DoctorProfile: React.FC = () => {
                   <div className="flex gap-2">
                     {/* Example treatment tags (from qualifications or specialties) */}
                     {doctor.qualifications &&
-                    (Array.isArray(doctor.qualifications)
-                      ? doctor.qualifications.slice(0, 2)
-                      : [doctor.qualifications]).map((q, idx) => (
-                        <span key={idx} className="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-md border border-gray-200">
-                          {q}
-                        </span>
-                      ))}
+                      (Array.isArray(doctor.qualifications)
+                        ? doctor.qualifications.slice(0, 2)
+                        : [doctor.qualifications]).map((q, idx) => (
+                          <span key={idx} className="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-md border border-gray-200">
+                            {q}
+                          </span>
+                        ))}
                   </div>
                 </div>
 
@@ -285,7 +289,11 @@ const DoctorProfile: React.FC = () => {
                   </div>
 
                   <div className="flex gap-2 mt-4 md:mt-0">
-                    <button className="p-2 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50 hover:text-[#00A1B0] transition-colors">
+                    <button
+                      onClick={() => navigate(`/patient/chat/default`)}
+                      className="p-2 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50 hover:text-[#00A1B0] transition-colors"
+                      title="Send Message"
+                    >
                       <FaRegComment />
                     </button>
                     <button className="p-2 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50 hover:text-[#00A1B0] transition-colors">
@@ -306,45 +314,46 @@ const DoctorProfile: React.FC = () => {
 
             {/* Tabs & Content Section */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
-              <div className="border-b border-gray-200 mb-6">
+              <div className="border-b border-gray-200 mb-8">
                 <nav className="-mb-px flex space-x-8">
-                  <button className="border-b-2 border-[#00A1B0] py-4 px-1 text-[#00A1B0] font-bold text-sm">Overview</button>
+                  <button
+                    onClick={() => setActiveTab('overview')}
+                    className={`py-4 px-1 font-bold text-sm transition-all border-b-2 ${activeTab === 'overview'
+                        ? 'border-[#00A1B0] text-[#00A1B0]'
+                        : 'border-transparent text-gray-400 hover:text-gray-600'
+                      }`}
+                  >
+                    Overview
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('reviews')}
+                    className={`py-4 px-1 font-bold text-sm transition-all border-b-2 ${activeTab === 'reviews'
+                        ? 'border-[#00A1B0] text-[#00A1B0]'
+                        : 'border-transparent text-gray-400 hover:text-gray-600'
+                      }`}
+                  >
+                    Reviews ({doctor.reviews})
+                  </button>
                 </nav>
               </div>
 
-              <div>
-                <div className="mb-8">
-                  <h3 className="text-lg font-bold text-[#002f33] mb-4">About </h3>
-                  <p className="text-gray-500 text-sm leading-relaxed mb-4">
-                    {doctor.about}
-                  </p>
-                </div>
-
-                <div className="border border-gray-100 rounded-lg p-4 bg-white shadow-sm max-w-2xl">
-                  <div className="flex gap-4">
-                    <img
-                      src="/images/doctor-01.jpg"
-                      alt="Adrian"
-                      className="w-12 h-12 rounded-full object-cover"
-                      onError={(e) => ((e.target as HTMLImageElement).src = "/doctor.png")}
-                    />
-                    <div>
-                      <div className="flex justify-between w-full">
-                        <div>
-                          <h4 className="text-gray-800 font-bold text-sm">Patient Review</h4>
-                          <p className="text-gray-400 text-xs">15 Mar 2024</p>
-                        </div>
-                      </div>
-                      <div className="flex text-yellow-400 text-xs mt-1 mb-2">
-                        <FaStar /><FaStar /><FaStar /><FaStar /><FaStar />
-                      </div>
-                      <p className="text-gray-500 text-xs leading-relaxed">
-                        Dr. {doctor.name} has been my family's trusted doctor for years. Their genuine care and thorough approach to our health concerns make every visit reassuring.
+              <div className="min-h-[300px]">
+                {activeTab === 'overview' ? (
+                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="mb-8">
+                      <h3 className="text-lg font-bold text-[#002f33] mb-4">About Doctor</h3>
+                      <p className="text-gray-500 text-sm leading-relaxed mb-4">
+                        {doctor.about}
                       </p>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <ReviewsList doctorId={doctor.id} />
+                  </div>
+                )}
               </div>
+
             </div>
 
             {/* Related Doctors */}

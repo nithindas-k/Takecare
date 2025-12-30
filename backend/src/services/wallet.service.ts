@@ -3,12 +3,15 @@ import { IWalletRepository } from "../repositories/interfaces/IWalletRepository"
 import { AppError } from "../errors/AppError";
 import { MESSAGES, HttpStatus } from "../constants/constants";
 
+import { INotificationService } from "./notification.service";
+
 export class WalletService implements IWalletService {
     constructor(
         private _walletRepository: IWalletRepository,
-        private _appointmentRepository?: any, 
+        private _appointmentRepository?: any,
         private _userRepository?: any,
-        private _doctorRepository?: any
+        private _doctorRepository?: any,
+        private _notificationService?: INotificationService
     ) { }
 
     async getWalletBalance(userId: string): Promise<number> {
@@ -31,11 +34,24 @@ export class WalletService implements IWalletService {
             description,
             status: "completed"
         });
+
+        if (this._notificationService) {
+            const title = type === "Refund" ? "Refund Received" :
+                type === "Consultation Fee" ? "Payment Received" :
+                    "Wallet Credited";
+
+            await this._notificationService.notify(userId, {
+                title: title,
+                message: `₹${amount} has been added to your wallet. ${description}`,
+                type: "success",
+                appointmentId
+            });
+        }
     }
 
     async deductMoney(userId: string, amount: number, description: string, appointmentId?: string, type: any = "Consultation Fee"): Promise<void> {
         const balance = await this.getWalletBalance(userId);
-       
+
         await this._walletRepository.updateBalance(userId, -amount);
         await this._walletRepository.createTransaction({
             userId,
@@ -45,6 +61,15 @@ export class WalletService implements IWalletService {
             description,
             status: "completed"
         });
+
+        if (this._notificationService) {
+            await this._notificationService.notify(userId, {
+                title: "Wallet Debited",
+                message: `₹${amount} has been deducted from your wallet. ${description}`,
+                type: "warning",
+                appointmentId
+            });
+        }
     }
 
     async getAdminTransactions(skip: number, limit: number): Promise<{ transactions: any[], total: number }> {
@@ -59,7 +84,7 @@ export class WalletService implements IWalletService {
             this._doctorRepository?.findAllActive?.().then((docs: any[]) => docs.length) || 0
         ]);
 
-       
+
         const grossRevenue = commission / 0.20;
 
         return {

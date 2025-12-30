@@ -23,4 +23,24 @@ html.lenis body {
     pointer-events: none;
 }
 
+/* Override Sonner default styles for custom notifications */
+[data-sonner-toaster] {
+    z-index: 9999 !important;
+}
 
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e5e7eb;
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #d1d5db;
+}

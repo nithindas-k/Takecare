@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import DoctorNavbar from '../../components/Doctor/DoctorNavbar';
 import DoctorLayout from '../../components/Doctor/DoctorLayout';
 import Breadcrumbs from '../../components/common/Breadcrumbs';
@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 
 const DoctorAppointmentDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
     const lastFetchedId = useRef<string | null>(null);
 
     const [appointment, setAppointment] = useState<any>(null);
@@ -237,22 +238,32 @@ const DoctorAppointmentDetails: React.FC = () => {
                                             {normalized.patientName}
                                         </h3>
 
-                                        <div className="text-sm text-gray-600 mt-2 space-y-1.5">
+                                        <div className="flex items-center gap-3 mt-4">
                                             <div className="flex items-center gap-2">
                                                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8" />
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19h14a2 2 0 002-2V7H3v10a2 2 0 002 2z" />
                                                 </svg>
-                                                {normalized.patientEmail}
+                                                <span className="text-sm text-gray-600">{normalized.patientEmail}</span>
                                             </div>
 
                                             <div className="flex items-center gap-2">
                                                 <FaPhone size={14} className="text-gray-400" />
-                                                {normalized.patientPhone}
+                                                <span className="text-sm text-gray-600">{normalized.patientPhone}</span>
                                             </div>
                                         </div>
 
-
+                                        <div className="mt-4">
+                                            <Button
+                                                onClick={() => navigate(`/doctor/chat/${appointment?._id || appointment?.id}`)}
+                                                variant="outline"
+                                                size="sm"
+                                                className="flex items-center gap-2 border-[#00A1B0] text-[#00A1B0] hover:bg-[#00A1B0]/10 rounded-full px-4 h-9 font-semibold"
+                                            >
+                                                <FaComments size={14} />
+                                                Message Patient
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -417,8 +428,11 @@ const DoctorAppointmentDetails: React.FC = () => {
                                         </p>
                                     </div>
                                     <div className="col-span-2 md:col-span-4 lg:col-span-1 flex items-end">
-                                        {normalized.isUpcoming && (
-                                            <button className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors">
+                                        {normalized.isUpcoming && normalized.status === 'confirmed' && (
+                                            <button
+                                                onClick={() => navigate(`/doctor/${normalized.appointmentType === 'video' ? 'call' : 'chat'}/${appointment?._id || appointment?.id}`)}
+                                                className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors"
+                                            >
                                                 Start Session
                                             </button>
                                         )}

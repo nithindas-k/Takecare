@@ -20,9 +20,10 @@ const userRepository = new UserRepository();
 const scheduleRepository = new ScheduleRepository();
 const walletRepository = new WalletRepository();
 
-const walletService = new WalletService(walletRepository);
+import { notificationService } from "./notification.router";
+import { chatService } from "./chat.router";
 
-
+const walletService = new WalletService(walletRepository, null, null, null, notificationService);
 
 const appointmentService = new AppointmentService(
     appointmentRepository,
@@ -30,7 +31,8 @@ const appointmentService = new AppointmentService(
     doctorRepository,
     scheduleRepository,
     walletService,
-
+    notificationService,
+    chatService
 );
 
 const appointmentController = new AppointmentController(appointmentService);
@@ -111,6 +113,12 @@ appointmentRouter.get(
     APPOINTMENT_ROUTES.GET_BY_ID,
     authMiddleware,
     appointmentController.getAppointmentById
+);
+
+appointmentRouter.put(
+    APPOINTMENT_ROUTES.START_CONSULTATION,
+    authMiddleware,
+    appointmentController.startConsultation
 );
 
 export default appointmentRouter;

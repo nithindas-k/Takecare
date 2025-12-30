@@ -17,16 +17,16 @@ const appointmentRepository = new AppointmentRepository();
 const doctorRepository = new DoctorRepository();
 const userRepository = new UserRepository();
 const walletRepository = new WalletRepository();
-const walletService = new WalletService(walletRepository);
+import { notificationService } from "./notification.router";
 
-
+const walletService = new WalletService(walletRepository, null, null, null, notificationService);
 
 const paymentService = new PaymentService(
     appointmentRepository,
     doctorRepository,
     userRepository,
     walletService,
-
+    notificationService
 );
 const paymentController = new PaymentController(paymentService);
 
@@ -39,7 +39,7 @@ paymentRouter.post(
 );
 
 paymentRouter.post(
-    PAYMENT_ROUTES.RAZORPAY_VERIFY,
+    PAYMENT_ROUTES.RAZORPAY_VERIFY, 
     authMiddleware,
     checkUserBlocked,
     requirePatient,

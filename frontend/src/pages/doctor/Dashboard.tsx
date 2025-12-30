@@ -16,6 +16,9 @@ import {
   FaCheck,
   FaTimes,
   FaEye,
+  FaBell,
+  FaStar,
+  FaMoneyBillWave,
 } from "react-icons/fa";
 
 
@@ -43,6 +46,13 @@ const mockInvoices = [
   { id: "Apt0002", name: "Kelly", amount: 500, date: "10 Nov 2024", avatar: "K" },
   { id: "Apt0003", name: "Samuel", amount: 320, date: "03 Nov 2024", avatar: "S" },
   { id: "Apt0004", name: "Catherine", amount: 240, date: "01 Nov 2024", avatar: "C" },
+];
+
+const mockNotifications = [
+  { icon: <FaBell />, message: "Booking Confirmed on 21 Mar 2024 10:30 AM", time: "Just Now", color: "bg-purple-500" },
+  { icon: <FaStar />, message: "You have a New Review for your Appointment", time: "5 Days ago", color: "bg-blue-500" },
+  { icon: <FaCalendarCheck />, message: "You have Appointment with Ahmed by 01:20 PM", time: "12:55 PM", color: "bg-red-500" },
+  { icon: <FaMoneyBillWave />, message: "Sent an amount of $200 for an Appointment", time: "2 Days ago", color: "bg-yellow-500" },
 ];
 
 
@@ -305,7 +315,7 @@ const DoctorDashboard: React.FC = () => {
         </div>
 
         {/* Recent Invoices & Notifications Row */}
-        <div className="grid grid-cols-1 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Invoices */}
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -340,7 +350,31 @@ const DoctorDashboard: React.FC = () => {
             </div>
           </div>
 
-
+          {/* Notifications */}
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
+              <button
+                type="button"
+                className="text-sm text-[#00A1B0] hover:text-[#00A1B0]"
+              >
+                View All
+              </button>
+            </div>
+            <div className="divide-y divide-gray-50">
+              {mockNotifications.map((notif, idx) => (
+                <div key={idx} className="px-6 py-4 flex items-start gap-4 hover:bg-gray-50 transition-colors">
+                  <div className={`w-10 h-10 rounded-full ${notif.color} flex items-center justify-center text-white`}>
+                    {notif.icon}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-700">{notif.message}</p>
+                    <p className="text-xs text-gray-400 mt-1">{notif.time}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </DoctorLayout>
     </div>

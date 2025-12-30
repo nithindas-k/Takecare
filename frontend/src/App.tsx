@@ -59,6 +59,10 @@ import UserWallet from "./pages/user/Wallet";
 import DoctorWallet from "./pages/doctor/Wallet";
 import AdminEarnings from "./pages/admin/Earnings";
 
+// Consultation Pages
+import VideoCallPage from "./pages/consultation/VideoCallPage";
+import ChatPage from "./pages/consultation/ChatPage";
+
 const NotFound: React.FC = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-100">
     <div className="text-center">
@@ -203,6 +207,22 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="call/:id"
+            element={
+              <ProtectedRoute role="doctor">
+                <VideoCallPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="chat/:id"
+            element={
+              <ProtectedRoute role="doctor">
+                <ChatPage />
+              </ProtectedRoute>
+            }
+          />
         </Route>
 
 
@@ -272,6 +292,22 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute role="patient">
                 <UserWallet />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="call/:id"
+            element={
+              <ProtectedRoute role="patient">
+                <VideoCallPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="chat/:id"
+            element={
+              <ProtectedRoute role="patient">
+                <ChatPage />
               </ProtectedRoute>
             }
           />

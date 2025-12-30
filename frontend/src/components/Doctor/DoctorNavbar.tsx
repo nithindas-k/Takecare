@@ -5,7 +5,7 @@ import { FaUserCircle } from "react-icons/fa";
 import { LogOut, User } from "lucide-react";
 import authService from "../../services/authService";
 
-
+import NotificationDropdown from "../common/NotificationDropdown";
 
 const DoctorNavbar: React.FC = () => {
   const navigate = useNavigate();
@@ -27,8 +27,7 @@ const DoctorNavbar: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-4 relative">
-
-
+        <NotificationDropdown />
         <div className="relative">
           <button
             onClick={() => setShowLogoutMenu(!showLogoutMenu)}

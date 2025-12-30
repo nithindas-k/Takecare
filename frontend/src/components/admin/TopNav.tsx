@@ -7,7 +7,7 @@ interface TopNavProps {
   onMenuClick?: () => void;
 }
 
-
+import NotificationDropdown from "../common/NotificationDropdown";
 
 const TopNav: React.FC<TopNavProps> = ({ onMenuClick }) => {
   const navigate = useNavigate();
@@ -36,7 +36,7 @@ const TopNav: React.FC<TopNavProps> = ({ onMenuClick }) => {
       </div>
       <div className="flex items-center gap-3">
         {/* Notification Button */}
-
+        <NotificationDropdown />
 
         {/* User Profile Dropdown */}
         <div className="relative">

@@ -6,10 +6,11 @@ import { IScheduleRepository } from "../repositories/interfaces/ISchedule.reposi
 import { AppError } from "../errors/AppError";
 import { LoggerService } from "./logger.service";
 import { APPOINTMENT_STATUS, MESSAGES, HttpStatus, PAYMENT_STATUS, PAYMENT_COMMISSION, CANCELLATION_RULES, ROLES } from "../constants/constants";
-import { Types } from "mongoose";
 import { AppointmentMapper } from "../mappers/appointment.mapper";
 import { IWalletService } from "./interfaces/IWalletService";
-
+import { IChatService } from "./interfaces/IChatService";
+import { INotificationService } from "./notification.service";
+import { socketService } from "./socket.service";
 
 export class AppointmentService implements IAppointmentService {
     private readonly logger: LoggerService;
@@ -20,7 +21,8 @@ export class AppointmentService implements IAppointmentService {
         private _doctorRepository: IDoctorRepository,
         private _scheduleRepository: IScheduleRepository,
         private _walletService: IWalletService,
-
+        private _notificationService?: INotificationService,
+        private _chatService?: IChatService
     ) {
         this.logger = new LoggerService("AppointmentService");
     }
@@ -80,8 +82,8 @@ export class AppointmentService implements IAppointmentService {
         const doctorEarnings = (consultationFees * PAYMENT_COMMISSION.DOCTOR_PERCENT) / 100;
 
         const appointment = await this._appointmentRepository.create({
-            patientId: new Types.ObjectId(patientId),
-            doctorId: new Types.ObjectId(appointmentData.doctorId),
+            patientId,
+            doctorId: appointmentData.doctorId,
             appointmentType: appointmentData.appointmentType,
             appointmentDate: new Date(appointmentData.appointmentDate),
             appointmentTime: appointmentData.appointmentTime,
@@ -114,6 +116,15 @@ export class AppointmentService implements IAppointmentService {
             }
         }
 
+        if (this._notificationService) {
+            await this._notificationService.notify(doctor.userId.toString(), {
+                title: "New Appointment Request",
+                message: `You have a new appointment request from ${patient.name}.`,
+                type: "info",
+                appointmentId: appointment._id.toString()
+            });
+        }
+
         const populatedAppointment = await this._appointmentRepository.findByIdPopulated(appointment._id.toString());
         return AppointmentMapper.toResponseDTO(populatedAppointment);
     }
@@ -142,7 +153,7 @@ export class AppointmentService implements IAppointmentService {
             patientId: filters.patientId,
         };
 
-        
+
         if (userRole === ROLES.PATIENT) {
             repoFilters.patientId = userId;
         } else if (userRole === ROLES.DOCTOR) {
@@ -264,13 +275,15 @@ export class AppointmentService implements IAppointmentService {
             const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
             const patient = await this._userRepository.findById(appointment.patientId.toString());
 
+            let refundAmount = 0; // Declare refundAmount here
+
             if (userRole === 'patient') {
-                  //user Cancel
-                const refundAmount = (totalFee * CANCELLATION_RULES.USER_CANCEL_REFUND_PERCENT) / 100;
+                //user Cancel
+                refundAmount = (totalFee * CANCELLATION_RULES.USER_CANCEL_REFUND_PERCENT) / 100;
                 const adminKeeps = (totalFee * CANCELLATION_RULES.USER_CANCEL_ADMIN_COMMISSION) / 100;
                 const doctorKeeps = (totalFee * CANCELLATION_RULES.USER_CANCEL_DOCTOR_COMMISSION) / 100;
 
-       
+
                 const doctorDeduction = appointment.doctorEarnings - doctorKeeps;
                 const adminDeduction = appointment.adminCommission - adminKeeps;
 
@@ -281,12 +294,12 @@ export class AppointmentService implements IAppointmentService {
                 const adminUser = admins[0];
                 if (adminUser) await this._walletService.deductMoney(adminUser._id.toString(), adminDeduction, `Commission Reversal: patient cancelled #${appointment.customId || appointment.id}`, appointment._id.toString());
 
-             
+
                 if (patient) await this._walletService.addMoney(patient._id.toString(), refundAmount, `Refund: appointment #${appointment.customId || appointment.id} cancelled (30% fee applied)`, appointment._id.toString());
 
             } else {
-             
-                const refundAmount = totalFee;
+
+                refundAmount = totalFee;
 
                 if (doctor) await this._walletService.deductMoney(doctor.userId.toString(), appointment.doctorEarnings, `Cancellation: appointment #${appointment.customId || appointment.id} cancelled by ${userRole}`, appointment._id.toString());
 
@@ -300,6 +313,33 @@ export class AppointmentService implements IAppointmentService {
             await this._appointmentRepository.updateById(appointmentId, {
                 paymentStatus: PAYMENT_STATUS.REFUNDED
             });
+
+            if (this._notificationService) {
+                const customId = appointment.customId || appointmentId;
+                if (userRole === "patient") {
+                    // Notify doctor about patient cancellation
+                    if (doctor) await this._notificationService.notify(doctor.userId.toString(), {
+                        title: "Appointment Cancelled",
+                        message: `Patient has cancelled appointment #${customId}.`,
+                        type: "warning",
+                        appointmentId: appointment._id.toString()
+                    });
+
+                    // Notify patient about their cancellation (Refund already notified by WalletService)
+                } else {
+                    // Notify patient about cancellation by doctor/admin with full refund
+                    if (patient) {
+                        await this._notificationService.notify(patient._id.toString(), {
+                            title: "Appointment Cancelled",
+                            message: `Your appointment #${customId} has been cancelled by the ${userRole}.`,
+                            type: "info",
+                            appointmentId: appointment._id.toString()
+                        });
+
+                        // Refund already notified by WalletService
+                    }
+                }
+            }
 
 
         }
@@ -431,6 +471,15 @@ export class AppointmentService implements IAppointmentService {
             status: APPOINTMENT_STATUS.CONFIRMED,
         });
 
+        if (this._notificationService) {
+            await this._notificationService.notify(appointment.patientId.toString(), {
+                title: "Appointment Confirmed",
+                message: `Your appointment #${appointment.customId || appointment.id} has been confirmed.`,
+                type: "success",
+                appointmentId: appointment._id.toString()
+            });
+        }
+
 
     }
 
@@ -465,10 +514,10 @@ export class AppointmentService implements IAppointmentService {
         if (appointment.paymentStatus === PAYMENT_STATUS.PAID) {
             const patient = await this._userRepository.findById(appointment.patientId.toString());
 
-          
+
             if (patient) await this._walletService.addMoney(patient._id.toString(), appointment.consultationFees, `Refund: appointment #${appointment.customId || appointment.id} rejected by doctor`, appointment._id.toString());
 
-          
+
             const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
             if (doctor) await this._walletService.deductMoney(doctor.userId.toString(), appointment.doctorEarnings, `Reversal: appointment #${appointment.customId || appointment.id} rejected`, appointment._id.toString());
 
@@ -480,7 +529,17 @@ export class AppointmentService implements IAppointmentService {
                 paymentStatus: PAYMENT_STATUS.REFUNDED
             });
 
+            if (this._notificationService) {
+                // Rejection notification
+                await this._notificationService.notify(appointment.patientId.toString(), {
+                    title: "Appointment Rejected",
+                    message: `Your appointment #${appointment.customId || appointment.id} has been rejected by the doctor.`,
+                    type: "error",
+                    appointmentId: appointment._id.toString()
+                });
 
+                // Refund already notified by WalletService
+            }
         }
 
         if (appointment.slotId) {
@@ -524,6 +583,44 @@ export class AppointmentService implements IAppointmentService {
             prescriptionUrl: prescriptionUrl || null,
             sessionEndTime: new Date(),
         });
+    }
+
+    async startConsultation(appointmentId: string, userId: string): Promise<void> {
+        const appointment = await this._appointmentRepository.findById(appointmentId);
+        if (!appointment) {
+            throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
+        }
+
+        // Verify it is the doctor starting the consultation
+        const doctor = await this._doctorRepository.findByUserId(userId);
+        if (!doctor || doctor._id.toString() !== appointment.doctorId.toString()) {
+            throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        // We only send the message if the session hasn't started yet
+        if (!appointment.sessionStartTime) {
+            await this._appointmentRepository.updateById(appointmentId, {
+                sessionStartTime: new Date()
+            });
+
+            if (appointment.appointmentType === 'chat' && this._chatService) {
+                const patient = await this._userRepository.findById(appointment.patientId.toString());
+                const patientName = patient?.name || 'Patient';
+
+                const messageContent = `Hello ${patientName}, shall we start?`;
+
+                const message = await this._chatService.saveMessage(
+                    appointmentId,
+                    doctor._id.toString(),
+                    'Doctor',
+                    messageContent,
+                    'text'
+                );
+
+                // Emit to the specific appointment room
+                socketService.emitMessage(appointment._id.toString(), message);
+            }
+        }
     }
 
 }

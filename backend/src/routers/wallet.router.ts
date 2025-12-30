@@ -16,11 +16,14 @@ const appointmentRepository = new AppointmentRepository();
 const userRepository = new UserRepository();
 const doctorRepository = new DoctorRepository();
 
+import { notificationService } from "./notification.router";
+
 const walletService = new WalletService(
     walletRepository,
     appointmentRepository,
     userRepository,
-    doctorRepository
+    doctorRepository,
+    notificationService
 );
 
 const walletController = new WalletController(walletService);

@@ -99,6 +99,7 @@ export const APPOINTMENT_API_ROUTES = {
   COMPLETE: (id: string): string => `/appointments/${id}/complete`,
   RESCHEDULE: (id: string): string => `/appointments/${id}/reschedule`,
   ADMIN_ALL: "/appointments/admin/all",
+  START_CONSULTATION: (id: string): string => `/appointments/${id}/start-consultation`,
 } as const;
 
 export const PAYMENT_API_ROUTES = {
@@ -110,6 +111,21 @@ export const WALLET_API_ROUTES = {
   MY_WALLET: "/wallet/my-wallet",
   ADMIN_EARNINGS: "/wallet/admin/earnings-overview",
   ADMIN_TRANSACTIONS: "/wallet/admin/transactions",
+} as const;
+
+export const CHAT_API_ROUTES = {
+  GET_CONVERSATIONS: "/chat/conversations",
+  GET_MESSAGES: (appointmentId: string): string => `/chat/${appointmentId}`,
+  SEND_MESSAGE: (appointmentId: string): string => `/chat/${appointmentId}`,
+  UPLOAD_ATTACHMENT: (appointmentId: string): string => `/chat/${appointmentId}/upload`,
+} as const;
+
+export const REVIEW_API_ROUTES = {
+  ADD: "/reviews",
+  UPDATE: (reviewId: string): string => `/reviews/${reviewId}`,
+  DELETE: (reviewId: string): string => `/reviews/${reviewId}`,
+  GET_DOCTOR_REVIEWS: (doctorId: string): string => `/reviews/doctor/${doctorId}`,
+  GET_DOCTOR_STATS: (doctorId: string): string => `/reviews/doctor/${doctorId}/stats`,
 } as const;
 
 export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];

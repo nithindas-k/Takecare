@@ -19,6 +19,9 @@ import adminRouter from "./routers/admin.route";
 import appointmentRouter from "./routers/appointment.router";
 import paymentRouter from "./routers/payment.router";
 import walletRouter from "./routers/wallet.router";
+import notificationRouter from "./routers/notification.router";
+import chatRouter from "./routers/chat.router";
+import reviewRouter from "./routers/review.route";
 
 import { errorHandler } from "./middlewares/error-handler.middleware";
 import { LoggerService } from "./services/logger.service";
@@ -82,6 +85,10 @@ app.use(BASE_ROUTES.ADMIN, adminRouter);
 app.use(BASE_ROUTES.APPOINTMENTS, appointmentRouter);
 app.use(BASE_ROUTES.PAYMENTS, paymentRouter);
 app.use(BASE_ROUTES.WALLET, walletRouter);
+app.use(BASE_ROUTES.NOTIFICATIONS, notificationRouter);
+app.use(BASE_ROUTES.CHAT, chatRouter);
+app.use(BASE_ROUTES.REVIEWS, reviewRouter);
+
 
 
 
@@ -97,15 +104,27 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 import { createServer } from "http";
+import { socketService } from "./services/socket.service";
+import { AppointmentReminderService } from "./services/appointmentReminder.service";
+import { AppointmentRepository } from "./repositories/appointment.repository";
+import { notificationService } from "./routers/notification.router";
+
+const appointmentRepository = new AppointmentRepository();
+const appointmentReminderService = new AppointmentReminderService(
+  appointmentRepository,
+  notificationService
+);
+appointmentReminderService.start();
 
 const PORT = Number(env.PORT);
 
-// const httpServer = createServer(app);
+const httpServer = createServer(app);
+socketService.init(httpServer);
 
 const startServer = async () => {
   try {
     await connectDB();
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       logger.info(`Server running on http://localhost:${PORT}`);
       logger.info(`API Base: http://localhost:${PORT}/api`);
     });

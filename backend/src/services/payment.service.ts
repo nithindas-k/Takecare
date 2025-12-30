@@ -9,6 +9,7 @@ import type { IUserRepository } from "../repositories/interfaces/IUser.repositor
 import type { IPaymentService } from "./interfaces/IPaymentService";
 import type { IWalletService } from "./interfaces/IWalletService";
 
+import type { INotificationService } from "./notification.service";
 import type { CreateRazorpayOrderDTO, VerifyRazorpayPaymentDTO } from "../dtos/payment.dtos/razorpay.dto";
 import { LoggerService } from "./logger.service";
 
@@ -21,7 +22,7 @@ export class PaymentService implements IPaymentService {
         private _doctorRepository: IDoctorRepository,
         private _userRepository: IUserRepository,
         private _walletService: IWalletService,
-
+        private _notificationService?: INotificationService
     ) {
         this.logger = new LoggerService("PaymentService");
 
@@ -133,7 +134,16 @@ export class PaymentService implements IPaymentService {
             paymentId: razorpay_payment_id,
         });
 
-    
+        if (this._notificationService) {
+            await this._notificationService.notify(patientId, {
+                title: "Payment Successful",
+                message: `Your payment of ₹${appointment.consultationFees} for appointment #${appointment.customId || appointmentId} was successful.`,
+                type: "success",
+                appointmentId: appointment._id.toString()
+            });
+        }
+
+
         const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
         const patient = await this._userRepository.findById(appointment.patientId.toString());
 
@@ -146,9 +156,18 @@ export class PaymentService implements IPaymentService {
                 "Consultation Fee"
             );
 
-
+            // Notify doctor that appointment is now confirmed (paid)
+            if (this._notificationService) {
+                await this._notificationService.notify(doctor.userId.toString(), {
+                    title: "Appointment Paid & Confirmed",
+                    message: `Payment for appointment #${appointment.customId || appointmentId} from ${patient?.name || 'Patient'} has been verified.`,
+                    type: "success",
+                    appointmentId: appointment._id.toString()
+                });
+            }
         }
 
+        // Notify admin about commission
         const admins = await this._userRepository.findByRole(ROLES.ADMIN);
         const adminUser = admins[0];
         if (adminUser) {
@@ -159,6 +178,8 @@ export class PaymentService implements IPaymentService {
                 appointment._id.toString(),
                 "Consultation Fee"
             );
+
+            // Admin commission is now notified via WalletService
         }
 
         this.logger.info("Razorpay payment verified and split performed", {

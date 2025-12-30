@@ -64,4 +64,9 @@ export interface IAppointmentService {
         doctorNotes?: string,
         prescriptionUrl?: string
     ): Promise<void>;
+
+    startConsultation(
+        appointmentId: string,
+        userId: string
+    ): Promise<void>;
 }

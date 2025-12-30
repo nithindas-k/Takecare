@@ -50,6 +50,8 @@ export interface IAppointment {
     doctorNotes?: string | null;
     prescriptionUrl?: string | null;
 
+    reminderSent?: boolean;
+
     createdAt?: Date;
     updatedAt?: Date;
 }

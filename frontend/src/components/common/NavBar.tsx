@@ -6,7 +6,7 @@ import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../../redux/store";
 import { logout } from "../../redux/user/userSlice";
 
-
+import NotificationDropdown from "./NotificationDropdown";
 
 const NavBar: React.FC = () => {
   const navigate = useNavigate();
@@ -87,7 +87,7 @@ const NavBar: React.FC = () => {
             </>
           ) : (
             <>
-
+              <NotificationDropdown />
 
               <div className="relative">
                 <button

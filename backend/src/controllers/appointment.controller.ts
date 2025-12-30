@@ -366,4 +366,26 @@ export class AppointmentController implements IAppointmentController {
             next(err);
         }
     };
+
+    startConsultation = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+            const appointmentId = req.params.id;
+
+            if (!userId || userRole !== ROLES.DOCTOR) {
+                throw new AppError(MESSAGES.DOCTOR_ONLY, HttpStatus.FORBIDDEN);
+            }
+
+            await this._appointmentService.startConsultation(appointmentId, userId);
+
+            sendSuccess(res, undefined, "Consultation started successfully");
+        } catch (err: unknown) {
+            next(err);
+        }
+    };
 }

@@ -1,7 +1,8 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 export interface UserProfile {
-    _id: string;
+    _id?: string;
+    id?: string;
     name: string;
     email: string;
     phone?: string;
@@ -23,7 +24,7 @@ export interface UserProfile {
     isVerified?: boolean;
     createdAt?: string;
     updatedAt?: string;
-    
+
 }
 
 interface UserState {

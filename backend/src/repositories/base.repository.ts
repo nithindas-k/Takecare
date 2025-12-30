@@ -36,6 +36,14 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
     return await this.model.findOne(query).exec();
   }
 
+  async find(filter: Record<string, any>): Promise<T[]> {
+    return await this.model.find(filter).exec();
+  }
+
+  async findWithPopulate(filter: Record<string, any>, populateField: string): Promise<T[]> {
+    return await this.model.find(filter).populate(populateField).exec();
+  }
+
   async existsByField(fieldName: string, value: unknown): Promise<boolean> {
     const query: Record<string, unknown> = {};
     query[fieldName] = value;

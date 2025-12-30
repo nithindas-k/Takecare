@@ -1,4 +1,5 @@
 import { StatusCodes } from "http-status-codes";
+import { env } from "../configs/env";
 
 export const ROLES = {
   ADMIN: "admin",
@@ -14,7 +15,7 @@ export const GENDER = {
 
 export const COOKIE_OPTIONS = {
   REFRESH_TOKEN: "refreshToken",
-  MAX_AGE: 30 * 24 * 60 * 60 * 1000,
+  MAX_AGE: env.REFRESH_TOKEN_MAX_AGE,
   SAME_SITE_STRICT: "strict",
   SAME_SITE_NONE: "none",
   ENV_PRODUCTION: "production",
@@ -87,7 +88,7 @@ export const ERROR_CODES = {
 } as const;
 
 export const CONFIG = {
-  SESSION_MAX_AGE: 24 * 60 * 60 * 1000,
+  SESSION_MAX_AGE: env.SESSION_MAX_AGE,
   OTP_EXPIRY_MINUTES: 1,
   OTP_RESEND_DELAY_SECONDS: 30,
 } as const;
@@ -130,7 +131,7 @@ export const MESSAGES = {
   USER_NOT_ACTIVE: "User is not active",
   USER_NOT_FOUND: "User not found",
   USER_BLOCKED: "Your account has been blocked",
-  APPOINTMENT_CANNOT_RESCHEDULE:"You can only reschedule an appointment once.",
+  APPOINTMENT_CANNOT_RESCHEDULE: "You can only reschedule an appointment once.",
   DOCTOR_SPECIALITY_LIMIT_EXCEEDED: "limit is 2",
   INVALID_CREDENTIALS: "Invalid email or password",
   LOGIN_SUCCESS: "Login successful",

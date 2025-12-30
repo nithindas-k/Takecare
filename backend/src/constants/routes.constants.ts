@@ -7,6 +7,9 @@ export const BASE_ROUTES = {
     APPOINTMENTS: "/appointments",
     PAYMENTS: "/payments",
     WALLET: "/wallet",
+    NOTIFICATIONS: "/notifications",
+    CHAT: "/chat",
+    REVIEWS: "/reviews",
 } as const;
 
 
@@ -76,6 +79,7 @@ export const APPOINTMENT_ROUTES = {
     COMPLETE: "/:id/complete",
     RESCHEDULE: "/:id/reschedule",
     ADMIN_ALL: "/admin/all",
+    START_CONSULTATION: "/:id/start-consultation",
 } as const;
 
 export const PAYMENT_ROUTES = {

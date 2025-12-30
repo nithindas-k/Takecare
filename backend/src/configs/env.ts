@@ -89,11 +89,19 @@ export const env = {
     return process.env.CLOUDINARY_API_SECRET || "Sgl7yYchZIpYIl83gni3H86SSwo";
   },
 
-  get RAZORPAY_API_KEY(){
-    return  process.env.RAZORPAY_API_KEY || process.env.RAZORPAY_KEY_ID || "rzp_test_RrS9ZYGEKdBbng";
+  get RAZORPAY_API_KEY() {
+    return process.env.RAZORPAY_API_KEY || process.env.RAZORPAY_KEY_ID || "rzp_test_RrS9ZYGEKdBbng";
   },
 
-  get RAZORPAY_API_SECRET(){
-    return  process.env.RAZORPAY_API_SECRET || process.env.RAZORPAY_KEY_SECRET || "bV5EhCsws3DaYkMDo7t1Fe6q";
+  get RAZORPAY_API_SECRET() {
+    return process.env.RAZORPAY_API_SECRET || process.env.RAZORPAY_KEY_SECRET || "bV5EhCsws3DaYkMDo7t1Fe6q";
+  },
+
+  get REFRESH_TOKEN_MAX_AGE() {
+    return Number(process.env.REFRESH_TOKEN_MAX_AGE) || 30 * 24 * 60 * 60 * 1000;
+  },
+
+  get SESSION_MAX_AGE() {
+    return Number(process.env.SESSION_MAX_AGE) || 24 * 60 * 60 * 1000;
   }
 };

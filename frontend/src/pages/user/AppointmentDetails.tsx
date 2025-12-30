@@ -400,6 +400,17 @@ const AppointmentDetails: React.FC = () => {
                                                         {normalized.department}
                                                     </div>
 
+                                                    <div className="mt-2">
+                                                        <Button
+                                                            onClick={() => navigate(`/patient/chat/${appointment?._id || appointment?.id}`)}
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="flex items-center gap-2 border-[#00A1B0] text-[#00A1B0] hover:bg-[#00A1B0]/10 rounded-full px-4 h-8 text-xs font-semibold"
+                                                        >
+                                                            <FaComments size={13} />
+                                                            Message Doctor
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -599,8 +610,11 @@ const AppointmentDetails: React.FC = () => {
                                         </p>
                                     </div>
                                     <div className="col-span-2 md:col-span-4 lg:col-span-1 flex items-end">
-                                        {normalized.isUpcoming && (
-                                            <button className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors">
+                                        {normalized.isUpcoming && normalized.status === 'confirmed' && (
+                                            <button
+                                                onClick={() => navigate(`/patient/${normalized.appointmentType === 'video' ? 'call' : 'chat'}/${appointment?._id || appointment?.id}`)}
+                                                className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors"
+                                            >
                                                 Start Session
                                             </button>
                                         )}

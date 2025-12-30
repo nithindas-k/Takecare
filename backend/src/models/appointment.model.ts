@@ -152,6 +152,10 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
             type: String,
             default: null,
         },
+        reminderSent: {
+            type: Boolean,
+            default: false,
+        },
     },
     {
         timestamps: true,

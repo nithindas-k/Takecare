@@ -1,0 +1,12 @@
+[2025-12-26T11:46:00.263Z] Socket.io initialized
+[2025-12-26T11:46:00.392Z] New socket connection: RsuooYz7I5O0hLa9AAAB
+[2025-12-26T11:46:00.397Z] Socket RsuooYz7I5O0hLa9AAAB joining room: 6941b7947d470d3c70f37807
+[2025-12-26T11:46:00.492Z] New socket connection: VIbxtaRVTOiGtLofAAAD
+[2025-12-26T11:46:00.498Z] Socket VIbxtaRVTOiGtLofAAAD joining room: 69425cdc7cfc9c7d98d51ebd
+[2025-12-26T11:47:22.493Z] Socket disconnected: VIbxtaRVTOiGtLofAAAD
+[2025-12-26T11:47:46.355Z] New socket connection: 4KbRlrZOj59xlQCFAAAF
+[2025-12-26T11:47:46.389Z] Socket 4KbRlrZOj59xlQCFAAAF joining room: 69425cdc7cfc9c7d98d51ebd
+[2025-12-26T11:48:25.884Z] Emitting notification to user 6941b7947d470d3c70f37807: New Appointment Request
+[2025-12-26T11:48:44.446Z] Emitting notification to user 69425cdc7cfc9c7d98d51ebd: Payment Successful
+[2025-12-26T11:48:44.454Z] Emitting notification to user 6941b7947d470d3c70f37807: Wallet Credited
+[2025-12-26T11:48:44.461Z] Emitting notification to user 69419946cbd5aab6bf1aea5a: Wallet Credited

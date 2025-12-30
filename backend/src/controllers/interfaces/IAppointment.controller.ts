@@ -14,6 +14,7 @@ export interface IAppointmentController {
     approveAppointmentRequest(req: Request, res: Response, next: NextFunction): Promise<void>;
     rejectAppointmentRequest(req: Request, res: Response, next: NextFunction): Promise<void>;
     completeAppointment(req: Request, res: Response, next: NextFunction): Promise<void>;
+    startConsultation(req: Request, res: Response, next: NextFunction): Promise<void>;
 
 
     getAllAppointments(req: Request, res: Response, next: NextFunction): Promise<void>;
