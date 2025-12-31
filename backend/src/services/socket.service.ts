@@ -15,6 +15,24 @@ class SocketService {
         });
 
         this.io.on("connection", (socket: Socket) => {
+            // WebRTC Signaling Events
+            socket.on("call-user", ({ userToCall, signalData, from, name }) => {
+                this.io?.to(userToCall).emit("call-user", { signal: signalData, from, name });
+            });
+
+            socket.on("answer-call", (data) => {
+                this.io?.to(data.to).emit("call-accepted", data.signal);
+            });
+
+            socket.on("ice-candidate", ({ to, candidate }) => {
+                this.io?.to(to).emit("ice-candidate", candidate);
+            });
+
+            socket.on("end-call", ({ to }) => {
+                this.io?.to(to).emit("call-ended");
+            });
+
+            // existing chat events...
             socket.on("join", (userId: string) => {
                 socket.join(userId);
                 this.onlineUsers.set(userId, socket.id);

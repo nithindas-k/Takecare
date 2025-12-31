@@ -41,7 +41,7 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
 }
 
 export interface DialogContentProps
-  extends React.HTMLAttributes<HTMLDivElement> {}
+  extends React.HTMLAttributes<HTMLDivElement> { }
 
 export function DialogContent({ className, children, ...props }: DialogContentProps) {
   const ctx = React.useContext(DialogContext);
@@ -58,7 +58,7 @@ export function DialogContent({ className, children, ...props }: DialogContentPr
       />
       <div
         className={cn(
-          "fixed left-1/2 top-1/2 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-gray-200 bg-white text-gray-900 shadow-2xl",
+          "fixed left-1/2 top-1/2 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl bg-white text-gray-900 shadow-2xl",
           className
         )}
         role="dialog"
@@ -78,7 +78,7 @@ export function DialogHeader({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("flex flex-col gap-1.5 border-b border-gray-200 p-5", className)}
+      className={cn("flex flex-col gap-1.5 p-5", className)}
       {...props}
     />
   );
@@ -117,7 +117,7 @@ export function DialogFooter({
   return (
     <div
       className={cn(
-        "flex items-center justify-end gap-2 border-t border-gray-200 bg-gray-50 p-4",
+        "flex items-center justify-end gap-2 p-4",
         className
       )}
       {...props}
@@ -126,7 +126,7 @@ export function DialogFooter({
 }
 
 export interface DialogCloseProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {}
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> { }
 
 export function DialogClose({ className, ...props }: DialogCloseProps) {
   const ctx = React.useContext(DialogContext);
