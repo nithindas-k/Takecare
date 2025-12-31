@@ -22,4 +22,8 @@ export interface IChatService {
     markMessagesAsRead(appointmentId: string, userId: string, userModel: 'User' | 'Doctor'): Promise<void>;
 
     getConversations(userId: string, userRole: string): Promise<any[]>;
+
+    editMessage(messageId: string, content: string, userId: string): Promise<IMessage>;
+
+    deleteMessage(messageId: string, userId: string): Promise<IMessage>;
 }

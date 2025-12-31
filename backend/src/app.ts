@@ -33,7 +33,7 @@ const logger = new LoggerService("App");
 const app = express();
 
 const corsOptions = {
-  origin: env.CLIENT_URL, //=
+  origin: env.CLIENT_URL,
   credentials: true,
   optionsSuccessStatus: 200,
 };

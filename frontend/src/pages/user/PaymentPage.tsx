@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaCheckCircle, FaArrowLeft, FaCreditCard, FaLock } from 'react-icons/fa';
+import { FaCheckCircle, FaArrowLeft, FaCreditCard } from 'react-icons/fa';
 import NavBar from '../../components/common/NavBar';
 import Footer from '../../components/common/Footer';
 import { Button } from '../../components/ui/button';
@@ -25,7 +25,6 @@ const PaymentPage: React.FC = () => {
     const [policyOpen, setPolicyOpen] = useState(false);
     const [bookingData, setBookingData] = useState<any>(null);
     const [processing, setProcessing] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'razorpay'>('razorpay');
 
     useEffect(() => {
         const token = localStorage.getItem('authToken');

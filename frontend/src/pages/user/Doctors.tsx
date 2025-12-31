@@ -72,12 +72,12 @@ const Doctors: React.FC = () => {
         fetchDoctors();
     }, [page, speciality, sortBy, experience, rating]);
     const handleSearch = () => {
-          
-        if(searchQuery.trim() == ""){
+
+        if (searchQuery.trim() == "") {
             toast.error("Please enter a search query");
             return
         }
-         
+
         setPage(1);
         if (page === 1) fetchDoctors();
     };
@@ -119,7 +119,7 @@ const Doctors: React.FC = () => {
     };
 
     return (
-        <div className="bg-gray-50 min-h-screen font-sans">
+        <div className="bg-gray-50 min-h-screen font-sans overflow-x-hidden">
             <NavBar />
 
             {/* Enhanced Hero & Minimal Search Section */}
@@ -166,77 +166,85 @@ const Doctors: React.FC = () => {
             </div>
 
             <div className="container mx-auto px-4 -mt-16 pb-32 relative z-20">
-                {/* Minimal Filter Toolbar - Light Theme */}
-                <div className="flex flex-col lg:flex-row items-center justify-between gap-6 mb-12">
-                    <div className="flex flex-wrap items-center gap-4">
-                        <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-2xl shadow-sm border border-slate-100">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Results</span>
+                {/* Minimal Filter Toolbar - Enhanced Responsiveness */}
+                <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 md:gap-6 mb-8 md:mb-12">
+
+                    {/* Primary Filters Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-2 md:flex md:flex-wrap items-center gap-3 md:gap-4 flex-1">
+
+                        {/* Results Count Widget */}
+                        <div className="col-span-2 sm:col-span-1 flex items-center gap-3 px-4 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 transition-all hover:shadow-md h-[52px]">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Results</span>
                             <div className="h-4 w-px bg-slate-100"></div>
-                            <span className="text-xs font-black text-cyan-600 px-2 tracking-tighter">{totalDoctors} Found</span>
+                            <span className="text-xs font-black text-[#00A1B0] px-2 tracking-tighter whitespace-nowrap">{totalDoctors} Found</span>
                         </div>
 
-                        <div className="flex items-center gap-2 px-6 py-3 bg-white rounded-2xl shadow-sm border border-slate-100">
-                            <FaFilter className="text-cyan-500 w-3 h-3" />
+                        {/* Speciality Filter */}
+                        <div className="flex items-center gap-2 px-4 md:px-6 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 transition-all hover:shadow-md h-[52px]">
+                            <FaFilter className="text-[#00A1B0] w-3 h-3 shrink-0" />
                             <select
-                                className="bg-transparent border-none text-[11px] font-black text-slate-800 uppercase tracking-widest focus:ring-0 focus:outline-none cursor-pointer appearance-none pr-8"
+                                className="w-full bg-transparent border-none text-[10px] md:text-[11px] font-black text-slate-800 uppercase tracking-widest focus:ring-0 focus:outline-none cursor-pointer appearance-none pr-6"
                                 value={speciality}
                                 onChange={(e) => setSpeciality(e.target.value)}
                             >
-                                <option value="">Speciality</option>
-                                <option value="Cardiologist">Cardiology</option>
-                                <option value="Neurologist">Neurology</option>
-                                <option value="Dermatologist">Dermatology</option>
-                                <option value="Pediatrician">Pediatrics</option>
-                                <option value="Psychologist">Psychology</option>
+                                <option value="">Spec</option>
+                                <option value="Cardiologist">Cardio</option>
+                                <option value="Neurologist">Neuro</option>
+                                <option value="Dermatologist">Derma</option>
+                                <option value="Pediatrician">Pediat</option>
+                                <option value="Psychologist">Psych</option>
                             </select>
                         </div>
 
-                        <div className="flex items-center gap-2 px-6 py-3 bg-white rounded-2xl shadow-sm border border-slate-100">
-                            <FaBriefcase className="text-cyan-500 w-3 h-3" />
+                        {/* Experience Filter */}
+                        <div className="flex items-center gap-2 px-4 md:px-6 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 transition-all hover:shadow-md h-[52px]">
+                            <FaBriefcase className="text-[#00A1B0] w-3 h-3 shrink-0" />
                             <select
-                                className="bg-transparent border-none text-[11px] font-black text-slate-800 uppercase tracking-widest focus:ring-0 focus:outline-none cursor-pointer appearance-none pr-8"
+                                className="w-full bg-transparent border-none text-[10px] md:text-[11px] font-black text-slate-800 uppercase tracking-widest focus:ring-0 focus:outline-none cursor-pointer appearance-none pr-6"
                                 value={experience}
                                 onChange={(e) => setExperience(e.target.value)}
                             >
-                                <option value="">Experience</option>
+                                <option value="">Exp</option>
                                 <option value="5">5+ Years</option>
                                 <option value="10">10+ Years</option>
                                 <option value="20">20+ Years</option>
                             </select>
                         </div>
 
-                        <div className="flex items-center gap-2 px-6 py-3 bg-white rounded-2xl shadow-sm border border-slate-100">
-                            <FaStar className="text-cyan-500 w-3 h-3" />
+                        {/* Rating Filter - Responsive visibility optionally or just keep grid */}
+                        <div className="flex items-center gap-2 px-4 md:px-6 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 transition-all hover:shadow-md h-[52px]">
+                            <FaStar className="text-[#00A1B0] w-3 h-3 shrink-0" />
                             <select
-                                className="bg-transparent border-none text-[11px] font-black text-slate-800 uppercase tracking-widest focus:ring-0 focus:outline-none cursor-pointer appearance-none pr-8"
+                                className="w-full bg-transparent border-none text-[10px] md:text-[11px] font-black text-slate-800 uppercase tracking-widest focus:ring-0 focus:outline-none cursor-pointer appearance-none pr-6"
                                 value={rating}
                                 onChange={(e) => setRating(e.target.value)}
                             >
-                                <option value="">Rating</option>
-                                <option value="4">4.0+ Stars</option>
-                                <option value="3">3.0+ Stars</option>
+                                <option value="">Stars</option>
+                                <option value="4">4.0+ </option>
+                                <option value="3">3.0+ </option>
                             </select>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 w-full lg:w-auto">
-                        <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 flex-1 lg:flex-none">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-2">Sort</span>
+                    {/* Secondary Actions: Sort & Reset */}
+                    <div className="flex items-center gap-3 w-full lg:w-auto mt-2 lg:mt-0">
+                        <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 flex-1 lg:flex-none transition-all hover:shadow-md h-[52px]">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Sort</span>
                             <div className="h-4 w-px bg-slate-100"></div>
                             <select
-                                className="bg-transparent border-none text-xs font-black text-slate-800 focus:ring-0 focus:outline-none cursor-pointer pr-10"
+                                className="flex-1 bg-transparent border-none text-xs font-black text-slate-800 focus:ring-0 focus:outline-none cursor-pointer pr-10"
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value)}
                             >
-                                <option value="">Recommended</option>
-                                <option value="price_asc">Price: Low - High</option>
-                                <option value="price_desc">Price: High - Low</option>
+                                <option value="">Latest</option>
+                                <option value="price_asc">Price ↑</option>
+                                <option value="price_desc">Price ↓</option>
                             </select>
                         </div>
 
                         <button
                             onClick={() => { setSpeciality(''); setSearchQuery(''); setSortBy(''); setExperience(''); setRating(''); setPage(1); if (page === 1) fetchDoctors(); }}
-                            className="p-4 text-slate-300 hover:text-red-500 hover:bg-white rounded-2xl shadow-sm border border-slate-100 transition-all group"
+                            className="p-4 bg-white text-slate-300 hover:text-red-500 rounded-2xl shadow-sm border border-slate-100 transition-all group h-[52px] flex items-center justify-center"
                             title="Clear All"
                         >
                             <FaTimes className="w-3.5 h-3.5 group-hover:rotate-90 transition-transform" />
@@ -250,11 +258,11 @@ const Doctors: React.FC = () => {
                         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00A1B0]"></div>
                     </div>
                 ) : doctors.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
                         {doctors.map((doctor) => (
                             <div key={doctor.id} className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-gray-100 group">
                                 {/* Card Image */}
-                                <div className="relative h-64 overflow-hidden bg-gray-100 cursor-pointer" onClick={() => navigate(`/doctors/${doctor.id}`)}>
+                                <div className="relative h-40 sm:h-64 overflow-hidden bg-gray-100 cursor-pointer" onClick={() => navigate(`/doctors/${doctor.id}`)}>
                                     <img
                                         src={getImageUrl(doctor.image)}
                                         alt={doctor.name}
@@ -272,46 +280,46 @@ const Doctors: React.FC = () => {
                                 </div>
 
                                 {/* Card Body */}
-                                <div className="p-4">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-xs font-bold uppercase tracking-wider text-blue-500">
+                                <div className="p-3 md:p-4">
+                                    <div className="flex justify-between items-center mb-1.5 md:mb-2">
+                                        <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-blue-500 truncate mr-1">
                                             {doctor.speciality}
                                         </span>
 
                                         {doctor.available ? (
-                                            <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-100 flex items-center gap-1">
-                                                <FaCircle className="w-1.5 h-1.5" /> Available
+                                            <span className="text-[8px] md:text-[10px] font-bold text-green-600 bg-green-50 px-1.5 md:px-2 py-0.5 rounded-full border border-green-100 flex items-center gap-1 shrink-0">
+                                                <FaCircle className="w-1 md:w-1.5 h-1 md:h-1.5" /> <span className="hidden xs:inline">Available</span>
                                             </span>
                                         ) : (
-                                            <span className="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full border border-red-100 flex items-center gap-1">
-                                                <FaCircle className="w-1.5 h-1.5" /> Unavailable
+                                            <span className="text-[8px] md:text-[10px] font-bold text-red-500 bg-red-50 px-1.5 md:px-2 py-0.5 rounded-full border border-red-100 flex items-center gap-1 shrink-0">
+                                                <FaCircle className="w-1 md:w-1.5 h-1 md:h-1.5" /> <span className="hidden xs:inline">Unavailable</span>
                                             </span>
                                         )}
                                     </div>
 
                                     <h3
-                                        className="text-lg font-bold text-gray-800 mb-2 group-hover:text-[#00A1B0] transition-colors cursor-pointer"
+                                        className="text-sm md:text-lg font-bold text-gray-800 mb-1.5 md:mb-2 group-hover:text-[#00A1B0] transition-colors cursor-pointer truncate"
                                         onClick={() => navigate(`/doctors/${doctor.id}`)}
                                     >
                                         {doctor.name}
                                     </h3>
 
-                                    <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
+                                    <div className="flex flex-wrap items-center gap-2 md:gap-4 text-[10px] md:text-xs text-gray-500 mb-3 md:mb-4">
                                         <div className="flex items-center gap-1">
-                                            <FaMapMarkerAlt className="text-gray-400" /> {doctor.location || "Online"}
+                                            <FaMapMarkerAlt className="text-gray-400 shrink-0" /> <span className="truncate max-w-[60px] md:max-w-none">{doctor.location || "Online"}</span>
                                         </div>
                                         <div className="flex items-center gap-1">
-                                            <FaMoneyBillWave className="text-gray-400" /> {doctor.experience} Yrs Exp.
+                                            <FaMoneyBillWave className="text-gray-400 shrink-0" /> {doctor.experience} Yrs
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-3 md:mt-4 pt-3 md:pt-4 border-t border-gray-100 gap-2">
                                         <div>
-                                            <p className="text-xs text-gray-400">Consultation Fees</p>
-                                            <p className="text-[#00A1B0] font-bold text-lg">₹{doctor.fees}</p>
+                                            <p className="text-[8px] md:text-xs text-gray-400">Fees</p>
+                                            <p className="text-[#00A1B0] font-bold text-sm md:text-lg">₹{doctor.fees}</p>
                                         </div>
                                         <button
-                                            className="border border-[#00A1B0] text-[#00A1B0] hover:bg-[#00A1B0] hover:text-white px-4 py-2 rounded-full text-sm font-bold transition-all"
+                                            className="border border-[#00A1B0] text-[#00A1B0] hover:bg-[#00A1B0] hover:text-white px-3 md:px-4 py-1.5 md:py-2 rounded-full text-[10px] md:text-sm font-bold transition-all"
                                             onClick={() => navigate(`/doctors/${doctor.id}`)}
                                         >
                                             Book Now

@@ -319,7 +319,7 @@ const AppointmentDetails: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 overflow-x-hidden">
             <NavBar />
 
             {/* Breadcrumb - Smooth Minimal Design */}
@@ -402,7 +402,7 @@ const AppointmentDetails: React.FC = () => {
 
                                                     <div className="mt-2">
                                                         <Button
-                                                            onClick={() => navigate(`/patient/chat/${appointment?._id || appointment?.id}`)}
+                                                            onClick={() => navigate(`   /${appointment?._id || appointment?.id}`)}
                                                             variant="outline"
                                                             size="sm"
                                                             className="flex items-center gap-2 border-[#00A1B0] text-[#00A1B0] hover:bg-[#00A1B0]/10 rounded-full px-4 h-8 text-xs font-semibold"

@@ -7,8 +7,6 @@ import {
   Phone,
   Calendar,
   User,
-  Ban,
-  CheckCircle,
   UserCircle,
   X,
 } from "lucide-react";
@@ -174,8 +172,8 @@ const PatientDetailPage: React.FC = () => {
                   onClick={() => setConfirmOpen(true)}
                   disabled={processing}
                   className={`w-full md:w-auto px-6 py-3 rounded-xl font-semibold text-white transition ${patient.isActive
-                      ? "bg-red-500 hover:bg-red-600"
-                      : "bg-green-500 hover:bg-green-600"
+                    ? "bg-red-500 hover:bg-red-600"
+                    : "bg-green-500 hover:bg-green-600"
                     }`}
                 >
                   {processing
@@ -254,8 +252,8 @@ const PatientDetailPage: React.FC = () => {
                     <p className="text-xs text-gray-500">Status</p>
                     <p
                       className={`font-bold ${patient.isActive
-                          ? "text-green-600"
-                          : "text-red-600"
+                        ? "text-green-600"
+                        : "text-red-600"
                         }`}
                     >
                       {patient.isActive ? "Active" : "Blocked"}

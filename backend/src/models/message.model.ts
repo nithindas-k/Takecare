@@ -7,6 +7,8 @@ export interface IMessage extends Document {
     content: string;
     type: 'text' | 'image' | 'file' | 'system'; // Added 'system' just in case
     read: boolean;
+    isDeleted: boolean;
+    isEdited: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -40,6 +42,14 @@ const MessageSchema = new Schema<IMessage>(
             default: 'text'
         },
         read: {
+            type: Boolean,
+            default: false
+        },
+        isDeleted: {
+            type: Boolean,
+            default: false
+        },
+        isEdited: {
             type: Boolean,
             default: false
         }

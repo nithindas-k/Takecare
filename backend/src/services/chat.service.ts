@@ -7,6 +7,7 @@ import { LoggerService } from "./logger.service";
 import { socketService } from "./socket.service";
 import { AppError } from "../errors/AppError";
 import { HttpStatus } from "../constants/constants";
+import { Types } from "mongoose";
 
 export class ChatService implements IChatService {
     private readonly logger: LoggerService;
@@ -27,13 +28,14 @@ export class ChatService implements IChatService {
         type: 'text' | 'image' | 'file' | 'system' = 'text'
     ): Promise<IMessage> {
         return await this._messageRepository.create({
-            appointmentId,
-            senderId,
+            appointmentId: new Types.ObjectId(appointmentId) as any,
+            senderId: new Types.ObjectId(senderId) as any,
             senderModel,
             content,
             type,
-            read: false
-        });
+            read: false,
+            isDeleted: false
+        } as any);
     }
 
     async sendMessage(
@@ -69,7 +71,9 @@ export class ChatService implements IChatService {
             type
         );
 
+        console.log(`[CHAT_SERVICE] Broadcasting saved message to room ${realAppointmentId}`);
         socketService.emitMessage(realAppointmentId, message);
+
         return message;
     }
 
@@ -145,7 +149,7 @@ export class ChatService implements IChatService {
                     patient: appointment.patientId,
                     doctor: appointment.doctorId,
                     lastMessage: lastMessage ? {
-                        content: lastMessage.content,
+                        content: lastMessage.isDeleted ? 'Message deleted' : lastMessage.content,
                         createdAt: lastMessage.createdAt,
                         senderModel: lastMessage.senderModel
                     } : null,
@@ -161,5 +165,76 @@ export class ChatService implements IChatService {
                 const timeB = b.lastMessage?.createdAt ? new Date(b.lastMessage.createdAt).getTime() : 0;
                 return timeB - timeA;
             });
+    }
+
+    async editMessage(messageId: string, content: string, userId: string): Promise<IMessage> {
+        const message = await this._messageRepository.findById(messageId);
+        if (!message) {
+            throw new AppError('Message not found', HttpStatus.NOT_FOUND);
+        }
+
+        // Verify if the user is the sender
+        // We need to check both userId (from req.user) and doctorId if they are a doctor
+        const isUserSender = message.senderId.toString() === userId;
+        let isDoctorSender = false;
+
+        console.log(`[CHAT_SERVICE] Verifying edit permission for user ${userId}. Message sender: ${message.senderId}`);
+
+        const doctor = await this._doctorRepository.findByUserId(userId);
+        if (doctor) {
+            isDoctorSender = message.senderId.toString() === doctor._id.toString();
+            console.log(`[CHAT_SERVICE] User is a doctor. Doctor ID: ${doctor._id}. Match: ${isDoctorSender}`);
+        }
+
+        if (!isUserSender && !isDoctorSender) {
+            this.logger.error(`Unauthorized edit attempt by user ${userId} for message ${messageId}`);
+            throw new AppError('You are not authorized to edit this message', HttpStatus.FORBIDDEN);
+        }
+
+        if (message.isDeleted) {
+            throw new AppError('Cannot edit a deleted message', HttpStatus.BAD_REQUEST);
+        }
+
+        const updatedMessage = await this._messageRepository.updateById(messageId, { content, isEdited: true });
+        if (!updatedMessage) {
+            throw new AppError('Failed to update message', HttpStatus.INTERNAL_ERROR);
+        }
+
+        socketService.emitToRoom(message.appointmentId.toString(), 'edit-message', updatedMessage);
+        return updatedMessage;
+    }
+
+    async deleteMessage(messageId: string, userId: string): Promise<IMessage> {
+        const message = await this._messageRepository.findById(messageId);
+        if (!message) {
+            throw new AppError('Message not found', HttpStatus.NOT_FOUND);
+        }
+
+        const isUserSender = message.senderId.toString() === userId;
+        let isDoctorSender = false;
+
+        console.log(`[CHAT_SERVICE] Verifying delete permission for user ${userId}. Message sender: ${message.senderId}`);
+
+        const doctor = await this._doctorRepository.findByUserId(userId);
+        if (doctor) {
+            isDoctorSender = message.senderId.toString() === doctor._id.toString();
+            console.log(`[CHAT_SERVICE] User is a doctor. Doctor ID: ${doctor._id}. Match: ${isDoctorSender}`);
+        }
+
+        if (!isUserSender && !isDoctorSender) {
+            this.logger.error(`Unauthorized delete attempt by user ${userId} for message ${messageId}`);
+            throw new AppError('You are not authorized to delete this message', HttpStatus.FORBIDDEN);
+        }
+
+        const deletedMessage = await this._messageRepository.deleteById(messageId);
+        if (!deletedMessage) {
+            throw new AppError('Failed to delete message', HttpStatus.INTERNAL_ERROR);
+        }
+
+        socketService.emitToRoom(message.appointmentId.toString(), 'delete-message', {
+            messageId,
+            appointmentId: message.appointmentId.toString()
+        });
+        return deletedMessage;
     }
 }

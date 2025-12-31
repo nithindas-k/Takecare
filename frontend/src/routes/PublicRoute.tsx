@@ -6,7 +6,7 @@ interface Props {
     role: "doctor" | "admin" | "patient";
 }
 
-const PublicRoute: React.FC<Props> = ({ children, role }) => {
+const PublicRoute: React.FC<Props> = ({ children, role: _role }) => {
     const token = localStorage.getItem(`authToken`);
 
 

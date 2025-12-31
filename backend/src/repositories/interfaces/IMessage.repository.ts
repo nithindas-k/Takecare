@@ -1,15 +1,7 @@
 import { IMessage } from "../../models/message.model";
+import { IBaseRepository } from "./IBase.repository";
 
-export interface IMessageRepository {
-    create(messageData: {
-        appointmentId: string;
-        senderId: string;
-        senderModel: 'User' | 'Doctor';
-        content: string;
-        type: 'text' | 'image' | 'file' | 'system';
-        read: boolean;
-    }): Promise<IMessage>;
-
+export interface IMessageRepository extends IBaseRepository<IMessage> {
     findByAppointmentId(appointmentId: string): Promise<IMessage[]>;
 
     markAsRead(appointmentId: string, excludeSenderId: string): Promise<void>;

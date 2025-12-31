@@ -1,6 +1,6 @@
 
 export const API_BASE_URL: string = import.meta.env.VITE_URL || "http://localhost:5000";
-export const AUTH_BASE_URL: string = import.meta.env.VITE_URL||"http://localhost:5000";
+export const AUTH_BASE_URL: string = import.meta.env.VITE_URL || "http://localhost:5000";
 
 
 export const USER_API_ROUTES = {
@@ -118,6 +118,8 @@ export const CHAT_API_ROUTES = {
   GET_MESSAGES: (appointmentId: string): string => `/chat/${appointmentId}`,
   SEND_MESSAGE: (appointmentId: string): string => `/chat/${appointmentId}`,
   UPLOAD_ATTACHMENT: (appointmentId: string): string => `/chat/${appointmentId}/upload`,
+  EDIT_MESSAGE: (messageId: string): string => `/chat/message/${messageId}`,
+  DELETE_MESSAGE: (messageId: string): string => `/chat/message/${messageId}`,
 } as const;
 
 export const REVIEW_API_ROUTES = {

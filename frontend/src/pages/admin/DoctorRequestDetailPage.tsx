@@ -18,7 +18,6 @@ const DoctorRequestDetailPage: React.FC = () => {
   const [modalImgSrc, setModalImgSrc] = useState<string | null>(null);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
-  const [isBanProcessing, setIsBanProcessing] = useState(false);
   const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
 

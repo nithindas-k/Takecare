@@ -4,7 +4,7 @@ import Button from "../../../components/Button";
 import authService from "../../../services/authService";
 
 const OTP_LENGTH = 6;
-const RESEND_TIMER = 60; 
+const RESEND_TIMER = 60;
 const ForgotPasswordOTP: React.FC = () => {
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [errors, setErrors] = useState<{ otp?: string }>({});
@@ -14,10 +14,10 @@ const ForgotPasswordOTP: React.FC = () => {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
-  const email = location.state?.email || ""; 
+  const email = location.state?.email || "";
 
   useEffect(() => {
-    let interval: NodeJS.Timeout | undefined;
+    let interval: any;
     if (resendTimer > 0) {
       interval = setInterval(() => setResendTimer(t => t - 1), 1000);
     }
@@ -138,16 +138,15 @@ const ForgotPasswordOTP: React.FC = () => {
                 {otp.map((digit, index) => (
                   <input
                     key={index}
-                    ref={el => (inputRefs.current[index] = el)}
+                    ref={el => { inputRefs.current[index] = el; }}
                     type="text"
                     inputMode="numeric"
                     maxLength={1}
                     value={digit}
                     onChange={e => handleChange(index, e.target.value)}
                     onPaste={index === 0 ? handlePaste : undefined}
-                    className={`w-12 h-12 sm:w-14 sm:h-14 text-center text-xl font-semibold border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all ${
-                      errors.otp ? "border-red-500" : digit ? "border-teal-500 bg-teal-50" : "border-gray-300"
-                    }`}
+                    className={`w-12 h-12 sm:w-14 sm:h-14 text-center text-xl font-semibold border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all ${errors.otp ? "border-red-500" : digit ? "border-teal-500 bg-teal-50" : "border-gray-300"
+                      }`}
                     aria-label={`OTP digit ${index + 1}`}
                   />
                 ))}

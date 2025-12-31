@@ -87,7 +87,7 @@ const PatientForgotPasswordOTP: React.FC = () => {
         setSubmitting(true);
         setServerError("");
         const otpString = otp.join("");
-        const response = await authService.verifyForgotOtp(email ,otpString ,"user");
+        const response = await authService.verifyForgotOtp(email, otpString, "user");
         if (response.success) {
           // On success, navigate to reset password page and pass reset token
           navigate("/patient/reset-password", { state: { email, resetToken: response.data.resetToken } });
@@ -137,16 +137,15 @@ const PatientForgotPasswordOTP: React.FC = () => {
                 {otp.map((digit, i) => (
                   <input
                     key={i}
-                    ref={(el) => (inputRefs.current[i] = el)}
+                    ref={(el) => { inputRefs.current[i] = el; }}
                     type="text"
                     inputMode="numeric"
                     maxLength={1}
                     value={digit}
                     onChange={(e) => handleChange(i, e.target.value)}
                     onPaste={i === 0 ? handlePaste : undefined}
-                    className={`w-14 h-14 text-center text-xl font-semibold border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition-all ${
-                      errors.otp ? "border-red-500" : digit ? "border-primary bg-primary/10" : "border-gray-300"
-                    }`}
+                    className={`w-14 h-14 text-center text-xl font-semibold border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition-all ${errors.otp ? "border-red-500" : digit ? "border-primary bg-primary/10" : "border-gray-300"
+                      }`}
                     aria-label={`OTP digit ${i + 1}`}
                   />
                 ))}

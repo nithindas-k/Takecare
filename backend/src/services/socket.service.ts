@@ -3,12 +3,12 @@ import { Server as HttpServer } from "http";
 
 class SocketService {
     private io: Server | null = null;
-    private onlineUsers = new Map<string, string>(); 
+    private onlineUsers = new Map<string, string>();
 
     init(httpServer: HttpServer) {
         this.io = new Server(httpServer, {
             cors: {
-                origin: process.env.CLIENT_URL || "http://localhost:5173",
+                origin: "http://localhost:5173",
                 methods: ["GET", "POST"],
                 credentials: true
             },
@@ -22,7 +22,15 @@ class SocketService {
             });
 
             socket.on("join-chat", (appointmentId: string) => {
-                socket.join(appointmentId);
+                const roomId = String(appointmentId);
+                socket.join(roomId);
+                console.log(`Socket [${socket.id}] joined room: ${roomId}`);
+            });
+
+            socket.on("leave-chat", (appointmentId: string) => {
+                const roomId = String(appointmentId);
+                socket.leave(roomId);
+                console.log(`Socket [${socket.id}] left room: ${roomId}`);
             });
 
             socket.on("typing", ({ appointmentId, userId }: { appointmentId: string, userId: string }) => {
@@ -34,8 +42,17 @@ class SocketService {
             });
 
             socket.on("mark-read", ({ appointmentId, userId }: { appointmentId: string, userId: string }) => {
-
                 socket.to(appointmentId).emit("messages-read", { appointmentId, userId });
+            });
+
+            socket.on("send-message", (data: any) => {
+                const roomId = String(data.appointmentId || "");
+                if (roomId) {
+                    console.log(`Socket [${socket.id}] sending message to room ${roomId}`);
+                    this.io?.to(roomId).emit("receive-message", data);
+                } else {
+                    console.error("Socket error: send-message received without appointmentId");
+                }
             });
 
             socket.on("disconnect", () => {
@@ -79,6 +96,12 @@ class SocketService {
     emitMessage(appointmentId: string, message: any) {
         if (this.io) {
             this.io.to(appointmentId).emit("receive-message", message);
+        }
+    }
+
+    emitToRoom(roomId: string, event: string, data: any) {
+        if (this.io) {
+            this.io.to(roomId).emit(event, data);
         }
     }
 }

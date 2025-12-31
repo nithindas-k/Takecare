@@ -76,10 +76,20 @@ export const PAYMENT_DEFAULTS = {
 } as const;
 
 export const UPLOAD_DEFAULTS = {
-  CLOUDINARY_FOLDER: "doctor-certificates",
-  ALLOWED_FORMATS: ["jpg", "jpeg", "png", "pdf"],
-  ALLOWED_MIMETYPES: ["image/jpeg", "image/jpg", "image/png", "application/pdf"],
-  MAX_FILE_SIZE_BYTES: 5 * 1024 * 1024,
+  CLOUDINARY_FOLDER: "takecare-uploads",
+  ALLOWED_FORMATS: ["jpg", "jpeg", "png", "pdf", "webm", "mp3", "wav", "ogg"],
+  ALLOWED_MIMETYPES: [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "application/pdf",
+    "audio/webm",
+    "audio/mpeg",
+    "audio/wav",
+    "audio/ogg",
+    "video/webm"
+  ],
+  MAX_FILE_SIZE_BYTES: 10 * 1024 * 1024,
 } as const;
 
 export const ERROR_CODES = {

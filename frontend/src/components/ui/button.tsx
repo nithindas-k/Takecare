@@ -2,7 +2,7 @@ import * as React from "react";
 
 import { cn } from "../../lib/utils";
 
-export type ButtonVariant = "default" | "secondary" | "outline" | "ghost";
+export type ButtonVariant = "default" | "secondary" | "outline" | "ghost" | "destructive";
 export type ButtonSize = "default" | "sm" | "lg" | "icon";
 
 export interface ButtonProps
@@ -20,6 +20,8 @@ const variantClasses: Record<ButtonVariant, string> = {
     "border border-gray-200 bg-white text-gray-900 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300",
   ghost:
     "bg-transparent text-gray-900 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300",
+  destructive:
+    "bg-red-600 text-white hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

@@ -42,7 +42,12 @@ export class MessageRepository extends BaseRepository<IMessage> implements IMess
         return await this.model.countDocuments({
             appointmentId,
             senderId: { $ne: excludeSenderId },
-            read: false
+            read: false,
+            isDeleted: false
         });
+    }
+
+    async deleteById(id: string): Promise<IMessage | null> {
+        return await this.model.findByIdAndUpdate(id, { isDeleted: true }, { new: true }).exec();
     }
 }

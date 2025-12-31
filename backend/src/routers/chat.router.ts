@@ -54,6 +54,17 @@ chatRouter.post(
         res.status(200).json({ success: true, url: req.file.path });
     }
 );
+chatRouter.patch(
+    "/message/:messageId",
+    authMiddleware,
+    chatController.editMessage
+);
+
+chatRouter.delete(
+    "/message/:messageId",
+    authMiddleware,
+    chatController.deleteMessage
+);
 
 export default chatRouter;
 export { chatService };

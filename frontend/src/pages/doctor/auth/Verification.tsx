@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useRef, useEffect } from "react";
+import React, { useCallback, useState, useRef, useEffect } from "react";
 import Button from "../../../components/Button";
 import Input from "../../../components/Input";
 import doctorService from "../../../services/doctorService";
@@ -57,7 +57,7 @@ const DoctorVerification: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [serverMessage, setServerMessage] = useState<string>("");
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
-  const [canResubmit, setCanResubmit] = useState<boolean>(true);
+  const [, setCanResubmit] = useState<boolean>(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -70,7 +70,7 @@ const DoctorVerification: React.FC = () => {
           const data = response.data;
           console.log("Verification Data:", data);
           console.log("Verification Documents:", data.verificationDocuments);
-          
+
           setFormData({
             degree: data.degree || "",
             experience: data.experience?.toString() || "",
@@ -131,18 +131,14 @@ const DoctorVerification: React.FC = () => {
     // Check if there are either existing documents or new files
     const hasExistingDocuments = documents.some(doc => doc.isExisting);
     const hasNewFiles = data.certificateFiles.length > 0;
-    
+
     if (!hasExistingDocuments && !hasNewFiles) {
       e.certificateFiles = "Please upload at least one verification document (degree certificate, license, etc.)";
     }
     return e;
   }, [documents]);
 
-  const formErrors = useMemo(() => validate(formData), [formData, validate]);
-  const isValid = useMemo(
-    () => Object.keys(formErrors).length === 0,
-    [formErrors]
-  );
+
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -160,14 +156,14 @@ const DoctorVerification: React.FC = () => {
   const handleFileUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || []);
-      
+
       if (files.length === 0) return;
 
       // Check if adding these files would exceed the max limit
       if (documents.length + files.length > MAX_FILES) {
-        setErrors((prev) => ({ 
-          ...prev, 
-          certificateFiles: `You can upload a maximum of ${MAX_FILES} documents.` 
+        setErrors((prev) => ({
+          ...prev,
+          certificateFiles: `You can upload a maximum of ${MAX_FILES} documents.`
         }));
         return;
       }
@@ -175,9 +171,9 @@ const DoctorVerification: React.FC = () => {
       // Validate file types
       const invalidFiles = files.filter(file => !IMAGE_TYPES.includes(file.type));
       if (invalidFiles.length > 0) {
-        setErrors((prev) => ({ 
-          ...prev, 
-          certificateFiles: "Only image files (.jpg, .jpeg, .png) are allowed." 
+        setErrors((prev) => ({
+          ...prev,
+          certificateFiles: "Only image files (.jpg, .jpeg, .png) are allowed."
         }));
         return;
       }
@@ -214,7 +210,7 @@ const DoctorVerification: React.FC = () => {
     setDocuments((prev) => {
       const docToRemove = prev.find(doc => doc.id === docId);
       const newDocs = prev.filter(doc => doc.id !== docId);
-      
+
       // If it's a new file, also remove from formData
       if (docToRemove && !docToRemove.isExisting && docToRemove.file) {
         setFormData((prevForm) => ({
@@ -222,7 +218,7 @@ const DoctorVerification: React.FC = () => {
           certificateFiles: prevForm.certificateFiles.filter(f => f !== docToRemove.file),
         }));
       }
-      
+
       return newDocs;
     });
   }, []);
@@ -244,11 +240,11 @@ const DoctorVerification: React.FC = () => {
         submitData.append("speciality", formData.speciality);
         submitData.append("videoFees", formData.videoFees);
         submitData.append("chatFees", formData.chatFees);
-        
+
         // Check if we have existing documents
         const hasExistingDocuments = documents.some(doc => doc.isExisting);
         submitData.append("hasExistingDocuments", hasExistingDocuments.toString());
-        
+
         // If we have existing documents, send their URLs
         if (hasExistingDocuments) {
           const existingUrls = documents
@@ -256,7 +252,7 @@ const DoctorVerification: React.FC = () => {
             .map(doc => doc.url);
           submitData.append("existingDocuments", JSON.stringify(existingUrls));
         }
-        
+
         // Append all new certificate files
         if (formData.certificateFiles.length > 0) {
           console.log("Appending new files:", formData.certificateFiles.length);
@@ -273,14 +269,14 @@ const DoctorVerification: React.FC = () => {
 
         console.log("=== SUBMITTING TO API ===");
         console.log("Endpoint: /doctors/submit-verification");
-        
+
         const response = await doctorService.submitVerification(submitData);
-        
+
         console.log("Server response:", response);
-        
+
         if (response.success) {
           setServerMessage("Verification submitted successfully! Redirecting to dashboard...");
-          
+
           // Clear the form
           setFormData({
             degree: "",
@@ -294,7 +290,7 @@ const DoctorVerification: React.FC = () => {
           setErrors({});
           setRejectionReason(null);
           setCanResubmit(false);
-          
+
           setTimeout(() => {
             navigate("/doctor/dashboard");
           }, 2000);

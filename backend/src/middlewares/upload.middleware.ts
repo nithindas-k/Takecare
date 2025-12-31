@@ -17,6 +17,7 @@ const storage = new CloudinaryStorage({
   params: {
     folder: UPLOAD_DEFAULTS.CLOUDINARY_FOLDER,
     allowed_formats: UPLOAD_DEFAULTS.ALLOWED_FORMATS,
+    resource_type: 'auto',
     public_id: (req: Request, file: Express.Multer.File) => {
       const name = file.originalname.split(".")[0].replace(/\s+/g, "-");
       return `${Date.now()}-${name}`;

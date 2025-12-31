@@ -77,4 +77,45 @@ export class ChatController {
             next(err);
         }
     };
+
+    editMessage = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const { messageId } = req.params;
+            const { content } = req.body;
+            const userId = req.user?.userId;
+
+            if (!userId) {
+                throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+            }
+
+            const updatedMessage = await this._chatService.editMessage(messageId, content, userId);
+            sendSuccess(res, updatedMessage);
+        } catch (err: unknown) {
+            next(err);
+        }
+    };
+
+    deleteMessage = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const { messageId } = req.params;
+            const userId = req.user?.userId;
+
+            if (!userId) {
+                throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+            }
+
+            const deletedMessage = await this._chatService.deleteMessage(messageId, userId);
+            sendSuccess(res, deletedMessage);
+        } catch (err: unknown) {
+            next(err);
+        }
+    };
 }

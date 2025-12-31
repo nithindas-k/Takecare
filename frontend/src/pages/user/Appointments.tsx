@@ -184,7 +184,7 @@ const Appointments: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 overflow-x-hidden">
             <NavBar />
 
             {/* Breadcrumb - Smooth Minimal Design */}
@@ -255,41 +255,41 @@ const Appointments: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Tabs */}
-                            <div className="flex gap-2 mt-6 border-b border-gray-200">
+                            {/* Tabs - Fixed width on mobile */}
+                            <div className="flex mt-6 border-b border-gray-200">
                                 <button
                                     onClick={() => setActiveTab('upcoming')}
-                                    className={`px-6 py-3 font-semibold transition-all relative ${activeTab === 'upcoming'
+                                    className={`flex-1 px-2 md:px-6 py-3 font-semibold transition-all relative whitespace-nowrap text-[11px] sm:text-xs md:text-sm lg:text-base ${activeTab === 'upcoming'
                                         ? 'text-[#00A1B0] border-b-2 border-[#00A1B0]'
                                         : 'text-gray-500 hover:text-gray-700'
                                         }`}
                                 >
                                     Upcoming
-                                    <span className="ml-2 px-2 py-0.5 bg-[#00A1B0]/10 text-[#00A1B0] text-xs rounded-full">
+                                    <span className="ml-1 md:ml-2 px-1.5 md:px-2 py-0.5 bg-[#00A1B0]/10 text-[#00A1B0] text-[9px] md:text-xs rounded-full">
                                         {getTabCount('upcoming')}
                                     </span>
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('cancelled')}
-                                    className={`px-6 py-3 font-semibold transition-all relative ${activeTab === 'cancelled'
+                                    className={`flex-1 px-2 md:px-6 py-3 font-semibold transition-all relative whitespace-nowrap text-[11px] sm:text-xs md:text-sm lg:text-base ${activeTab === 'cancelled'
                                         ? 'text-[#00A1B0] border-b-2 border-[#00A1B0]'
                                         : 'text-gray-500 hover:text-gray-700'
                                         }`}
                                 >
                                     Cancelled
-                                    <span className="ml-2 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                                    <span className="ml-1 md:ml-2 px-1.5 md:px-2 py-0.5 bg-gray-100 text-gray-600 text-[9px] md:text-xs rounded-full">
                                         {getTabCount('cancelled')}
                                     </span>
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('completed')}
-                                    className={`px-6 py-3 font-semibold transition-all relative ${activeTab === 'completed'
+                                    className={`flex-1 px-2 md:px-6 py-3 font-semibold transition-all relative whitespace-nowrap text-[11px] sm:text-xs md:text-sm lg:text-base ${activeTab === 'completed'
                                         ? 'text-[#00A1B0] border-b-2 border-[#00A1B0]'
                                         : 'text-gray-500 hover:text-gray-700'
                                         }`}
                                 >
                                     Completed
-                                    <span className="ml-2 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                                    <span className="ml-1 md:ml-2 px-1.5 md:px-2 py-0.5 bg-gray-100 text-gray-600 text-[9px] md:text-xs rounded-full">
                                         {getTabCount('completed')}
                                     </span>
                                 </button>
