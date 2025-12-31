@@ -164,12 +164,21 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }, [stream, socket]);
 
     const callUser = async (id: string) => {
+        console.log("Attempting to call user:", id);
+
+        if (!socket) {
+            console.error("Cannot call: Socket is not initialized");
+            toast.error("Connection lost. Please refresh.");
+            return;
+        }
+
         const peer = createPeerConnection(id);
 
         const offer = await peer.createOffer();
         await peer.setLocalDescription(offer);
 
-        socket?.emit("call-user", {
+        console.log("Emitting call-user signal to:", id);
+        socket.emit("call-user", {
             userToCall: id,
             signalData: offer,
             from: me,

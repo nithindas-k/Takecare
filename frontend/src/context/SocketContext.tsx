@@ -35,12 +35,23 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (userId) {
             const newSocket = io(API_BASE_URL, {
                 withCredentials: true,
+                transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
+                reconnectionAttempts: 5,
             });
 
             setSocket(newSocket);
 
             newSocket.on('connect', () => {
+                console.log("Socket Connected:", newSocket.id);
                 newSocket.emit('join', userId);
+            });
+
+            newSocket.on('connect_error', (err) => {
+                console.error("Socket Connection Error:", err.message);
+            });
+
+            newSocket.on('disconnect', (reason) => {
+                console.warn("Socket Disconnected:", reason);
             });
             // Listen for reminder modal
             newSocket.on('appointment-reminder', (data: any) => {

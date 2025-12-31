@@ -1,5 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { Server as HttpServer } from "http";
+import {env}  from "../configs/env"
 
 class SocketService {
     private io: Server | null = null;
@@ -8,7 +9,7 @@ class SocketService {
     init(httpServer: HttpServer) {
         this.io = new Server(httpServer, {
             cors: {
-                origin: "http://localhost:5173",
+                origin: env.CLIENT_URL, 
                 methods: ["GET", "POST"],
                 credentials: true
             },
