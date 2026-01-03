@@ -1,73 +1,109 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import {
-  LayoutDashboard,
+  BarChart2,
   Zap,
   Stethoscope,
   Users,
   Calendar,
-  Hospital,
+  Grid,
   DollarSign,
   Settings,
   Lock,
   LogOut,
-  UserCircle
+  Activity,
+  X
 } from "lucide-react";
+import authService from "../../services/authService";
+import { toast } from "sonner";
+
+interface SidebarProps {
+  onMobileClose?: () => void;
+}
 
 const sidebarItems = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/admin/dashboard" },
+  { label: "Dashboard", icon: BarChart2, path: "/admin/dashboard" },
   { label: "Doctor Request", icon: Zap, path: "/admin/doctor-request", hasNotification: true },
   { label: "Doctors", icon: Stethoscope, path: "/admin/doctors" },
   { label: "Patients", icon: Users, path: "/admin/patients" },
   { label: "Appointments", icon: Calendar, path: "/admin/appointments" },
-  { label: "Speciality", icon: Hospital, path: "/admin/speciality" },
+  { label: "Speciality", icon: Grid, path: "/admin/speciality" },
   { label: "Earnings", icon: DollarSign, path: "/admin/earnings" },
   { label: "Profile Settings", icon: Settings, path: "/admin/profile-settings" },
   { label: "Change Password", icon: Lock, path: "/admin/change-password" },
-  { label: "Logout", icon: LogOut, path: "/admin/logout" },
 ];
 
-const Sidebar: React.FC = () => {
+const Sidebar: React.FC<SidebarProps> = ({ onMobileClose }) => {
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      toast.success("Logged out successfully");
+      window.location.href = "/admin/login";
+    } catch (error) {
+      toast.error("Logout failed");
+    }
+  };
+
   return (
-    <aside className="w-64 min-h-screen bg-white flex flex-col shadow-xl border-r border-gray-200">
-      {/* Profile Section */}
-      <div className="text-center py-8 px-6 border-b border-gray-200 flex-shrink-0">
-        <div className="flex justify-center mb-4">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center shadow-lg">
-            <UserCircle className="w-12 h-12 text-white" strokeWidth={1.5} />
+    <div className="flex flex-col h-full bg-white">
+      {/* Brand Section */}
+      <div className="p-6 flex items-center justify-between border-b border-slate-50">
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 bg-[#00A1B0]/10 rounded-xl flex items-center justify-center text-[#00A1B0]">
+            <Activity size={20} className="stroke-[2.5]" />
           </div>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+            TakeCare
+          </h1>
         </div>
-        <h2 className="font-bold text-lg text-gray-800 tracking-wide">ADMIN</h2>
-        <span className="text-xs text-gray-500">* Takecare</span>
+        {/* Mobile Close Button */}
+        <button
+          onClick={onMobileClose}
+          className="lg:hidden p-2 text-slate-400 hover:text-slate-900"
+        >
+          <X size={20} />
+        </button>
       </div>
 
-      {/* Menu Items - Scrollable */}
-      <nav className="flex-1 pt-6 px-4 space-y-1.5 overflow-y-auto">
-        {sidebarItems.map((item) => {
-          const Icon = item.icon;
-          return (
+      {/* Navigation */}
+      <nav className="flex-1 py-4 overflow-y-auto no-scrollbar" data-lenis-prevent>
+        <div className="px-3 space-y-1">
+          {sidebarItems.map((item) => (
             <NavLink
               key={item.label}
               to={item.path}
-              className={({ isActive }) =>
-                `flex items-center px-4 py-3 cursor-pointer rounded-lg transition-all duration-200 relative group
+              onClick={onMobileClose}
+              className={({ isActive }) => `
+                flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
                 ${isActive
-                  ? "bg-gradient-to-r from-cyan-400 to-teal-500 text-white shadow-md shadow-cyan-500/20"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"}`
-              }
-              end
+                  ? "bg-[#00A1B0]/10 text-[#00A1B0] font-semibold"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}
+              `}
             >
-              <Icon className="w-5 h-5 mr-3 flex-shrink-0" strokeWidth={2} />
-              <span className="text-sm font-medium flex-1">{item.label}</span>
+              <item.icon
+                size={20}
+                className={`transition-colors ${item.hasNotification && !window.location.pathname.includes(item.path) ? 'text-yellow-500' : ''}`}
+              />
+              <span className="text-sm">{item.label}</span>
               {item.hasNotification && (
-                <span className="w-2 h-2 bg-yellow-400 rounded-full shadow-lg shadow-yellow-400/50 animate-pulse"></span>
+                <span className="ml-auto w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></span>
               )}
-
             </NavLink>
-          );
-        })}
+          ))}
+        </div>
       </nav>
-    </aside>
+
+      {/* Logout at Bottom */}
+      <div className="p-4 border-t border-slate-50">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all duration-200"
+        >
+          <LogOut size={20} />
+          <span className="text-sm font-medium">Logout</span>
+        </button>
+      </div>
+    </div>
   );
 };
 

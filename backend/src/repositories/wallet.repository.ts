@@ -25,8 +25,34 @@ export class WalletRepository implements IWalletRepository {
         return await TransactionModel.create(data);
     }
 
-    async getTransactionsByUserId(userId: string, skip: number, limit: number): Promise<{ transactions: ITransactionDocument[], total: number }> {
-        const query = { userId: new Types.ObjectId(userId) };
+    async getTransactionsByUserId(userId: string, skip: number, limit: number, filters?: { search?: string, type?: string, date?: string }): Promise<{ transactions: ITransactionDocument[], total: number }> {
+        const query: any = { userId: new Types.ObjectId(userId) };
+
+        if (filters?.search) {
+            query.description = { $regex: filters.search, $options: 'i' };
+        }
+
+        if (filters?.type) {
+            if (filters.type === 'credit') {
+                query.amount = { $gt: 0 };
+            } else if (filters.type === 'debit') {
+                query.amount = { $lt: 0 };
+            }
+        }
+
+        if (filters?.date) {
+            const startOfDay = new Date(filters.date);
+            startOfDay.setHours(0, 0, 0, 0);
+
+            const endOfDay = new Date(filters.date);
+            endOfDay.setHours(23, 59, 59, 999);
+
+            query.createdAt = {
+                $gte: startOfDay,
+                $lte: endOfDay
+            };
+        }
+
         const [transactions, total] = await Promise.all([
             TransactionModel.find(query)
                 .populate('appointmentId', 'customId')
@@ -38,8 +64,22 @@ export class WalletRepository implements IWalletRepository {
         return { transactions, total };
     }
 
-    async getAdminTransactions(skip: number, limit: number): Promise<{ transactions: any[], total: number }> {
-        const query = { description: { $regex: /Commission/i } };
+    async getAdminTransactions(skip: number, limit: number, filters?: { date?: string }): Promise<{ transactions: any[], total: number }> {
+        const query: any = { description: { $regex: /Commission/i } };
+
+        if (filters?.date) {
+            const startOfDay = new Date(filters.date);
+            startOfDay.setHours(0, 0, 0, 0);
+
+            const endOfDay = new Date(filters.date);
+            endOfDay.setHours(23, 59, 59, 999);
+
+            query.createdAt = {
+                $gte: startOfDay,
+                $lte: endOfDay
+            };
+        }
+
         const [transactions, total] = await Promise.all([
             TransactionModel.find(query)
                 .populate('userId', 'name email')
@@ -54,7 +94,7 @@ export class WalletRepository implements IWalletRepository {
     }
 
     async getTotalCommission(): Promise<number> {
-  
+
         const result = await TransactionModel.aggregate([
             { $match: { description: { $regex: /Commission/i } } },
             { $group: { _id: null, total: { $sum: "$amount" } } }

@@ -10,6 +10,8 @@ export interface IMessage {
     type: 'text' | 'image' | 'file' | 'system';
     read: boolean;
     isDeleted: boolean;
+    isEdited?: boolean;
+    _id?: string;
     createdAt: string;
     updatedAt: string;
 }

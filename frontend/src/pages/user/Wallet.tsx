@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import NavBar from '../../components/common/NavBar';
 import PatientSidebar from '../../components/Patient/PatientSidebar';
-import { FaHistory, FaWallet } from 'react-icons/fa';
+import { FaHistory, FaWallet, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { walletService } from '../../services/walletService';
 
 interface Transaction {
@@ -20,24 +20,35 @@ const UserWallet: React.FC = () => {
     const [balance, setBalance] = useState(0);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedDate, setSelectedDate] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [limit] = useState(10);
+
+    // Reset to page 1 when date changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedDate]);
+
+    const fetchWalletData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const response = await walletService.getMyWallet(currentPage, limit, undefined, undefined, selectedDate);
+            if (response.success) {
+                setBalance(response.data.balance);
+                setTransactions(response.data.transactions);
+                setTotalPages(response.data.totalPages || 1);
+            }
+        } catch (error) {
+            console.error("Error fetching wallet data:", error);
+        } finally {
+            setLoading(false);
+        }
+    }, [currentPage, limit, selectedDate]);
 
     useEffect(() => {
-        const fetchWalletData = async () => {
-            try {
-                const response = await walletService.getMyWallet();
-                if (response.success) {
-                    setBalance(response.data.balance);
-                    setTransactions(response.data.transactions);
-                }
-            } catch (error) {
-                console.error("Error fetching wallet data:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchWalletData();
-    }, []);
+    }, [fetchWalletData]);
 
     const getStatusStyles = (status: string) => {
         switch (status) {
@@ -83,18 +94,40 @@ const UserWallet: React.FC = () => {
                                 <div>
                                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Available Funds</p>
                                     <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
-                                        {loading ? "..." : `₹${balance.toLocaleString()}`}
+                                        {loading && balance === 0 ? "..." : `₹${balance.toLocaleString()}`}
                                     </h2>
                                 </div>
                             </div>
                         </div>
 
                         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden text-balance">
-                            <div className="px-8 py-5 border-b border-gray-50 bg-gray-50/20 flex items-center justify-between">
+                            {/* Header with Date Picker */}
+                            <div className="px-6 py-5 border-b border-gray-50 bg-gray-50/20 flex flex-col sm:flex-row items-center justify-between gap-4">
                                 <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-2">
                                     <FaHistory className="text-[#00A1B0]" />
                                     Transaction Ledger
                                 </h3>
+
+                                <div className="flex items-center gap-3 w-full sm:w-auto">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Select Date:</span>
+                                    <div className="relative flex-1 sm:flex-none">
+                                        <input
+                                            type="date"
+                                            value={selectedDate}
+                                            onChange={(e) => setSelectedDate(e.target.value)}
+                                            className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-[#00A1B0] focus:ring-1 focus:ring-[#00A1B0] transition-all cursor-pointer"
+                                        />
+                                        {selectedDate && (
+                                            <button
+                                                onClick={() => setSelectedDate('')}
+                                                className="absolute -right-2 -top-2 w-5 h-5 bg-rose-500 text-white rounded-full flex items-center justify-center text-[10px] shadow-sm hover:bg-rose-600 transition-colors"
+                                                title="Clear date"
+                                            >
+                                                ×
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="overflow-x-auto">
@@ -111,11 +144,11 @@ const UserWallet: React.FC = () => {
                                     <tbody className="divide-y divide-gray-50">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={5} className="px-8 py-10 text-center text-gray-500">Loading transactions...</td>
+                                                <td colSpan={5} className="px-8 py-10 text-center text-gray-500 text-sm">Loading transactions...</td>
                                             </tr>
                                         ) : transactions.length === 0 ? (
                                             <tr>
-                                                <td colSpan={5} className="px-8 py-10 text-center text-gray-500">No transactions found.</td>
+                                                <td colSpan={5} className="px-8 py-10 text-center text-gray-500 text-sm">No transactions found matching your criteria.</td>
                                             </tr>
                                         ) : (
                                             transactions.map((txn) => {
@@ -143,7 +176,7 @@ const UserWallet: React.FC = () => {
                                                         </td>
                                                         <td className="px-8 py-6 text-right">
                                                             <span className={`text-sm font-bold tracking-tight ${txn.amount >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                                                {txn.amount >= 0 ? '+' : ''}₹{txn.amount.toLocaleString()}
+                                                                {txn.amount >= 0 ? '+' : '-'}₹{Math.abs(txn.amount).toLocaleString()}
                                                             </span>
                                                         </td>
                                                     </tr>
@@ -153,6 +186,31 @@ const UserWallet: React.FC = () => {
                                     </tbody>
                                 </table>
                             </div>
+
+                            {/* Pagination Controls */}
+                            {totalPages > 1 && (
+                                <div className="px-8 py-5 border-t border-gray-50 bg-gray-50/20 flex items-center justify-between">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                        Page {currentPage} of {totalPages}
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                            disabled={currentPage === 1}
+                                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed hover:border-[#00A1B0] hover:text-[#00A1B0] transition-colors"
+                                        >
+                                            <FaChevronLeft size={10} />
+                                        </button>
+                                        <button
+                                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                            disabled={currentPage === totalPages}
+                                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed hover:border-[#00A1B0] hover:text-[#00A1B0] transition-colors"
+                                        >
+                                            <FaChevronRight size={10} />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -63,11 +63,11 @@ const PatientLogin: React.FC = () => {
         const response: ApiResponse<LoginResponse> = await authService.userLogin(formData);
 
         if (response.success && response.data) {
-          // Save token and user data
+          
           authService.saveToken(response.data.token);
           authService.saveUser(response.data.user);
 
-          // Only store essential user fields in Redux
+         
           dispatch(setUser({
             _id: response.data.user.id,
             name: response.data.user.name,
@@ -79,11 +79,11 @@ const PatientLogin: React.FC = () => {
 
           toast.success("Login successful! Welcome back.");
 
-          // Clear form
+  
           setFormData({ email: "", password: "", role: "patient" });
           setErrors({});
 
-          // Navigate to dashboard
+       
           navigate("/");
         } else {
           toast.error(response.message || "Login failed");

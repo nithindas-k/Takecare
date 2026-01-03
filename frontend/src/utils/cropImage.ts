@@ -44,24 +44,20 @@ export default async function getCroppedImg(
 
     const rotRad = getRadianAngle(rotation)
 
-    // calculate bounding box of the rotated image
+   
     const { width: bBoxWidth, height: bBoxHeight } = rotateSize(
         image.width,
         image.height,
         rotation
     )
-
-    // set canvas size to match the bounding box
-    canvas.width = bBoxWidth
+ canvas.width = bBoxWidth
     canvas.height = bBoxHeight
 
-    // translate canvas context to a central point to allow rotating and flipping around the center
     ctx.translate(bBoxWidth / 2, bBoxHeight / 2)
     ctx.rotate(rotRad)
     ctx.scale(flip.horizontal ? -1 : 1, flip.vertical ? -1 : 1)
     ctx.translate(-image.width / 2, -image.height / 2)
 
-    // draw rotated image
     ctx.drawImage(image, 0, 0)
 
     const croppedCanvas = document.createElement('canvas')
@@ -72,11 +68,9 @@ export default async function getCroppedImg(
         return null
     }
 
-    // Set the size of the cropped canvas
     croppedCanvas.width = pixelCrop.width
     croppedCanvas.height = pixelCrop.height
 
-    // Draw the cropped image from the main canvas onto the cropped canvas
     croppedCtx.drawImage(
         canvas,
         pixelCrop.x,

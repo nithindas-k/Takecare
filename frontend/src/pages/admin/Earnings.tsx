@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from "../../components/admin/Sidebar";
 import TopNav from "../../components/admin/TopNav";
-import { DollarSign, TrendingUp, Users, Calendar, Download } from "lucide-react";
+import { DollarSign, TrendingUp, Users, Calendar, Download, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { walletService } from '../../services/walletService';
 
 interface TransactionReport {
@@ -20,30 +20,42 @@ interface TransactionReport {
 }
 
 const AdminEarnings: React.FC = () => {
-    const [filterPeriod, setFilterPeriod] = useState('Month');
     const [stats, setStats] = useState<any>(null);
     const [transactions, setTransactions] = useState<TransactionReport[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedDate, setSelectedDate] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [limit] = useState(10);
+
+    // Reset to page 1 when date changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedDate]);
+
+    const fetchAdminData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [statsRes, transRes] = await Promise.all([
+                walletService.getAdminOverview(),
+                walletService.getAdminTransactions(currentPage, limit, selectedDate)
+            ]);
+
+            if (statsRes.success) setStats(statsRes.data);
+            if (transRes.success) {
+                setTransactions(transRes.data.transactions);
+                setTotalPages(transRes.data.totalPages || 1);
+            }
+        } catch (error) {
+            console.error("Error fetching admin earnings data:", error);
+        } finally {
+            setLoading(false);
+        }
+    }, [currentPage, limit, selectedDate]);
 
     useEffect(() => {
-        const fetchAdminData = async () => {
-            try {
-                const [statsRes, transRes] = await Promise.all([
-                    walletService.getAdminOverview(),
-                    walletService.getAdminTransactions()
-                ]);
-
-                if (statsRes.success) setStats(statsRes.data);
-                if (transRes.success) setTransactions(transRes.data.transactions);
-            } catch (error) {
-                console.error("Error fetching admin earnings data:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchAdminData();
-    }, []);
+    }, [fetchAdminData]);
 
     const getStatusStyles = (status: string) => {
         switch (status) {
@@ -78,16 +90,24 @@ const AdminEarnings: React.FC = () => {
                                 <p className="text-sm text-gray-500 font-medium whitespace-nowrap">Platform performance tracking</p>
                             </div>
                             <div className="flex items-center gap-3">
-                                <div className="bg-white border border-gray-100 rounded-2xl p-1 flex items-center shadow-sm">
-                                    {['Week', 'Month', 'Year'].map((p) => (
-                                        <button
-                                            key={p}
-                                            onClick={() => setFilterPeriod(p)}
-                                            className={`px-5 py-2 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all ${filterPeriod === p ? 'bg-[#00A1B0] text-white shadow-lg' : 'text-gray-400 hover:text-gray-900'}`}
-                                        >
-                                            {p}
-                                        </button>
-                                    ))}
+                                <div className="bg-white border border-gray-100 rounded-2xl p-2 flex items-center shadow-sm gap-3">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-2">Filter by Date</span>
+                                    <div className="relative">
+                                        <input
+                                            type="date"
+                                            value={selectedDate}
+                                            onChange={(e) => setSelectedDate(e.target.value)}
+                                            className="px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#00A1B0]/20 cursor-pointer"
+                                        />
+                                        {selectedDate && (
+                                            <button
+                                                onClick={() => setSelectedDate('')}
+                                                className="absolute -right-2 -top-2 w-5 h-5 bg-rose-500 text-white rounded-full flex items-center justify-center text-[10px] shadow-sm hover:bg-rose-600"
+                                            >
+                                                <X size={10} />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                                 <button className="p-3 bg-white border border-gray-100 rounded-2xl shadow-sm text-gray-400 hover:text-[#00A1B0] transition-colors">
                                     <Download size={16} />
@@ -107,7 +127,7 @@ const AdminEarnings: React.FC = () => {
                                         </span>
                                     </div>
                                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">{s.label}</p>
-                                    <h2 className="text-xl font-bold text-gray-900 mt-2 tracking-tight">{loading ? "..." : s.value}</h2>
+                                    <h2 className="text-xl font-bold text-gray-900 mt-2 tracking-tight">{loading && !stats ? "..." : s.value}</h2>
                                 </div>
                             ))}
                         </div>
@@ -130,9 +150,9 @@ const AdminEarnings: React.FC = () => {
                                     </thead>
                                     <tbody className="divide-y divide-gray-50">
                                         {loading ? (
-                                            <tr><td colSpan={5} className="px-8 py-10 text-center text-gray-500">Loading commission data...</td></tr>
+                                            <tr><td colSpan={5} className="px-8 py-10 text-center text-gray-500 text-sm italic">Loading commission data...</td></tr>
                                         ) : transactions.length === 0 ? (
-                                            <tr><td colSpan={5} className="px-8 py-10 text-center text-gray-500">No commissions recorded yet.</td></tr>
+                                            <tr><td colSpan={5} className="px-8 py-10 text-center text-gray-500 text-sm italic">No commissions recorded for the selected criteria.</td></tr>
                                         ) : (
                                             transactions.map((r) => (
                                                 <tr key={r._id} className="hover:bg-gray-50/30 transition-colors">
@@ -144,10 +164,11 @@ const AdminEarnings: React.FC = () => {
                                                     <td className="px-8 py-5">
                                                         <div className="flex flex-col">
                                                             <span className="text-sm font-bold text-gray-800 tracking-tight">{r.description}</span>
+                                                            <span className="text-[10px] text-gray-400 font-medium tracking-tight">by {r.userId?.name || 'System'}</span>
                                                         </div>
                                                     </td>
-                                                    <td className="px-8 py-5 text-sm text-gray-500">
-                                                        {new Date(r.createdAt).toLocaleDateString()}
+                                                    <td className="px-8 py-5 text-sm font-medium text-gray-500">
+                                                        {new Date(r.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                                     </td>
                                                     <td className={`px-8 py-5 text-right font-bold text-sm tracking-tight ${r.amount >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                                                         {r.amount >= 0 ? `+₹${r.amount.toLocaleString()}` : `-₹${Math.abs(r.amount).toLocaleString()}`}
@@ -165,6 +186,31 @@ const AdminEarnings: React.FC = () => {
                                     </tbody>
                                 </table>
                             </div>
+
+                            {/* Pagination Controls */}
+                            {totalPages > 1 && (
+                                <div className="px-8 py-5 border-t border-gray-50 bg-gray-50/20 flex items-center justify-between">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                        Page {currentPage} of {totalPages}
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                            disabled={currentPage === 1}
+                                            className="w-10 h-10 flex items-center justify-center rounded-xl border border-gray-100 bg-white text-gray-400 disabled:opacity-30 hover:text-[#00A1B0] hover:border-[#00A1B0] transition-all"
+                                        >
+                                            <ChevronLeft size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                            disabled={currentPage === totalPages}
+                                            className="w-10 h-10 flex items-center justify-center rounded-xl border border-gray-100 bg-white text-gray-400 disabled:opacity-30 hover:text-[#00A1B0] hover:border-[#00A1B0] transition-all"
+                                        >
+                                            <ChevronRight size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </main>

@@ -31,7 +31,8 @@ export class ScheduleRepository
     async addBlockedDate(
         doctorId: string | Types.ObjectId,
         date: Date,
-        reason?: string
+        reason?: string,
+        slots?: string[]
     ): Promise<IDoctorScheduleDocument | null> {
         const id = typeof doctorId === "string" ? new Types.ObjectId(doctorId) : doctorId;
         const schedule = await this.model.findOne({ doctorId: id }).exec();
@@ -40,22 +41,26 @@ export class ScheduleRepository
             return null;
         }
 
-
         const dateStr = date.toISOString().split("T")[0];
-        const isAlreadyBlocked = schedule.blockedDates?.some(
+
+        schedule.blockedDates = schedule.blockedDates || [];
+
+        const existingIndex = schedule.blockedDates.findIndex(
             (blocked) => blocked.date.toISOString().split("T")[0] === dateStr
         );
 
-        if (!isAlreadyBlocked) {
-            schedule.blockedDates = schedule.blockedDates || [];
+        if (existingIndex >= 0) {
+            schedule.blockedDates[existingIndex].reason = reason || schedule.blockedDates[existingIndex].reason;
+            schedule.blockedDates[existingIndex].slots = slots;
+        } else {
             schedule.blockedDates.push({
                 date,
                 reason: reason || null,
+                slots: slots
             });
-            return await schedule.save();
         }
 
-        return schedule;
+        return await schedule.save();
     }
 
     async removeBlockedDate(

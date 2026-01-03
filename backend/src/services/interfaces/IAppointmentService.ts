@@ -69,4 +69,13 @@ export interface IAppointmentService {
         appointmentId: string,
         userId: string
     ): Promise<void>;
+
+    updateSessionStatus(
+        appointmentId: string,
+        userId: string,
+        status: "ACTIVE" | "WAITING_FOR_DOCTOR" | "CONTINUED_BY_DOCTOR" | "ENDED"
+    ): Promise<void>;
+
+    enablePostConsultationChat(appointmentId: string, doctorUserId: string): Promise<void>;
+    disablePostConsultationChat(appointmentId: string, doctorUserId: string): Promise<void>;
 }

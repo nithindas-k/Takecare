@@ -1,77 +1,83 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { LogOut, User, Menu } from "lucide-react";
+import { LogOut, User, Menu, Search } from "lucide-react";
 import authService from "../../services/authService";
+import NotificationDropdown from "../common/NotificationDropdown";
 
 interface TopNavProps {
   onMenuClick?: () => void;
 }
 
-import NotificationDropdown from "../common/NotificationDropdown";
-
 const TopNav: React.FC<TopNavProps> = ({ onMenuClick }) => {
-  const navigate = useNavigate();
   const [showLogoutMenu, setShowLogoutMenu] = useState(false);
 
   const handleLogout = async () => {
     await authService.logout();
-    navigate("/admin/login");
+    window.location.href = "/admin/login";
   };
 
   return (
-    <nav className="bg-[#00A1B0] text-white px-4 sm:px-6 py-3 flex items-center justify-between shadow-md">
+    <nav className="h-16 bg-white border-b border-slate-100 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40">
       <div className="flex items-center gap-4">
         <button
           type="button"
           onClick={onMenuClick}
-          className="lg:hidden w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+          className="lg:hidden w-10 h-10 rounded-lg text-slate-500 hover:bg-slate-50 flex items-center justify-center transition-colors"
           aria-label="Toggle menu"
         >
           <Menu size={20} />
         </button>
-        <div className="flex items-center gap-2">
-          <img src="/doctor.png" alt="Takecare Logo" className="h-7 w-auto" />
-          <span className="text-xl sm:text-2xl font-bold tracking-wide">TAKECARE</span>
+
+        <div className="hidden sm:flex items-center relative group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#00A1B0] transition-colors" />
+          <input
+            type="text"
+            placeholder="Search anything..."
+            className="pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-[#00A1B0]/20 w-64 outline-none transition-all"
+          />
         </div>
       </div>
-      <div className="flex items-center gap-3">
-        {/* Notification Button */}
-        <NotificationDropdown />
 
-        {/* User Profile Dropdown */}
+      <div className="flex items-center gap-2 sm:gap-4">
+        {/* Notification */}
         <div className="relative">
-          <button
-            onClick={() => setShowLogoutMenu(!showLogoutMenu)}
-            className="w-9 h-9 bg-white text-[#00A1B0] rounded-full flex items-center justify-center hover:bg-white/90 transition-colors"
-            title="Profile Menu"
-          >
-            <User size={18} />
-          </button>
+          <NotificationDropdown />
+        </div>
 
-          {/* Dropdown Menu */}
-          {showLogoutMenu && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
-              <button
-                onClick={handleLogout}
-                className="w-full px-4 py-2 text-left text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 transition-colors"
-              >
-                <LogOut size={18} />
-                <span className="font-medium">Logout</span>
-              </button>
-            </div>
-          )}
+        {/* User Profile */}
+        <div className="flex items-center gap-3 pl-4 border-l border-slate-100 ml-2">
+          <div className="hidden sm:block text-right">
+            <p className="text-sm font-bold text-slate-900 leading-none">Admin</p>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1 text-right">Super Admin</p>
+          </div>
+
+          <div className="relative">
+            <button
+              onClick={() => setShowLogoutMenu(!showLogoutMenu)}
+              className="w-10 h-10 bg-slate-50 text-slate-600 rounded-xl flex items-center justify-center hover:bg-slate-100 hover:text-[#00A1B0] transition-all"
+            >
+              <User size={18} />
+            </button>
+
+            {showLogoutMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowLogoutMenu(false)} />
+                <div className="absolute right-0 mt-3 w-52 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                  <div className="px-4 py-3 border-b border-slate-50 mb-1">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Account Details</p>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full px-4 py-2.5 text-left text-red-500 hover:bg-red-50 flex items-center gap-2 transition-colors font-semibold text-sm"
+                  >
+                    <LogOut size={18} />
+                    Logout
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Click outside to close dropdown */}
-      {showLogoutMenu && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setShowLogoutMenu(false)}
-        >
-          {/* Empty div to fix JSX structure */}
-        </div>
-      )}
     </nav>
   );
 };

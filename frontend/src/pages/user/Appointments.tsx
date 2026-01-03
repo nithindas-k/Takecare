@@ -128,7 +128,6 @@ const Appointments: React.FC = () => {
         let isMounted = true;
 
         const fetchAppointments = async () => {
-            // Only fetch if we haven't fetched this page before or if it's page 1 with no data
             if (lastFetchedPage.current === page && appointments.length > 0) {
                 setLoading(false);
                 return;
@@ -149,7 +148,7 @@ const Appointments: React.FC = () => {
                 if (!isMounted) return;
                 setAppointments((prev) => (page === 1 ? nextAppointments : [...prev, ...nextAppointments]));
                 setTotal(nextTotal);
-                lastFetchedPage.current = page; // Mark this page as fetched
+                lastFetchedPage.current = page; 
             } catch (e: any) {
                 if (!isMounted) return;
                 setError(e?.response?.data?.message || e?.message || 'Failed to fetch appointments');

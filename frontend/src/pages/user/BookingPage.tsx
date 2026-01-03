@@ -79,7 +79,6 @@ const BookingPage: React.FC = () => {
                     }))
                     : [];
 
-                // Filter past slots if strictly today
                 const now = new Date();
                 const isToday = selectedDay.toDateString() === now.toDateString();
 

@@ -40,7 +40,7 @@ export class ScheduleService implements IScheduleService {
             throw new NotFoundError(MESSAGES.DOCTOR_NOT_FOUND);
         }
 
-      
+
         const doctorId = doctor._id.toString();
         const existingSchedule = await this._scheduleRepository.findByDoctorId(doctorId);
 
@@ -63,7 +63,7 @@ export class ScheduleService implements IScheduleService {
 
         ScheduleValidator.validateCreateSchedule(data);
 
-        
+
         const weeklySchedule = data.weeklySchedule.map(day => ({
             ...day,
             slots: day.slots ? day.slots.map(slot => ({
@@ -141,13 +141,13 @@ export class ScheduleService implements IScheduleService {
         }
 
         ScheduleValidator.validateUpdateSchedule(data);
-        
+
 
         const updateData: any = {};
         if (data.weeklySchedule) {
-             
+
             updateData.weeklySchedule = data.weeklySchedule.map(day => ({
-                
+
                 ...day,
                 slots: day.slots ? day.slots.map(slot => ({
                     ...slot,
@@ -204,14 +204,14 @@ export class ScheduleService implements IScheduleService {
             throw new NotFoundError(MESSAGES.DOCTOR_NOT_FOUND);
         }
 
-
         ScheduleValidator.validateBlockDate(data);
 
         const date = new Date(data.date);
         const schedule = await this._scheduleRepository.addBlockedDate(
             doctorId,
             date,
-            data.reason
+            data.reason,
+            data.slots
         );
 
         if (!schedule) {
@@ -303,10 +303,16 @@ export class ScheduleService implements IScheduleService {
         const dateStr = dateObj.toISOString().split("T")[0];
 
         let isBlocked = false;
+        let blockedDaySlots: string[] = [];
+
         if (schedule.blockedDates) {
             for (const blocked of schedule.blockedDates) {
                 if (blocked.date.toISOString().split("T")[0] === dateStr) {
-                    isBlocked = true;
+                    if (!blocked.slots || blocked.slots.length === 0) {
+                        isBlocked = true;
+                    } else {
+                        blockedDaySlots = blocked.slots;
+                    }
                     break;
                 }
             }
@@ -345,6 +351,9 @@ export class ScheduleService implements IScheduleService {
 
         const availableSlots: AvailableSlotResponseDTO[] = [];
         for (const slot of enabledSlots) {
+            if (blockedDaySlots.includes(slot.startTime)) {
+                continue;
+            }
             const isSlotBooked = slot.booked === true;
             const slotTimeRange = `${slot.startTime} - ${slot.endTime}`;
 

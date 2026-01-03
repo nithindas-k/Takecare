@@ -223,26 +223,60 @@ const Home: React.FC = () => {
               >
                 Explore Doctors
               </button>
-              <button
-                className="flex-1 sm:flex-none px-6 py-3.5 bg-white text-[#00A1B0] border border-[#00A1B0] rounded-xl font-bold shadow-sm hover:bg-[#00A1B0]/10 transition-all"
-                onClick={() => navigate('/booking')}
-              >
-                Quick Book
-              </button>
+
             </div>
           </div>
 
           {/* Right Column: Image overlapping background */}
-          <div className="relative h-full flex justify-center lg:justify-start hero-image order-2 lg:order-2 mt-8 lg:mt-0">
-            <div className="relative z-10 w-full max-w-lg lg:-ml-12">
-              {/* Geometric Shapes behind doctor */}
-              <div className="absolute top-10 right-10 w-20 h-20 border-4 border-[#00A1B0]/10 rounded-full animate-pulse-slow"></div>
-              <div className="absolute bottom-20 left-10 w-16 h-16 bg-[#00A1B0] rounded-full opacity-10 blur-xl"></div>
+          <div className="relative h-full flex justify-center lg:justify-start hero-image order-2 lg:order-2 mt-8 lg:mt-0 perspective-1000">
+            <div className="relative z-10 w-full max-w-lg lg:-ml-12 group" style={{ transformStyle: 'preserve-3d' }}>
+              {/* 3D Layered background elements */}
+              <div
+                className="absolute inset-0 bg-gradient-to-br from-[#00A1B0]/20 to-transparent rounded-3xl blur-2xl transition-transform duration-500 group-hover:scale-110"
+                style={{ transform: 'translateZ(-80px)' }}
+              ></div>
 
-              <img src="/doctor.png" alt="Doctor" className="relative z-10 w-full h-auto object-contain drop-shadow-2xl" />
+              {/* Geometric Shapes behind doctor - 3D positioned */}
+              <div
+                className="absolute top-10 right-10 w-20 h-20 border-4 border-[#00A1B0]/20 rounded-full animate-pulse-slow transition-transform duration-500 group-hover:rotate-45"
+                style={{ transform: 'translateZ(-40px)' }}
+              ></div>
+              <div
+                className="absolute bottom-20 left-10 w-16 h-16 bg-[#00A1B0] rounded-full opacity-20 blur-xl transition-transform duration-500"
+                style={{ transform: 'translateZ(-60px)' }}
+              ></div>
+              <div
+                className="absolute top-1/2 right-0 w-24 h-24 bg-gradient-to-br from-[#00A1B0]/10 to-[#00A1B0]/5 rounded-full blur-lg transition-transform duration-500"
+                style={{ transform: 'translateZ(-30px) translateY(-50%)' }}
+              ></div>
 
-              {/* Stats Card - Floating visually between backgrounds */}
-              <div className="absolute bottom-10 sm:bottom-20 left-0 sm:left-[-10px] lg:left-[-40px] bg-white p-4 sm:p-5 rounded-2xl shadow-xl flex flex-col gap-1 z-20 animate-bounce-slow max-w-[140px] lg:max-w-[160px]">
+              {/* Main Doctor Image with 3D Transform */}
+              <div
+                className="relative transition-all duration-500 ease-out group-hover:scale-[1.02]"
+                style={{
+                  transform: 'rotateY(-5deg) rotateX(2deg)',
+                  transformStyle: 'preserve-3d'
+                }}
+              >
+                <img
+                  src="/doctor.png"
+                  alt="Doctor"
+                  className="relative z-10 w-full h-auto object-contain drop-shadow-2xl transition-all duration-500 group-hover:drop-shadow-[0_35px_60px_rgba(0,161,176,0.3)]"
+                  style={{ transform: 'translateZ(40px)' }}
+                />
+
+                {/* Shadow layer for depth */}
+                <div
+                  className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[80%] h-8 bg-black/10 rounded-full blur-xl transition-all duration-500 group-hover:w-[90%] group-hover:blur-2xl"
+                  style={{ transform: 'translateZ(-20px) rotateX(90deg)' }}
+                ></div>
+              </div>
+
+              {/* Stats Card - Floating visually between backgrounds with 3D effect */}
+              <div
+                className="absolute bottom-10 sm:bottom-20 left-0 sm:left-[-10px] lg:left-[-40px] bg-white p-4 sm:p-5 rounded-2xl shadow-xl flex flex-col gap-1 z-20 animate-bounce-slow max-w-[140px] lg:max-w-[160px] transition-all duration-500 hover:shadow-2xl hover:scale-105"
+                style={{ transform: 'translateZ(60px) rotateY(5deg)' }}
+              >
                 <div className="flex items-center gap-2 mb-1">
                   <div className="flex -space-x-2">
                     <img
@@ -458,9 +492,10 @@ const Home: React.FC = () => {
 
       {/* Banner CTA */}
       <div className="max-w-6xl mx-auto py-16 lg:py-24 px-4 banner-cta">
-        <div className="bg-[#00A1B0] rounded-[2rem] p-0 shadow-2xl flex flex-col md:flex-row relative overflow-hidden">
-          <div className="p-10 md:p-16 text-white md:w-1/2 flex flex-col justify-center z-10 text-center md:text-left">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6 md:mb-8 leading-tight">
+        <div className="bg-[#00A1B0] rounded-[2rem] shadow-2xl flex flex-col md:flex-row relative min-h-[320px] md:min-h-[380px]">
+          {/* Text Content */}
+          <div className="p-8 md:p-12 lg:p-16 text-white md:w-1/2 flex flex-col justify-center z-10 text-center md:text-left">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-6 md:mb-8 leading-tight">
               Book Appointment <br className="hidden sm:block" />
               With 100+ Trusted Doctors
             </h2>
@@ -473,12 +508,13 @@ const Home: React.FC = () => {
               </button>
             </div>
           </div>
-          <div className="md:w-1/2 relative min-h-[300px] md:min-h-[400px]">
-            {/* Using local doctor.png for this prominent banner */}
+
+          {/* Doctor Image - Head overflows outside container */}
+          <div className="md:w-1/2 relative flex items-end justify-center md:justify-end overflow-visible">
             <img
               src="/appointment-doc-img.png"
               alt="Doctor Banner"
-              className="absolute bottom-0 right-0 w-auto h-[110%] md:h-[130%] object-contain banner-doc-img"
+              className="absolute bottom-0 right-0 md:right-4 lg:right-8 h-[350px] md:h-[450px] lg:h-[500px] w-auto object-contain object-bottom banner-doc-img"
               onError={(e) => (e.target as HTMLImageElement).src = '/doctor.png'}
             />
           </div>

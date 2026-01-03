@@ -136,8 +136,6 @@ const PatientOTPVerify: React.FC = () => {
         setServerError("");
         setSuccessMessage("");
 
-        // dispatch(signInStart()); // Removed as requested by user for simple slice
-
         const otpString = otp.join("");
         const response = await authService.userVerifyOtp({
           email,
@@ -158,7 +156,6 @@ const PatientOTPVerify: React.FC = () => {
           authService.saveToken(response.data.token);
           authService.saveUser(response.data.user);
 
-          // Only store essential user fields in Redux
           dispatch(setUser({
             _id: response.data.user.id,
             name: response.data.user.name,
@@ -181,7 +178,6 @@ const PatientOTPVerify: React.FC = () => {
         setServerError(
           error.message || "Verification failed. Please try again."
         );
-        // dispatch(signInFailure(...));
         setOtp(Array(OTP_LENGTH).fill(""));
         inputRefs.current[0]?.focus();
       } finally {

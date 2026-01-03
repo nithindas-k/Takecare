@@ -80,6 +80,9 @@ export const APPOINTMENT_ROUTES = {
     RESCHEDULE: "/:id/reschedule",
     ADMIN_ALL: "/admin/all",
     START_CONSULTATION: "/:id/start-consultation",
+    UPDATE_SESSION_STATUS: "/:id/session-status",
+    ENABLE_CHAT: "/:id/enable-chat",
+    DISABLE_CHAT: "/:id/disable-chat",
 } as const;
 
 export const PAYMENT_ROUTES = {

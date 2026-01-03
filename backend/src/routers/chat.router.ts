@@ -9,22 +9,21 @@ import { upload } from "../middlewares/upload.middleware";
 
 const chatRouter = Router();
 
-// Initialize repositories
+
 const messageRepository = new MessageRepository();
 const appointmentRepository = new AppointmentRepository();
 const doctorRepository = new DoctorRepository();
 
-// Initialize service with dependency injection
 const chatService = new ChatService(
     messageRepository,
     appointmentRepository,
     doctorRepository
 );
 
-// Initialize controller
+
 const chatController = new ChatController(chatService);
 
-// Routes
+
 chatRouter.get(
     "/conversations",
     authMiddleware,

@@ -156,7 +156,6 @@ export class PaymentService implements IPaymentService {
                 "Consultation Fee"
             );
 
-            // Notify doctor that appointment is now confirmed (paid)
             if (this._notificationService) {
                 await this._notificationService.notify(doctor.userId.toString(), {
                     title: "Appointment Paid & Confirmed",
@@ -167,7 +166,7 @@ export class PaymentService implements IPaymentService {
             }
         }
 
-        // Notify admin about commission
+
         const admins = await this._userRepository.findByRole(ROLES.ADMIN);
         const adminUser = admins[0];
         if (adminUser) {
@@ -179,7 +178,7 @@ export class PaymentService implements IPaymentService {
                 "Consultation Fee"
             );
 
-            // Admin commission is now notified via WalletService
+
         }
 
         this.logger.info("Razorpay payment verified and split performed", {

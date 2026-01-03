@@ -5,7 +5,7 @@ export interface IMessage extends Document {
     senderId: mongoose.Types.ObjectId;
     senderModel: 'User' | 'Doctor';
     content: string;
-    type: 'text' | 'image' | 'file' | 'system'; // Added 'system' just in case
+    type: 'text' | 'image' | 'file' | 'system'; 
     read: boolean;
     isDeleted: boolean;
     isEdited: boolean;
@@ -69,7 +69,7 @@ const MessageSchema = new Schema<IMessage>(
     }
 );
 
-// Indexes for faster retrieval of chat history
+
 MessageSchema.index({ appointmentId: 1, createdAt: 1 });
 
 const MessageModel: Model<IMessage> = mongoose.models.Message || mongoose.model<IMessage>('Message', MessageSchema);

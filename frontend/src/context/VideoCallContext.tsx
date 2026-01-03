@@ -34,7 +34,7 @@ export const useVideoCall = () => {
     return context;
 };
 
-// STUN servers are essential for WebRTC to work over the internet
+
 const ICE_SERVERS = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -44,7 +44,7 @@ const ICE_SERVERS = {
 
 export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [stream, setStream] = useState<MediaStream>();
-    const [call, setCall] = useState<any>({});
+    const [call] = useState<any>({});
     const [incomingCall, setIncomingCall] = useState<any>(null);
     const [callAccepted, setCallAccepted] = useState(false);
     const [callEnded, setCallEnded] = useState(false);
@@ -60,7 +60,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const user = useSelector(selectCurrentUser);
     const me = user?.id || (user as any)?._id;
 
-    // Ensure we join the socket room so we can be called
+ 
     useEffect(() => {
         if (socket && me) {
             console.log("VideoCallContext: Joining socket room", me);
@@ -68,7 +68,6 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
     }, [socket, me]);
 
-    // Initialize Media Stream
     useEffect(() => {
         navigator.mediaDevices.getUserMedia({ video: true, audio: true })
             .then((currentStream) => {
@@ -83,7 +82,6 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             });
     }, []);
 
-    // Socket Event Listeners
     useEffect(() => {
         if (!socket) return;
 
@@ -122,8 +120,6 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             }
             connectionRef.current = null;
             toast.info("Call ended");
-            // Reload to clear state/connection cleanly
-            window.location.reload();
         });
 
         return () => {
@@ -137,19 +133,19 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const createPeerConnection = useCallback((targetId: string) => {
         const peer = new RTCPeerConnection(ICE_SERVERS);
 
-        // Add local tracks
+       
         if (stream) {
             stream.getTracks().forEach(track => peer.addTrack(track, stream));
         }
 
-        // Handle remote stream
+     
         peer.ontrack = (event) => {
             if (userVideo.current) {
                 userVideo.current.srcObject = event.streams[0];
             }
         };
 
-        // Handle ICE candidates
+       
         peer.onicecandidate = (event) => {
             if (event.candidate) {
                 socket?.emit("ice-candidate", {
@@ -209,8 +205,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (targetId) {
             socket?.emit("end-call", { to: targetId });
         }
-        // Force cleanup handled by component or context unmount
-        // window.location.href = '/dashboard';
+     
     };
 
     const toggleMute = () => {

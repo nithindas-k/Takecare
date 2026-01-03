@@ -17,7 +17,7 @@ const PatientForgotPasswordOTP: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState(60);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Countdown OTP expiry timer
+
   useEffect(() => {
     if (timeLeft === 0) return;
     const timerId = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);

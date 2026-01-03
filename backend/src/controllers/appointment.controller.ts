@@ -5,7 +5,11 @@ import { sendSuccess } from "../utils/response.util";
 import { AppError } from "../errors/AppError";
 import { MESSAGES, HttpStatus, PAGINATION, ROLES, APPOINTMENT_STATUS } from "../constants/constants";
 
+import { LoggerService } from "../services/logger.service";
+
 export class AppointmentController implements IAppointmentController {
+    private readonly logger = new LoggerService("AppointmentController");
+
     constructor(private _appointmentService: IAppointmentService) { }
 
     createAppointment = async (
@@ -46,13 +50,16 @@ export class AppointmentController implements IAppointmentController {
                 );
             }
 
+            this.logger.info("Calling createAppointment", { patientId, appointmentData });
             const appointment = await this._appointmentService.createAppointment(
                 patientId,
                 appointmentData
             );
+            this.logger.info("Appointment created successfully", { id: appointment?._id || appointment?.id });
 
             sendSuccess(res, appointment, MESSAGES.APPOINTMENT_CREATED, HttpStatus.CREATED);
         } catch (err: unknown) {
+            this.logger.error("Error in createAppointment", err);
             next(err);
         }
     };
@@ -384,6 +391,72 @@ export class AppointmentController implements IAppointmentController {
             await this._appointmentService.startConsultation(appointmentId, userId);
 
             sendSuccess(res, undefined, "Consultation started successfully");
+        } catch (err: unknown) {
+            next(err);
+        }
+    };
+
+    updateSessionStatus = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = req.user?.userId;
+            const appointmentId = req.params.id;
+            const { status } = req.body;
+
+            if (!userId) {
+                throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+            }
+
+            await this._appointmentService.updateSessionStatus(appointmentId, userId, status);
+
+            sendSuccess(res, undefined, `Session status updated to ${status}`);
+        } catch (err: unknown) {
+            next(err);
+        }
+    };
+
+    enablePostConsultationChat = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+            const appointmentId = req.params.id;
+
+            if (!userId || userRole !== ROLES.DOCTOR) {
+                throw new AppError(MESSAGES.DOCTOR_ONLY, HttpStatus.FORBIDDEN);
+            }
+
+            await this._appointmentService.enablePostConsultationChat(appointmentId, userId);
+
+            sendSuccess(res, undefined, "Post-consultation chat enabled for 24 hours.");
+        } catch (err: unknown) {
+            next(err);
+        }
+    };
+
+    disablePostConsultationChat = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+            const appointmentId = req.params.id;
+
+            if (!userId || userRole !== ROLES.DOCTOR) {
+                throw new AppError(MESSAGES.DOCTOR_ONLY, HttpStatus.FORBIDDEN);
+            }
+
+            await this._appointmentService.disablePostConsultationChat(appointmentId, userId);
+
+            sendSuccess(res, undefined, "Post-consultation chat manually closed.");
         } catch (err: unknown) {
             next(err);
         }

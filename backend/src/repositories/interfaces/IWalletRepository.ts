@@ -5,7 +5,7 @@ export interface IWalletRepository {
     createWallet(userId: string): Promise<IWalletDocument>;
     updateBalance(userId: string, amount: number): Promise<IWalletDocument | null>;
     createTransaction(data: any): Promise<ITransactionDocument>;
-    getTransactionsByUserId(userId: string, skip: number, limit: number): Promise<{ transactions: ITransactionDocument[], total: number }>;
-    getAdminTransactions(skip: number, limit: number): Promise<{ transactions: any[], total: number }>;
+    getTransactionsByUserId(userId: string, skip: number, limit: number, filters?: { search?: string, type?: string, date?: string }): Promise<{ transactions: ITransactionDocument[], total: number }>;
+    getAdminTransactions(skip: number, limit: number, filters?: { date?: string }): Promise<{ transactions: any[], total: number }>;
     getTotalCommission(): Promise<number>;
 }

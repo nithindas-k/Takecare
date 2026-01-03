@@ -100,6 +100,9 @@ export const APPOINTMENT_API_ROUTES = {
   RESCHEDULE: (id: string): string => `/appointments/${id}/reschedule`,
   ADMIN_ALL: "/appointments/admin/all",
   START_CONSULTATION: (id: string): string => `/appointments/${id}/start-consultation`,
+  UPDATE_SESSION_STATUS: (id: string): string => `/appointments/${id}/session-status`,
+  ENABLE_CHAT: (id: string): string => `/appointments/${id}/enable-chat`,
+  DISABLE_CHAT: (id: string): string => `/appointments/${id}/disable-chat`,
 } as const;
 
 export const PAYMENT_API_ROUTES = {

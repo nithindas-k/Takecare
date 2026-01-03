@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FaCheckCircle, FaArrowLeft, FaCreditCard } from 'react-icons/fa';
 import NavBar from '../../components/common/NavBar';
 import Footer from '../../components/common/Footer';
@@ -21,10 +21,14 @@ import { toast } from 'sonner';
 
 const PaymentPage: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [policyOpen, setPolicyOpen] = useState(false);
     const [bookingData, setBookingData] = useState<any>(null);
     const [processing, setProcessing] = useState(false);
+    const [existingAppointmentId, setExistingAppointmentId] = useState<string | null>(
+        location.state?.appointmentId || sessionStorage.getItem('tempAppointmentId') || null
+    );
 
     useEffect(() => {
         const token = localStorage.getItem('authToken');
@@ -68,23 +72,32 @@ const PaymentPage: React.FC = () => {
 
         setProcessing(true);
         try {
-            const appointmentPayload = {
-                doctorId: bookingData.doctorId,
-                appointmentDate: bookingData.appointmentDate,
-                appointmentTime: bookingData.appointmentTime,
-                slotId: bookingData.slotId,
-                appointmentType: bookingData.appointmentType,
-                reason: bookingData.patientDetails?.reason || bookingData.patientDetails?.symptoms || ''
-            };
+            let appointmentId = existingAppointmentId;
 
-            const appointmentResponse = await appointmentService.createAppointment(appointmentPayload);
-            if (!appointmentResponse || !appointmentResponse.success) {
-                throw new Error(appointmentResponse?.message || 'Failed to create appointment');
-            }
-
-            const appointmentId = appointmentResponse.data?.id || appointmentResponse.data?._id;
             if (!appointmentId) {
-                throw new Error('Appointment ID missing');
+                const appointmentPayload = {
+                    doctorId: bookingData.doctorId,
+                    appointmentDate: bookingData.appointmentDate,
+                    appointmentTime: bookingData.appointmentTime,
+                    slotId: bookingData.slotId,
+                    appointmentType: bookingData.appointmentType,
+                    reason: bookingData.patientDetails?.reason || bookingData.patientDetails?.symptoms || ''
+                };
+
+                console.log('PaymentPage: Creating appointment with payload:', appointmentPayload);
+                const appointmentResponse = await appointmentService.createAppointment(appointmentPayload);
+                console.log('PaymentPage: Appointment creation response:', appointmentResponse);
+                if (!appointmentResponse || !appointmentResponse.success) {
+                    throw new Error(appointmentResponse?.message || 'Failed to create appointment');
+                }
+
+                appointmentId = appointmentResponse.data?.id || appointmentResponse.data?._id;
+                if (!appointmentId) {
+                    throw new Error('Appointment ID missing');
+                }
+
+                setExistingAppointmentId(appointmentId);
+                sessionStorage.setItem('tempAppointmentId', appointmentId);
             }
 
             const orderResponse = await paymentService.createRazorpayOrder({
@@ -109,7 +122,7 @@ const PaymentPage: React.FC = () => {
                 handler: async (response: any) => {
                     try {
                         const verifyResponse = await paymentService.verifyRazorpayPayment({
-                            appointmentId,
+                            appointmentId: appointmentId!,
                             razorpay_order_id: response.razorpay_order_id,
                             razorpay_payment_id: response.razorpay_payment_id,
                             razorpay_signature: response.razorpay_signature,
@@ -119,9 +132,9 @@ const PaymentPage: React.FC = () => {
                             throw new Error(verifyResponse?.message || 'Payment verification failed');
                         }
 
-                        sessionStorage.setItem('appointmentId', appointmentId);
-                        sessionStorage.setItem('appointmentData', JSON.stringify(appointmentResponse.data));
+                        sessionStorage.setItem('appointmentId', appointmentId!);
                         sessionStorage.removeItem('bookingData');
+                        sessionStorage.removeItem('tempAppointmentId');
 
                         toast.success('Payment successful! Appointment booked.');
                         navigate('/booking-success');
@@ -135,6 +148,8 @@ const PaymentPage: React.FC = () => {
                 modal: {
                     ondismiss: () => {
                         setProcessing(false);
+                        toast.info("Payment cancelled. Redirecting to appointment details...");
+                        navigate(`/patient/appointments/${appointmentId}`);
                     },
                 },
                 theme: {
@@ -147,25 +162,41 @@ const PaymentPage: React.FC = () => {
                 console.error('Razorpay payment failed:', resp);
                 toast.error(resp?.error?.description || 'Payment failed');
                 setProcessing(false);
+                navigate(`/patient/appointments/${appointmentId}`);
             });
 
             rzp.open();
         } catch (error: any) {
             console.error('Razorpay payment error:', error);
-            toast.error(error?.response?.data?.message || error?.message || 'Payment failed. Please try again.');
+            const errorMessage = error?.response?.data?.message || error?.message || 'Payment failed. Please try again.';
+            toast.error(errorMessage);
             setProcessing(false);
+
+
         }
     };
+
+    const consultationFee = (bookingData && (bookingData.appointmentType?.toLowerCase() === 'video' || bookingData.type?.toLowerCase() === 'video'))
+        ? (bookingData.doctor.videoFees || bookingData.doctor.fees || 0)
+        : (bookingData ? (bookingData.doctor.chatFees || bookingData.doctor.fees || 0) : 0);
+
+    const total = consultationFee;
+
+    useEffect(() => {
+        if (bookingData) {
+            console.log("Fee Calculation Debug:", {
+                type: bookingData.appointmentType,
+                videoFees: bookingData.doctor?.videoFees,
+                chatFees: bookingData.doctor?.chatFees,
+                fee: consultationFee,
+                total: total
+            });
+        }
+    }, [bookingData, consultationFee, total]);
 
     if (!bookingData) {
         return null;
     }
-
-    const consultationFee = bookingData.appointmentType === 'video'
-        ? (bookingData.doctor.videoFees || bookingData.doctor.fees || 0)
-        : (bookingData.doctor.chatFees || bookingData.doctor.fees || 0);
-
-    const total = consultationFee;
 
     return (
         <div className="bg-gray-50 min-h-screen font-sans">
@@ -350,7 +381,12 @@ const PaymentPage: React.FC = () => {
                                 disabled={!acceptedTerms || processing}
                                 className="w-full"
                             >
-                                {processing ? 'Processing...' : 'Pay with Online Payment'}
+                                {processing
+                                    ? 'Processing...'
+                                    : existingAppointmentId
+                                        ? 'Retry Payment'
+                                        : 'Pay with Online Payment'
+                                }
                             </Button>
                         </div>
                     </div>

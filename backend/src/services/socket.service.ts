@@ -33,7 +33,7 @@ class SocketService {
                 this.io?.to(to).emit("call-ended");
             });
 
-            // existing chat events...
+            
             socket.on("join", (userId: string) => {
                 socket.join(userId);
                 this.onlineUsers.set(userId, socket.id);
@@ -76,7 +76,7 @@ class SocketService {
 
             socket.on("disconnect", () => {
                 let disconnectedUserId = "";
-                for (let [uid, sid] of this.onlineUsers.entries()) {
+                for (const [uid, sid] of this.onlineUsers.entries()) {
                     if (sid === socket.id) {
                         disconnectedUserId = uid;
                         this.onlineUsers.delete(uid);
@@ -85,6 +85,7 @@ class SocketService {
                 }
                 if (disconnectedUserId) {
                     this.io?.emit("user-status", { userId: disconnectedUserId, status: 'offline' });
+                    
                 }
             });
         });

@@ -152,9 +152,22 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
             type: String,
             default: null,
         },
+        sessionStatus: {
+            type: String,
+            enum: ["idle", "ACTIVE", "WAITING_FOR_DOCTOR", "CONTINUED_BY_DOCTOR", "ENDED"],
+            default: "idle",
+        },
+        extensionCount: {
+            type: Number,
+            default: 0,
+        },
         reminderSent: {
             type: Boolean,
             default: false,
+        },
+        postConsultationChatWindow: {
+            isActive: { type: Boolean, default: false },
+            expiresAt: { type: Date, default: null }
         },
     },
     {

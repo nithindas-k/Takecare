@@ -22,7 +22,7 @@ axiosInstance.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    console.log("🚀 API Request:", {
+    console.log("API Request:", {
       method: config.method?.toUpperCase(),
       url: config.url,
       headers: config.headers.Authorization ? "Bearer token present" : "No token",
@@ -32,7 +32,7 @@ axiosInstance.interceptors.request.use(
     return config;
   },
   (error: AxiosError) => {
-    console.error("❌ Request Error:", error);
+    console.error("Request Error:", error);
     return Promise.reject(error);
   }
 );
@@ -40,7 +40,7 @@ axiosInstance.interceptors.request.use(
 
 axiosInstance.interceptors.response.use(
   (response: AxiosResponse) => {
-    console.log("✅ API Response:", {
+    console.log("API Response:", {
       status: response.status,
       url: response.config.url,
       data: response.data,

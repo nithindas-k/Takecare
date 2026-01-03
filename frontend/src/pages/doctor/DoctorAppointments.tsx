@@ -52,7 +52,7 @@ const DoctorAppointments: React.FC = () => {
                     setRefreshing(true);
                 }
                 setError('');
-                let status = activeTab === 'upcoming' ? 'confirmed' : activeTab;
+                const status = activeTab === 'upcoming' ? 'confirmed' : activeTab;
                 const response = await appointmentService.getDoctorAppointments(status, 1, 100);
 
                 if (response?.success) {

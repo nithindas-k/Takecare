@@ -255,13 +255,12 @@ class AuthService {
     }
   }
 
-  // These methods are deprecated - use getCurrentUserInfo() instead
+
   getCurrentUser(): AuthUser | null {
     console.warn('getCurrentUser is deprecated. Use getCurrentUserInfo() instead.');
     const userInfo = this.getCurrentUserInfo();
     if (!userInfo) return null;
 
-    // Convert to old format for backward compatibility
     return {
       id: userInfo.id,
       _id: userInfo.id,
@@ -271,7 +270,7 @@ class AuthService {
     } as unknown as AuthUser;
   }
 
-  // This method is deprecated - user data should be fetched from API when needed
+
   saveUser(_user: AuthUser): void {
     console.warn('saveUser is deprecated. User data should not be stored in localStorage.');
   }

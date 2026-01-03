@@ -134,9 +134,6 @@ const DoctorRequestDetailPage: React.FC = () => {
         status: 'rejected',
         rejectionReason: rejectionReason,
       });
-
-      // Show success message and stay on the page
-      // toast.success("Rejection reason has been recorded", { duration: 2000 }); // Redundant
     }
   };
 

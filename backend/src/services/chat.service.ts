@@ -49,6 +49,18 @@ export class ChatService implements IChatService {
         if (!appointment) {
             throw new AppError('Appointment not found', HttpStatus.NOT_FOUND);
         }
+
+        if (appointment.sessionStatus === "ENDED" || appointment.status === "completed") {
+            // Check if post-consultation window is active
+            const window = appointment.postConsultationChatWindow;
+            const now = new Date();
+            const isWindowOpen = window?.isActive && window.expiresAt && new Date(window.expiresAt) > now;
+
+            if (!isWindowOpen) {
+                throw new AppError("This session has ended. No further messages can be sent.", HttpStatus.BAD_REQUEST);
+            }
+        }
+
         const realAppointmentId = (appointment as any)._id.toString();
 
         let senderModel: 'User' | 'Doctor' = 'User';
@@ -71,8 +83,13 @@ export class ChatService implements IChatService {
             type
         );
 
-        console.log(`[CHAT_SERVICE] Broadcasting saved message to room ${realAppointmentId}`);
+        const patientId = appointment.patientId.toString();
+        const doctorId = appointment.doctorId.toString();
+        const persistentRoomId = `persistent-${patientId}-${doctorId}`;
+
+        console.log(`[CHAT_SERVICE] Broadcasting to room ${realAppointmentId} and ${persistentRoomId}`);
         socketService.emitMessage(realAppointmentId, message);
+        socketService.emitMessage(persistentRoomId, message);
 
         return message;
     }
@@ -82,14 +99,28 @@ export class ChatService implements IChatService {
         if (!appointment) {
             return [];
         }
-        const realId = (appointment as any)._id.toString();
-        return await this._messageRepository.findByAppointmentId(realId);
+
+        const patientId = appointment.patientId.toString();
+        const doctorId = appointment.doctorId.toString();
+
+        const { appointments } = await this._appointmentRepository.findAll({
+            patientId,
+            doctorId
+        }, 0, 1000);
+
+        const allIds = appointments.map((a: any) => a._id.toString());
+        return await this._messageRepository.findByAppointmentIds(allIds);
     }
 
     async markMessagesAsRead(appointmentId: string, userId: string, userModel: 'User' | 'Doctor'): Promise<void> {
         const appointment = await this._appointmentRepository.findById(appointmentId);
         if (!appointment) return;
-        const realId = (appointment as any)._id.toString();
+
+        const patientId = appointment.patientId.toString();
+        const doctorId = appointment.doctorId.toString();
+
+        const { appointments } = await this._appointmentRepository.findAll({ patientId, doctorId }, 0, 1000);
+        const allIds = appointments.map((a: any) => a._id.toString());
 
         let excludeSenderId = userId;
         if (userModel === 'Doctor') {
@@ -99,7 +130,7 @@ export class ChatService implements IChatService {
             }
         }
 
-        await this._messageRepository.markAsRead(realId, excludeSenderId);
+        await this._messageRepository.markAsReadByIds(allIds, excludeSenderId);
     }
 
     async getConversations(userId: string, userRole: string): Promise<any[]> {
@@ -107,31 +138,38 @@ export class ChatService implements IChatService {
 
         if (userRole === 'doctor') {
             const doctor = await this._doctorRepository.findByUserId(userId);
-            if (!doctor) {
-                return [];
-            }
-            // Use specific doctor filter in repository
+            if (!doctor) return [];
             appointmentsResult = await this._appointmentRepository.findAll({
-                doctorId: doctor._id.toString(),
-                status: 'confirmed' // Or whatever default is needed, Repository handles the rest
-            }, 0, 100);
-
-            // Note: If the repository only allows one status string, and we need multiple, 
-            // we might need to adjust the repository or call it multiple times.
-            // But usually 'confirmed' is enough for active chats.
+                doctorId: doctor._id.toString()
+            }, 0, 1000);
         } else {
             appointmentsResult = await this._appointmentRepository.findAll({
-                patientId: userId,
-                status: 'confirmed'
-            }, 0, 100);
+                patientId: userId
+            }, 0, 1000);
         }
 
         const { appointments } = appointmentsResult;
 
-        const conversationsWithMessages = await Promise.all(
-            appointments.map(async (appointment: any) => {
-                const appointmentIdStr = appointment._id.toString();
-                const lastMessage = await this._messageRepository.findLastMessageByAppointmentId(appointmentIdStr);
+
+        const groups = new Map<string, any[]>();
+        appointments.forEach(apt => {
+            const pId = apt.patientId?._id?.toString() || apt.patientId?.toString();
+            const dId = apt.doctorId?._id?.toString() || apt.doctorId?.toString();
+            if (!pId || !dId) return;
+            const key = [pId, dId].sort().join('-');
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key)!.push(apt);
+        });
+
+        const conversations = await Promise.all(
+            Array.from(groups.values()).map(async (group) => {
+
+                group.sort((a, b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime());
+                const latestApt = group[0];
+                const allAptIds = group.map(a => a._id.toString());
+
+                const lastMessage = await this._messageRepository.findLastMessageByAppointmentIds(allAptIds);
+                if (!lastMessage) return null;
 
                 let excludeSenderId = userId;
                 if (userRole === 'doctor') {
@@ -139,102 +177,34 @@ export class ChatService implements IChatService {
                     excludeSenderId = doctor?._id?.toString() || userId;
                 }
 
-                const unreadCount = await this._messageRepository.countUnread(appointmentIdStr, excludeSenderId);
+                const unreadCount = await this._messageRepository.countUnreadInAppointments(allAptIds, excludeSenderId);
 
                 return {
-                    appointmentId: appointment._id,
-                    customId: appointment.customId,
-                    appointmentType: appointment.appointmentType,
-                    status: appointment.status,
-                    patient: appointment.patientId,
-                    doctor: appointment.doctorId,
-                    lastMessage: lastMessage ? {
+                    appointmentId: latestApt._id,
+                    customId: latestApt.customId,
+                    appointmentType: latestApt.appointmentType,
+                    status: latestApt.status,
+                    patient: latestApt.patientId,
+                    doctor: latestApt.doctorId,
+                    lastMessage: {
                         content: lastMessage.isDeleted ? 'Message deleted' : lastMessage.content,
                         createdAt: lastMessage.createdAt,
                         senderModel: lastMessage.senderModel
-                    } : null,
+                    },
                     unreadCount
                 };
             })
         );
 
-        return conversationsWithMessages
-            .filter(conv => conv.lastMessage !== null) // Only show active chats with messages
-            .sort((a, b) => {
-                const timeA = a.lastMessage?.createdAt ? new Date(a.lastMessage.createdAt).getTime() : 0;
-                const timeB = b.lastMessage?.createdAt ? new Date(b.lastMessage.createdAt).getTime() : 0;
-                return timeB - timeA;
-            });
+        return (conversations.filter(c => c !== null) as any[])
+            .sort((a, b) => new Date(b.lastMessage.createdAt).getTime() - new Date(a.lastMessage.createdAt).getTime());
     }
 
     async editMessage(messageId: string, content: string, userId: string): Promise<IMessage> {
-        const message = await this._messageRepository.findById(messageId);
-        if (!message) {
-            throw new AppError('Message not found', HttpStatus.NOT_FOUND);
-        }
-
-        // Verify if the user is the sender
-        // We need to check both userId (from req.user) and doctorId if they are a doctor
-        const isUserSender = message.senderId.toString() === userId;
-        let isDoctorSender = false;
-
-        console.log(`[CHAT_SERVICE] Verifying edit permission for user ${userId}. Message sender: ${message.senderId}`);
-
-        const doctor = await this._doctorRepository.findByUserId(userId);
-        if (doctor) {
-            isDoctorSender = message.senderId.toString() === doctor._id.toString();
-            console.log(`[CHAT_SERVICE] User is a doctor. Doctor ID: ${doctor._id}. Match: ${isDoctorSender}`);
-        }
-
-        if (!isUserSender && !isDoctorSender) {
-            this.logger.error(`Unauthorized edit attempt by user ${userId} for message ${messageId}`);
-            throw new AppError('You are not authorized to edit this message', HttpStatus.FORBIDDEN);
-        }
-
-        if (message.isDeleted) {
-            throw new AppError('Cannot edit a deleted message', HttpStatus.BAD_REQUEST);
-        }
-
-        const updatedMessage = await this._messageRepository.updateById(messageId, { content, isEdited: true });
-        if (!updatedMessage) {
-            throw new AppError('Failed to update message', HttpStatus.INTERNAL_ERROR);
-        }
-
-        socketService.emitToRoom(message.appointmentId.toString(), 'edit-message', updatedMessage);
-        return updatedMessage;
+        throw new AppError("Editing messages is not allowed in this consultation chat.", HttpStatus.FORBIDDEN);
     }
 
     async deleteMessage(messageId: string, userId: string): Promise<IMessage> {
-        const message = await this._messageRepository.findById(messageId);
-        if (!message) {
-            throw new AppError('Message not found', HttpStatus.NOT_FOUND);
-        }
-
-        const isUserSender = message.senderId.toString() === userId;
-        let isDoctorSender = false;
-
-        console.log(`[CHAT_SERVICE] Verifying delete permission for user ${userId}. Message sender: ${message.senderId}`);
-
-        const doctor = await this._doctorRepository.findByUserId(userId);
-        if (doctor) {
-            isDoctorSender = message.senderId.toString() === doctor._id.toString();
-            console.log(`[CHAT_SERVICE] User is a doctor. Doctor ID: ${doctor._id}. Match: ${isDoctorSender}`);
-        }
-
-        if (!isUserSender && !isDoctorSender) {
-            this.logger.error(`Unauthorized delete attempt by user ${userId} for message ${messageId}`);
-            throw new AppError('You are not authorized to delete this message', HttpStatus.FORBIDDEN);
-        }
-
-        const deletedMessage = await this._messageRepository.deleteById(messageId);
-        if (!deletedMessage) {
-            throw new AppError('Failed to delete message', HttpStatus.INTERNAL_ERROR);
-        }
-
-        socketService.emitToRoom(message.appointmentId.toString(), 'delete-message', {
-            messageId,
-            appointmentId: message.appointmentId.toString()
-        });
-        return deletedMessage;
+        throw new AppError("Deleting messages is not allowed in this consultation chat.", HttpStatus.FORBIDDEN);
     }
 }

@@ -4,7 +4,7 @@ import { Document, Types } from "mongoose";
 export interface ITimeSlot {
     customId?: string;
     startTime: string;
-    endTime: string;  
+    endTime: string;
     enabled?: boolean;
     booked?: boolean;
 }
@@ -29,6 +29,7 @@ export interface IDaySchedule {
 export interface IBlockedDate {
     date: Date;
     reason?: string | null;
+    slots?: string[];
 }
 
 export interface IDoctorSchedule {
@@ -36,8 +37,8 @@ export interface IDoctorSchedule {
     doctorId: Types.ObjectId;
     weeklySchedule: IDaySchedule[];
     blockedDates?: IBlockedDate[];
-    defaultSlotDuration: number; 
-    bufferTime: number;         
+    defaultSlotDuration: number;
+    bufferTime: number;
     maxPatientsPerSlot: number;
     isActive: boolean;
 

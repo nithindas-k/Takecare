@@ -18,7 +18,7 @@ export class ReviewService implements IReviewService {
         rating: number;
         comment: string;
     }): Promise<IReview> {
-        // Check if review already exists for this appointment
+        
         const existing = await this._reviewRepository.findByAppointmentId(data.appointmentId);
         if (existing) {
             throw new AppError("You have already reviewed this appointment", HttpStatus.BAD_REQUEST);

@@ -78,5 +78,22 @@ export const appointmentService = {
             params: { page, limit, ...filters },
         });
         return response.data;
+    },
+
+    updateSessionStatus: async (id: string, status: string) => {
+        const response = await axiosInstance.put(APPOINTMENT_API_ROUTES.UPDATE_SESSION_STATUS(id), {
+            status,
+        });
+        return response.data;
+    },
+
+    enablePostConsultationChat: async (id: string) => {
+        const response = await axiosInstance.put(APPOINTMENT_API_ROUTES.ENABLE_CHAT(id));
+        return response.data;
+    },
+
+    disablePostConsultationChat: async (id: string) => {
+        const response = await axiosInstance.put(APPOINTMENT_API_ROUTES.DISABLE_CHAT(id));
+        return response.data;
     }
 };

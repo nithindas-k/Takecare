@@ -23,21 +23,18 @@ import {
     DialogHeader,
     DialogTitle,
 } from "../../components/ui/dialog";
+import { useSocket } from '../../context/SocketContext';
+import { toast } from 'sonner';
+import { Lock } from 'lucide-react';
 
 const VideoCallContent: React.FC = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [targetUserId, setTargetUserId] = React.useState<string | null>(null);
-    const [isFullscreen, setIsFullscreen] = React.useState(false);
-    const [showControls, setShowControls] = React.useState(true);
-    const [callDuration, setCallDuration] = React.useState(0);
-
     const {
         myVideo,
         userVideo,
         callAccepted,
         callEnded,
-        stream,
         callUser,
         answerCall,
         leaveCall,
@@ -48,6 +45,37 @@ const VideoCallContent: React.FC = () => {
         incomingCall
     } = useVideoCall();
     const user = useSelector(selectCurrentUser) as any;
+    const { socket } = useSocket();
+    const isDoctor = user?.role === 'doctor';
+
+    const [targetUserId, setTargetUserId] = React.useState<string | null>(null);
+    const [isFullscreen, setIsFullscreen] = React.useState(false);
+    const [showControls, setShowControls] = React.useState(true);
+    const [callDuration, setCallDuration] = React.useState(0);
+    const [appointment, setAppointment] = React.useState<any>(null);
+
+    const [sessionStatus, setSessionStatus] = React.useState<string>("idle");
+    const [isTimeOver, setIsTimeOver] = React.useState(false);
+    const [extensionCount, setExtensionCount] = React.useState(0);
+    const [endSessionDialogOpen, setEndSessionDialogOpen] = React.useState(false);
+
+    const updateSessionStatus = async (status: "ACTIVE" | "WAITING_FOR_DOCTOR" | "CONTINUED_BY_DOCTOR" | "ENDED") => {
+        if (!id) return;
+        try {
+            await appointmentService.updateSessionStatus(id, status);
+        } catch (error: any) {
+            console.error("Failed to update session status", error);
+            const message = error.response?.data?.message || "Failed to update session status";
+
+            if (message.includes("Session has already ended")) {
+                toast.info("Session already ended.");
+                leaveCall();
+                navigate(-1);
+            } else {
+                toast.error(message);
+            }
+        }
+    };
 
     // Call duration timer
     useEffect(() => {
@@ -98,6 +126,7 @@ const VideoCallContent: React.FC = () => {
                 const response = await appointmentService.getAppointmentById(id);
                 if (response.success && response.data) {
                     const apt = response.data;
+                    setAppointment(apt);
                     console.log("Full Appointment Object:", apt);
                     const isDoctor = user?.role === 'doctor';
 
@@ -117,6 +146,15 @@ const VideoCallContent: React.FC = () => {
                     if (isDoctor) {
                         setTargetUserId(patientId);
                         console.log("I am Doctor, calling Patient:", patientId);
+
+                        // Automatically set to ACTIVE if doctor starts first time and session is not ended
+                        if (!apt.sessionStartTime && apt.status !== 'completed' && apt.sessionStatus !== 'ENDED') {
+                            try {
+                                await appointmentService.updateSessionStatus(id, "ACTIVE");
+                            } catch (e) {
+                                console.warn("Failed to auto-start session (might already be active)", e);
+                            }
+                        }
                     } else {
                         setTargetUserId(doctorUserId);
                         console.log("I am Patient, calling Doctor (User ID):", doctorUserId);
@@ -131,6 +169,80 @@ const VideoCallContent: React.FC = () => {
             fetchAppointment();
         }
     }, [id, user]);
+
+    useEffect(() => {
+        if (!appointment || appointment.status === 'completed' || sessionStatus === 'ENDED') return;
+
+        const checkTime = () => {
+            if (sessionStatus === "CONTINUED_BY_DOCTOR" || sessionStatus === "ENDED" || extensionCount > 0) {
+                if (isTimeOver) setIsTimeOver(false);
+                return;
+            }
+
+            const now = new Date();
+            const timeStr = appointment.appointmentTime;
+            if (!timeStr) return;
+
+            const [_, endTimeStr] = timeStr.split('-');
+            if (!endTimeStr) return;
+
+            const [hours, minutes] = endTimeStr.trim().split(':');
+            const sessionEnd = new Date(appointment.appointmentDate);
+            sessionEnd.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+            if (now > sessionEnd) {
+                if (!isTimeOver) {
+                    setIsTimeOver(true);
+                    if (sessionStatus !== "WAITING_FOR_DOCTOR" && !isDoctor) {
+                        updateSessionStatus("WAITING_FOR_DOCTOR");
+                    }
+                }
+            } else {
+                if (isTimeOver) setIsTimeOver(false);
+            }
+        };
+
+        const interval = setInterval(checkTime, 1000);
+        return () => clearInterval(interval);
+    }, [appointment, sessionStatus, isDoctor, isTimeOver, extensionCount]);
+
+    useEffect(() => {
+        if (!socket || !id) return;
+
+        // Join the appointment-specific room
+        socket.emit("join-chat", id);
+        console.log(`Joining video call room: ${id}`);
+
+        const onSessionStatusUpdated = (data: any) => {
+            if (data.appointmentId === id || data.appointmentId === appointment?._id) {
+                setSessionStatus(data.status);
+                setExtensionCount(data.extensionCount || 0);
+                if (data.status === "ACTIVE" || data.status === "CONTINUED_BY_DOCTOR") {
+                    setIsTimeOver(false);
+                }
+            }
+        };
+
+        const onSessionEnded = (data: any) => {
+            if (data.appointmentId === id || data.appointmentId === appointment?._id) {
+                toast.info("Session has been ended.");
+                leaveCall();
+                setTimeout(() => {
+                    navigate(isDoctor ? `/doctor/appointments/${id}` : `/patient/appointments/${id}`);
+                }, 1500);
+            }
+        };
+
+        socket.on("session-status-updated", onSessionStatusUpdated);
+        socket.on("session-ended", onSessionEnded);
+
+        return () => {
+            console.log(`Leaving video call room: ${id}`);
+            socket.emit("leave-chat", id);
+            socket.off("session-status-updated", onSessionStatusUpdated);
+            socket.off("session-ended", onSessionEnded);
+        };
+    }, [socket, appointment?._id, id, isDoctor, navigate, leaveCall]);
 
     const toggleFullscreen = () => {
         setIsFullscreen(!isFullscreen);
@@ -252,9 +364,19 @@ const VideoCallContent: React.FC = () => {
                                 )}
                             </div>
 
-                            <button className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-[#1C1F24]/80 backdrop-blur-lg flex items-center justify-center text-white hover:bg-[#2A2F32] transition-colors">
-                                <FaEllipsisV size={16} />
-                            </button>
+                            <div className="flex gap-2">
+                                {isDoctor && sessionStatus !== "ENDED" && (
+                                    <Button
+                                        onClick={() => setEndSessionDialogOpen(true)}
+                                        className="h-9 px-4 bg-amber-500 hover:bg-amber-600 text-white font-black uppercase text-[10px] tracking-widest rounded-xl transition-all shadow-lg shadow-amber-500/20"
+                                    >
+                                        Wind Up
+                                    </Button>
+                                )}
+                                <button className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-[#1C1F24]/80 backdrop-blur-lg flex items-center justify-center text-white hover:bg-[#2A2F32] transition-colors">
+                                    <FaEllipsisV size={16} />
+                                </button>
+                            </div>
                         </div>
                     </motion.div>
                 )}
@@ -348,8 +470,12 @@ const VideoCallContent: React.FC = () => {
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => {
-                                        leaveCall();
-                                        navigate(-1);
+                                        if (isDoctor && sessionStatus !== "ENDED") {
+                                            setEndSessionDialogOpen(true);
+                                        } else {
+                                            leaveCall();
+                                            navigate(-1);
+                                        }
                                     }}
                                     className="flex flex-col items-center gap-2"
                                 >
@@ -380,6 +506,141 @@ const VideoCallContent: React.FC = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+            {/* Time Over Modal for Patient */}
+            <AnimatePresence>
+                {isTimeOver && !isDoctor && sessionStatus !== "CONTINUED_BY_DOCTOR" && sessionStatus !== "ENDED" && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="bg-[#1C1F24] border border-[#2A2F32] rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
+                        >
+                            <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Lock className="h-10 w-10 text-amber-500" />
+                            </div>
+                            <h2 className="text-2xl font-black text-white mb-4 tracking-tight uppercase">Session Time Over</h2>
+                            <p className="text-[#8696A0] font-bold leading-relaxed mb-8 text-xs uppercase tracking-tight">
+                                Your appointment time is over. Please wait for the doctor's response.
+                            </p>
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-center gap-2 py-2 px-4 bg-[#2A2F32] rounded-xl">
+                                    <div className="w-2 h-2 bg-[#00A1B0] rounded-full animate-ping"></div>
+                                    <p className="text-[10px] font-black text-[#8696A0] uppercase tracking-widest">
+                                        Waiting for Doctor...
+                                    </p>
+                                </div>
+                                <Button
+                                    onClick={() => {
+                                        leaveCall();
+                                        navigate(-1);
+                                    }}
+                                    className="w-full bg-[#00A1B0] hover:bg-[#008f9c] text-white rounded-2xl h-14 font-black uppercase tracking-widest transition-all active:scale-95"
+                                >
+                                    Back to Dashboard
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Improved Doctor Session Controls (Modal Style) when time is over */}
+            <AnimatePresence>
+                {isTimeOver && isDoctor && sessionStatus === "WAITING_FOR_DOCTOR" && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+                    >
+                        <motion.div
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            className="bg-[#1C1F24] rounded-3xl p-8 max-w-md w-full shadow-2xl border border-[#2A2F32]"
+                        >
+                            <div className="flex items-center gap-4 mb-6 text-white">
+                                <div className="h-14 w-14 bg-amber-500/10 rounded-2xl flex items-center justify-center shrink-0">
+                                    <FaEllipsisV className="h-7 w-7 text-amber-500" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black tracking-tight uppercase">Session Completed</h2>
+                                    <p className="text-xs text-[#8696A0] font-bold uppercase tracking-tight">Manage appointment status</p>
+                                </div>
+                            </div>
+
+                            <p className="text-[#8696A0] font-medium leading-relaxed mb-8 text-sm bg-[#0B1014] p-4 rounded-2xl border border-[#2A2F32]">
+                                The appointment time has ended. You can choose to continue the session or wind it up. Patient is currently locked out.
+                            </p>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <Button
+                                    onClick={() => updateSessionStatus("CONTINUED_BY_DOCTOR")}
+                                    className="bg-green-500 hover:bg-green-600 text-white rounded-2xl h-14 font-black uppercase text-xs tracking-widest shadow-lg shadow-green-500/20"
+                                >
+                                    ✅ Continue
+                                </Button>
+                                <Button
+                                    onClick={() => updateSessionStatus("ENDED")}
+                                    className="bg-red-500 hover:bg-red-600 text-white rounded-2xl h-14 font-black uppercase text-xs tracking-widest shadow-lg shadow-red-500/20"
+                                >
+                                    ❌ Wind Up
+                                </Button>
+                            </div>
+
+                            {extensionCount > 0 && (
+                                <p className="mt-6 text-center text-[10px] text-[#00A1B0] font-black uppercase tracking-tighter">
+                                    Previously Extended {extensionCount} Times
+                                </p>
+                            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            {/* End Session Confirmation Dialog for Doctor */}
+            <Dialog open={endSessionDialogOpen} onOpenChange={setEndSessionDialogOpen}>
+                <DialogContent className="sm:max-w-md bg-[#1C1F24] border-[#2A2F32] text-white">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl">End Session?</DialogTitle>
+                        <DialogDescription className="text-[#8696A0]">
+                            Do you want to complete this appointment or just leave the call?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col gap-3 py-4">
+                        <Button
+                            onClick={() => {
+                                updateSessionStatus("ENDED");
+                                setEndSessionDialogOpen(false);
+                            }}
+                            className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-6 rounded-xl"
+                        >
+                            End Session & Complete Appointment
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                leaveCall();
+                                navigate(-1);
+                            }}
+                            className="w-full border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white py-6 rounded-xl"
+                        >
+                            Just Leave Call
+                        </Button>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="ghost"
+                            onClick={() => setEndSessionDialogOpen(false)}
+                            className="text-[#8696A0] hover:text-white"
+                        >
+                            Cancel
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

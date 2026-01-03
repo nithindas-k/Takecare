@@ -14,7 +14,6 @@ const ConsultationType: React.FC = () => {
         if (stored) {
             setBookingData(JSON.parse(stored));
         } else {
-            // If no booking data, redirect to home
             navigate('/');
         }
     }, [navigate]);
@@ -25,7 +24,6 @@ const ConsultationType: React.FC = () => {
             return;
         }
 
-        // Update booking data with consultation type
         const updatedBooking = {
             ...bookingData,
             appointmentType: selectedType

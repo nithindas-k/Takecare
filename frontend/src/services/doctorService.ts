@@ -110,10 +110,10 @@ class DoctorService {
     }
   }
 
-  async blockDate(date: string, reason?: string, doctorId?: string) {
+  async blockDate(date: string, reason?: string, doctorId?: string, slots?: string[]) {
     try {
       const url = DOCTOR_API_ROUTES.BLOCK_DATE(doctorId);
-      const response = await axiosInstance.post(url, { date, reason });
+      const response = await axiosInstance.post(url, { date, reason, slots });
       return response.data;
     } catch (error: any) {
       return {

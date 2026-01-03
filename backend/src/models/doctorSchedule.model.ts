@@ -12,7 +12,7 @@ const TimeSlotSchema = new Schema(
             sparse: true,
         },
         startTime: {
-            type: String, 
+            type: String,
             required: true,
         },
         endTime: {
@@ -75,7 +75,7 @@ const DoctorScheduleSchema = new Schema<IDoctorScheduleDocument>(
             index: true,
         },
 
-        
+
         weeklySchedule: {
             type: [DayScheduleSchema],
             default: [
@@ -89,7 +89,7 @@ const DoctorScheduleSchema = new Schema<IDoctorScheduleDocument>(
             ],
         },
 
-        
+
         blockedDates: [
             {
                 date: {
@@ -101,10 +101,14 @@ const DoctorScheduleSchema = new Schema<IDoctorScheduleDocument>(
                     default: null,
                     trim: true,
                 },
+                slots: {
+                    type: [String],
+                    default: [],
+                },
             },
         ],
 
-        
+
         defaultSlotDuration: {
             type: Number,
             default: 30,
@@ -112,7 +116,7 @@ const DoctorScheduleSchema = new Schema<IDoctorScheduleDocument>(
             max: 120,
         },
 
-        
+
         bufferTime: {
             type: Number,
             default: 5,
@@ -120,7 +124,7 @@ const DoctorScheduleSchema = new Schema<IDoctorScheduleDocument>(
             max: 30,
         },
 
-        
+
         maxPatientsPerSlot: {
             type: Number,
             default: 1,
@@ -128,7 +132,7 @@ const DoctorScheduleSchema = new Schema<IDoctorScheduleDocument>(
             max: 10,
         },
 
-        
+
         isActive: {
             type: Boolean,
             default: true,
@@ -157,24 +161,24 @@ DoctorScheduleSchema.index({ isActive: 1 });
 
 DoctorScheduleSchema.pre('save', async function (next) {
 
-  if (this.isNew && !this.customId) {
-    this.customId = IDGenerator.generateSlotId();
-  }
-  
-  
-  if (this.weeklySchedule) {
-    for (const daySchedule of this.weeklySchedule) {
-      if (daySchedule.slots) {
-        for (const slot of daySchedule.slots) {
-          if (!slot.customId) {
-            slot.customId = IDGenerator.generateSlotId();
-          }
-        }
-      }
+    if (this.isNew && !this.customId) {
+        this.customId = IDGenerator.generateSlotId();
     }
-  }
-  
-  next();
+
+
+    if (this.weeklySchedule) {
+        for (const daySchedule of this.weeklySchedule) {
+            if (daySchedule.slots) {
+                for (const slot of daySchedule.slots) {
+                    if (!slot.customId) {
+                        slot.customId = IDGenerator.generateSlotId();
+                    }
+                }
+            }
+        }
+    }
+
+    next();
 });
 
 DoctorScheduleSchema.virtual("doctor", {

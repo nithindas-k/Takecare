@@ -1,3 +1,4 @@
+import { Types } from "mongoose";
 import { IAppointmentService } from "./interfaces/IAppointmentService";
 import { IAppointmentRepository } from "../repositories/interfaces/IAppointmentRepository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
@@ -48,6 +49,12 @@ export class AppointmentService implements IAppointmentService {
             reason?: string;
         }
     ): Promise<any> {
+        this.logger.info("createAppointment started", { patientId, doctorId: appointmentData.doctorId });
+
+        if (!Types.ObjectId.isValid(appointmentData.doctorId)) {
+            this.logger.warn("Invalid doctorId format", { doctorId: appointmentData.doctorId });
+            throw new AppError(MESSAGES.INVALID_ID_FORMAT, HttpStatus.BAD_REQUEST);
+        }
         const patient = await this._userRepository.findById(patientId);
         if (!patient) {
             throw new AppError(MESSAGES.PATIENT_NOT_FOUND, HttpStatus.NOT_FOUND);
@@ -55,10 +62,19 @@ export class AppointmentService implements IAppointmentService {
 
         const doctor = await this._doctorRepository.findById(appointmentData.doctorId);
         if (!doctor) {
+            this.logger.warn("Doctor not found", { doctorId: appointmentData.doctorId });
             throw new AppError(MESSAGES.DOCTOR_NOT_FOUND, HttpStatus.NOT_FOUND);
         }
 
+        this.logger.info("Doctor found", {
+            id: doctor._id,
+            isActive: doctor.isActive,
+            VideoFees: doctor.VideoFees,
+            ChatFees: doctor.ChatFees
+        });
+
         if (!doctor.isActive) {
+            this.logger.warn("Doctor is not active", { doctorId: doctor._id });
             throw new AppError(MESSAGES.DOCTOR_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
         }
 
@@ -81,7 +97,7 @@ export class AppointmentService implements IAppointmentService {
         const adminCommission = (consultationFees * PAYMENT_COMMISSION.ADMIN_PERCENT) / 100;
         const doctorEarnings = (consultationFees * PAYMENT_COMMISSION.DOCTOR_PERCENT) / 100;
 
-        const appointment = await this._appointmentRepository.create({
+        const appointmentToCreate = {
             patientId,
             doctorId: appointmentData.doctorId,
             appointmentType: appointmentData.appointmentType,
@@ -96,7 +112,11 @@ export class AppointmentService implements IAppointmentService {
             paymentStatus: PAYMENT_STATUS.PENDING,
             paymentId: null,
             paymentMethod: null,
-        });
+        };
+
+        this.logger.info("Saving appointment to DB", appointmentToCreate);
+        const appointment = await this._appointmentRepository.create(appointmentToCreate);
+        this.logger.info("Appointment saved successfully", { id: appointment?._id || appointment?.id });
 
 
 
@@ -224,6 +244,16 @@ export class AppointmentService implements IAppointmentService {
     ): Promise<any> {
         const appointment = await this._appointmentRepository.findById(appointmentId);
 
+        const getIdString = (value: any): string | null => {
+            if (!value) return null;
+            if (typeof value === "string") return value;
+            if (typeof value === "object") {
+                if (value._id) return value._id.toString();
+                if (value.id) return value.id.toString();
+            }
+            return null;
+        };
+
         if (!appointment) {
             throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
         }
@@ -237,15 +267,7 @@ export class AppointmentService implements IAppointmentService {
             throw new AppError("Cannot cancel an appointment that has already been rejected", HttpStatus.BAD_REQUEST);
         }
 
-        const getIdString = (value: any): string | null => {
-            if (!value) return null;
-            if (typeof value === "string") return value;
-            if (typeof value === "object") {
-                if (value._id) return value._id.toString();
-                if (value.id) return value.id.toString();
-            }
-            return null;
-        };
+
 
         const appointmentPatientId = getIdString(appointment.patientId);
         const appointmentDoctorId = getIdString(appointment.doctorId);
@@ -275,7 +297,7 @@ export class AppointmentService implements IAppointmentService {
             const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
             const patient = await this._userRepository.findById(appointment.patientId.toString());
 
-            let refundAmount = 0; // Declare refundAmount here
+            let refundAmount = 0;
 
             if (userRole === 'patient') {
                 //user Cancel
@@ -317,7 +339,7 @@ export class AppointmentService implements IAppointmentService {
             if (this._notificationService) {
                 const customId = appointment.customId || appointmentId;
                 if (userRole === "patient") {
-                    // Notify doctor about patient cancellation
+                    // Notify doctor  cancellation
                     if (doctor) await this._notificationService.notify(doctor.userId.toString(), {
                         title: "Appointment Cancelled",
                         message: `Patient has cancelled appointment #${customId}.`,
@@ -325,9 +347,9 @@ export class AppointmentService implements IAppointmentService {
                         appointmentId: appointment._id.toString()
                     });
 
-                    // Notify patient about their cancellation (Refund already notified by WalletService)
+
                 } else {
-                    // Notify patient about cancellation by doctor/admin with full refund
+
                     if (patient) {
                         await this._notificationService.notify(patient._id.toString(), {
                             title: "Appointment Cancelled",
@@ -336,7 +358,7 @@ export class AppointmentService implements IAppointmentService {
                             appointmentId: appointment._id.toString()
                         });
 
-                        // Refund already notified by WalletService
+
                     }
                 }
             }
@@ -347,15 +369,18 @@ export class AppointmentService implements IAppointmentService {
         if (appointment.slotId) {
             try {
                 const [startTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
-                await this._scheduleRepository.updateSlotBookedStatus(
-                    appointment.doctorId.toString(),
-                    appointment.slotId,
-                    false,
-                    new Date(appointment.appointmentDate),
-                    startTime
-                );
+                const docId = getIdString(appointment.doctorId);
+                if (docId) {
+                    await this._scheduleRepository.updateSlotBookedStatus(
+                        docId,
+                        appointment.slotId,
+                        false,
+                        new Date(appointment.appointmentDate),
+                        startTime
+                    );
+                }
             } catch (error) {
-                this.logger.error("Failed to mark slot as available", { error, doctorId: appointment.doctorId.toString() });
+                this.logger.error("Failed to mark slot as available", { error, doctorId: appointment.doctorId });
             }
         }
 
@@ -491,6 +516,15 @@ export class AppointmentService implements IAppointmentService {
         const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
         const appointment = await this._appointmentRepository.findById(appointmentId);
 
+        const getIdString = (value: any): string | null => {
+            if (!value) return null;
+            if (typeof value === "string") return value;
+            if (typeof value === "object") {
+                if (value._id) return value._id.toString();
+                if (value.id) return value.id.toString();
+            }
+            return null;
+        };
 
         if (!appointment) {
             throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
@@ -530,7 +564,7 @@ export class AppointmentService implements IAppointmentService {
             });
 
             if (this._notificationService) {
-                // Rejection notification
+
                 await this._notificationService.notify(appointment.patientId.toString(), {
                     title: "Appointment Rejected",
                     message: `Your appointment #${appointment.customId || appointment.id} has been rejected by the doctor.`,
@@ -538,22 +572,25 @@ export class AppointmentService implements IAppointmentService {
                     appointmentId: appointment._id.toString()
                 });
 
-                // Refund already notified by WalletService
+
             }
         }
 
         if (appointment.slotId) {
             try {
                 const [startTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
-                await this._scheduleRepository.updateSlotBookedStatus(
-                    appointment.doctorId.toString(),
-                    appointment.slotId,
-                    false,
-                    new Date(appointment.appointmentDate),
-                    startTime
-                );
+                const docId = getIdString(appointment.doctorId)
+                if (docId) {
+                    await this._scheduleRepository.updateSlotBookedStatus(
+                        docId,
+                        appointment.slotId,
+                        false,
+                        new Date(appointment.appointmentDate),
+                        startTime
+                    );
+                }
             } catch (error) {
-                this.logger.error("Failed to mark slot as available (rejected)", { error, doctorId: appointment.doctorId.toString() });
+                this.logger.error("Failed to mark slot as available (rejected)", { error, doctorId: appointment.doctorId });
             }
         }
     }
@@ -591,13 +628,13 @@ export class AppointmentService implements IAppointmentService {
             throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
         }
 
-        // Verify it is the doctor starting the consultation
+
         const doctor = await this._doctorRepository.findByUserId(userId);
         if (!doctor || doctor._id.toString() !== appointment.doctorId.toString()) {
             throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        // We only send the message if the session hasn't started yet
+
         if (!appointment.sessionStartTime) {
             await this._appointmentRepository.updateById(appointmentId, {
                 sessionStartTime: new Date()
@@ -617,10 +654,163 @@ export class AppointmentService implements IAppointmentService {
                     'text'
                 );
 
-                // Emit to the specific appointment room
                 socketService.emitMessage(appointment._id.toString(), message);
             }
         }
     }
 
+    async updateSessionStatus(
+        appointmentId: string,
+        userId: string,
+        status: "ACTIVE" | "WAITING_FOR_DOCTOR" | "CONTINUED_BY_DOCTOR" | "ENDED"
+    ): Promise<void> {
+        const appointment = await this._appointmentRepository.findById(appointmentId);
+        if (!appointment) {
+            throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
+        }
+
+
+        if (appointment.sessionStatus === "ENDED") {
+            this.logger.warn("UpdateSessionStatus rejected: Session already ended", {
+                appointmentId,
+                currentStatus: appointment.sessionStatus,
+                requestedStatus: status
+            });
+            throw new AppError("Session has already ended and cannot be modified.", HttpStatus.BAD_REQUEST);
+        }
+
+        const doctor = await this._doctorRepository.findByUserId(userId);
+        const isDoctor = doctor && doctor._id.toString() === appointment.doctorId.toString();
+
+
+        const canTriggerStatus = (s: string) => s === "time_over" || s === "WAITING_FOR_DOCTOR";
+
+        if (!isDoctor && !canTriggerStatus(status)) {
+            throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        const updateData: any = {
+            sessionStatus: status
+        };
+
+        if (status === "ACTIVE") {
+            if (!appointment.sessionStartTime) {
+                updateData.sessionStartTime = new Date();
+            }
+        } else if (status === "CONTINUED_BY_DOCTOR") {
+            updateData.extensionCount = (appointment.extensionCount || 0) + 1;
+        } else if (status === "ENDED") {
+            updateData.sessionEndTime = new Date();
+            updateData.status = APPOINTMENT_STATUS.COMPLETED;
+        }
+
+        await this._appointmentRepository.updateById(appointmentId, updateData);
+
+        socketService.emitToRoom(appointmentId, "session-status-updated", {
+            appointmentId,
+            status: updateData.sessionStatus,
+            extensionCount: updateData.extensionCount || appointment.extensionCount
+        });
+
+        if (updateData.sessionStatus === "ENDED") {
+            socketService.emitToRoom(appointmentId, "session-ended", { appointmentId });
+        }
+    }
+
+    async enablePostConsultationChat(appointmentId: string, doctorUserId: string): Promise<void> {
+        const appointment = await this._appointmentRepository.findById(appointmentId);
+        if (!appointment) {
+            throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
+        }
+
+        const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
+        if (appointment.doctorId.toString() !== doctorId) {
+            throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        // Logic check: Allow only if completed
+        if (appointment.status !== APPOINTMENT_STATUS.COMPLETED) {
+            throw new AppError("Chat can only be enabled for completed appointments", HttpStatus.BAD_REQUEST);
+        }
+
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24);
+
+        await this._appointmentRepository.updateById(appointmentId, {
+            postConsultationChatWindow: {
+                isActive: true,
+                expiresAt
+            }
+        });
+
+        if (this._chatService) {
+            const doctor = await this._doctorRepository.findById(doctorId);
+            const patient = await this._userRepository.findById(appointment.patientId.toString());
+            const patientName = patient?.name || 'Patient';
+
+            const messageContent = `Hello ${patientName}, you have 24 hours to proceed with your test results. The chat is now open for you.`;
+
+            const realAptId = appointment._id.toString();
+            const patientId = appointment.patientId.toString();
+            const docId = appointment.doctorId.toString();
+            const persistentRoomId = `persistent-${patientId}-${docId}`;
+
+            const message = await this._chatService.saveMessage(
+                realAptId,
+                doctorId,
+                'Doctor',
+                messageContent,
+                'text'
+            );
+
+            socketService.emitMessage(realAptId, message);
+            socketService.emitMessage(persistentRoomId, message);
+        }
+    }
+
+    async disablePostConsultationChat(appointmentId: string, doctorUserId: string): Promise<void> {
+        const appointment = await this._appointmentRepository.findById(appointmentId);
+        if (!appointment) {
+            throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
+        }
+
+        const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
+        if (appointment.doctorId.toString() !== doctorId) {
+            throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        await this._appointmentRepository.updateById(appointmentId, {
+            postConsultationChatWindow: {
+                isActive: false,
+                expiresAt: new Date()
+            }
+        });
+
+        if (this._chatService) {
+            const patient = await this._userRepository.findById(appointment.patientId.toString());
+            const patientName = patient?.name || 'Patient';
+
+            const messageContent = `Hello ${patientName}, the doctor has closed this chat session.`;
+
+            const realAptId = appointment._id.toString();
+            const persistentRoomId = `persistent-${appointment.patientId.toString()}-${doctorId}`;
+
+            const message = await this._chatService.saveMessage(
+                realAptId,
+                doctorId,
+                'Doctor',
+                messageContent,
+                'text'
+            );
+
+            socketService.emitMessage(realAptId, message);
+            socketService.emitMessage(persistentRoomId, message);
+
+            // Also notify room that session status definitely needs refresh
+            socketService.emitToRoom(realAptId, "session-status-updated", {
+                appointmentId: realAptId,
+                status: "ENDED"
+            });
+        }
+    }
 }

@@ -124,6 +124,7 @@ export class ScheduleController implements IScheduleController {
             const dto: BlockDateDTO = {
                 date: req.body.date,
                 reason: req.body.reason,
+                slots: req.body.slots,
             };
 
 

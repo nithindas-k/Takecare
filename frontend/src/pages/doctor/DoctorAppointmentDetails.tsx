@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { ClipboardList, MessagesSquare, XCircle } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DoctorNavbar from '../../components/Doctor/DoctorNavbar';
 import DoctorLayout from '../../components/Doctor/DoctorLayout';
@@ -50,6 +51,16 @@ const DoctorAppointmentDetails: React.FC = () => {
 
         const isUpcoming = status === 'pending' || status === 'confirmed' || status === 'upcoming';
 
+        let isSessionReady = false;
+        if (hasValidDate && time) {
+            const now = new Date();
+            const [startTimeStr] = time.split('-');
+            const [hours, minutes] = startTimeStr.trim().split(':');
+            const sessionStart = new Date(date);
+            sessionStart.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            isSessionReady = now >= sessionStart;
+        }
+
         return {
             id: apt?.customId || apt?._id || apt?.id,
             patientName,
@@ -66,6 +77,7 @@ const DoctorAppointmentDetails: React.FC = () => {
             reason: apt?.reason || '',
             paymentStatus: apt?.paymentStatus || 'N/A',
             isUpcoming,
+            isSessionReady,
         };
     }, [appointment]);
 
@@ -253,17 +265,7 @@ const DoctorAppointmentDetails: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        <div className="mt-4">
-                                            <Button
-                                                onClick={() => navigate(`/doctor/chat/${appointment?._id || appointment?.id}`)}
-                                                variant="outline"
-                                                size="sm"
-                                                className="flex items-center gap-2 border-[#00A1B0] text-[#00A1B0] hover:bg-[#00A1B0]/10 rounded-full px-4 h-9 font-semibold"
-                                            >
-                                                <FaComments size={14} />
-                                                Message Patient
-                                            </Button>
-                                        </div>
+
                                     </div>
                                 </div>
 
@@ -427,14 +429,77 @@ const DoctorAppointmentDetails: React.FC = () => {
                                             {normalized.appointmentType === 'video' ? 'Video Call' : 'Chat'}
                                         </p>
                                     </div>
-                                    <div className="col-span-2 md:col-span-4 lg:col-span-1 flex items-end">
+                                    <div className="col-span-2 md:col-span-4 lg:col-span-1 flex items-end flex-col gap-2">
                                         {normalized.isUpcoming && normalized.status === 'confirmed' && (
                                             <button
                                                 onClick={() => navigate(`/doctor/${normalized.appointmentType === 'video' ? 'call' : 'chat'}/${appointment?._id || appointment?.id}`)}
-                                                className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors"
+                                                disabled={!normalized.isSessionReady}
+                                                className={`w-full px-6 py-2.5 font-semibold rounded-lg transition-colors ${normalized.isSessionReady
+                                                    ? 'bg-[#00A1B0] hover:bg-[#008f9c] text-white cursor-pointer'
+                                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                    }`}
                                             >
-                                                Start Session
+                                                {normalized.isSessionReady ? 'Start Session' : 'Starts at ' + normalized.time.split(' - ')[0]}
                                             </button>
+                                        )}
+
+                                        {/* Post-Consultation Chat Button for Completed Video Appointments */}
+                                        {normalized.status === 'completed' && normalized.appointmentType === 'video' && (
+                                            <div className="w-full flex flex-col gap-3">
+                                                {!appointment?.postConsultationChatWindow?.isActive ? (
+                                                    <Button
+                                                        onClick={async () => {
+                                                            try {
+                                                                const res = await appointmentService.enablePostConsultationChat(normalized.id);
+                                                                if (res.success) {
+                                                                    toast.success("Chat enabled for 24 hours. Message sent to patient.");
+                                                                    const response = await appointmentService.getAppointmentById(normalized.id);
+                                                                    if (response?.success) setAppointment(response.data);
+                                                                } else {
+                                                                    toast.error(res.message);
+                                                                }
+                                                            } catch (error: any) {
+                                                                toast.error(error.response?.data?.message || "Failed to enable chat");
+                                                            }
+                                                        }}
+                                                        className="w-full h-12 bg-gradient-to-br from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-amber-500/20 transition-all active:scale-95 flex items-center justify-center gap-2 rounded-2xl border-none p-0"
+                                                    >
+                                                        <ClipboardList className="h-3.5 w-3.5" />
+                                                        Tests Wanted
+                                                    </Button>
+                                                ) : (
+                                                    <div className="w-full flex flex-col gap-2">
+                                                        <Button
+                                                            onClick={() => navigate(`/doctor/chat/${normalized.id}`)}
+                                                            className="w-full h-12 bg-gradient-to-br from-[#00A1B0] to-[#008f9c] hover:from-[#008f9c] hover:to-[#007b8a] text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-[#00A1B0]/20 transition-all active:scale-95 flex items-center justify-center gap-2 rounded-2xl border-none p-0"
+                                                        >
+                                                            <MessagesSquare className="h-3.5 w-3.5" />
+                                                            Go to Chat
+                                                        </Button>
+                                                        <Button
+                                                            onClick={async () => {
+                                                                try {
+                                                                    const res = await appointmentService.disablePostConsultationChat(normalized.id);
+                                                                    if (res.success) {
+                                                                        toast.success("Chat window closed manually.");
+                                                                        const response = await appointmentService.getAppointmentById(normalized.id);
+                                                                        if (response?.success) setAppointment(response.data);
+                                                                    } else {
+                                                                        toast.error(res.message);
+                                                                    }
+                                                                } catch (error: any) {
+                                                                    toast.error(error.response?.data?.message || "Failed to close chat");
+                                                                }
+                                                            }}
+                                                            variant="outline"
+                                                            className="w-full h-10 border-red-500/50 text-red-500 hover:bg-red-50 hover:text-red-600 font-black uppercase text-[9px] tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 rounded-2xl p-0"
+                                                        >
+                                                            <XCircle className="h-3 w-3" />
+                                                            Close Window
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                 </div>

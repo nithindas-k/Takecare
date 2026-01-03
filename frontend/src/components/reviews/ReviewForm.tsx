@@ -37,8 +37,8 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
             setError("Please select a rating");
             return;
         }
-        if (comment.trim().length < 10) {
-            setError("Comment must be at least 10 characters");
+        if (comment.trim().length < 3) {
+            setError("Comment must be at least 3 characters");
             return;
         }
         setError("");

@@ -2,7 +2,9 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import NavBar from '../../components/common/NavBar';
 import PatientSidebar from '../../components/Patient/PatientSidebar';
-import { FaVideo, FaComments, FaArrowLeft, FaTimes, FaChevronDown, FaChevronUp, FaStethoscope, FaCalendarAlt } from 'react-icons/fa';
+import { FaVideo, FaComments, FaArrowLeft, FaTimes, FaChevronDown, FaChevronUp, FaStethoscope, FaCalendarAlt, FaStar, FaCreditCard, FaExclamationTriangle } from 'react-icons/fa';
+import ReviewForm from '../../components/reviews/ReviewForm';
+import { reviewService } from '../../services/reviewService';
 import { appointmentService } from '../../services/appointmentService';
 import doctorService from '../../services/doctorService';
 import { API_BASE_URL } from '../../utils/constants';
@@ -26,7 +28,7 @@ const AppointmentDetails: React.FC = () => {
     const [cancelError, setCancelError] = useState('');
     const [showCancelReason, setShowCancelReason] = useState(false);
 
-    // Reschedule states
+    
     const [rescheduleOpen, setRescheduleOpen] = useState(false);
     const [startDate, setStartDate] = useState(new Date());
     const [selectedDay, setSelectedDay] = useState<Date>(new Date());
@@ -34,6 +36,7 @@ const AppointmentDetails: React.FC = () => {
     const [loadingSlots, setLoadingSlots] = useState(false);
     const [selectedSlot, setSelectedSlot] = useState<any>(null);
     const [rescheduleSubmitting, setRescheduleSubmitting] = useState(false);
+    const [reviewFormOpen, setReviewFormOpen] = useState(false);
 
     const formatDate = (date: Date) => {
         return {
@@ -73,14 +76,14 @@ const AppointmentDetails: React.FC = () => {
 
     const formatTimeTo12h = (timeStr: string) => {
         if (!timeStr) return 'N/A';
-        // Handle cases like "09:00 - 10:00" or just "09:00"
+        
         return timeStr.split('-').map(part => {
             const [hours, minutes] = part.trim().split(':');
             let h = parseInt(hours);
             const m = minutes || '00';
             const ampm = h >= 12 ? 'PM' : 'AM';
             h = h % 12;
-            h = h ? h : 12; // the hour '0' should be '12'
+            h = h ? h : 12; 
             return `${h}:${m} ${ampm}`;
         }).join(' - ');
     };
@@ -185,6 +188,16 @@ const AppointmentDetails: React.FC = () => {
 
         const isUpcoming = status === 'pending' || status === 'confirmed' || status === 'upcoming';
 
+        let isSessionReady = false;
+        if (hasValidDate && time) {
+            const now = new Date();
+            const [startTimeStr] = time.split('-');
+            const [hours, minutes] = startTimeStr.trim().split(':');
+            const sessionStart = new Date(date);
+            sessionStart.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            isSessionReady = now >= sessionStart;
+        }
+
         return {
             id: apt?.customId || apt?._id || apt?.id,
             doctorName: doctorName || 'Doctor',
@@ -201,6 +214,7 @@ const AppointmentDetails: React.FC = () => {
             consultationFees: apt?.consultationFees ?? apt?.consultationFees ?? 0,
             reason: apt?.reason || '',
             isUpcoming,
+            isSessionReady,
         };
     }, [appointment]);
 
@@ -262,7 +276,7 @@ const AppointmentDetails: React.FC = () => {
                 }
             } catch (fetchError) {
                 console.warn('Failed to refetch appointment, using local update:', fetchError);
-                // Fallback to local state update
+                
                 setAppointment((prev: any) => ({
                     ...prev,
                     status: 'cancelled',
@@ -272,7 +286,7 @@ const AppointmentDetails: React.FC = () => {
 
             setCancelOpen(false);
 
-            // Show success toast message
+        
             toast.success('Appointment cancelled successfully!');
         } catch (e: any) {
             console.error('Cancel error:', e);
@@ -308,6 +322,72 @@ const AppointmentDetails: React.FC = () => {
         } finally {
             setRescheduleSubmitting(false);
         }
+    };
+
+    const handleReviewSubmit = async (data: { rating: number; comment: string }) => {
+        if (!appointment) return;
+        try {
+            const docObj = appointment.doctor || appointment.doctorId;
+            const doctorId = docObj?._id || docObj?.id || (typeof docObj === 'string' ? docObj : null);
+            
+            const appointmentId = appointment._id || appointment.id;
+
+            if (!doctorId) {
+                toast.error("Doctor information missing");
+                return;
+            }
+
+            if (!appointmentId) {
+                toast.error("Appointment information missing");
+                return;
+            }
+
+            await reviewService.addReview({
+                ...data,
+                appointmentId,
+                doctorId
+            });
+            toast.success("Review submitted successfully!");
+            setReviewFormOpen(false);
+        } catch (error: any) {
+            console.error("Review submit error:", error);
+            toast.error(error.response?.data?.message || "Failed to submit review");
+        }
+    };
+
+    const handleRetryPayment = () => {
+        if (!appointment) return;
+
+        const doctorObj = appointment.doctorId || appointment.doctor || {};
+        
+        const userObj = doctorObj.userId || doctorObj.user || {};
+
+        
+        const videoFees = doctorObj.VideoFees || doctorObj.videoFees || appointment.consultationFees || 0;
+        const chatFees = doctorObj.ChatFees || doctorObj.chatFees || appointment.consultationFees || 0;
+
+        const bookingData = {
+            doctorId: doctorObj._id || doctorObj.id || appointment.doctorId,
+            doctor: {
+                name: userObj.name || doctorObj.name || normalized.doctorName,
+                image: userObj.profileImage || userObj.image || doctorObj.image || normalized.doctorImage,
+                speciality: doctorObj.specialty || doctorObj.department || normalized.department,
+                videoFees,
+                chatFees,
+                fees: appointment.consultationFees 
+            },
+            appointmentDate: appointment.appointmentDate,
+            appointmentTime: appointment.appointmentTime,
+            slotId: appointment.slotId,
+            appointmentType: appointment.appointmentType,
+            patientDetails: {
+                reason: appointment.reason
+            }
+        };
+
+        sessionStorage.setItem('bookingData', JSON.stringify(bookingData));
+        sessionStorage.setItem('tempAppointmentId', appointment._id || appointment.id);
+        navigate('/payment', { state: { appointmentId: appointment._id || appointment.id } });
     };
 
     if (loading) {
@@ -371,6 +451,19 @@ const AppointmentDetails: React.FC = () => {
                                 {error}
                             </div>
                         )}
+                        {/* Payment Pending Warning */}
+                        {normalized.status === 'pending' && (appointment?.paymentStatus === 'pending' || appointment?.paymentStatus === 'failed') && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+                                <FaExclamationTriangle className="text-amber-600 mt-0.5 flex-shrink-0" />
+                                <div>
+                                    <h4 className="font-semibold text-amber-800 text-sm">Action Required: Payment Pending</h4>
+                                    <p className="text-sm text-amber-700 mt-1">
+                                        Please complete the payment within <strong>5 minutes</strong> to confirm your booking.
+                                        If payment is not received, this appointment will be automatically cancelled.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                         {/* Appointment Detail Card */}
                         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
                             {/* Main Appointment Info */}
@@ -400,17 +493,7 @@ const AppointmentDetails: React.FC = () => {
                                                         {normalized.department}
                                                     </div>
 
-                                                    <div className="mt-2">
-                                                        <Button
-                                                            onClick={() => navigate(`   /${appointment?._id || appointment?.id}`)}
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="flex items-center gap-2 border-[#00A1B0] text-[#00A1B0] hover:bg-[#00A1B0]/10 rounded-full px-4 h-8 text-xs font-semibold"
-                                                        >
-                                                            <FaComments size={13} />
-                                                            Message Doctor
-                                                        </Button>
-                                                    </div>
+                                                
                                                 </div>
                                             </div>
                                         </div>
@@ -613,9 +696,30 @@ const AppointmentDetails: React.FC = () => {
                                         {normalized.isUpcoming && normalized.status === 'confirmed' && (
                                             <button
                                                 onClick={() => navigate(`/patient/${normalized.appointmentType === 'video' ? 'call' : 'chat'}/${appointment?._id || appointment?.id}`)}
-                                                className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors"
+                                                disabled={!normalized.isSessionReady}
+                                                className={`w-full px-6 py-2.5 font-semibold rounded-lg transition-colors ${normalized.isSessionReady
+                                                    ? 'bg-[#00A1B0] hover:bg-[#008f9c] text-white cursor-pointer'
+                                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                    }`}
                                             >
-                                                Start Session
+                                                {normalized.isSessionReady ? 'Start Session' : 'Starts at ' + normalized.time.split(' - ')[0]}
+                                            </button>
+                                        )}
+                                        {normalized.status === 'completed' && (
+                                            <button
+                                                onClick={() => setReviewFormOpen(true)}
+                                                className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                <FaStar /> Rate Doctor
+                                            </button>
+                                        )}
+                                        {/* Pending Payment Action */}
+                                        {normalized.status === 'pending' && (appointment?.paymentStatus === 'pending' || appointment?.paymentStatus === 'failed') && (
+                                            <button
+                                                onClick={handleRetryPayment}
+                                                className="w-full px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                <FaCreditCard /> Complete Payment
                                             </button>
                                         )}
                                     </div>
@@ -828,6 +932,14 @@ const AppointmentDetails: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            <ReviewForm
+                isOpen={reviewFormOpen}
+                onClose={() => setReviewFormOpen(false)}
+                onSubmit={handleReviewSubmit}
+                title="Rate Your Experience"
+            />
+
         </div>
     );
 };

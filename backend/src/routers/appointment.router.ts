@@ -121,4 +121,22 @@ appointmentRouter.put(
     appointmentController.startConsultation
 );
 
+appointmentRouter.put(
+    APPOINTMENT_ROUTES.UPDATE_SESSION_STATUS,
+    authMiddleware,
+    appointmentController.updateSessionStatus
+);
+
+appointmentRouter.put(
+    APPOINTMENT_ROUTES.ENABLE_CHAT,
+    authMiddleware,
+    appointmentController.enablePostConsultationChat
+);
+
+appointmentRouter.put(
+    APPOINTMENT_ROUTES.DISABLE_CHAT,
+    authMiddleware,
+    appointmentController.disablePostConsultationChat
+);
+
 export default appointmentRouter;

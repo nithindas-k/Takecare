@@ -19,9 +19,9 @@ export class WalletService implements IWalletService {
         return wallet ? wallet.balance : 0;
     }
 
-    async getTransactions(userId: string, page: number, limit: number): Promise<{ transactions: any[], total: number }> {
+    async getTransactions(userId: string, page: number, limit: number, filters?: { search?: string, type?: string, date?: string }): Promise<{ transactions: any[], total: number }> {
         const skip = (page - 1) * limit;
-        return await this._walletRepository.getTransactionsByUserId(userId, skip, limit);
+        return await this._walletRepository.getTransactionsByUserId(userId, skip, limit, filters);
     }
 
     async addMoney(userId: string, amount: number, description: string, appointmentId?: string, type: any = "Refund"): Promise<void> {
@@ -72,8 +72,8 @@ export class WalletService implements IWalletService {
         }
     }
 
-    async getAdminTransactions(skip: number, limit: number): Promise<{ transactions: any[], total: number }> {
-        return await this._walletRepository.getAdminTransactions(skip, limit);
+    async getAdminTransactions(skip: number, limit: number, filters?: { date?: string }): Promise<{ transactions: any[], total: number }> {
+        return await this._walletRepository.getAdminTransactions(skip, limit, filters);
     }
 
     async getAdminEarningsOverview(): Promise<any> {

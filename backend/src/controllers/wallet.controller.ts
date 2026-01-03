@@ -22,14 +22,19 @@ export class WalletController {
             const balance = await this._walletService.getWalletBalance(userId);
             const page = parseInt(req.query.page as string) || PAGINATION.DEFAULT_PAGE;
             const limit = parseInt(req.query.limit as string) || PAGINATION.DEFAULT_LIMIT;
-            const { transactions, total } = await this._walletService.getTransactions(userId, page, limit);
+            const search = req.query.search as string;
+            const type = req.query.type as string;
+            const date = req.query.date as string;
+
+            const { transactions, total } = await this._walletService.getTransactions(userId, page, limit, { search, type, date });
 
             sendSuccess(res, {
                 balance,
                 transactions,
                 total,
                 page,
-                limit
+                limit,
+                totalPages: Math.ceil(total / limit)
             });
         } catch (error: any) {
             next(error);
@@ -49,9 +54,16 @@ export class WalletController {
         try {
             const page = parseInt(req.query.page as string) || PAGINATION.DEFAULT_PAGE;
             const limit = parseInt(req.query.limit as string) || PAGINATION.DEFAULT_LIMIT;
+            const date = req.query.date as string;
             const skip = (page - 1) * limit;
-            const { transactions, total } = await this._walletService.getAdminTransactions(skip, limit);
-            sendSuccess(res, { transactions, total, page, limit });
+            const { transactions, total } = await this._walletService.getAdminTransactions(skip, limit, { date });
+            sendSuccess(res, {
+                transactions,
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            });
         } catch (error: any) {
             next(error);
         }

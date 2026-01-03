@@ -290,7 +290,7 @@ const DoctorProfile: React.FC = () => {
 
                   <div className="flex gap-2 mt-4 md:mt-0">
                     <button
-                      onClick={() => navigate(`/patient/chat/default`)}
+          
                       className="p-2 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50 hover:text-[#00A1B0] transition-colors"
                       title="Send Message"
                     >

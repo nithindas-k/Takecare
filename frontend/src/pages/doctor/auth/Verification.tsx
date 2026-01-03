@@ -168,7 +168,7 @@ const DoctorVerification: React.FC = () => {
         return;
       }
 
-      // Validate file types
+      
       const invalidFiles = files.filter(file => !IMAGE_TYPES.includes(file.type));
       if (invalidFiles.length > 0) {
         setErrors((prev) => ({
@@ -178,7 +178,7 @@ const DoctorVerification: React.FC = () => {
         return;
       }
 
-      // Add new documents
+      
       const newDocuments: DocumentPreview[] = files.map((file, index) => ({
         id: `new-${Date.now()}-${index}`,
         url: URL.createObjectURL(file),
@@ -198,7 +198,7 @@ const DoctorVerification: React.FC = () => {
         return next;
       });
 
-      // Reset file input
+    
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -211,7 +211,7 @@ const DoctorVerification: React.FC = () => {
       const docToRemove = prev.find(doc => doc.id === docId);
       const newDocs = prev.filter(doc => doc.id !== docId);
 
-      // If it's a new file, also remove from formData
+      
       if (docToRemove && !docToRemove.isExisting && docToRemove.file) {
         setFormData((prevForm) => ({
           ...prevForm,
@@ -241,11 +241,11 @@ const DoctorVerification: React.FC = () => {
         submitData.append("videoFees", formData.videoFees);
         submitData.append("chatFees", formData.chatFees);
 
-        // Check if we have existing documents
+    
         const hasExistingDocuments = documents.some(doc => doc.isExisting);
         submitData.append("hasExistingDocuments", hasExistingDocuments.toString());
 
-        // If we have existing documents, send their URLs
+        
         if (hasExistingDocuments) {
           const existingUrls = documents
             .filter(doc => doc.isExisting)
@@ -253,7 +253,7 @@ const DoctorVerification: React.FC = () => {
           submitData.append("existingDocuments", JSON.stringify(existingUrls));
         }
 
-        // Append all new certificate files
+        
         if (formData.certificateFiles.length > 0) {
           console.log("Appending new files:", formData.certificateFiles.length);
           formData.certificateFiles.forEach((file, index) => {

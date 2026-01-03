@@ -11,7 +11,8 @@ export interface IScheduleRepository {
     addBlockedDate(
         doctorId: string | Types.ObjectId,
         date: Date,
-        reason?: string
+        reason?: string,
+        slots?: string[]
     ): Promise<IDoctorScheduleDocument | null>;
     removeBlockedDate(
         doctorId: string | Types.ObjectId,

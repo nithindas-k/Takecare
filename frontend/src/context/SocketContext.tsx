@@ -35,7 +35,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (userId) {
             const newSocket = io(API_BASE_URL, {
                 withCredentials: true,
-                transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
+                transports: ['websocket', 'polling'], 
                 reconnectionAttempts: 5,
             });
 
@@ -53,13 +53,13 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             newSocket.on('disconnect', (reason) => {
                 console.warn("Socket Disconnected:", reason);
             });
-            // Listen for reminder modal
+           
             newSocket.on('appointment-reminder', (data: any) => {
                 setReminderData(data);
                 setIsReminderOpen(true);
             });
 
-            // Listen for notifications and show toast
+           
             newSocket.on('notification', (notification: any) => {
                 const toastOptions = {
                     description: notification.message,

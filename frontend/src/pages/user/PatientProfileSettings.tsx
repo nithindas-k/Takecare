@@ -99,7 +99,6 @@ const PatientProfileSettings: React.FC = () => {
             if (response.success) {
                 toast.success("Profile updated successfully");
                 if (response.data) {
-                    // Only update essential user fields in Redux, not all profile data
                     dispatch(setUser({
                         ...response.data,
                         _id: response.data.id || response.data._id,

@@ -16,7 +16,7 @@ const ReviewSchema: Schema = new Schema(
             type: Schema.Types.ObjectId,
             ref: "Appointment",
             required: true,
-            unique: true, // One review per appointment
+            unique: true, 
         },
         patientId: {
             type: Schema.Types.ObjectId,
@@ -38,7 +38,7 @@ const ReviewSchema: Schema = new Schema(
             type: String,
             required: true,
             trim: true,
-            minlength: 10,
+            minlength: 3,
         },
     },
     {
@@ -46,7 +46,7 @@ const ReviewSchema: Schema = new Schema(
     }
 );
 
-// Indexing for faster queries
+
 ReviewSchema.index({ doctorId: 1, createdAt: -1 });
 ReviewSchema.index({ patientId: 1 });
 

@@ -19,13 +19,11 @@ const PatientDetails: React.FC = () => {
     const [bookingData, setBookingData] = useState<any>(null);
 
     useEffect(() => {
-        // Get booking data from sessionStorage
         const stored = sessionStorage.getItem('bookingData');
         if (stored) {
             setBookingData(JSON.parse(stored));
         }
 
-        // Fetch user profile to pre-fill
         fetchUserProfile();
     }, []);
 

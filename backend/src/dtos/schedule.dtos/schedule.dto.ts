@@ -29,6 +29,7 @@ export interface UpdateScheduleDTO {
 export interface BlockDateDTO {
     date: Date | string;
     reason?: string;
+    slots?: string[];
 }
 
 export interface UnblockDateDTO {
@@ -66,6 +67,6 @@ export interface AvailableSlotResponseDTO {
     isAvailable: boolean;
     bookedCount: number;
     maxPatients: number;
-    slotId?: string; // Include slot customId
+    slotId?: string;
 }
 

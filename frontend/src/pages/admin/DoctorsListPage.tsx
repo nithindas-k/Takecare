@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "../../components/admin/Sidebar";
 import TopNav from "../../components/admin/TopNav";
-import { X, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import adminService from "../../services/adminService";
 
 interface Doctor {
@@ -85,36 +86,41 @@ const DoctorsListPage: React.FC = () => {
       : "??";
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50 no-scrollbar">
 
 
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:block">
+      {/* Sidebar - Desktop */}
+      <div className="hidden lg:block w-64 fixed inset-y-0 left-0 z-50">
         <Sidebar />
       </div>
 
-      {/* Mobile Sidebar */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setSidebarOpen(false)}
-          />
-          <div className="absolute left-0 top-0 h-full w-72 bg-white shadow-2xl">
-            <div className="flex justify-end p-3">
-              <button
-                onClick={() => setSidebarOpen(false)}
-                className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <Sidebar />
+      {/* Sidebar - Mobile Overlay */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <div className="fixed inset-0 z-[60] lg:hidden">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSidebarOpen(false)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            {/* Sidebar Content */}
+            <motion.div
+              initial={{ x: -256 }}
+              animate={{ x: 0 }}
+              exit={{ x: -256 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="absolute left-0 top-0 h-full w-64 bg-white shadow-2xl"
+            >
+              <Sidebar onMobileClose={() => setSidebarOpen(false)} />
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col lg:pl-64 min-w-0">
         <TopNav onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 py-6">
@@ -186,10 +192,10 @@ const DoctorsListPage: React.FC = () => {
                               <img
                                 src={doctor.profileImage}
                                 alt={doctor.name}
-                                className="w-10 h-10 rounded-full object-cover border"
+                                className="w-10 h-10 rounded-full object-cover border flex-shrink-0 aspect-square"
                               />
                             ) : (
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-teal-500 text-white flex items-center justify-center text-xs font-bold">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-teal-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0 aspect-square">
                                 {getInitials(doctor.name)}
                               </div>
                             )}
@@ -239,57 +245,57 @@ const DoctorsListPage: React.FC = () => {
                   </div>
 
                   {/* Desktop Table */}
-                  <div className="hidden lg:block overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+                  <div className="hidden lg:block overflow-x-auto no-scrollbar">
+                    <table className="w-full text-left border-collapse table-fixed">
                       <thead>
-                        <tr className="bg-gray-50 border-b text-xs uppercase text-gray-500 font-semibold">
-                          <th className="px-6 py-4">Doctor</th>
-                          <th className="px-6 py-4">Department</th>
-                          <th className="px-6 py-4">Experience</th>
-                          <th className="px-6 py-4">Status</th>
-                          <th className="px-6 py-4">Joined</th>
-                          <th className="px-6 py-4 text-center">Action</th>
+                        <tr className="bg-gray-50 border-b text-[11px] uppercase text-gray-500 font-semibold">
+                          <th className="px-4 py-4 w-[220px]">Doctor</th>
+                          <th className="px-4 py-4 w-[130px]">Department</th>
+                          <th className="px-4 py-4 w-[100px]">Experience</th>
+                          <th className="px-4 py-4 w-[100px]">Status</th>
+                          <th className="px-4 py-4 w-[110px]">Joined</th>
+                          <th className="px-4 py-4 w-[70px] text-center">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
                         {doctors.map((doctor) => (
                           <tr
                             key={doctor.id}
-                            className="hover:bg-gray-50"
+                            className="hover:bg-gray-50 transition-colors"
                           >
-                            <td className="px-6 py-4">
+                            <td className="px-4 py-4">
                               <div className="flex items-center gap-3">
                                 {doctor.profileImage ? (
                                   <img
                                     src={doctor.profileImage}
                                     alt={doctor.name}
-                                    className="w-9 h-9 rounded-full object-cover border"
+                                    className="w-9 h-9 rounded-full object-cover border flex-shrink-0 aspect-square"
                                   />
                                 ) : (
-                                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-400 to-teal-500 text-white flex items-center justify-center text-xs font-bold">
+                                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-400 to-teal-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0 aspect-square">
                                     {getInitials(doctor.name)}
                                   </div>
                                 )}
-                                <div>
-                                  <p className="font-medium">
+                                <div className="min-w-0">
+                                  <p className="font-medium text-gray-800 text-sm truncate">
                                     {doctor.name}
                                   </p>
-                                  <p className="text-xs text-gray-500">
+                                  <p className="text-xs text-gray-500 truncate">
                                     {doctor.email}
                                   </p>
                                 </div>
                               </div>
                             </td>
 
-                            <td className="px-6 py-4 text-sm">
+                            <td className="px-4 py-4 text-sm text-gray-600 truncate">
                               {doctor.specialty}
                             </td>
 
-                            <td className="px-6 py-4 text-sm">
+                            <td className="px-4 py-4 text-sm text-gray-600">
                               {doctor.experienceYears} Years
                             </td>
 
-                            <td className="px-6 py-4">
+                            <td className="px-4 py-4">
                               <span
                                 className={`px-3 py-1 rounded-full text-xs font-medium ${doctor.isActive
                                   ? "bg-green-100 text-green-700"
@@ -300,18 +306,18 @@ const DoctorsListPage: React.FC = () => {
                               </span>
                             </td>
 
-                            <td className="px-6 py-4 text-sm">
+                            <td className="px-4 py-4 text-sm text-gray-600">
                               {new Date(
                                 doctor.createdAt
                               ).toLocaleDateString()}
                             </td>
 
-                            <td className="px-6 py-4 text-center">
+                            <td className="px-4 py-4 text-center">
                               <button
                                 onClick={() =>
                                   navigate(`/admin/doctors/${doctor.id}`)
                                 }
-                                className="w-8 h-8 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center"
+                                className="w-8 h-8 rounded-full bg-cyan-100 text-cyan-700 flex items-center justify-center hover:bg-cyan-200 transition-colors"
                               >
                                 <Eye size={16} />
                               </button>

@@ -50,7 +50,15 @@ export interface IAppointment {
     doctorNotes?: string | null;
     prescriptionUrl?: string | null;
 
+    sessionStatus?: "idle" | "ACTIVE" | "WAITING_FOR_DOCTOR" | "CONTINUED_BY_DOCTOR" | "ENDED";
+    extensionCount?: number;
+
     reminderSent?: boolean;
+
+    postConsultationChatWindow?: {
+        isActive: boolean;
+        expiresAt: Date | null;
+    };
 
     createdAt?: Date;
     updatedAt?: Date;
