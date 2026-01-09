@@ -1,83 +1,75 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import DoctorNavbar from "../../components/Doctor/DoctorNavbar";
-import DoctorLayout from "../../components/Doctor/DoctorLayout";
-import Breadcrumbs from "../../components/common/Breadcrumbs";
-import doctorService from "../../services/doctorService";
-import Button from "../../components/Button";
-
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
+import type { DateRange } from "react-day-picker";
 import {
   FaUserInjured,
   FaCalendarCheck,
   FaVideo,
   FaComments,
   FaArrowUp,
-  FaArrowDown,
-  FaCheck,
-  FaTimes,
-  FaEye,
-  FaBell,
-  FaStar,
-  FaMoneyBillWave,
+  FaMoneyBillWave
 } from "react-icons/fa";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
+import DoctorNavbar from "../../components/Doctor/DoctorNavbar";
+import DoctorLayout from "../../components/Doctor/DoctorLayout";
+import Breadcrumbs from "../../components/common/Breadcrumbs";
+import doctorService from "../../services/doctorService";
+import { walletService } from "../../services/walletService";
+import { Button } from "../../components/ui/button";
+import { DatePickerWithRange } from "../../components/ui/date-range-picker";
 
 interface DoctorProfile {
   name: string;
   email: string;
-  specialty?: string;
-  qualifications: string[];
-  profileImage?: string;
   verificationStatus: string;
   rejectionReason?: string;
 }
 
-// Mock data for dashboard
-const mockAppointments = [
-  { id: "Apt0001", name: "Adrian Marshall", date: "11 Nov 2024 10:45 AM", type: "General", avatar: "AM" },
-  { id: "Apt0002", name: "Kelly Stevens", date: "10 Nov 2024 11:00 AM", type: "Clinic Consulting", avatar: "KS" },
-  { id: "Apt0003", name: "Samuel Anderson", date: "03 Nov 2024 02:00 PM", type: "General", avatar: "SA" },
-  { id: "Apt0004", name: "Catherine Griffin", date: "01 Nov 2024 04:00 PM", type: "Clinic Consulting", avatar: "CG" },
-  { id: "Apt0005", name: "Robert Hutchinson", date: "28 Oct 2024 05:30 PM", type: "General", avatar: "RH" },
-];
-
-const mockInvoices = [
-  { id: "Apt0001", name: "Adrian", amount: 450, date: "11 Nov 2024", avatar: "A" },
-  { id: "Apt0002", name: "Kelly", amount: 500, date: "10 Nov 2024", avatar: "K" },
-  { id: "Apt0003", name: "Samuel", amount: 320, date: "03 Nov 2024", avatar: "S" },
-  { id: "Apt0004", name: "Catherine", amount: 240, date: "01 Nov 2024", avatar: "C" },
-];
-
-const mockNotifications = [
-  { icon: <FaBell />, message: "Booking Confirmed on 21 Mar 2024 10:30 AM", time: "Just Now", color: "bg-purple-500" },
-  { icon: <FaStar />, message: "You have a New Review for your Appointment", time: "5 Days ago", color: "bg-blue-500" },
-  { icon: <FaCalendarCheck />, message: "You have Appointment with Ahmed by 01:20 PM", time: "12:55 PM", color: "bg-red-500" },
-  { icon: <FaMoneyBillWave />, message: "Sent an amount of $200 for an Appointment", time: "2 Days ago", color: "bg-yellow-500" },
-];
-
-
-
 const DoctorDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<DoctorProfile | null>(null);
+  const [stats, setStats] = useState<any>(null);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
   useEffect(() => {
-    async function fetchProfile() {
-      setLoading(true);
+    async function fetchData() {
+      // Don't set loading true on every date change to avoid flicker, or do if preferred.
+      // setLoading(true); 
       try {
-        const response = await doctorService.getDoctorProfile();
-        if (response.success && response.data) {
-          setProfile(response.data);
+        const startDate = dateRange?.from?.toISOString();
+        const endDate = dateRange?.to?.toISOString();
+
+        const [profileRes, statsRes, walletRes] = await Promise.all([
+          doctorService.getDoctorProfile(),
+          doctorService.getDashboardStats(startDate, endDate),
+          walletService.getMyWallet(1, 1)
+        ]);
+
+        console.log("DoctorDashboard statsRes:", statsRes);
+        console.log("DoctorDashboard walletRes:", walletRes);
+        if (profileRes.success && profileRes.data) {
+          setProfile(profileRes.data);
+        }
+        if (statsRes && statsRes.success && statsRes.data) {
+          console.log("Setting stats to:", statsRes.data);
+          setStats(statsRes.data);
+        }
+        if (walletRes && walletRes.success && walletRes.data) {
+          setWalletBalance(walletRes.data.balance);
         }
       } catch (error) {
-        console.error("Failed to fetch profile", error);
+        console.error("Failed to fetch dashboard data", error);
       } finally {
         setLoading(false);
       }
     }
-    fetchProfile();
-  }, []);
+    fetchData();
+  }, [dateRange]);
 
   const handleReVerify = () => {
     navigate("/doctor/verification");
@@ -96,286 +88,197 @@ const DoctorDashboard: React.FC = () => {
 
   const breadcrumbItems = [{ label: 'Dashboard' }];
 
-  // Pending Verification State
   if (profile?.verificationStatus === "pending") {
     return (
       <div className="min-h-screen bg-gray-50">
         <DoctorNavbar />
-        <Breadcrumbs
-          items={breadcrumbItems}
-          title="Dashboard"
-          subtitle="Welcome to your dashboard"
-        />
+        <Breadcrumbs items={breadcrumbItems} title="Dashboard" subtitle="Welcome to your dashboard" />
         <DoctorLayout>
-          <div className="flex items-center justify-center">
-            <div className="text-center p-8 bg-white rounded-2xl shadow-lg max-w-md mx-auto">
-              <div className="mb-6 w-20 h-20 mx-auto bg-yellow-100 rounded-full flex items-center justify-center">
-                <svg className="w-10 h-10 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold mb-4 text-gray-800">Verification Pending</h2>
-              <p className="text-gray-600 mb-6">
-                Your account verification is in process. Please wait for admin approval. This usually takes 24-48 hours.
-              </p>
-
+          <div className="flex items-center justify-center h-[60vh]">
+            <div className="text-center p-8 bg-white rounded-2xl shadow-lg max-w-md">
+              <h2 className="text-2xl font-bold mb-4 text-yellow-600">Verification Pending</h2>
+              <p className="text-gray-600">Your profile is under review. Please check back later.</p>
             </div>
           </div>
         </DoctorLayout>
       </div>
-    );
+    )
   }
 
-  // Rejected Verification State  
   if (profile?.verificationStatus === "rejected") {
     return (
       <div className="min-h-screen bg-gray-50">
         <DoctorNavbar />
-        <Breadcrumbs
-          items={breadcrumbItems}
-          title="Dashboard"
-          subtitle="Welcome to your dashboard"
-        />
+        <Breadcrumbs items={breadcrumbItems} title="Dashboard" subtitle="Welcome to your dashboard" />
         <DoctorLayout>
-          <div className="flex items-center justify-center">
-            <div className="text-center p-8 bg-white rounded-2xl shadow-lg max-w-md mx-auto">
-              <div className="mb-6 w-20 h-20 mx-auto bg-red-100 rounded-full flex items-center justify-center">
-                <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
+          <div className="flex items-center justify-center h-[60vh]">
+            <div className="text-center p-8 bg-white rounded-2xl shadow-lg max-w-md">
               <h2 className="text-2xl font-bold mb-4 text-red-600">Verification Rejected</h2>
-              <p className="text-gray-600 mb-4">
-                Your verification request has been rejected by the admin.
-              </p>
-              {profile.rejectionReason && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-left">
-                  <p className="text-sm font-semibold text-red-800 mb-1">Reason:</p>
-                  <p className="text-sm text-red-700">{profile.rejectionReason}</p>
-                </div>
-              )}
-              <Button onClick={handleReVerify} className="w-full py-3">
-                Re-Submit Verification
-              </Button>
+              <p className="text-gray-600 mb-4">{profile.rejectionReason}</p>
+              <Button onClick={handleReVerify}>Re-submit Verification</Button>
             </div>
           </div>
         </DoctorLayout>
       </div>
-    );
+    )
   }
 
-  // Approved - Full Dashboard
   return (
     <div className="min-h-screen bg-gray-50">
       <DoctorNavbar />
-
-      <Breadcrumbs
-        items={breadcrumbItems}
-        title="Dashboard"
-        subtitle="Welcome to your dashboard"
-      />
+      <Breadcrumbs items={breadcrumbItems} title="Dashboard" subtitle={`Welcome back, Dr. ${profile?.name || ''}`} />
       <DoctorLayout>
-        {/* Stats Cards Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Total Patients Card */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
+
+        {/* Key Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-2xl shadow-sm p-6 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start">
               <div>
-                <p className="text-gray-500 text-sm font-medium">Total Patient</p>
-                <h3 className="text-3xl font-bold text-gray-800 mt-1">978</h3>
-                <p className="text-green-500 text-sm mt-2 flex items-center gap-1">
-                  <FaArrowUp className="w-3 h-3" />
-                  15% From Last Week
-                </p>
+                <p className="text-sm font-medium text-gray-500">Total Patients</p>
+                <h3 className="text-3xl font-bold text-gray-800 mt-2">{stats?.totalPatients || 0}</h3>
               </div>
-              <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center">
-                <FaUserInjured className="w-7 h-7 text-blue-500" />
-              </div>
+              <div className="p-3 bg-blue-100 rounded-xl text-blue-600"><FaUserInjured size={24} /></div>
+            </div>
+            <div className="mt-4 flex items-center text-sm text-green-500">
+              <FaArrowUp className="mr-1" />
+              <span>Lifetime Count</span>
             </div>
           </div>
 
-          {/* Patients Today Card */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
+          <div className="bg-white rounded-2xl shadow-sm p-6 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start">
               <div>
-                <p className="text-gray-500 text-sm font-medium">Patients Today</p>
-                <h3 className="text-3xl font-bold text-gray-800 mt-1">80</h3>
-                <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                  <FaArrowDown className="w-3 h-3" />
-                  15% From Yesterday
-                </p>
+                <p className="text-sm font-medium text-gray-500">Appointments Today</p>
+                <h3 className="text-3xl font-bold text-gray-800 mt-2">{stats?.appointmentsToday || 0}</h3>
               </div>
-              <div className="w-14 h-14 bg-[#00A1B0]/10 rounded-xl flex items-center justify-center">
-                <FaUserInjured className="w-7 h-7 text-[#00A1B0]" />
-              </div>
+              <div className="p-3 bg-purple-100 rounded-xl text-purple-600"><FaCalendarCheck size={24} /></div>
+            </div>
+            <div className="mt-4 text-sm text-gray-400">
+              Scheduled for today
             </div>
           </div>
 
-          {/* Appointments Today Card */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
+          <div className="bg-white rounded-2xl shadow-sm p-6 flex flex-col justify-between hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start">
               <div>
-                <p className="text-gray-500 text-sm font-medium">Appointments Today</p>
-                <h3 className="text-3xl font-bold text-gray-800 mt-1">50</h3>
-                <p className="text-green-500 text-sm mt-2 flex items-center gap-1">
-                  <FaArrowUp className="w-3 h-3" />
-                  20% From Yesterday
-                </p>
+                <p className="text-sm font-medium text-gray-500">Available Balance</p>
+                <h3 className="text-3xl font-bold text-gray-800 mt-2">₹{walletBalance.toLocaleString()}</h3>
               </div>
-              <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center">
-                <FaCalendarCheck className="w-7 h-7 text-purple-500" />
-              </div>
+              <div className="p-3 bg-green-100 rounded-xl text-green-600"><FaMoneyBillWave size={24} /></div>
+            </div>
+            <div className="mt-4 flex items-center text-sm text-green-500">
+              <FaArrowUp className="mr-1" />
+              <span>Net Income</span>
             </div>
           </div>
         </div>
 
-        {/* Appointments Table */}
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-800">Appointment</h3>
-            <select className="text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#00A1B0]">
-              <option>Last 7 Days</option>
-              <option>Today</option>
-              <option>This Month</option>
-            </select>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <tbody>
-                {mockAppointments.map((apt) => (
-                  <tr key={apt.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00A1B0]/80 to-[#00A1B0] flex items-center justify-center text-white font-semibold text-sm">
-                          {apt.avatar}
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-400">#{apt.id}</p>
-                          <p className="font-medium text-gray-800">{apt.name}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm text-gray-800">{apt.date}</p>
-                      <span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-600 text-xs rounded-full">
-                        {apt.type}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <button className="w-8 h-8 rounded-full bg-green-100 text-green-600 hover:bg-green-200 transition-colors flex items-center justify-center">
-                          <FaCheck className="w-3 h-3" />
-                        </button>
-                        <button className="w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors flex items-center justify-center">
-                          <FaTimes className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Upcoming Appointment Card */}
-        <div className="bg-gradient-to-r from-[#00A1B0]/80 to-[#00A1B0] rounded-2xl p-6 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-10 -mb-10"></div>
-
-          <h3 className="text-lg font-semibold mb-4 relative z-10">Upcoming Appointment</h3>
-          <div className="flex items-center gap-4 mb-4 relative z-10">
-            <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-lg">
-              AM
-            </div>
-            <div className="flex-1">
-              <p className="text-white/70 text-sm">#Apt0001</p>
-              <h4 className="font-semibold text-lg">Adrian Marshall</h4>
-            </div>
-            <div className="text-right">
-              <p className="text-white/70 text-sm">General visit</p>
-              <p className="font-semibold">Today, 10:45 AM</p>
-            </div>
-          </div>
-          <div className="flex items-center justify-between pt-4 border-t border-white/20 relative z-10">
-            <div className="flex items-center gap-2">
-              <FaVideo className="w-4 h-4" />
-              <span className="text-sm">Video Appointment</span>
-            </div>
-            <div className="flex gap-2">
-              <button className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors">
-                <FaComments className="inline mr-2" />
-                Chat Now
-              </button>
-              <button className="px-4 py-2 bg-white text-[#00A1B0] hover:bg-white/90 rounded-lg text-sm font-medium transition-colors">
-                Start Appointment
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Invoices & Notifications Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Invoices */}
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-800">Recent Invoices</h3>
-              <button
-                type="button"
-                onClick={() => navigate("/doctor/invoices")}
-                className="text-sm text-[#00A1B0] hover:text-[#00A1B0]"
-              >
-                View All
-              </button>
-            </div>
-            <div className="divide-y divide-gray-50">
-              {mockInvoices.map((invoice) => (
-                <div key={invoice.id} className="px-6 py-4 flex items-center gap-4 hover:bg-gray-50 transition-colors">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
-                    {invoice.avatar}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-800">{invoice.name}</p>
-                    <p className="text-xs text-gray-400">#{invoice.id}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-800">${invoice.amount}</p>
-                    <p className="text-xs text-gray-400">{invoice.date}</p>
-                  </div>
-                  <button className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-[#00A1B0]/10 hover:text-[#00A1B0] transition-colors flex items-center justify-center">
-                    <FaEye className="w-3 h-3" />
-                  </button>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Chart */}
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+              <h3 className="text-lg font-bold text-gray-800">Earnings Overview</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant={!dateRange ? "default" : "outline"}
+                    onClick={() => setDateRange(undefined)}
+                    className="text-xs h-8"
+                  >
+                    Overall
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setDateRange({ from: startOfDay(new Date()), to: endOfDay(new Date()) })}
+                    className="text-xs h-8"
+                  >
+                    Today
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setDateRange({ from: startOfWeek(new Date()), to: endOfWeek(new Date()) })}
+                    className="text-xs h-8"
+                  >
+                    This Week
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setDateRange({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) })}
+                    className="text-xs h-8"
+                  >
+                    This Month
+                  </Button>
                 </div>
-              ))}
+                <DatePickerWithRange date={dateRange} setDate={setDateRange} className="w-auto" />
+              </div>
+            </div>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats?.revenueGraph || []}>
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="amount" fill="#00A1B0" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Notifications */}
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
-              <button
-                type="button"
-                className="text-sm text-[#00A1B0] hover:text-[#00A1B0]"
-              >
-                View All
-              </button>
-            </div>
-            <div className="divide-y divide-gray-50">
-              {mockNotifications.map((notif, idx) => (
-                <div key={idx} className="px-6 py-4 flex items-start gap-4 hover:bg-gray-50 transition-colors">
-                  <div className={`w-10 h-10 rounded-full ${notif.color} flex items-center justify-center text-white`}>
-                    {notif.icon}
+          {/* Upcoming Appointment Widget */}
+          <div>
+            {stats?.nextAppointment ? (
+              <div className="bg-gradient-to-br from-[#00A1B0] to-teal-600 rounded-2xl p-6 text-white h-full relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10"></div>
+                <div className="relative z-10">
+                  <h3 className="font-bold text-lg mb-4">Up Next</h3>
+                  <div className="flex items-center gap-4 mb-6">
+                    <img
+                      src={stats.nextAppointment.patientId?.profileImage || "https://i.pravatar.cc/150"}
+                      alt="Patient"
+                      className="w-16 h-16 rounded-full border-2 border-white/30"
+                    />
+                    <div>
+                      <p className="font-semibold text-xl">{stats.nextAppointment.patientId?.name}</p>
+                      <p className="text-white/80 text-sm">#{stats.nextAppointment.customId}</p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-700">{notif.message}</p>
-                    <p className="text-xs text-gray-400 mt-1">{notif.time}</p>
+                  <div className="bg-white/20 rounded-xl p-4 mb-6">
+                    <div className="flex justify-between mb-2">
+                      <span className="text-white/80 text-sm">Time</span>
+                      <span className="font-medium">{stats.nextAppointment.appointmentTime}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/80 text-sm">Date</span>
+                      <span className="font-medium">{new Date(stats.nextAppointment.appointmentDate).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button onClick={() => navigate(`/doctor/consultation/video/${stats.nextAppointment.customId}`)} className="flex-1 bg-white text-teal-600 py-2.5 rounded-lg font-medium hover:bg-white/90 transition-colors flex items-center justify-center gap-2">
+                      <FaVideo /> Join Call
+                    </button>
+                    <button onClick={() => navigate(`/doctor/consultation/chat/${stats.nextAppointment.customId}`)} className="flex-1 bg-white/20 text-white py-2.5 rounded-lg font-medium hover:bg-white/30 transition-colors flex items-center justify-center gap-2">
+                      <FaComments /> Chat
+                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl shadow-sm p-6 h-full flex flex-col items-center justify-center text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <FaCalendarCheck className="text-gray-400 text-2xl" />
+                </div>
+                <h3 className="font-bold text-gray-800">No Upcoming Appointments</h3>
+                <p className="text-gray-500 text-sm mt-2">You don't have any pending appointments scheduled for today.</p>
+              </div>
+            )}
           </div>
         </div>
+
+
       </DoctorLayout>
     </div>
   );

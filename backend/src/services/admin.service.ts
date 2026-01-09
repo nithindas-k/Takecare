@@ -10,7 +10,9 @@ import { LoginAdminDTO, AuthResponseDTO, DoctorRequestDTO, DoctorRequestDetailDT
 import { IAdminRepository } from "../repositories/interfaces/IAdmin.repository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
+import { IAppointmentRepository } from "../repositories/interfaces/IAppointmentRepository";
 import { PatientListItem, DoctorListItem, UserListItem } from "../types/common";
+import { DashboardStats } from "../types/appointment.type";
 import { IUserDocument } from "../types/user.type";
 import { IDoctorDocument } from "../types/doctor.type";
 import { AppError, UnauthorizedError } from "../errors/AppError";
@@ -24,7 +26,8 @@ export class AdminService implements IAdminService {
   constructor(
     private _adminRepository: IAdminRepository,
     private _doctorRepository: IDoctorRepository,
-    private _userRepository: IUserRepository
+    private _userRepository: IUserRepository,
+    private _appointmentRepository: IAppointmentRepository
   ) {
     this.logger = new LoggerService("AdminService");
   }
@@ -188,5 +191,11 @@ export class AdminService implements IAdminService {
 
   async unbanDoctor(doctorId: string): Promise<void> {
     await toggleEntityStatus(this._doctorRepository, doctorId, true, "Doctor", this.logger);
+  }
+
+  async getDashboardStats(startDate?: string, endDate?: string): Promise<DashboardStats> {
+    const start = startDate ? new Date(startDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+    return await this._appointmentRepository.getAdminDashboardStats(start, end);
   }
 }

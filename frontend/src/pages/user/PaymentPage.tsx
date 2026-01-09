@@ -273,7 +273,7 @@ const PaymentPage: React.FC = () => {
                     </DialogBody>
 
                     <DialogFooter className="justify-end">
-                        <DialogClose className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                        <DialogClose className="px-4 py-2 text-sm font-medium text-[#00A1B0] bg-white border border-[#00A1B0] rounded-md hover:bg-[#00A1B0] hover:text-white transition-colors">
                             Okay
                         </DialogClose>
                     </DialogFooter>
@@ -300,7 +300,7 @@ const PaymentPage: React.FC = () => {
                 <div className="mb-6">
                     <button
                         onClick={() => navigate(-1)}
-                        className="flex items-center gap-2 text-gray-400 hover:text-[#00A1B0] transition-colors text-sm"
+                        className="flex items-center gap-2 text-[#00A1B0] hover:text-[#008f9c] transition-colors text-sm font-medium"
                     >
                         <FaArrowLeft /> Back
                     </button>
@@ -379,7 +379,7 @@ const PaymentPage: React.FC = () => {
                             <Button
                                 onClick={handleRazorpayPay}
                                 disabled={!acceptedTerms || processing}
-                                className="w-full"
+                                className="w-full bg-[#00A1B0] hover:bg-[#008f9c] text-white"
                             >
                                 {processing
                                     ? 'Processing...'

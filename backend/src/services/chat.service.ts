@@ -83,13 +83,17 @@ export class ChatService implements IChatService {
             type
         );
 
-        const patientId = appointment.patientId.toString();
-        const doctorId = appointment.doctorId.toString();
-        const persistentRoomId = `persistent-${patientId}-${doctorId}`;
+        const patient = await (this as any)._appointmentRepository.findByIdPopulated(realAppointmentId);
+        const patientUserId = patient?.patientId?._id?.toString() || patient?.patientId?.toString();
+        const doctorUserId = patient?.doctorId?.userId?._id?.toString() || patient?.doctorId?.userId?.toString();
 
-        console.log(`[CHAT_SERVICE] Broadcasting to room ${realAppointmentId} and ${persistentRoomId}`);
+        console.log(`[CHAT_SERVICE] Broadcasting to users: ${patientUserId}, ${doctorUserId}`);
+
+        if (patientUserId) socketService.emitToUser(patientUserId, "receive-message", message);
+        if (doctorUserId) socketService.emitToUser(doctorUserId, "receive-message", message);
+
+        // Also keep room broadcast for safety/WebRTC compatibility if any
         socketService.emitMessage(realAppointmentId, message);
-        socketService.emitMessage(persistentRoomId, message);
 
         return message;
     }
@@ -201,10 +205,74 @@ export class ChatService implements IChatService {
     }
 
     async editMessage(messageId: string, content: string, userId: string): Promise<IMessage> {
-        throw new AppError("Editing messages is not allowed in this consultation chat.", HttpStatus.FORBIDDEN);
+        const message = await this._messageRepository.findById(messageId);
+        if (!message) {
+            throw new AppError('Message not found', HttpStatus.NOT_FOUND);
+        }
+
+        // Check if user is the sender
+        // Note: senderId could be User ID or Doctor ID
+        let actualUserId = userId;
+        const doctor = await this._doctorRepository.findByUserId(userId);
+        if (doctor) {
+            actualUserId = doctor._id.toString();
+        }
+
+        if (message.senderId.toString() !== actualUserId) {
+            throw new AppError('Unauthorized to edit this message', HttpStatus.FORBIDDEN);
+        }
+
+        // Cannot edit deleted messages
+        if (message.isDeleted) {
+            throw new AppError('Cannot edit a deleted message', HttpStatus.BAD_REQUEST);
+        }
+
+        const updated = await this._messageRepository.updateById(messageId, {
+            content,
+            isEdited: true
+        });
+
+        if (!updated) {
+            throw new AppError('Failed to update message', HttpStatus.INTERNAL_ERROR);
+        }
+
+        const appointmentId = updated.appointmentId.toString();
+        socketService.emitToRoom(appointmentId, 'edit-message', updated);
+
+        return updated;
     }
 
     async deleteMessage(messageId: string, userId: string): Promise<IMessage> {
-        throw new AppError("Deleting messages is not allowed in this consultation chat.", HttpStatus.FORBIDDEN);
+        const message = await this._messageRepository.findById(messageId);
+        if (!message) {
+            throw new AppError('Message not found', HttpStatus.NOT_FOUND);
+        }
+
+        let actualUserId = userId;
+        const doctor = await this._doctorRepository.findByUserId(userId);
+        if (doctor) {
+            actualUserId = doctor._id.toString();
+        }
+
+        if (message.senderId.toString() !== actualUserId) {
+            throw new AppError('Unauthorized to delete this message', HttpStatus.FORBIDDEN);
+        }
+
+        const updated = await this._messageRepository.updateById(messageId, {
+            isDeleted: true,
+            content: 'This message was deleted'
+        });
+
+        if (!updated) {
+            throw new AppError('Failed to delete message', HttpStatus.INTERNAL_ERROR);
+        }
+
+        const appointmentId = (updated as any).appointmentId.toString();
+        socketService.emitToRoom(appointmentId, 'delete-message', {
+            messageId: (updated as any)._id.toString(),
+            appointmentId
+        });
+
+        return updated;
     }
 }

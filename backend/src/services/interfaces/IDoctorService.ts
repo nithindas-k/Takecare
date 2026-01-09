@@ -1,4 +1,5 @@
 import type { SubmitVerificationDTO, VerificationStatus, UpdateDoctorProfileDTO, VerificationResponseDTO } from "dtos/doctor.dtos/doctor.dto";
+import type { DoctorDashboardStats } from "../../types/appointment.type";
 
 export interface IDoctorService {
   submitVerification(
@@ -29,4 +30,5 @@ export interface IDoctorService {
   ): Promise<{ doctors: any[]; total: number; page: number; totalPages: number }>;
   getDoctorById(doctorId: string): Promise<any>;
   getRelatedDoctors(doctorId: string): Promise<any[]>;
+  getDashboardStats(userId: string, startDate?: string, endDate?: string): Promise<DoctorDashboardStats>;
 }

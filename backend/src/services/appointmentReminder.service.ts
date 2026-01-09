@@ -1,5 +1,6 @@
 import cron from "node-cron";
 import { AppointmentRepository } from "../repositories/appointment.repository";
+import { ScheduleRepository } from "../repositories/schedule.repository";
 import { NotificationService } from "./notification.service";
 import { socketService } from "./socket.service";
 import { LoggerService } from "./logger.service";
@@ -8,15 +9,18 @@ import { APPOINTMENT_STATUS } from "../constants/constants";
 export class AppointmentReminderService {
     private readonly logger: LoggerService;
     private appointmentRepository: AppointmentRepository;
+    private scheduleRepository: ScheduleRepository;
     private notificationService: NotificationService;
     private cronJob: any = null;
 
     constructor(
         appointmentRepository: AppointmentRepository,
+        scheduleRepository: ScheduleRepository,
         notificationService: NotificationService
     ) {
         this.logger = new LoggerService("AppointmentReminderService");
         this.appointmentRepository = appointmentRepository;
+        this.scheduleRepository = scheduleRepository;
         this.notificationService = notificationService;
     }
 
@@ -56,6 +60,18 @@ export class AppointmentReminderService {
 
                 let deletedCount = 0;
                 for (const appt of pendingAppointments) {
+                    // Release the slot before deleting the appointment
+                    if (appt.slotId && appt.doctorId) {
+                        const [startTime] = appt.appointmentTime.split("-").map((t: string) => t.trim());
+                        await this.scheduleRepository.updateSlotBookedStatus(
+                            appt.doctorId.toString(),
+                            appt.slotId,
+                            false,
+                            new Date(appt.appointmentDate),
+                            startTime
+                        );
+                        this.logger.info(`Released slot ${appt.slotId} for abandoned appointment ${appt._id}`);
+                    }
                     await this.appointmentRepository.deleteById(appt._id.toString());
                     deletedCount++;
                 }
@@ -88,7 +104,7 @@ export class AppointmentReminderService {
             this.logger.debug(`Found ${appointments.length} confirmed appointments for today to check for reminders.`);
 
             for (const appointment of appointments) {
-             
+
                 const timeParts = appointment.appointmentTime.split("-");
                 if (timeParts.length === 0) continue;
 
@@ -126,23 +142,23 @@ export class AppointmentReminderService {
                         continue;
                     }
 
-                
+
                     await this.notificationService.notify(patientId, {
                         ...reminderData,
                         type: "warning",
                     });
 
-                
+
                     await this.notificationService.notify(doctorUserId, {
                         ...reminderData,
                         type: "warning",
                     });
 
-                    
+
                     socketService.sendReminder(patientId, reminderData);
                     socketService.sendReminder(doctorUserId, reminderData);
 
-                
+
                     await this.appointmentRepository.updateById(appointment._id.toString(), {
                         reminderSent: true
                     });

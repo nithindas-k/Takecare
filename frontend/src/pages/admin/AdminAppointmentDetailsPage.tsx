@@ -383,7 +383,7 @@ const AdminAppointmentDetailsPage: React.FC = () => {
 
                               <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
                                 <div className="text-xs text-gray-500 mb-1">Visit Type</div>
-                                <div className="font-semibold text-gray-900">{appointment?.visitType || appointment?.consultationType || "-"}</div>
+                                <div className="font-semibold text-gray-900">{appointment?.appointmentType || "-"}</div>
                               </div>
 
                               <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">

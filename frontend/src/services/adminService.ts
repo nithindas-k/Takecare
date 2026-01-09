@@ -105,6 +105,17 @@ class AdminService {
       return { success: false, message: error.response?.data?.message || "Error unblocking patient" };
     }
   }
+
+  async getDashboardStats(startDate?: string, endDate?: string) {
+    try {
+      const response = await axiosInstance.get("/admin/stats", {
+        params: { startDate, endDate },
+      });
+      return response.data;
+    } catch (error: any) {
+      return { success: false, message: error.response?.data?.message || "Error fetching dashboard stats" };
+    }
+  }
 }
 
 export default new AdminService();

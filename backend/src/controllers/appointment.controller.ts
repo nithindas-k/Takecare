@@ -461,4 +461,29 @@ export class AppointmentController implements IAppointmentController {
             next(err);
         }
     };
+
+    updateDoctorNotes = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = req.user?.userId;
+            const userRole = req.user?.role;
+            const appointmentId = req.params.id;
+            const { notes } = req.body;
+
+            console.log("Controller: updateDoctorNotes", { userId, userRole, appointmentId, notes });
+
+            if (!userId || userRole !== ROLES.DOCTOR) {
+                throw new AppError(MESSAGES.DOCTOR_ONLY, HttpStatus.FORBIDDEN);
+            }
+
+            await this._appointmentService.updateDoctorNotes(appointmentId, userId, notes);
+
+            sendSuccess(res, undefined, "Doctor notes updated successfully.");
+        } catch (err: unknown) {
+            next(err);
+        }
+    };
 }

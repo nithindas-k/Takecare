@@ -5,24 +5,24 @@ import { IWalletDocument, ITransactionDocument } from "../types/wallet.type";
 import { Types } from "mongoose";
 
 export class WalletRepository implements IWalletRepository {
-    async findByUserId(userId: string): Promise<IWalletDocument | null> {
-        return await WalletModel.findOne({ userId: new Types.ObjectId(userId) });
+    async findByUserId(userId: string, session?: any): Promise<IWalletDocument | null> {
+        return await WalletModel.findOne({ userId: new Types.ObjectId(userId) }).session(session);
     }
 
-    async createWallet(userId: string): Promise<IWalletDocument> {
-        return await WalletModel.create({ userId: new Types.ObjectId(userId), balance: 0 });
+    async createWallet(userId: string, session?: any): Promise<IWalletDocument> {
+        return await WalletModel.create([{ userId: new Types.ObjectId(userId), balance: 0 }], { session }).then(docs => docs[0]);
     }
 
-    async updateBalance(userId: string, amount: number): Promise<IWalletDocument | null> {
+    async updateBalance(userId: string, amount: number, session?: any): Promise<IWalletDocument | null> {
         return await WalletModel.findOneAndUpdate(
             { userId: new Types.ObjectId(userId) },
             { $inc: { balance: amount } },
-            { new: true, upsert: true }
+            { new: true, upsert: true, session }
         );
     }
 
-    async createTransaction(data: any): Promise<ITransactionDocument> {
-        return await TransactionModel.create(data);
+    async createTransaction(data: any, session?: any): Promise<ITransactionDocument> {
+        return await TransactionModel.create([data], { session }).then(docs => docs[0]);
     }
 
     async getTransactionsByUserId(userId: string, skip: number, limit: number, filters?: { search?: string, type?: string, date?: string }): Promise<{ transactions: ITransactionDocument[], total: number }> {

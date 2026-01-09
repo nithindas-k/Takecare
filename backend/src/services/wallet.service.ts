@@ -24,8 +24,8 @@ export class WalletService implements IWalletService {
         return await this._walletRepository.getTransactionsByUserId(userId, skip, limit, filters);
     }
 
-    async addMoney(userId: string, amount: number, description: string, appointmentId?: string, type: any = "Refund"): Promise<void> {
-        await this._walletRepository.updateBalance(userId, amount);
+    async addMoney(userId: string, amount: number, description: string, appointmentId?: string, type: any = "Refund", session?: any): Promise<void> {
+        await this._walletRepository.updateBalance(userId, amount, session);
         await this._walletRepository.createTransaction({
             userId,
             appointmentId,
@@ -33,7 +33,7 @@ export class WalletService implements IWalletService {
             type,
             description,
             status: "completed"
-        });
+        }, session);
 
         if (this._notificationService) {
             const title = type === "Refund" ? "Refund Received" :
@@ -49,10 +49,8 @@ export class WalletService implements IWalletService {
         }
     }
 
-    async deductMoney(userId: string, amount: number, description: string, appointmentId?: string, type: any = "Consultation Fee"): Promise<void> {
-        const balance = await this.getWalletBalance(userId);
-
-        await this._walletRepository.updateBalance(userId, -amount);
+    async deductMoney(userId: string, amount: number, description: string, appointmentId?: string, type: any = "Consultation Fee", session?: any): Promise<void> {
+        await this._walletRepository.updateBalance(userId, -amount, session);
         await this._walletRepository.createTransaction({
             userId,
             appointmentId,
@@ -60,7 +58,7 @@ export class WalletService implements IWalletService {
             type,
             description,
             status: "completed"
-        });
+        }, session);
 
         if (this._notificationService) {
             await this._notificationService.notify(userId, {

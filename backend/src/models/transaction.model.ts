@@ -20,7 +20,7 @@ const TransactionSchema = new Schema<ITransactionDocument>(
         },
         type: {
             type: String,
-            enum: ["Consultation Fee", "Refund", "Wallet Top-up"],
+            enum: ["Consultation Fee", "Refund", "Wallet Top-up", "Consultation Reversal", "Commission Reversal"],
             required: true,
         },
         description: {

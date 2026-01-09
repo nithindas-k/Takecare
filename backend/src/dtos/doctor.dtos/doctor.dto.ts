@@ -51,7 +51,7 @@ export interface UpdateDoctorProfileDTO {
   licenseNumber?: string;
   gender?: "male" | "female" | "other";
   dob?: string | Date;
-  about?:string
+  about?: string;
 }
 
 export interface VerificationResponseDTO {

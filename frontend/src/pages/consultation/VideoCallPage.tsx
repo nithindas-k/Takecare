@@ -25,7 +25,7 @@ import {
 } from "../../components/ui/dialog";
 import { useSocket } from '../../context/SocketContext';
 import { toast } from 'sonner';
-import { Lock } from 'lucide-react';
+import { Lock, ClipboardList, Clock } from 'lucide-react';
 
 const VideoCallContent: React.FC = () => {
     const { id } = useParams();
@@ -58,6 +58,36 @@ const VideoCallContent: React.FC = () => {
     const [isTimeOver, setIsTimeOver] = React.useState(false);
     const [extensionCount, setExtensionCount] = React.useState(0);
     const [endSessionDialogOpen, setEndSessionDialogOpen] = React.useState(false);
+
+    const isPostConsultationWindowOpen = React.useMemo(() => {
+        if (!appointment?.postConsultationChatWindow?.isActive) return false;
+        const expiresAt = new Date(appointment.postConsultationChatWindow.expiresAt);
+        return expiresAt > new Date();
+    }, [appointment]);
+
+    const handleEnablePostChat = async () => {
+        if (!id) return;
+        try {
+            const res = await appointmentService.enablePostConsultationChat(id);
+            if (res.success) {
+                toast.success("Post-consultation chat enabled for 24 hours.");
+                setAppointment((prev: any) => {
+                    if (!prev) return null;
+                    const expiresAt = new Date();
+                    expiresAt.setHours(expiresAt.getHours() + 24);
+                    return {
+                        ...prev,
+                        postConsultationChatWindow: {
+                            isActive: true,
+                            expiresAt: expiresAt.toISOString()
+                        }
+                    };
+                });
+            }
+        } catch (error: any) {
+            toast.error(error.message || "Failed to enable chat");
+        }
+    };
 
     const updateSessionStatus = async (status: "ACTIVE" | "WAITING_FOR_DOCTOR" | "CONTINUED_BY_DOCTOR" | "ENDED") => {
         if (!id) return;
@@ -217,6 +247,15 @@ const VideoCallContent: React.FC = () => {
             if (data.appointmentId === id || data.appointmentId === appointment?._id) {
                 setSessionStatus(data.status);
                 setExtensionCount(data.extensionCount || 0);
+                if (data.postConsultationChatWindow) {
+                    setAppointment((prev: any) => {
+                        if (!prev) return null;
+                        return {
+                            ...prev,
+                            postConsultationChatWindow: data.postConsultationChatWindow
+                        };
+                    });
+                }
                 if (data.status === "ACTIVE" || data.status === "CONTINUED_BY_DOCTOR") {
                     setIsTimeOver(false);
                 }
@@ -365,6 +404,24 @@ const VideoCallContent: React.FC = () => {
                             </div>
 
                             <div className="flex gap-2">
+                                {isDoctor && sessionStatus === "ENDED" && (
+                                    <div className="flex items-center gap-2">
+                                        {!isPostConsultationWindowOpen ? (
+                                            <Button
+                                                onClick={handleEnablePostChat}
+                                                size="sm"
+                                                className="hidden md:flex items-center gap-2 rounded-xl px-4 h-9 bg-amber-500 hover:bg-amber-600 text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-amber-500/20"
+                                            >
+                                                <ClipboardList className="h-4 w-4" />
+                                                Request Test Result
+                                            </Button>
+                                        ) : (
+                                            <div className="hidden md:flex items-center gap-2 px-4 h-9 bg-amber-50/10 text-amber-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-500/20">
+                                                <Clock className="h-3.5 w-3.5" /> Follow-up Open
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                                 {isDoctor && sessionStatus !== "ENDED" && (
                                     <Button
                                         onClick={() => setEndSessionDialogOpen(true)}
@@ -602,41 +659,40 @@ const VideoCallContent: React.FC = () => {
             </AnimatePresence>
             {/* End Session Confirmation Dialog for Doctor */}
             <Dialog open={endSessionDialogOpen} onOpenChange={setEndSessionDialogOpen}>
-                <DialogContent className="sm:max-w-md bg-[#1C1F24] border-[#2A2F32] text-white">
+                <DialogContent className="sm:max-w-md bg-[#1C1F24] border-[#2A2F32] text-white p-6">
                     <DialogHeader>
-                        <DialogTitle className="text-xl">End Session?</DialogTitle>
-                        <DialogDescription className="text-[#8696A0]">
-                            Do you want to complete this appointment or just leave the call?
+                        <DialogTitle className="text-xl flex items-center gap-2">
+                            🎥 End Video Consultation
+                        </DialogTitle>
+                        <DialogDescription className="text-[#8696A0] mt-1">
+                            Are you sure you want to end this session?
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="flex flex-col gap-3 py-4">
+
+                    <div className="py-4">
+                        <div className="bg-[#2A2F32]/50 p-4 rounded-xl border border-[#2A2F32]">
+                            <p className="text-sm text-gray-300 leading-relaxed">
+                                Ending the session will close the video call for both you and the patient. You can still manage prescriptions and tests from the appointment details page.
+                            </p>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="flex flex-row gap-3">
+                        <Button
+                            variant="ghost"
+                            onClick={() => setEndSessionDialogOpen(false)}
+                            className="flex-1 h-12 rounded-xl text-[#8696A0] hover:text-white hover:bg-[#2A2F32]"
+                        >
+                            Cancel
+                        </Button>
                         <Button
                             onClick={() => {
                                 updateSessionStatus("ENDED");
                                 setEndSessionDialogOpen(false);
                             }}
-                            className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-6 rounded-xl"
+                            className="flex-1 h-12 rounded-xl text-white font-bold transition-all shadow-lg bg-red-500 hover:bg-red-600 shadow-red-500/20"
                         >
-                            End Session & Complete Appointment
-                        </Button>
-                        <Button
-                            variant="outline"
-                            onClick={() => {
-                                leaveCall();
-                                navigate(-1);
-                            }}
-                            className="w-full border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white py-6 rounded-xl"
-                        >
-                            Just Leave Call
-                        </Button>
-                    </div>
-                    <DialogFooter>
-                        <Button
-                            variant="ghost"
-                            onClick={() => setEndSessionDialogOpen(false)}
-                            className="text-[#8696A0] hover:text-white"
-                        >
-                            Cancel
+                            End Consultation
                         </Button>
                     </DialogFooter>
                 </DialogContent>

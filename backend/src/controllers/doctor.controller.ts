@@ -107,19 +107,40 @@ export class DoctorController implements IDoctorController {
         throw new AppError(MESSAGES.UNAUTHORIZED, STATUS.UNAUTHORIZED);
       }
 
+      let bodyData = { ...req.body };
+
+      // Parse nested JSON strings if they exist (handling frontend format)
+      if (req.body.information) {
+        try {
+          const info = JSON.parse(req.body.information);
+          bodyData = { ...bodyData, ...info };
+        } catch (e) {
+          console.error("Error parsing information:", e);
+        }
+      }
+
+      if (req.body.additionalInformation) {
+        try {
+          const additionalInfo = JSON.parse(req.body.additionalInformation);
+          bodyData = { ...bodyData, ...additionalInfo };
+        } catch (e) {
+          console.error("Error parsing additionalInformation:", e);
+        }
+      }
+
       const dto: UpdateDoctorProfileDTO = {
-        name: req.body.name ? String(req.body.name) : undefined,
-        phone: req.body.phone ? String(req.body.phone) : undefined,
-        gender: req.body.gender ? String(req.body.gender) as "male" | "female" | "other" : undefined,
-        dob: req.body.dob ? String(req.body.dob) : undefined,
-        specialty: req.body.specialty ? String(req.body.specialty) : undefined,
-        licenseNumber: req.body.licenseNumber ? String(req.body.licenseNumber) : undefined,
-        experienceYears: req.body.experienceYears && String(req.body.experienceYears).trim() ? Number.parseInt(String(req.body.experienceYears), 10) : undefined,
-        VideoFees: req.body.VideoFees && String(req.body.VideoFees).trim() ? Number.parseFloat(String(req.body.VideoFees)) : undefined,
-        ChatFees: req.body.ChatFees && String(req.body.ChatFees).trim() ? Number.parseFloat(String(req.body.ChatFees)) : undefined,
-        languages: req.body.languages && String(req.body.languages).trim() ? JSON.parse(String(req.body.languages)) : undefined,
-        qualifications: req.body.qualifications && String(req.body.qualifications).trim() ? JSON.parse(String(req.body.qualifications)) : undefined,
-        about: req.body.about ? String(req.body.about) : undefined,
+        name: bodyData.name ? String(bodyData.name) : undefined,
+        phone: bodyData.phone ? String(bodyData.phone) : undefined,
+        gender: bodyData.gender ? String(bodyData.gender) as "male" | "female" | "other" : undefined,
+        dob: bodyData.dob ? String(bodyData.dob) : undefined,
+        specialty: bodyData.specialty ? String(bodyData.specialty) : undefined,
+        licenseNumber: bodyData.licenseNumber ? String(bodyData.licenseNumber) : undefined,
+        experienceYears: bodyData.experienceYears && String(bodyData.experienceYears).trim() ? Number.parseInt(String(bodyData.experienceYears), 10) : undefined,
+        VideoFees: bodyData.VideoFees && String(bodyData.VideoFees).trim() ? Number.parseFloat(String(bodyData.VideoFees)) : undefined,
+        ChatFees: bodyData.ChatFees && String(bodyData.ChatFees).trim() ? Number.parseFloat(String(bodyData.ChatFees)) : undefined,
+        languages: bodyData.languages && (Array.isArray(bodyData.languages) || String(bodyData.languages).trim()) ? (Array.isArray(bodyData.languages) ? bodyData.languages : JSON.parse(String(bodyData.languages))) : undefined,
+        qualifications: bodyData.qualifications && (Array.isArray(bodyData.qualifications) || String(bodyData.qualifications).trim()) ? (Array.isArray(bodyData.qualifications) ? bodyData.qualifications : JSON.parse(String(bodyData.qualifications))) : undefined,
+        about: bodyData.about ? String(bodyData.about) : undefined,
       };
 
       const profileImage = req.file;
@@ -175,6 +196,25 @@ export class DoctorController implements IDoctorController {
       const result = await this._doctorService.getRelatedDoctors(doctorId);
 
       sendSuccess(res, result, MESSAGES.DOCTOR_FETCHED, STATUS.OK);
+      sendSuccess(res, result, MESSAGES.DOCTOR_FETCHED, STATUS.OK);
+    } catch (error: unknown) {
+      return next(error);
+    }
+  };
+
+  getDashboardStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = this.getUserIdFromReq(req);
+      console.log("DoctorController.getDashboardStats userId:", userId);
+      if (!userId) {
+        throw new AppError(MESSAGES.UNAUTHORIZED, STATUS.UNAUTHORIZED);
+      }
+
+      const startDate = req.query.startDate as string;
+      const endDate = req.query.endDate as string;
+      const stats = await this._doctorService.getDashboardStats(userId, startDate, endDate);
+      console.log("DoctorController.getDashboardStats stats:", stats);
+      sendSuccess(res, stats);
     } catch (error: unknown) {
       return next(error);
     }

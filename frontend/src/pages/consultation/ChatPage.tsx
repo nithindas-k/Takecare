@@ -65,6 +65,7 @@ interface Appointment {
     };
     doctorNotes?: string;
     patient?: any;
+    customId?: string;
 }
 
 interface Conversation {
@@ -348,6 +349,8 @@ const ChatPage: React.FC = () => {
         }
     }, [id]);
 
+
+
     useEffect(() => {
         if (!appointment || appointment.status === 'completed' || sessionStatus === 'ENDED') return;
 
@@ -371,7 +374,7 @@ const ChatPage: React.FC = () => {
             sessionEnd.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
             if (now > sessionEnd) {
-                if (!isTimeOver) {
+                if (!isTimeOver && !isPostConsultationWindowOpen) {
                     setIsTimeOver(true);
 
                     if (sessionStatus !== "WAITING_FOR_DOCTOR" && !isDoctor) {
@@ -392,20 +395,72 @@ const ChatPage: React.FC = () => {
 
         const onSessionStatusUpdated = (data: any) => {
             console.log("[SOCKET] Session status updated:", data);
-            if (data.appointmentId === (appointment?._id || id)) {
+
+
+            const matchId = appointment?._id || id;
+            const matchCustomId = appointment?.customId;
+
+            const isMatch =
+                data.appointmentId === matchId ||
+                String(data.appointmentId) === String(matchId) ||
+                (data.customId && matchCustomId && data.customId === matchCustomId) ||
+                (data.customId && data.customId === id) ||
+                (data.appointmentId === id);
+
+            if (isMatch) {
+
+
                 setSessionStatus(data.status);
-                setExtensionCount(data.extensionCount || 0);
-                if (data.status === "active") {
+                if (data.extensionCount !== undefined) setExtensionCount(data.extensionCount);
+
+
+                if (data.postConsultationChatWindow) {
+                    setAppointment((prev) => {
+                        if (!prev) return null;
+                        const updated = {
+                            ...prev,
+                            postConsultationChatWindow: data.postConsultationChatWindow
+                        };
+                        console.log("[CHAT_PAGE] Updated appointment postConsultationChatWindow:", updated.postConsultationChatWindow);
+
+
+                        return { ...updated };
+                    });
+
+                    if (data.postConsultationChatWindow.isActive) {
+                        toast.success("Consultation Chat Unlocked for 24 Hours");
+
+                        setIsTimeOver(false);
+                    } else if (data.postConsultationChatWindow.isActive === false) {
+                        toast.info("Consultation Chat has been closed");
+                    }
+                }
+
+                if (data.status === "active" || data.status === "ACTIVE") {
                     setIsTimeOver(false);
                 }
-            }
-        };
 
+                if (data.status === "ENDED") {
+                    setIsOtherTyping(false);
+                    setConversations(prev => prev.map(c => c.appointmentId === data.appointmentId ? { ...c, unreadCount: 0 } : c));
+                }
+            } else {
+                console.warn("[SOCKET] Session update received for different appointment:", data.appointmentId, "Expected:", matchId);
+            }
+
+            setConversations((prev: Conversation[]) => prev.map(conv => {
+                if (conv.appointmentId === data.appointmentId) {
+                    return { ...conv, status: data.status };
+                }
+                return conv;
+            }));
+        };
         const onSessionEnded = (data: any) => {
             if (data.appointmentId === (appointment?._id || id)) {
                 console.log("[SOCKET] Session ended for:", data.appointmentId);
                 toast.info("Session has been ended.");
                 setSessionStatus("ENDED");
+                setIsOtherTyping(false);
             }
         };
 
@@ -504,6 +559,10 @@ const ChatPage: React.FC = () => {
                     setExtensionCount(currentAppointment.extensionCount || 0);
                 }
 
+                if (currentAppointment.doctorNotes) {
+                    setNoteText(currentAppointment.doctorNotes);
+                }
+
                 if (isDoctor && !currentAppointment.sessionStartTime && currentAppointment.status !== 'completed' && currentAppointment.status !== 'cancelled' && currentAppointment.status !== 'rejected') {
                     await updateSessionStatus("ACTIVE");
                 }
@@ -522,7 +581,7 @@ const ChatPage: React.FC = () => {
                 setMessages(uiMessages);
 
 
-                if (socket && socket.connected) {
+                if (socket) {
                     const mongoId = String(currentAppointment?._id || "");
                     const customId = String(currentAppointment?.customId || currentAppointment?.id || "");
                     const pId = currentAppointment.patientId?._id || currentAppointment.patientId;
@@ -564,17 +623,13 @@ const ChatPage: React.FC = () => {
                             appointmentIdFromMsg === currentCustomId ||
                             appointmentIdFromMsg === currentUrlId;
 
-                        console.log(`[SOCKET] Message match check: ${isMatch}`, {
-                            msgAppId: appointmentIdFromMsg,
-                            mongoId: currentMongoId,
-                            customId: currentCustomId,
-                            urlId: currentUrlId
-                        });
+                        const isFromMe = (newMessage.senderModel === 'User' && !isDoctor) || (newMessage.senderModel === 'Doctor' && isDoctor);
+                        const senderType = isFromMe ? 'user' : 'other';
 
                         if (isMatch) {
                             const uiMsg: Message = {
                                 id: newMessage._id || newMessage.id || Date.now(),
-                                sender: (newMessage.senderModel === 'User' && !isDoctor) || (newMessage.senderModel === 'Doctor' && isDoctor) ? 'user' : 'other',
+                                sender: senderType,
                                 text: newMessage.content,
                                 time: new Date(newMessage.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                                 status: newMessage.read ? 'read' : 'delivered',
@@ -582,19 +637,16 @@ const ChatPage: React.FC = () => {
                                 isDeleted: newMessage.isDeleted,
                                 isEdited: newMessage.isEdited,
                             };
+
                             setMessages((prev) => {
                                 const messageId = String(newMessage._id || newMessage.id || "");
 
-
+                                // Prevent duplicate permanent messages
                                 if (!messageId.startsWith('temp-') && prev.some(m => String(m.id) === messageId)) {
-                                    console.log(`[SOCKET] Permanent message already exists, skipping:`, messageId);
                                     return prev;
                                 }
 
-
-                                const isFromMe = (newMessage.senderModel === 'User' && !isDoctor) || (newMessage.senderModel === 'Doctor' && isDoctor);
-                                const senderType = isFromMe ? 'user' : 'other';
-
+                                // Handle temp message replacement
                                 const duplicateTempIdx = prev.findIndex(m =>
                                     String(m.id).startsWith('temp-') &&
                                     m.text === newMessage.content &&
@@ -603,46 +655,47 @@ const ChatPage: React.FC = () => {
                                 );
 
                                 if (duplicateTempIdx !== -1 && !messageId.startsWith('temp-')) {
-                                    console.log(`[SOCKET] Replacing temp message with permanent:`, messageId);
                                     const updated = [...prev];
                                     updated[duplicateTempIdx] = uiMsg;
                                     return updated;
                                 }
 
-
+                                // Skip adding if it's from me and it's a temp ID but we already have it
+                                // (This handles the socket re-broadcast of the sender's own message)
                                 if (messageId && prev.some(m => String(m.id) === messageId)) {
                                     return prev;
                                 }
 
-                                console.log(`[SOCKET] Adding new message:`, messageId);
                                 return [...prev, uiMsg];
                             });
-
-
-                            setConversations((prev: Conversation[]) => {
-                                const existingConvIdx = prev.findIndex(c => c.appointmentId === newMessage.appointmentId);
-                                const updatedConversations = [...prev];
-                                if (existingConvIdx !== -1) {
-                                    const conv = updatedConversations[existingConvIdx];
-                                    const updatedConv = {
-                                        ...conv,
-                                        lastMessage: {
-                                            content: newMessage.content,
-                                            createdAt: newMessage.createdAt || new Date().toISOString(),
-                                            senderModel: newMessage.senderModel
-                                        },
-                                        unreadCount: (newMessage.appointmentId !== id) ? ((conv.unreadCount || 0) + 1) : (conv.unreadCount || 0)
-                                    };
-                                    updatedConversations.splice(existingConvIdx, 1);
-                                    updatedConversations.unshift(updatedConv);
-                                } else {
-                                    chatService.getConversations().then(response => {
-                                        setConversations(response.data || []);
-                                    });
-                                }
-                                return updatedConversations;
-                            });
                         }
+
+                        // GLOBAL Conversation update (Sidebar)
+                        setConversations((prev: Conversation[]) => {
+                            const existingConvIdx = prev.findIndex(c => c.appointmentId === newMessage.appointmentId);
+                            if (existingConvIdx !== -1) {
+                                const updatedConversations = [...prev];
+                                const conv = updatedConversations[existingConvIdx];
+                                const updatedConv = {
+                                    ...conv,
+                                    lastMessage: {
+                                        content: newMessage.type === 'system' ? newMessage.content : (newMessage.isDeleted ? 'Message deleted' : newMessage.content),
+                                        createdAt: newMessage.createdAt || new Date().toISOString(),
+                                        senderModel: newMessage.senderModel
+                                    },
+                                    unreadCount: (!isMatch && !isFromMe) ? ((conv.unreadCount || 0) + 1) : (conv.unreadCount || 0)
+                                };
+                                updatedConversations.splice(existingConvIdx, 1);
+                                updatedConversations.unshift(updatedConv);
+                                return updatedConversations;
+                            } else {
+                                // If it's a completely new conversation appearing (rare in this flow)
+                                chatService.getConversations().then(response => {
+                                    setConversations(response.data || []);
+                                });
+                                return prev;
+                            }
+                        });
                     };
 
                     const handleSocketEdit = (updatedMessage: IMessage) => {
@@ -693,11 +746,14 @@ const ChatPage: React.FC = () => {
                         }));
                     };
 
-                    const onTyping = ({ userId: typingUserId, isTyping }: { userId: string, isTyping: boolean }) => {
+                    const onTyping = ({ userId: typingUserId, isTyping, appointmentId: typingAppId }: { userId: string, isTyping: boolean, appointmentId?: string }) => {
                         const myId = String(user?.id || (user as any)?._id || "");
                         if (String(typingUserId) !== myId) {
-                            console.log(`[SOCKET] Typing indicator:`, { userId: typingUserId, isTyping });
-                            setIsOtherTyping(isTyping);
+                            // Only show typing indicator if it's for the current chat
+                            if (typingAppId === (currentAppointment?._id || id)) {
+                                console.log(`[SOCKET] Typing indicator:`, { userId: typingUserId, isTyping });
+                                setIsOtherTyping(isTyping);
+                            }
                         }
                     };
 
@@ -782,10 +838,16 @@ const ChatPage: React.FC = () => {
         scrollToBottom();
     }, [messages]);
 
-    const handleSaveNote = () => {
-        if (!noteText.trim()) return;
-        setSavedNotes([{ id: Date.now(), text: noteText, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }, ...savedNotes]);
-        setNoteText("");
+    const handleSaveNote = async () => {
+        if (!id || id === 'default') return;
+        try {
+            await appointmentService.updateDoctorNotes(id, noteText);
+            toast.success("Notes updated successfully");
+            setSavedNotes([{ id: Date.now(), text: noteText, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }, ...savedNotes]);
+        } catch (error) {
+            console.error("Failed to update notes", error);
+            toast.error("Failed to update notes");
+        }
     };
 
     const onEmojiClick = (emojiData: EmojiClickData) => {
@@ -907,7 +969,6 @@ const ChatPage: React.FC = () => {
             String(m.id) === idStr ? { ...m, text: editingContent, isEdited: true } : m
         ));
 
-        const msgId = editingMessageId;
         setEditingMessageId(null);
         setEditingContent("");
 
@@ -1516,8 +1577,15 @@ const ChatPage: React.FC = () => {
                                 </div>
                                 <div className="flex gap-2">
                                     {isDoctor && sessionStatus === "ENDED" && (
-                                        <div className="hidden md:flex items-center px-4 h-9 bg-slate-100 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200">
-                                            Session Ended
+                                        <div className="flex items-center gap-2">
+                                            {isPostConsultationWindowOpen && (
+                                                <div className="hidden md:flex items-center gap-2 px-4 h-9 bg-amber-50 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-200">
+                                                    <Clock className="h-3.5 w-3.5" /> Follow-up Open
+                                                </div>
+                                            )}
+                                            <div className="hidden md:flex items-center px-4 h-9 bg-slate-100 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200">
+                                                Session Ended
+                                            </div>
                                         </div>
                                     )}
                                     {isDoctor && sessionStatus !== "ENDED" && (
@@ -2022,7 +2090,7 @@ const ChatPage: React.FC = () => {
             </Dialog>
             {/* Time Over Modal for Patient */}
             <AnimatePresence>
-                {isTimeOver && !isDoctor && sessionStatus !== "CONTINUED_BY_DOCTOR" && sessionStatus !== "ENDED" && (
+                {isTimeOver && !isDoctor && !isPostConsultationWindowOpen && sessionStatus !== "CONTINUED_BY_DOCTOR" && sessionStatus !== "ENDED" && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}

@@ -127,26 +127,6 @@ const AdminAppointmentsListPage: React.FC = () => {
     setLoading(false);
   };
 
-  const handleCancel = async (id: string) => {
-    const reason = window.prompt("Enter cancellation reason:");
-    if (reason === null) return;
-    if (!reason.trim()) {
-      toast.error("Cancellation reason is required");
-      return;
-    }
-
-    try {
-      const res = await appointmentService.cancelAppointment(id, reason);
-      if (res?.success) {
-        toast.success("Appointment cancelled successfully");
-        fetchAppointments(page);
-      } else {
-        toast.error(res?.message || "Failed to cancel appointment");
-      }
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message || "Error cancelling appointment");
-    }
-  };
 
   useEffect(() => {
     fetchAppointments(page);
@@ -304,17 +284,6 @@ const AdminAppointmentsListPage: React.FC = () => {
                               >
                                 <Eye size={16} />
                               </button>
-
-                              {(apt.status === "pending" || apt.status === "confirmed") && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleCancel(apt.id || apt.customId || "")}
-                                  className="w-9 h-9 rounded-full bg-red-100 text-red-700 flex items-center justify-center hover:bg-red-200 transition-colors"
-                                  title="Cancel Appointment"
-                                >
-                                  <X size={16} />
-                                </button>
-                              )}
                             </div>
                           </div>
 
@@ -462,16 +431,7 @@ const AdminAppointmentsListPage: React.FC = () => {
                                     <Eye size={14} />
                                   </button>
 
-                                  {(apt.status === "pending" || apt.status === "confirmed") && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleCancel(apt.id || apt.customId || "")}
-                                      className="w-7 h-7 rounded-full bg-red-100 text-red-700 flex items-center justify-center hover:bg-red-200 transition-colors"
-                                      title="Cancel Appointment"
-                                    >
-                                      <X size={14} />
-                                    </button>
-                                  )}
+                                
                                 </div>
                               </td>
                             </tr>
@@ -492,7 +452,7 @@ const AdminAppointmentsListPage: React.FC = () => {
                       disabled={page === 1}
                       className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border transition-colors ${page === 1
                         ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                        : "bg-white text-[#00A1B0] border-[#00A1B0] hover:bg-[#00A1B0] hover:text-white"
                         }`}
                       title="Previous"
                     >
@@ -506,7 +466,7 @@ const AdminAppointmentsListPage: React.FC = () => {
                         onClick={() => setPage(p)}
                         className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full text-xs sm:text-sm font-semibold transition-colors ${p === page
                           ? "bg-gradient-to-r from-cyan-400 to-teal-500 text-white shadow"
-                          : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+                          : "bg-white text-[#00A1B0] border border-[#00A1B0] hover:bg-[#00A1B0] hover:text-white"
                           }`}
                         title={`Page ${p}`}
                       >
@@ -520,7 +480,7 @@ const AdminAppointmentsListPage: React.FC = () => {
                       disabled={page === totalPages}
                       className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border transition-colors ${page === totalPages
                         ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                        : "bg-white text-[#00A1B0] border-[#00A1B0] hover:bg-[#00A1B0] hover:text-white"
                         }`}
                       title="Next"
                     >

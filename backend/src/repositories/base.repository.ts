@@ -8,46 +8,51 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
     this.model = model;
   }
 
-  async create(item: Partial<T>): Promise<T> {
+  async create(item: Partial<T>, session?: any): Promise<T> {
     const doc = new this.model(item);
-    return await doc.save();
+    return await doc.save({ session });
   }
 
-  async findById(id: string | Types.ObjectId): Promise<T | null> {
-    return await this.model.findById(id).exec();
+  async findById(id: string | Types.ObjectId, session?: any): Promise<T | null> {
+    return await this.model.findById(id).session(session).exec();
   }
 
   async updateById(
     id: string | Types.ObjectId,
-    update: Partial<T>
+    update: Partial<T>,
+    session?: any
   ): Promise<T | null> {
-    return await this.model.findByIdAndUpdate(id, update, { new: true }).exec();
+    return await this.model.findByIdAndUpdate(id, update, { new: true, session }).exec();
   }
 
-  async deleteById(id: string | Types.ObjectId): Promise<T | null> {
+  async deleteById(id: string | Types.ObjectId, session?: any): Promise<T | null> {
     return await this.model
-      .findByIdAndUpdate(id, { isActive: false }, { new: true })
+      .findByIdAndUpdate(id, { isActive: false }, { new: true, session })
       .exec();
   }
 
-  async findOneByField(fieldName: string, value: unknown): Promise<T | null> {
+  async findOneByField(fieldName: string, value: unknown, session?: any): Promise<T | null> {
     const query: Record<string, unknown> = {};
     query[fieldName] = value;
-    return await this.model.findOne(query).exec();
+    return await this.model.findOne(query).session(session).exec();
   }
 
-  async find(filter: Record<string, any>): Promise<T[]> {
-    return await this.model.find(filter).exec();
+  async findOne(filter: Record<string, any>, session?: any): Promise<T | null> {
+    return await this.model.findOne(filter).session(session).exec();
   }
 
-  async findWithPopulate(filter: Record<string, any>, populateField: string): Promise<T[]> {
-    return await this.model.find(filter).populate(populateField).exec();
+  async find(filter: Record<string, any>, session?: any): Promise<T[]> {
+    return await this.model.find(filter).session(session).exec();
   }
 
-  async existsByField(fieldName: string, value: unknown): Promise<boolean> {
+  async findWithPopulate(filter: Record<string, any>, populateField: string, session?: any): Promise<T[]> {
+    return await this.model.find(filter).session(session).populate(populateField).exec();
+  }
+
+  async existsByField(fieldName: string, value: unknown, session?: any): Promise<boolean> {
     const query: Record<string, unknown> = {};
     query[fieldName] = value;
-    const count = await this.model.countDocuments(query);
+    const count = await this.model.countDocuments(query).session(session);
     return count > 0;
   }
 }

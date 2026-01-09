@@ -24,16 +24,18 @@ interface DocumentPreview {
 
 type Errors = Partial<Record<keyof FormData, string>>;
 
-const specialities = [
-  "Cardiologist",
-  "Dermatologist",
-  "Neurologist",
-  "Pediatrician",
-  "Psychiatrist",
-  "Orthopedic",
-  "General Physician",
-  "Other",
-];
+import { specialtyService } from "../../../services/specialtyService";
+
+// const specialities = [
+//   "Cardiologist",
+//   "Dermatologist",
+//   "Neurologist",
+//   "Pediatrician",
+//   "Psychiatrist",
+//   "Orthopedic",
+//   "General Physician",
+//   "Other",
+// ];
 
 const IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png"];
 const MAX_FILES = 5;
@@ -58,6 +60,7 @@ const DoctorVerification: React.FC = () => {
   const [serverMessage, setServerMessage] = useState<string>("");
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
   const [, setCanResubmit] = useState<boolean>(true);
+  const [specialtiesList, setSpecialtiesList] = useState<{ _id: string; name: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -114,6 +117,20 @@ const DoctorVerification: React.FC = () => {
     fetchVerificationData();
   }, []);
 
+  useEffect(() => {
+    const fetchSpecialties = async () => {
+      try {
+        const response = await specialtyService.getActiveSpecialties();
+        if (response.success && response.data) {
+          setSpecialtiesList(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch specialties:", error);
+      }
+    };
+    fetchSpecialties();
+  }, []);
+
   const validate = useCallback((data: FormData): Errors => {
     const e: Errors = {};
     if (!data.degree.trim()) e.degree = "Degree is required.";
@@ -168,7 +185,7 @@ const DoctorVerification: React.FC = () => {
         return;
       }
 
-      
+
       const invalidFiles = files.filter(file => !IMAGE_TYPES.includes(file.type));
       if (invalidFiles.length > 0) {
         setErrors((prev) => ({
@@ -178,7 +195,7 @@ const DoctorVerification: React.FC = () => {
         return;
       }
 
-      
+
       const newDocuments: DocumentPreview[] = files.map((file, index) => ({
         id: `new-${Date.now()}-${index}`,
         url: URL.createObjectURL(file),
@@ -198,7 +215,7 @@ const DoctorVerification: React.FC = () => {
         return next;
       });
 
-    
+
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -211,7 +228,7 @@ const DoctorVerification: React.FC = () => {
       const docToRemove = prev.find(doc => doc.id === docId);
       const newDocs = prev.filter(doc => doc.id !== docId);
 
-      
+
       if (docToRemove && !docToRemove.isExisting && docToRemove.file) {
         setFormData((prevForm) => ({
           ...prevForm,
@@ -241,11 +258,11 @@ const DoctorVerification: React.FC = () => {
         submitData.append("videoFees", formData.videoFees);
         submitData.append("chatFees", formData.chatFees);
 
-    
+
         const hasExistingDocuments = documents.some(doc => doc.isExisting);
         submitData.append("hasExistingDocuments", hasExistingDocuments.toString());
 
-        
+
         if (hasExistingDocuments) {
           const existingUrls = documents
             .filter(doc => doc.isExisting)
@@ -253,7 +270,7 @@ const DoctorVerification: React.FC = () => {
           submitData.append("existingDocuments", JSON.stringify(existingUrls));
         }
 
-        
+
         if (formData.certificateFiles.length > 0) {
           console.log("Appending new files:", formData.certificateFiles.length);
           formData.certificateFiles.forEach((file, index) => {
@@ -404,9 +421,9 @@ const DoctorVerification: React.FC = () => {
                       }`}
                   >
                     <option value="">Select speciality</option>
-                    {specialities.map((spec) => (
-                      <option key={spec} value={spec}>
-                        {spec}
+                    {specialtiesList.map((spec) => (
+                      <option key={spec._id} value={spec.name}>
+                        {spec.name}
                       </option>
                     ))}
                   </select>

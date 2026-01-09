@@ -195,6 +195,20 @@ class DoctorService {
       };
     }
   }
+
+  async getDashboardStats(startDate?: string, endDate?: string) {
+    try {
+      const response = await axiosInstance.get("/doctors/stats", {
+        params: { startDate, endDate },
+      });
+      return response.data;
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to fetch dashboard stats",
+      };
+    }
+  }
 }
 
 export default new DoctorService();

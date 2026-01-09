@@ -4,6 +4,7 @@ import { Router } from "express";
 import { AdminRepository } from "../repositories/admin.repository";
 import { UserRepository } from "../repositories/user.repository";
 import { DoctorRepository } from "../repositories/doctor.repository";
+import { AppointmentRepository } from "../repositories/appointment.repository";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireAdmin } from "../middlewares/role.middleware";
 import { checkUserBlocked } from "../middlewares/check-user-blocked.middleware";
@@ -15,11 +16,13 @@ const router = Router();
 const adminRepository = new AdminRepository();
 const userRepository = new UserRepository();
 const doctorRepository = new DoctorRepository();
-const adminService = new AdminService(adminRepository, doctorRepository, userRepository);
+const appointmentRepository = new AppointmentRepository();
+const adminService = new AdminService(adminRepository, doctorRepository, userRepository, appointmentRepository);
 const adminController = new AdminController(adminService);
 
 
 router.post(ADMIN_ROUTES.LOGIN, adminController.login);
+router.get("/stats", authMiddleware, checkUserBlocked, requireAdmin, adminController.getDashboardStats);
 
 router.get(ADMIN_ROUTES.DOCTOR_REQUESTS, authMiddleware, checkUserBlocked, requireAdmin, adminController.getDoctorRequests);
 router.get(ADMIN_ROUTES.DOCTOR_BY_ID, authMiddleware, checkUserBlocked, requireAdmin, adminController.getDoctorRequestDetails);

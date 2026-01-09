@@ -1,6 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { Server as HttpServer } from "http";
-import {env}  from "../configs/env"
+import { env } from "../configs/env"
 
 class SocketService {
     private io: Server | null = null;
@@ -9,7 +9,7 @@ class SocketService {
     init(httpServer: HttpServer) {
         this.io = new Server(httpServer, {
             cors: {
-                origin: env.CLIENT_URL, 
+                origin: env.CLIENT_URL,
                 methods: ["GET", "POST"],
                 credentials: true
             },
@@ -33,7 +33,7 @@ class SocketService {
                 this.io?.to(to).emit("call-ended");
             });
 
-            
+
             socket.on("join", (userId: string) => {
                 socket.join(userId);
                 this.onlineUsers.set(userId, socket.id);
@@ -85,7 +85,7 @@ class SocketService {
                 }
                 if (disconnectedUserId) {
                     this.io?.emit("user-status", { userId: disconnectedUserId, status: 'offline' });
-                    
+
                 }
             });
         });
@@ -122,6 +122,12 @@ class SocketService {
     emitToRoom(roomId: string, event: string, data: any) {
         if (this.io) {
             this.io.to(roomId).emit(event, data);
+        }
+    }
+
+    emitToUser(userId: string, event: string, data: any) {
+        if (this.io) {
+            this.io.to(userId.toString()).emit(event, data);
         }
     }
 }

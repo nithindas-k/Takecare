@@ -95,5 +95,10 @@ export const appointmentService = {
     disablePostConsultationChat: async (id: string) => {
         const response = await axiosInstance.put(APPOINTMENT_API_ROUTES.DISABLE_CHAT(id));
         return response.data;
+    },
+
+    updateDoctorNotes: async (id: string, notes: string) => {
+        const response = await axiosInstance.put(APPOINTMENT_API_ROUTES.UPDATE_NOTES(id), { notes });
+        return response.data;
     }
 };

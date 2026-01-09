@@ -92,3 +92,24 @@ export interface IAppointmentPopulated extends Omit<IAppointment, "patientId" | 
         };
     };
 }
+
+export interface DashboardStats {
+    totalAppointments: number;
+    totalRevenue: number;
+    statusDistribution: {
+        completed: number;
+        cancelled: number;
+        pending: number;
+    };
+    revenueGraph: { date: string; amount: number }[];
+    topDoctors?: { doctorId: string; name: string; revenue: number; appointments: number }[];
+}
+
+export interface DoctorDashboardStats {
+    totalAppointments: number;
+    totalPatients: number;
+    totalEarnings: number;
+    appointmentsToday: number;
+    revenueGraph: { date: string; amount: number }[];
+    nextAppointment: any; // Using any for simplicity as it involves populated fields
+}

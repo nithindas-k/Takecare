@@ -40,6 +40,8 @@ import BookingSuccess from "./pages/user/BookingSuccess";
 import PatientProfileSettings from "./pages/user/PatientProfileSettings";
 import Appointments from "./pages/user/Appointments";
 import AppointmentDetails from "./pages/user/AppointmentDetails";
+import About from "./pages/user/About";
+import Contact from "./pages/user/Contact";
 
 // Admin Routes
 import AdminLogin from "./pages/admin/auth/Login";
@@ -58,6 +60,7 @@ import AuthCallback from "./pages/AuthCallback";
 import UserWallet from "./pages/user/Wallet";
 import DoctorWallet from "./pages/doctor/Wallet";
 import AdminEarnings from "./pages/admin/Earnings";
+import Specialties from "./pages/admin/Specialties";
 
 // Consultation Pages
 import VideoCallPage from "./pages/consultation/VideoCallPage";
@@ -80,6 +83,7 @@ const NotFound: React.FC = () => (
 
 import { Toaster } from "./components/ui/sonner";
 import userService from "./services/userService";
+import AppointmentReminder from "./components/common/AppointmentReminder";
 
 const App: React.FC = () => {
   const dispatch = useDispatch()
@@ -110,6 +114,7 @@ const App: React.FC = () => {
   return (
     <BrowserRouter>
       <Toaster />
+      <AppointmentReminder />
       <Routes>
 
         <Route path="/" element={<ProtectedRoute role="patient" >
@@ -124,6 +129,8 @@ const App: React.FC = () => {
         <Route path="/consultation-type" element={<ConsultationType />} />
         <Route path="/payment" element={<PaymentPage />} />
         <Route path="/booking-success" element={<BookingSuccess />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
 
         <Route path="/doctor">
 
@@ -405,6 +412,15 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute role="admin">
                 <AdminEarnings />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="speciality"
+            element={
+              <ProtectedRoute role="admin">
+                <Specialties />
               </ProtectedRoute>
             }
           />

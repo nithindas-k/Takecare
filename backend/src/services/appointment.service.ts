@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import { runInTransaction } from "../utils/transaction.util";
 import { IAppointmentService } from "./interfaces/IAppointmentService";
 import { IAppointmentRepository } from "../repositories/interfaces/IAppointmentRepository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
@@ -40,113 +41,183 @@ export class AppointmentService implements IAppointmentService {
 
     async createAppointment(
         patientId: string,
-        appointmentData: {
-            doctorId: string;
-            appointmentDate: Date | string;
-            appointmentTime: string;
-            slotId?: string;
-            appointmentType: "video" | "chat";
-            reason?: string;
-        }
+        appointmentData: any
     ): Promise<any> {
-        this.logger.info("createAppointment started", { patientId, doctorId: appointmentData.doctorId });
-
-        if (!Types.ObjectId.isValid(appointmentData.doctorId)) {
-            this.logger.warn("Invalid doctorId format", { doctorId: appointmentData.doctorId });
-            throw new AppError(MESSAGES.INVALID_ID_FORMAT, HttpStatus.BAD_REQUEST);
-        }
-        const patient = await this._userRepository.findById(patientId);
-        if (!patient) {
-            throw new AppError(MESSAGES.PATIENT_NOT_FOUND, HttpStatus.NOT_FOUND);
-        }
-
-        const doctor = await this._doctorRepository.findById(appointmentData.doctorId);
-        if (!doctor) {
-            this.logger.warn("Doctor not found", { doctorId: appointmentData.doctorId });
-            throw new AppError(MESSAGES.DOCTOR_NOT_FOUND, HttpStatus.NOT_FOUND);
-        }
-
-        this.logger.info("Doctor found", {
-            id: doctor._id,
-            isActive: doctor.isActive,
-            VideoFees: doctor.VideoFees,
-            ChatFees: doctor.ChatFees
-        });
-
-        if (!doctor.isActive) {
-            this.logger.warn("Doctor is not active", { doctorId: doctor._id });
-            throw new AppError(MESSAGES.DOCTOR_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
-        }
-
-
-
-
-        const consultationFees = appointmentData.appointmentType === "video"
-            ? doctor.VideoFees || 0
-            : doctor.ChatFees || 0;
-
-        if (consultationFees === 0) {
-            throw new AppError(
-                MESSAGES.DOCTOR_FEES_NOT_SET.replace("{type}", appointmentData.appointmentType),
-                HttpStatus.BAD_REQUEST
-            );
-        }
-
-
-
-        const adminCommission = (consultationFees * PAYMENT_COMMISSION.ADMIN_PERCENT) / 100;
-        const doctorEarnings = (consultationFees * PAYMENT_COMMISSION.DOCTOR_PERCENT) / 100;
-
-        const appointmentToCreate = {
+        this.logger.info("Service: createAppointment attempt", {
             patientId,
             doctorId: appointmentData.doctorId,
-            appointmentType: appointmentData.appointmentType,
-            appointmentDate: new Date(appointmentData.appointmentDate),
-            appointmentTime: appointmentData.appointmentTime,
-            slotId: appointmentData.slotId || null,
-            status: APPOINTMENT_STATUS.PENDING,
-            consultationFees,
-            adminCommission,
-            doctorEarnings,
-            reason: appointmentData.reason || null,
-            paymentStatus: PAYMENT_STATUS.PENDING,
-            paymentId: null,
-            paymentMethod: null,
-        };
+            slotId: appointmentData.slotId,
+            date: appointmentData.appointmentDate,
+            time: appointmentData.appointmentTime
+        });
 
-        this.logger.info("Saving appointment to DB", appointmentToCreate);
-        const appointment = await this._appointmentRepository.create(appointmentToCreate);
-        this.logger.info("Appointment saved successfully", { id: appointment?._id || appointment?.id });
+        return await runInTransaction(async (session) => {
+            const doctor = await this._doctorRepository.findById(appointmentData.doctorId);
+            if (!doctor) {
+                throw new AppError(MESSAGES.DOCTOR_NOT_FOUND, HttpStatus.NOT_FOUND);
+            }
 
+            const patient = await this._userRepository.findById(patientId);
+            if (!patient) {
+                throw new AppError(MESSAGES.PATIENT_NOT_FOUND, HttpStatus.NOT_FOUND);
+            }
 
+            if (!doctor.isActive) {
+                throw new AppError(MESSAGES.DOCTOR_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
+            }
 
+            const consultationFees = appointmentData.appointmentType === "video"
+                ? doctor.VideoFees || 0
+                : doctor.ChatFees || 0;
 
-        if (appointmentData.slotId) {
-            try {
+            if (consultationFees === 0) {
+                throw new AppError(
+                    MESSAGES.DOCTOR_FEES_NOT_SET.replace("{type}", appointmentData.appointmentType),
+                    HttpStatus.BAD_REQUEST
+                );
+            }
+
+            // 1. Pre-check availability (still useful inside transaction)
+            if (appointmentData.slotId) {
+                const schedule = await this._scheduleRepository.findByDoctorId(appointmentData.doctorId, session);
+                if (schedule) {
+                    const slot = schedule.weeklySchedule
+                        .flatMap(day => day.slots)
+                        .find(s => s.customId === appointmentData.slotId);
+
+                    if (slot && slot.booked) {
+                        this.logger.info("Slot marked as booked. Searching for existing PENDING appointment to reuse.", {
+                            patientId,
+                            doctorId: appointmentData.doctorId,
+                            slotId: appointmentData.slotId,
+                            date: appointmentData.appointmentDate
+                        });
+
+                        // Convert IDs safely
+                        let pId, dId;
+                        try {
+                            pId = typeof patientId === 'string' ? new Types.ObjectId(patientId) : patientId;
+                            dId = typeof appointmentData.doctorId === 'string' ? new Types.ObjectId(appointmentData.doctorId) : appointmentData.doctorId;
+                        } catch (err) {
+                            this.logger.error("Error converting IDs for search", { patientId, doctorId: appointmentData.doctorId });
+                            throw new AppError(MESSAGES.INVALID_ID_FORMAT, HttpStatus.BAD_REQUEST);
+                        }
+
+                        // Use a broader date search to be timezone-safe
+                        const searchDate = new Date(appointmentData.appointmentDate);
+                        if (isNaN(searchDate.getTime())) {
+                            this.logger.error("Invalid appointment date provided", { date: appointmentData.appointmentDate });
+                            throw new AppError("Invalid appointment date", HttpStatus.BAD_REQUEST);
+                        }
+
+                        // Normalize to 12 hours before and after for safety
+                        const startDate = new Date(searchDate);
+                        startDate.setHours(startDate.getHours() - 12);
+                        const endDate = new Date(searchDate);
+                        endDate.setHours(endDate.getHours() + 12);
+
+                        const existingAppointment = await this._appointmentRepository.findOne({
+                            patientId: pId,
+                            doctorId: dId,
+                            appointmentDate: {
+                                $gte: startDate,
+                                $lte: endDate
+                            },
+                            slotId: appointmentData.slotId,
+                            status: APPOINTMENT_STATUS.PENDING
+                        }, session);
+
+                        if (existingAppointment) {
+                            this.logger.info("Found existing PENDING appointment. Updating and reusing.", {
+                                appointmentId: existingAppointment._id.toString(),
+                                previousStatus: existingAppointment.status
+                            });
+
+                            // Update the existing appointment
+                            const adminCommission = (consultationFees * PAYMENT_COMMISSION.ADMIN_PERCENT) / 100;
+                            const doctorEarnings = (consultationFees * PAYMENT_COMMISSION.DOCTOR_PERCENT) / 100;
+
+                            const updated = await this._appointmentRepository.updateById(existingAppointment._id.toString(), {
+                                appointmentType: appointmentData.appointmentType,
+                                consultationFees,
+                                adminCommission,
+                                doctorEarnings,
+                                reason: appointmentData.reason || existingAppointment.reason,
+                                appointmentTime: appointmentData.appointmentTime,
+                                appointmentDate: new Date(appointmentData.appointmentDate) // Update to requested date just in case
+                            }, session);
+
+                            const populatedAppointment = await this._appointmentRepository.findByIdPopulated(updated!._id.toString());
+                            return AppointmentMapper.toResponseDTO(populatedAppointment);
+                        }
+
+                        this.logger.warn("Slot is booked but no matching PENDING appointment found for this user.", {
+                            patientId,
+                            slotId: appointmentData.slotId,
+                            doctorId: appointmentData.doctorId
+                        });
+
+                        throw new AppError(MESSAGES.APPOINTMENT_SLOT_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
+                    }
+                }
+            }
+
+            const adminCommission = (consultationFees * PAYMENT_COMMISSION.ADMIN_PERCENT) / 100;
+            const doctorEarnings = (consultationFees * PAYMENT_COMMISSION.DOCTOR_PERCENT) / 100;
+
+            const appointmentToCreate = {
+                patientId,
+                doctorId: appointmentData.doctorId,
+                appointmentType: appointmentData.appointmentType,
+                appointmentDate: new Date(appointmentData.appointmentDate),
+                appointmentTime: appointmentData.appointmentTime,
+                slotId: appointmentData.slotId || null,
+                status: APPOINTMENT_STATUS.PENDING,
+                consultationFees,
+                adminCommission,
+                doctorEarnings,
+                reason: appointmentData.reason || null,
+                paymentStatus: PAYMENT_STATUS.PENDING,
+                paymentId: null,
+                paymentMethod: null,
+            };
+
+            // 2. Mark slot as booked inside transaction (CRITICAL: Do this BEFORE creating appointment to prevent duplicates)
+            if (appointmentData.slotId) {
                 const [startTime] = appointmentData.appointmentTime.split("-").map((t: string) => t.trim());
-                await this._scheduleRepository.updateSlotBookedStatus(
+                const slotUpdated = await this._scheduleRepository.updateSlotBookedStatus(
                     appointmentData.doctorId,
                     appointmentData.slotId,
                     true,
                     new Date(appointmentData.appointmentDate),
-                    startTime
+                    startTime,
+                    session
                 );
-            } catch (error) {
-                this.logger.error("Failed to mark slot as booked", { error, doctorId: appointmentData.doctorId });
+
+                if (!slotUpdated) {
+                    this.logger.warn("Failed to mark slot as booked - possibly already taken", {
+                        slotId: appointmentData.slotId,
+                        doctorId: appointmentData.doctorId
+                    });
+                    throw new AppError(MESSAGES.APPOINTMENT_SLOT_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
+                }
             }
-        }
 
-        if (this._notificationService) {
-            await this._notificationService.notify(doctor.userId.toString(), {
-                title: "New Appointment Request",
-                message: `You have a new appointment request from ${patient.name}.`,
-                type: "info",
-                appointmentId: appointment._id.toString()
-            });
-        }
+            // 3. Create appointment inside transaction
+            const appointment = await this._appointmentRepository.create(appointmentToCreate, session);
 
-        const populatedAppointment = await this._appointmentRepository.findByIdPopulated(appointment._id.toString());
-        return AppointmentMapper.toResponseDTO(populatedAppointment);
+            if (this._notificationService) {
+                await this._notificationService.notify(doctor.userId.toString(), {
+                    title: "New Appointment Request",
+                    message: `You have a new appointment request from ${patient.name}.`,
+                    type: "info",
+                    appointmentId: appointment._id.toString()
+                });
+            }
+
+            const populatedAppointment = await this._appointmentRepository.findByIdPopulated(appointment._id.toString());
+            return AppointmentMapper.toResponseDTO(populatedAppointment);
+        });
     }
 
     async listAppointments(
@@ -242,132 +313,101 @@ export class AppointmentService implements IAppointmentService {
         userRole: string,
         cancellationReason: string
     ): Promise<any> {
-        const appointment = await this._appointmentRepository.findById(appointmentId);
+        this.logger.info("cancelAppointment started", { appointmentId, userId, userRole });
 
-        const getIdString = (value: any): string | null => {
-            if (!value) return null;
-            if (typeof value === "string") return value;
-            if (typeof value === "object") {
-                if (value._id) return value._id.toString();
-                if (value.id) return value.id.toString();
-            }
-            return null;
-        };
+        return runInTransaction(async (session) => {
+            const appointment = await this._appointmentRepository.findById(appointmentId, session);
 
-        if (!appointment) {
-            throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
-        }
-        if (appointment.status === APPOINTMENT_STATUS.CANCELLED) {
-            throw new AppError(MESSAGES.APPOINTMENT_ALREADY_CANCELLED, HttpStatus.BAD_REQUEST);
-        }
-        if (appointment.status === APPOINTMENT_STATUS.COMPLETED) {
-            throw new AppError(MESSAGES.APPOINTMENT_ALREADY_COMPLETED, HttpStatus.BAD_REQUEST);
-        }
-        if (appointment.status === APPOINTMENT_STATUS.REJECTED) {
-            throw new AppError("Cannot cancel an appointment that has already been rejected", HttpStatus.BAD_REQUEST);
-        }
-
-
-
-        const appointmentPatientId = getIdString(appointment.patientId);
-        const appointmentDoctorId = getIdString(appointment.doctorId);
-
-        const isPatient = appointmentPatientId === userId;
-        let isDoctor = false;
-
-        if (userRole === "doctor") {
-            const doctor = await this._doctorRepository.findByUserId(userId);
-            isDoctor = doctor?._id.toString() === appointmentDoctorId;
-        }
-
-        if (!isPatient && !isDoctor && userRole !== "admin") {
-            throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
-        }
-
-        const updatedAppointment = await this._appointmentRepository.updateById(appointmentId, {
-            status: APPOINTMENT_STATUS.CANCELLED,
-            cancelledBy: userRole === "patient" ? "patient" : userRole === "admin" ? "admin" : "doctor",
-            cancellationReason,
-            cancelledAt: new Date(),
-        });
-
-        // refund
-        if (appointment.paymentStatus === PAYMENT_STATUS.PAID) {
-            const totalFee = appointment.consultationFees;
-            const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
-            const patient = await this._userRepository.findById(appointment.patientId.toString());
-
-            let refundAmount = 0;
-
-            if (userRole === 'patient') {
-                //user Cancel
-                refundAmount = (totalFee * CANCELLATION_RULES.USER_CANCEL_REFUND_PERCENT) / 100;
-                const adminKeeps = (totalFee * CANCELLATION_RULES.USER_CANCEL_ADMIN_COMMISSION) / 100;
-                const doctorKeeps = (totalFee * CANCELLATION_RULES.USER_CANCEL_DOCTOR_COMMISSION) / 100;
-
-
-                const doctorDeduction = appointment.doctorEarnings - doctorKeeps;
-                const adminDeduction = appointment.adminCommission - adminKeeps;
-
-                if (doctor) await this._walletService.deductMoney(doctor.userId.toString(), doctorDeduction, `Cancellation: patient cancelled #${appointment.customId || appointment.id}`, appointment._id.toString());
-
-
-                const admins = await this._userRepository.findByRole(ROLES.ADMIN);
-                const adminUser = admins[0];
-                if (adminUser) await this._walletService.deductMoney(adminUser._id.toString(), adminDeduction, `Commission Reversal: patient cancelled #${appointment.customId || appointment.id}`, appointment._id.toString());
-
-
-                if (patient) await this._walletService.addMoney(patient._id.toString(), refundAmount, `Refund: appointment #${appointment.customId || appointment.id} cancelled (30% fee applied)`, appointment._id.toString());
-
-            } else {
-
-                refundAmount = totalFee;
-
-                if (doctor) await this._walletService.deductMoney(doctor.userId.toString(), appointment.doctorEarnings, `Cancellation: appointment #${appointment.customId || appointment.id} cancelled by ${userRole}`, appointment._id.toString());
-
-                const admins = await this._userRepository.findByRole(ROLES.ADMIN);
-                const adminUser = admins[0];
-                if (adminUser) await this._walletService.deductMoney(adminUser._id.toString(), appointment.adminCommission, `Commission Reversal: appointment #${appointment.customId || appointment.id} cancelled by ${userRole}`, appointment._id.toString());
-
-                if (patient) await this._walletService.addMoney(patient._id.toString(), refundAmount, `Refund: appointment #${appointment.customId || appointment.id} cancelled by ${userRole}`, appointment._id.toString());
+            if (!appointment) {
+                throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
             }
 
-            await this._appointmentRepository.updateById(appointmentId, {
-                paymentStatus: PAYMENT_STATUS.REFUNDED
-            });
+            if (appointment.status === APPOINTMENT_STATUS.CANCELLED) {
+                throw new AppError(MESSAGES.APPOINTMENT_ALREADY_CANCELLED, HttpStatus.BAD_REQUEST);
+            }
+            if (appointment.status === APPOINTMENT_STATUS.COMPLETED) {
+                throw new AppError(MESSAGES.APPOINTMENT_ALREADY_COMPLETED, HttpStatus.BAD_REQUEST);
+            }
+            if (appointment.status === APPOINTMENT_STATUS.REJECTED) {
+                throw new AppError("Cannot cancel an appointment that has already been rejected", HttpStatus.BAD_REQUEST);
+            }
 
-            if (this._notificationService) {
-                const customId = appointment.customId || appointmentId;
-                if (userRole === "patient") {
-                    // Notify doctor  cancellation
-                    if (doctor) await this._notificationService.notify(doctor.userId.toString(), {
-                        title: "Appointment Cancelled",
-                        message: `Patient has cancelled appointment #${customId}.`,
-                        type: "warning",
-                        appointmentId: appointment._id.toString()
-                    });
+            const getIdString = (value: any): string | null => {
+                if (!value) return null;
+                if (typeof value === "string") return value;
+                if (typeof value === "object") {
+                    if (value._id) return value._id.toString();
+                    if (value.id) return value.id.toString();
+                }
+                return null;
+            };
 
+            const appointmentPatientId = getIdString(appointment.patientId);
+            const appointmentDoctorId = getIdString(appointment.doctorId);
+
+            const isPatient = appointmentPatientId === userId;
+            let isDoctor = false;
+
+            if (userRole === ROLES.DOCTOR) {
+                const doctor = await this._doctorRepository.findByUserId(userId);
+                isDoctor = doctor?._id.toString() === appointmentDoctorId;
+            }
+
+            if (!isPatient && !isDoctor && userRole !== ROLES.ADMIN) {
+                throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
+            }
+
+            // 1. Update appointment status
+            const updatedAppointment = await this._appointmentRepository.updateById(appointmentId, {
+                status: APPOINTMENT_STATUS.CANCELLED,
+                cancelledBy: userRole === ROLES.PATIENT ? "patient" : userRole === ROLES.ADMIN ? "admin" : "doctor",
+                cancellationReason,
+                cancelledAt: new Date(),
+            }, session);
+
+            // 2. Handle refund if paid
+            if (appointment.paymentStatus === PAYMENT_STATUS.PAID) {
+                const totalFee = appointment.consultationFees;
+                const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
+                const patient = await this._userRepository.findById(appointment.patientId.toString());
+
+                let refundAmount = 0;
+
+                if (userRole === ROLES.PATIENT) {
+                    refundAmount = (totalFee * CANCELLATION_RULES.USER_CANCEL_REFUND_PERCENT) / 100;
+                    const adminKeeps = (totalFee * CANCELLATION_RULES.USER_CANCEL_ADMIN_COMMISSION) / 100;
+                    const doctorKeeps = (totalFee * CANCELLATION_RULES.USER_CANCEL_DOCTOR_COMMISSION) / 100;
+
+                    const doctorDeduction = appointment.doctorEarnings - doctorKeeps;
+                    const adminDeduction = appointment.adminCommission - adminKeeps;
+
+                    if (doctor) await this._walletService.deductMoney(doctor.userId.toString(), doctorDeduction, `Cancellation: patient cancelled #${appointment.customId || appointment.id}`, appointment._id.toString(), "Consultation Reversal", session);
+
+                    const admins = await this._userRepository.findByRole(ROLES.ADMIN);
+                    const adminUser = admins[0];
+                    if (adminUser) await this._walletService.deductMoney(adminUser._id.toString(), adminDeduction, `Commission Reversal: patient cancelled #${appointment.customId || appointment.id}`, appointment._id.toString(), "Commission Reversal", session);
+
+                    if (patient) await this._walletService.addMoney(patient._id.toString(), refundAmount, `Refund: appointment #${appointment.customId || appointment.id} cancelled (30% fee applied)`, appointment._id.toString(), "Refund", session);
 
                 } else {
+                    refundAmount = totalFee;
 
-                    if (patient) {
-                        await this._notificationService.notify(patient._id.toString(), {
-                            title: "Appointment Cancelled",
-                            message: `Your appointment #${customId} has been cancelled by the ${userRole}.`,
-                            type: "info",
-                            appointmentId: appointment._id.toString()
-                        });
+                    if (doctor) await this._walletService.deductMoney(doctor.userId.toString(), appointment.doctorEarnings, `Cancellation: appointment #${appointment.customId || appointment.id} cancelled by ${userRole}`, appointment._id.toString(), "Consultation Reversal", session);
 
+                    const admins = await this._userRepository.findByRole(ROLES.ADMIN);
+                    const adminUser = admins[0];
+                    if (adminUser) await this._walletService.deductMoney(adminUser._id.toString(), appointment.adminCommission, `Commission Reversal: appointment #${appointment.customId || appointment.id} cancelled by ${userRole}`, appointment._id.toString(), "Commission Reversal", session);
 
-                    }
+                    if (patient) await this._walletService.addMoney(patient._id.toString(), refundAmount, `Refund: appointment #${appointment.customId || appointment.id} cancelled by ${userRole}`, appointment._id.toString(), "Refund", session);
                 }
+
+                await this._appointmentRepository.updateById(appointmentId, {
+                    paymentStatus: PAYMENT_STATUS.REFUNDED
+                }, session);
             }
 
-
-        }
-
-        if (appointment.slotId) {
-            try {
+            // 3. Release slot
+            if (appointment.slotId) {
                 const [startTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
                 const docId = getIdString(appointment.doctorId);
                 if (docId) {
@@ -376,15 +416,37 @@ export class AppointmentService implements IAppointmentService {
                         appointment.slotId,
                         false,
                         new Date(appointment.appointmentDate),
-                        startTime
+                        startTime,
+                        session
                     );
                 }
-            } catch (error) {
-                this.logger.error("Failed to mark slot as available", { error, doctorId: appointment.doctorId });
             }
-        }
 
-        return updatedAppointment;
+            // Notify (after commit, though best effort)
+            if (this._notificationService) {
+                const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
+                const patient = await this._userRepository.findById(appointment.patientId.toString());
+                const customId = appointment.customId || appointmentId;
+
+                if (userRole === ROLES.PATIENT) {
+                    if (doctor) await this._notificationService.notify(doctor.userId.toString(), {
+                        title: "Appointment Cancelled",
+                        message: `Patient has cancelled appointment #${customId}.`,
+                        type: "warning",
+                        appointmentId: appointment._id.toString()
+                    });
+                } else {
+                    if (patient) await this._notificationService.notify(patient._id.toString(), {
+                        title: "Appointment Cancelled",
+                        message: `Your appointment #${customId} has been cancelled by the ${userRole}.`,
+                        type: "info",
+                        appointmentId: appointment._id.toString()
+                    });
+                }
+            }
+
+            return updatedAppointment;
+        });
     }
 
     async rescheduleAppointment(
@@ -397,81 +459,85 @@ export class AppointmentService implements IAppointmentService {
             slotId?: string
         }
     ): Promise<any> {
+        this.logger.info("rescheduleAppointment started", { appointmentId, userId });
 
+        return runInTransaction(async (session) => {
+            const appointment = await this._appointmentRepository.findById(appointmentId, session);
 
+            if (!appointment) {
+                throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
+            }
 
-        const appointment = await this._appointmentRepository.findById(appointmentId);
+            if ((appointment.rescheduleCount ?? 0) >= 1) {
+                throw new AppError(MESSAGES.APPOINTMENT_CANNOT_RESCHEDULE, HttpStatus.BAD_REQUEST);
+            }
 
+            const isPatient = appointment.patientId.toString() === userId;
+            if (!isPatient && userRole !== ROLES.ADMIN) {
+                throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
+            }
 
+            const allowedStatuses = [APPOINTMENT_STATUS.PENDING, APPOINTMENT_STATUS.CONFIRMED, APPOINTMENT_STATUS.UPCOMING];
+            if (!allowedStatuses.includes(appointment.status as any)) {
+                throw new AppError(MESSAGES.APPOINTMENT_CANNOT_MODIFY, HttpStatus.BAD_REQUEST);
+            }
 
-
-        if (!appointment) {
-            throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
-        }
-
-        if ((appointment.rescheduleCount ?? 0) >= 1) {
-            throw new AppError(MESSAGES.APPOINTMENT_CANNOT_RESCHEDULE, HttpStatus.BAD_REQUEST);
-        }
-
-
-        const isPatient = appointment.patientId.toString() === userId;
-        if (!isPatient && userRole !== "admin") {
-            throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
-        }
-
-
-        const allowedStatuses = [APPOINTMENT_STATUS.PENDING, APPOINTMENT_STATUS.CONFIRMED, APPOINTMENT_STATUS.UPCOMING];
-        if (!allowedStatuses.includes(appointment.status as any)) {
-            throw new AppError(MESSAGES.APPOINTMENT_CANNOT_MODIFY, HttpStatus.BAD_REQUEST);
-        }
-
-
-        if (appointment.slotId) {
-            try {
+            // 1. Release old slot
+            if (appointment.slotId) {
                 const [oldStartTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
                 await this._scheduleRepository.updateSlotBookedStatus(
                     appointment.doctorId.toString(),
                     appointment.slotId,
-                    false,
+                    false, // Unbook
                     new Date(appointment.appointmentDate),
-                    oldStartTime
+                    oldStartTime,
+                    session
                 );
-            } catch (error) {
-                this.logger.error("Failed to release old slot during reschedule", { error, appointmentId });
             }
-        }
 
+            // 2. Pre-check new slot availability
+            if (rescheduleData.slotId) {
+                const schedule = await this._scheduleRepository.findByDoctorId(appointment.doctorId.toString(), session);
+                if (schedule) {
+                    const slot = schedule.weeklySchedule
+                        .flatMap(day => day.slots)
+                        .find(s => s.customId === rescheduleData.slotId);
 
-        if (rescheduleData.slotId) {
-            try {
+                    if (slot && slot.booked) {
+                        throw new AppError(MESSAGES.APPOINTMENT_SLOT_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
+                    }
+                }
+            }
+
+            // 3. Book new slot
+            if (rescheduleData.slotId) {
                 const [newStartTime] = rescheduleData.appointmentTime.split("-").map((t: string) => t.trim());
-                await this._scheduleRepository.updateSlotBookedStatus(
+                const slotUpdated = await this._scheduleRepository.updateSlotBookedStatus(
                     appointment.doctorId.toString(),
                     rescheduleData.slotId,
-                    true,
+                    true, // Book
                     new Date(rescheduleData.appointmentDate),
-                    newStartTime
+                    newStartTime,
+                    session
                 );
-            } catch (error) {
-                this.logger.error("Failed to book new slot during reschedule", { error, appointmentId });
-                throw new AppError("Failed to book selected slot", HttpStatus.BAD_REQUEST);
+
+                if (!slotUpdated) {
+                    throw new AppError(MESSAGES.APPOINTMENT_SLOT_NOT_AVAILABLE, HttpStatus.BAD_REQUEST);
+                }
             }
-        }
 
+            // 4. Update appointment
+            const updatedAppointment = await this._appointmentRepository.updateById(appointmentId, {
+                appointmentDate: new Date(rescheduleData.appointmentDate),
+                appointmentTime: rescheduleData.appointmentTime,
+                slotId: rescheduleData.slotId || null,
+                status: APPOINTMENT_STATUS.PENDING,
+                rescheduleCount: (appointment.rescheduleCount || 0) + 1,
+            }, session);
 
-        const updatedAppointment = await this._appointmentRepository.updateById(appointmentId, {
-            appointmentDate: new Date(rescheduleData.appointmentDate),
-            appointmentTime: rescheduleData.appointmentTime,
-            slotId: rescheduleData.slotId || null,
-            status: APPOINTMENT_STATUS.PENDING,
-            rescheduleCount: (appointment.rescheduleCount || 0) + 1,
+            const populated = await this._appointmentRepository.findByIdPopulated(appointmentId);
+            return AppointmentMapper.toResponseDTO(populated);
         });
-
-
-
-
-        const populated = await this._appointmentRepository.findByIdPopulated(appointmentId);
-        return AppointmentMapper.toResponseDTO(populated);
     }
 
     // ==================== DOCTOR SIDE ====================
@@ -479,33 +545,50 @@ export class AppointmentService implements IAppointmentService {
 
 
     async approveAppointmentRequest(appointmentId: string, doctorUserId: string): Promise<void> {
-        const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
-        const appointment = await this._appointmentRepository.findById(appointmentId);
+        this.logger.info("approveAppointmentRequest started", { appointmentId, doctorUserId });
 
-        if (!appointment) {
-            throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
-        }
-        if (appointment.doctorId.toString() !== doctorId) {
-            throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
-        }
-        if (appointment.status !== APPOINTMENT_STATUS.PENDING) {
-            throw new AppError(MESSAGES.APPOINTMENT_NOT_PENDING, HttpStatus.BAD_REQUEST);
-        }
+        return runInTransaction(async (session) => {
+            const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
+            const appointment = await this._appointmentRepository.findById(appointmentId, session);
 
-        await this._appointmentRepository.updateById(appointmentId, {
-            status: APPOINTMENT_STATUS.CONFIRMED,
+            if (!appointment) {
+                throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
+            }
+            if (appointment.doctorId.toString() !== doctorId) {
+                throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
+            }
+            if (appointment.status !== APPOINTMENT_STATUS.PENDING) {
+                throw new AppError(MESSAGES.APPOINTMENT_NOT_PENDING, HttpStatus.BAD_REQUEST);
+            }
+
+            await this._appointmentRepository.updateById(appointmentId, {
+                status: APPOINTMENT_STATUS.CONFIRMED,
+            }, session);
+
+            // Release global slot lock so other dates/weeks can be booked.
+            // We rely on date-specific appointment counts to block this specific date.
+            if (appointment.slotId) {
+                const [startTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
+                await this._scheduleRepository.updateSlotBookedStatus(
+                    appointment.doctorId.toString(),
+                    appointment.slotId,
+                    false,
+                    new Date(appointment.appointmentDate),
+                    startTime,
+                    session
+                );
+                this.logger.info(`Released slot lock for ${appointment.slotId} after confirmation of appointment ${appointmentId}`);
+            }
+
+            if (this._notificationService) {
+                await this._notificationService.notify(appointment.patientId.toString(), {
+                    title: "Appointment Confirmed",
+                    message: `Your appointment #${appointment.customId || appointment.id} has been confirmed.`,
+                    type: "success",
+                    appointmentId: appointment._id.toString()
+                });
+            }
         });
-
-        if (this._notificationService) {
-            await this._notificationService.notify(appointment.patientId.toString(), {
-                title: "Appointment Confirmed",
-                message: `Your appointment #${appointment.customId || appointment.id} has been confirmed.`,
-                type: "success",
-                appointmentId: appointment._id.toString()
-            });
-        }
-
-
     }
 
     async rejectAppointmentRequest(
@@ -513,86 +596,81 @@ export class AppointmentService implements IAppointmentService {
         doctorUserId: string,
         rejectionReason: string
     ): Promise<void> {
-        const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
-        const appointment = await this._appointmentRepository.findById(appointmentId);
+        this.logger.info("rejectAppointmentRequest started", { appointmentId, doctorUserId });
 
-        const getIdString = (value: any): string | null => {
-            if (!value) return null;
-            if (typeof value === "string") return value;
-            if (typeof value === "object") {
-                if (value._id) return value._id.toString();
-                if (value.id) return value.id.toString();
+        return runInTransaction(async (session) => {
+            const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
+            const appointment = await this._appointmentRepository.findById(appointmentId, session);
+
+            if (!appointment) {
+                throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
             }
-            return null;
-        };
+            if (appointment.doctorId.toString() !== doctorId) {
+                throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
+            }
+            if (appointment.status !== APPOINTMENT_STATUS.PENDING) {
+                throw new AppError(MESSAGES.APPOINTMENT_NOT_PENDING, HttpStatus.BAD_REQUEST);
+            }
 
-        if (!appointment) {
-            throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
-        }
-        if (appointment.doctorId.toString() !== doctorId) {
-            throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
-        }
-        if (appointment.status !== APPOINTMENT_STATUS.PENDING) {
-            throw new AppError(MESSAGES.APPOINTMENT_NOT_PENDING, HttpStatus.BAD_REQUEST);
-        }
-
-
-        await this._appointmentRepository.updateById(appointmentId, {
-            status: APPOINTMENT_STATUS.REJECTED,
-            rejectionReason,
-        });
-
-
-
-        // refund reject
-        if (appointment.paymentStatus === PAYMENT_STATUS.PAID) {
-            const patient = await this._userRepository.findById(appointment.patientId.toString());
-
-
-            if (patient) await this._walletService.addMoney(patient._id.toString(), appointment.consultationFees, `Refund: appointment #${appointment.customId || appointment.id} rejected by doctor`, appointment._id.toString());
-
-
-            const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
-            if (doctor) await this._walletService.deductMoney(doctor.userId.toString(), appointment.doctorEarnings, `Reversal: appointment #${appointment.customId || appointment.id} rejected`, appointment._id.toString());
-
-            const admins = await this._userRepository.findByRole(ROLES.ADMIN);
-            const adminUser = admins[0];
-            if (adminUser) await this._walletService.deductMoney(adminUser._id.toString(), appointment.adminCommission, `Commission Reversal: appointment #${appointment.customId || appointment.id} rejected`, appointment._id.toString());
-
+            // 1. Update appointment status
             await this._appointmentRepository.updateById(appointmentId, {
-                paymentStatus: PAYMENT_STATUS.REFUNDED
-            });
+                status: APPOINTMENT_STATUS.REJECTED,
+                rejectionReason,
+            }, session);
 
-            if (this._notificationService) {
+            // 2. Handle refund if paid
+            if (appointment.paymentStatus === PAYMENT_STATUS.PAID) {
+                const patient = await this._userRepository.findById(appointment.patientId.toString());
+                const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
 
-                await this._notificationService.notify(appointment.patientId.toString(), {
-                    title: "Appointment Rejected",
-                    message: `Your appointment #${appointment.customId || appointment.id} has been rejected by the doctor.`,
-                    type: "error",
-                    appointmentId: appointment._id.toString()
-                });
+                if (patient) await this._walletService.addMoney(patient._id.toString(), appointment.consultationFees, `Refund: appointment #${appointment.customId || appointment.id} rejected by doctor`, appointment._id.toString(), "Refund", session);
 
+                if (doctor) await this._walletService.deductMoney(doctor.userId.toString(), appointment.doctorEarnings, `Reversal: appointment #${appointment.customId || appointment.id} rejected`, appointment._id.toString(), "Consultation Reversal", session);
 
+                const admins = await this._userRepository.findByRole(ROLES.ADMIN);
+                const adminUser = admins[0];
+                if (adminUser) await this._walletService.deductMoney(adminUser._id.toString(), appointment.adminCommission, `Commission Reversal: appointment #${appointment.customId || appointment.id} rejected`, appointment._id.toString(), "Commission Reversal", session);
+
+                await this._appointmentRepository.updateById(appointmentId, {
+                    paymentStatus: PAYMENT_STATUS.REFUNDED
+                }, session);
             }
-        }
 
-        if (appointment.slotId) {
-            try {
+            // 3. Release slot
+            if (appointment.slotId) {
                 const [startTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
-                const docId = getIdString(appointment.doctorId)
+                const getIdString = (value: any): string | null => {
+                    if (!value) return null;
+                    if (typeof value === "string") return value;
+                    if (typeof value === "object") {
+                        if (value._id) return value._id.toString();
+                        if (value.id) return value.id.toString();
+                    }
+                    return null;
+                };
+                const docId = getIdString(appointment.doctorId);
                 if (docId) {
                     await this._scheduleRepository.updateSlotBookedStatus(
                         docId,
                         appointment.slotId,
                         false,
                         new Date(appointment.appointmentDate),
-                        startTime
+                        startTime,
+                        session
                     );
                 }
-            } catch (error) {
-                this.logger.error("Failed to mark slot as available (rejected)", { error, doctorId: appointment.doctorId });
             }
-        }
+
+            // Notify
+            if (this._notificationService) {
+                await this._notificationService.notify(appointment.patientId.toString(), {
+                    title: "Appointment Rejected",
+                    message: `Your appointment #${appointment.customId || appointment.id} has been rejected by the doctor.`,
+                    type: "error",
+                    appointmentId: appointment._id.toString()
+                });
+            }
+        });
     }
 
     async completeAppointment(
@@ -620,6 +698,19 @@ export class AppointmentService implements IAppointmentService {
             prescriptionUrl: prescriptionUrl || null,
             sessionEndTime: new Date(),
         });
+
+        // Release slot lock so it can be booked for other dates/weeks
+        if (appointment.slotId) {
+            const [startTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
+            await this._scheduleRepository.updateSlotBookedStatus(
+                appointment.doctorId.toString(),
+                appointment.slotId,
+                false,
+                new Date(appointment.appointmentDate),
+                startTime
+            );
+            this.logger.info(`Released slot ${appointment.slotId} after completion of appointment ${appointmentId}`);
+        }
     }
 
     async startConsultation(appointmentId: string, userId: string): Promise<void> {
@@ -706,25 +797,70 @@ export class AppointmentService implements IAppointmentService {
 
         await this._appointmentRepository.updateById(appointmentId, updateData);
 
-        socketService.emitToRoom(appointmentId, "session-status-updated", {
+        const populatedApt = await this._appointmentRepository.findByIdPopulated(appointmentId);
+        const pUserId = populatedApt?.patientId?._id?.toString() || populatedApt?.patientId?.toString();
+        const dUserId = populatedApt?.doctorId?.userId?._id?.toString() || populatedApt?.doctorId?.userId?.toString();
+
+        const statusData = {
             appointmentId,
             status: updateData.sessionStatus,
             extensionCount: updateData.extensionCount || appointment.extensionCount
-        });
+        };
+
+        // Notify session status update to targeted users
+        if (pUserId) socketService.emitToUser(pUserId, "session-status-updated", statusData);
+        if (dUserId) socketService.emitToUser(dUserId, "session-status-updated", statusData);
+
+        // Also keep room broadcast
+        socketService.emitToRoom(appointmentId, "session-status-updated", statusData);
+
+        // Add a system message to the chat
+        if (this._chatService) {
+            let messageContent = "";
+            if (status === "ACTIVE") {
+                messageContent = "The doctor has started the session.";
+            } else if (status === "CONTINUED_BY_DOCTOR") {
+                messageContent = `The doctor has extended the session. (Extension #${updateData.extensionCount})`;
+            } else if (status === "ENDED") {
+                messageContent = "The consultation has been concluded.";
+            }
+
+            if (messageContent) {
+                const docId = appointment.doctorId.toString();
+                const patientId = appointment.patientId.toString();
+
+                const message = await this._chatService.saveMessage(
+                    appointmentId,
+                    docId,
+                    'Doctor',
+                    messageContent,
+                    'system'
+                );
+
+                if (pUserId) socketService.emitToUser(pUserId, "receive-message", message);
+                if (dUserId) socketService.emitToUser(dUserId, "receive-message", message);
+                socketService.emitMessage(appointmentId, message);
+            }
+        }
 
         if (updateData.sessionStatus === "ENDED") {
-            socketService.emitToRoom(appointmentId, "session-ended", { appointmentId });
+            const endData = { appointmentId };
+            if (pUserId) socketService.emitToUser(pUserId, "session-ended", endData);
+            if (dUserId) socketService.emitToUser(dUserId, "session-ended", endData);
+            socketService.emitToRoom(appointmentId, "session-ended", endData);
         }
     }
 
     async enablePostConsultationChat(appointmentId: string, doctorUserId: string): Promise<void> {
-        const appointment = await this._appointmentRepository.findById(appointmentId);
+        const appointment = await this._appointmentRepository.findByIdPopulated(appointmentId);
         if (!appointment) {
             throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
         }
 
         const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
-        if (appointment.doctorId.toString() !== doctorId) {
+        const apptDoctorId = (appointment.doctorId as any)?._id?.toString() || (appointment.doctorId as any)?.toString();
+
+        if (apptDoctorId !== doctorId) {
             throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
         }
 
@@ -745,14 +881,15 @@ export class AppointmentService implements IAppointmentService {
 
         if (this._chatService) {
             const doctor = await this._doctorRepository.findById(doctorId);
-            const patient = await this._userRepository.findById(appointment.patientId.toString());
+            const ptId = (appointment.patientId as any)?._id?.toString() || (appointment.patientId as any)?.toString();
+            const patient = await this._userRepository.findById(ptId);
             const patientName = patient?.name || 'Patient';
 
             const messageContent = `Hello ${patientName}, you have 24 hours to proceed with your test results. The chat is now open for you.`;
 
             const realAptId = appointment._id.toString();
-            const patientId = appointment.patientId.toString();
-            const docId = appointment.doctorId.toString();
+            const patientId = (appointment.patientId as any)?._id?.toString() || (appointment.patientId as any)?.toString();
+            const docId = (appointment.doctorId as any)?._id?.toString() || (appointment.doctorId as any)?.toString();
             const persistentRoomId = `persistent-${patientId}-${docId}`;
 
             const message = await this._chatService.saveMessage(
@@ -763,19 +900,46 @@ export class AppointmentService implements IAppointmentService {
                 'text'
             );
 
+            const patientUserId = patient?._id?.toString() || ptId;
+            const populatedDoctor = await this._doctorRepository.findById(doctorId);
+            const doctorUserId = populatedDoctor?.userId?.toString();
+
+            if (patientUserId) socketService.emitToUser(patientUserId, "receive-message", message);
+            if (doctorUserId) socketService.emitToUser(doctorUserId, "receive-message", message);
             socketService.emitMessage(realAptId, message);
-            socketService.emitMessage(persistentRoomId, message);
+
+            const statusUpdate = {
+                appointmentId: realAptId,
+                customId: appointment.customId,
+                status: appointment.sessionStatus || "ENDED",
+                postConsultationChatWindow: {
+                    isActive: true,
+                    expiresAt
+                }
+            };
+
+            const patientData = appointment.patientId as any;
+            const doctorData = appointment.doctorId as any;
+
+            const pUserId = patientData?.userId?._id?.toString() || patientData?.userId?.toString() || patientData?._id?.toString() || patientData?.toString();
+            const dUserId = doctorData?.userId?._id?.toString() || doctorData?.userId?.toString() || doctorData?._id?.toString() || doctorData?.toString();
+
+            socketService.emitToRoom(realAptId, "session-status-updated", statusUpdate);
+            if (pUserId) socketService.emitToUser(pUserId, "session-status-updated", statusUpdate);
+            if (dUserId) socketService.emitToUser(dUserId, "session-status-updated", statusUpdate);
         }
     }
 
     async disablePostConsultationChat(appointmentId: string, doctorUserId: string): Promise<void> {
-        const appointment = await this._appointmentRepository.findById(appointmentId);
+        const appointment = await this._appointmentRepository.findByIdPopulated(appointmentId);
         if (!appointment) {
             throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
         }
 
         const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
-        if (appointment.doctorId.toString() !== doctorId) {
+        const apptDoctorId = (appointment.doctorId as any)?._id?.toString() || (appointment.doctorId as any)?.toString();
+
+        if (apptDoctorId !== doctorId) {
             throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
         }
 
@@ -787,7 +951,8 @@ export class AppointmentService implements IAppointmentService {
         });
 
         if (this._chatService) {
-            const patient = await this._userRepository.findById(appointment.patientId.toString());
+            const ptId = (appointment.patientId as any)?._id?.toString() || (appointment.patientId as any)?.toString();
+            const patient = await this._userRepository.findById(ptId);
             const patientName = patient?.name || 'Patient';
 
             const messageContent = `Hello ${patientName}, the doctor has closed this chat session.`;
@@ -803,14 +968,68 @@ export class AppointmentService implements IAppointmentService {
                 'text'
             );
 
-            socketService.emitMessage(realAptId, message);
-            socketService.emitMessage(persistentRoomId, message);
+            const patientUserId = patient?._id?.toString() || appointment.patientId.toString();
+            const populatedDoctor = await this._doctorRepository.findById(doctorId);
+            const doctorUserId = populatedDoctor?.userId?.toString();
 
-            // Also notify room that session status definitely needs refresh
-            socketService.emitToRoom(realAptId, "session-status-updated", {
+            if (patientUserId) socketService.emitToUser(patientUserId, "receive-message", message);
+            if (doctorUserId) socketService.emitToUser(doctorUserId, "receive-message", message);
+            socketService.emitMessage(realAptId, message);
+
+            const statusUpdate = {
                 appointmentId: realAptId,
-                status: "ENDED"
+                status: "ENDED",
+                postConsultationChatWindow: {
+                    isActive: false,
+                    expiresAt: appointment.postConsultationChatWindow?.expiresAt
+                }
+            };
+
+            const patientData = appointment.patientId as any;
+            const doctorData = appointment.doctorId as any;
+
+            const pUserId = patientData?.userId?._id?.toString() || patientData?.userId?.toString() || patientData?._id?.toString() || patientData?.toString();
+            const dUserId = doctorData?.userId?._id?.toString() || doctorData?.userId?.toString() || doctorData?._id?.toString() || doctorData?.toString();
+
+            socketService.emitToRoom(realAptId, "session-status-updated", statusUpdate);
+            if (pUserId) socketService.emitToUser(pUserId, "session-status-updated", statusUpdate);
+            if (dUserId) socketService.emitToUser(dUserId, "session-status-updated", statusUpdate);
+
+            await this._appointmentRepository.updateById(realAptId, {
+                sessionStatus: "ENDED"
             });
+
+            // Also emit session-ended to clear any active states
+            socketService.emitToRoom(realAptId, "session-ended", { appointmentId: realAptId });
+            if (pUserId) socketService.emitToUser(pUserId, "session-ended", { appointmentId: realAptId });
+            if (dUserId) socketService.emitToUser(dUserId, "session-ended", { appointmentId: realAptId });
         }
+    }
+
+    async updateDoctorNotes(appointmentId: string, doctorUserId: string, notes: string): Promise<void> {
+        this.logger.info("Updating doctor notes", { appointmentId, doctorUserId, notesLength: notes?.length });
+
+        const appointment = await this._appointmentRepository.findById(appointmentId);
+        if (!appointment) {
+            this.logger.warn("Appointment not found for note update", { appointmentId });
+            throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
+        }
+
+        const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
+        if (appointment.doctorId.toString() !== doctorId) {
+            this.logger.warn("Unauthorized attempt to update notes", { appointmentId, doctorUserId });
+            throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        const result = await this._appointmentRepository.updateById(appointmentId, {
+            doctorNotes: notes
+        });
+
+        if (!result) {
+            this.logger.error("Failed to update doctor notes in database", { appointmentId });
+            throw new AppError("Failed to update notes", HttpStatus.INTERNAL_ERROR);
+        }
+
+        this.logger.info("Doctor notes updated successfully", { appointmentId });
     }
 }

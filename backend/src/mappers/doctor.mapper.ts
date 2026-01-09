@@ -31,7 +31,7 @@ export class DoctorMapper {
             dob: user.dob,
             createdAt: doctor.createdAt,
             updatedAt: doctor.updatedAt,
-            about: doctor.about
+            about: doctor.about,
         };
     }
 

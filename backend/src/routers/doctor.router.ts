@@ -15,13 +15,14 @@ const router = Router();
 
 const doctorRepository = new DoctorRepository();
 const userRepository = new UserRepository();
-const doctorService = new DoctorService(doctorRepository, userRepository);
+const appointmentRepository = new AppointmentRepository();
+const doctorService = new DoctorService(doctorRepository, userRepository, appointmentRepository);
 
 const doctorController = new DoctorController(doctorService);
 
 
 const scheduleRepository = new ScheduleRepository();
-const appointmentRepository = new AppointmentRepository();
+// appointmentRepository already created above
 const scheduleService = new ScheduleService(
   scheduleRepository,
   appointmentRepository,
@@ -42,7 +43,7 @@ router.post(
   "/submit-verification",
   authMiddleware,
   requireDoctor,
-  upload.array("certificate", 5), 
+  upload.array("certificate", 5),
   doctorController.submitVerification
 );
 
@@ -65,6 +66,13 @@ router.get(
   authMiddleware,
   requireDoctor,
   doctorController.getProfile
+);
+
+router.get(
+  "/stats",
+  authMiddleware,
+  requireDoctor,
+  doctorController.getDashboardStats
 );
 
 router.put(

@@ -49,13 +49,13 @@ const DoctorRequestDetailPage: React.FC = () => {
               toast.dismiss(id);
               proceedWithApproval();
             }}
-            className="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition-colors"
+            className="bg-[#00A1B0] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#008f9c] transition-colors"
           >
             Yes, Approve
           </button>
           <button
             onClick={() => toast.dismiss(id)}
-            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
+            className="bg-[#00A1B0] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#008f9c] transition-colors"
           >
             Cancel
           </button>
@@ -186,7 +186,7 @@ const DoctorRequestDetailPage: React.FC = () => {
             {/* Back button */}
             <button
               onClick={() => navigate(-1)}
-              className="text-gray-700 hover:text-teal-600 mb-6 flex items-center gap-2 font-medium transition-colors"
+              className="text-[#00A1B0] hover:text-[#008f9c] mb-6 flex items-center gap-2 font-medium transition-colors"
             >
               <span className="text-xl">←</span> Doctor Details
             </button>

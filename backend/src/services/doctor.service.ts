@@ -3,6 +3,8 @@ import { SubmitVerificationDTO, VerificationStatus, UpdateDoctorProfileDTO, Veri
 import { MESSAGES, PAGINATION, ROLES, STATUS } from "../constants/constants";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
+import { IAppointmentRepository } from "../repositories/interfaces/IAppointmentRepository";
+import { DoctorDashboardStats } from "../types/appointment.type";
 import { DoctorValidator } from "../validators/doctor.validator";
 import { AppError, NotFoundError, UnauthorizedError } from "../errors/AppError";
 import { LoggerService } from "./logger.service";
@@ -13,7 +15,8 @@ export class DoctorService implements IDoctorService {
 
   constructor(
     private _doctorRepository: IDoctorRepository,
-    private _userRepository: IUserRepository
+    private _userRepository: IUserRepository,
+    private _appointmentRepository: IAppointmentRepository
   ) {
     this.logger = new LoggerService("DoctorService");
   }
@@ -45,12 +48,12 @@ export class DoctorService implements IDoctorService {
     let documentUrls: string[];
 
     if (files.length > 0) {
-     
+
       const newFileUrls = files.map((file) => file.path);
       const existingUrls = hasExistingDocuments ? existingDocuments : [];
       documentUrls = [...existingUrls, ...newFileUrls];
     } else if (hasExistingDocuments) {
-    
+
       documentUrls = existingDocuments.length > 0
         ? existingDocuments
         : (doctor.verificationDocuments || []);
@@ -220,5 +223,18 @@ export class DoctorService implements IDoctorService {
       const user = doc.userId as any;
       return DoctorMapper.toListDTO(doc, user);
     });
+  }
+
+  async getDashboardStats(userId: string, startDate?: string, endDate?: string): Promise<DoctorDashboardStats> {
+    const doctor = await this._doctorRepository.findByUserId(userId);
+    console.log("DoctorService.getDashboardStats doctor:", doctor?._id);
+    if (!doctor) {
+      throw new NotFoundError(MESSAGES.DOCTOR_PROFILE_NOT_FOUND);
+    }
+    const start = startDate ? new Date(startDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+    const result = await this._appointmentRepository.getDoctorDashboardStats(doctor._id.toString(), start, end);
+    console.log("DoctorService.getDashboardStats result:", result);
+    return result;
   }
 }

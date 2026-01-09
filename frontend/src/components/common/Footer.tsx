@@ -9,30 +9,33 @@ const Footer: React.FC = () => (
           <img src="/logo-takecare.png" alt="TakeCare Logo" className="h-7 w-auto mr-2" />
           <span className="text-xl font-extrabold tracking-wide">Takecare</span>
         </div>
+        <div className="text-sm mb-3 text-white/90">
+          Your Trusted Online Healthcare Partner
+        </div>
         <div className="text-sm mb-3">
-          Address: 13 Elmore Road, Street 32, Balo-Walmen
+          📧 Email: support@takecare.com
         </div>
         <div className="text-sm mb-5">
-          Phone: +01 2222 365 / +91 091 2345 6789
+          📞 Phone: +91 9876543210 (24/7 Support)
         </div>
         <div className="flex space-x-2">
-          <a href="#" className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#007a85]">
+          <a href="#" className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#007a85] hover:bg-white/90 transition">
             {/* Twitter */}
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="..." /></svg>
           </a>
-          <a href="#" className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#007a85]">
+          <a href="#" className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#007a85] hover:bg-white/90 transition">
             {/* Facebook */}
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="..." /></svg>
           </a>
-          <a href="#" className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#007a85]">
+          <a href="#" className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-[#007a85] hover:bg-white/90 transition">
             {/* Instagram */}
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="..." /></svg>
           </a>
         </div>
       </div>
-      {/* Address/Links */}
+      {/* Quick Links */}
       <div>
-        <div className="mb-2 font-semibold">Address</div>
+        <div className="mb-2 font-semibold">Quick Links</div>
         <ul className="space-y-1 text-sm">
           <li><a href="/about" className="hover:underline">About Us</a></li>
           <li><a href="/delivery" className="hover:underline">Delivery Information</a></li>

@@ -22,6 +22,9 @@ import walletRouter from "./routers/wallet.router";
 import notificationRouter from "./routers/notification.router";
 import chatRouter from "./routers/chat.router";
 import reviewRouter from "./routers/review.route";
+import prescriptionRouter from "./routers/prescription.router";
+import specialtyRouter from "./routers/specialty.router";
+import contactRouter from "./routes/contact.routes";
 
 import { errorHandler } from "./middlewares/error-handler.middleware";
 import { LoggerService } from "./services/logger.service";
@@ -87,7 +90,11 @@ app.use(BASE_ROUTES.PAYMENTS, paymentRouter);
 app.use(BASE_ROUTES.WALLET, walletRouter);
 app.use(BASE_ROUTES.NOTIFICATIONS, notificationRouter);
 app.use(BASE_ROUTES.CHAT, chatRouter);
+
 app.use(BASE_ROUTES.REVIEWS, reviewRouter);
+app.use(BASE_ROUTES.PRESCRIPTIONS, prescriptionRouter);
+app.use(BASE_ROUTES.SPECIALTIES, specialtyRouter);
+app.use(BASE_ROUTES.CONTACT, contactRouter);
 
 
 
@@ -107,11 +114,14 @@ import { createServer } from "http";
 import { socketService } from "./services/socket.service";
 import { AppointmentReminderService } from "./services/appointmentReminder.service";
 import { AppointmentRepository } from "./repositories/appointment.repository";
+import { ScheduleRepository } from "./repositories/schedule.repository";
 import { notificationService } from "./routers/notification.router";
 
 const appointmentRepository = new AppointmentRepository();
+const scheduleRepository = new ScheduleRepository();
 const appointmentReminderService = new AppointmentReminderService(
   appointmentRepository,
+  scheduleRepository,
   notificationService
 );
 appointmentReminderService.start();

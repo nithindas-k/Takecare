@@ -4,6 +4,7 @@ import { setUser } from "../../redux/user/userSlice";
 import DoctorNavbar from "../../components/Doctor/DoctorNavbar";
 import DoctorLayout from "../../components/Doctor/DoctorLayout";
 import doctorService from "../../services/doctorService";
+import { specialtyService } from "../../services/specialtyService";
 import Button from "../../components/Button";
 import { FaUpload, FaTimes } from "react-icons/fa";
 import { toast } from "sonner";
@@ -44,6 +45,8 @@ const DoctorProfileSettings: React.FC = () => {
   const [videoFees, setVideoFees] = useState("");
   const [chatFees, setChatFees] = useState("");
 
+  const [specialtiesList, setSpecialtiesList] = useState<{ _id: string; name: string }[]>([]);
+
   const [languages, setLanguages] = useState<string[]>([]);
   const [languageInput, setLanguageInput] = useState("");
   const [qualifications, setQualifications] = useState<string[]>([]);
@@ -56,9 +59,23 @@ const DoctorProfileSettings: React.FC = () => {
   const [about, setAbout] = useState<string>("");
   const [generating, setGenerating] = useState(false);
 
+
   useEffect(() => {
     fetchProfile();
+    fetchSpecialties();
   }, []);
+
+  const fetchSpecialties = async () => {
+    try {
+      const response = await specialtyService.getActiveSpecialties();
+      if (response?.success && response.data) {
+        setSpecialtiesList(response.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch specialties:", error);
+    }
+  };
+
 
   const fetchProfile = async () => {
     setLoading(true);
@@ -82,6 +99,7 @@ const DoctorProfileSettings: React.FC = () => {
         setAbout(data.about || "");
 
         if (data.profileImage) setPreviewImage(data.profileImage);
+
       }
     } catch (err) {
       console.error(err);
@@ -90,6 +108,7 @@ const DoctorProfileSettings: React.FC = () => {
       setLoading(false);
     }
   };
+
 
   const generateLocalAbout = () => {
     const years = experienceYears || "several";
@@ -167,6 +186,7 @@ const DoctorProfileSettings: React.FC = () => {
     setQualifications(qualifications.filter((q) => q !== qual));
   };
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -187,7 +207,7 @@ const DoctorProfileSettings: React.FC = () => {
         ChatFees: Number(chatFees),
         languages,
         qualifications,
-        about
+        about,
       };
 
       const formData = new FormData();
@@ -207,7 +227,6 @@ const DoctorProfileSettings: React.FC = () => {
             _id: response.data.id || response.data._id,
           })
         );
-
         setProfile(response.data);
       } else {
         toast.error(response?.message || "Update failed");
@@ -367,16 +386,11 @@ const DoctorProfileSettings: React.FC = () => {
                   className="w-full px-4 py-2 border rounded-lg"
                 >
                   <option value="">Select Specialty</option>
-                  <option value="General Physician">General Physician</option>
-                  <option value="Cardiologist">Cardiologist</option>
-                  <option value="Dermatologist">Dermatologist</option>
-                  <option value="Neurologist">Neurologist</option>
-                  <option value="Orthopedic">Orthopedic</option>
-                  <option value="Pediatrician">Pediatrician</option>
-                  <option value="Psychiatrist">Psychiatrist</option>
-                  <option value="Dentist">Dentist</option>
-                  <option value="Gynecologist">Gynecologist</option>
-                  <option value="ENT Specialist">ENT Specialist</option>
+                  {specialtiesList.map((spec) => (
+                    <option key={spec._id} value={spec.name}>
+                      {spec.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -498,6 +512,7 @@ const DoctorProfileSettings: React.FC = () => {
                 className="w-full px-2 py-1 text-sm outline-none"
               />
             </div>
+
 
             {/* ---------------- SAVE BUTTON ---------------- */}
             <div className="flex justify-end gap-4 pt-4 border-t">

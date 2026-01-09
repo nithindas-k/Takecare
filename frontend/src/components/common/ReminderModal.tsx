@@ -10,9 +10,10 @@ interface ReminderModalProps {
         message: string;
         customId: string;
     } | null;
+    onAction?: () => void;
 }
 
-const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, data }) => {
+const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, data, onAction }) => {
     if (!data) return null;
 
     return (
@@ -63,10 +64,10 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, data }) 
 
                             <div className="w-full flex flex-col gap-2">
                                 <button
-                                    onClick={onClose}
+                                    onClick={onAction || onClose}
                                     className="w-full bg-[#00A1B0] hover:bg-[#008f9c] text-white py-3.5 rounded-xl font-bold transition-all duration-300 active:scale-[0.98] shadow-sm"
                                 >
-                                    Get Started
+                                    {onAction ? 'Join Now' : 'Get Started'}
                                 </button>
                                 <button
                                     onClick={onClose}

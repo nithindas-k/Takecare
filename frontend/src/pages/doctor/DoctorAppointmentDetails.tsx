@@ -1,15 +1,26 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ClipboardList, MessagesSquare, XCircle } from 'lucide-react';
+import { ClipboardList, MessagesSquare, XCircle, Stethoscope } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DoctorNavbar from '../../components/Doctor/DoctorNavbar';
 import DoctorLayout from '../../components/Doctor/DoctorLayout';
 import Breadcrumbs from '../../components/common/Breadcrumbs';
 import { FaVideo, FaComments, FaPhone, FaTimes, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import { appointmentService } from '../../services/appointmentService';
+import { prescriptionService } from '../../services/prescriptionService';
 import { API_BASE_URL } from '../../utils/constants';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
+import PrescriptionModal from '../../components/Doctor/PrescriptionModal';
+import PrescriptionViewModal from '../../components/Patient/PrescriptionViewModal';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "../../components/ui/dialog";
 
 const DoctorAppointmentDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -22,13 +33,31 @@ const DoctorAppointmentDetails: React.FC = () => {
     const [cancelOpen, setCancelOpen] = useState(false);
     const [cancelReason, setCancelReason] = useState('');
     const [cancelSubmitting, setCancelSubmitting] = useState(false);
+    const [closeChatOpen, setCloseChatOpen] = useState(false);
+
     const [showCancelReason, setShowCancelReason] = useState(false);
+    const [prescriptionOpen, setPrescriptionOpen] = useState(false);
+    const [prescriptionViewOpen, setPrescriptionViewOpen] = useState(false);
+    const [hasPrescription, setHasPrescription] = useState(false);
 
     const getImageUrl = (imagePath: string | null | undefined) => {
         if (!imagePath) return '/patient.png';
         if (imagePath.startsWith('http')) return imagePath;
         const cleanPath = imagePath.replace(/\\/g, '/');
         return `${API_BASE_URL}/${cleanPath}`;
+    };
+
+    const formatTimeTo12h = (timeStr: string) => {
+        if (!timeStr) return 'N/A';
+        return timeStr.split('-').map(part => {
+            const [hours, minutes] = part.trim().split(':');
+            let h = parseInt(hours);
+            const m = minutes || '00';
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12;
+            h = h ? h : 12;
+            return `${h}:${m} ${ampm}`;
+        }).join(' - ');
     };
 
     const normalized = useMemo(() => {
@@ -70,7 +99,8 @@ const DoctorAppointmentDetails: React.FC = () => {
             appointmentType: apt?.appointmentType,
             date,
             hasValidDate,
-            time,
+
+            time: formatTimeTo12h(time),
             status,
             displayStatus,
             consultationFees: apt?.consultationFees ?? 0,
@@ -100,6 +130,19 @@ const DoctorAppointmentDetails: React.FC = () => {
                 if (response?.success) {
                     setAppointment(response.data);
                     lastFetchedId.current = id;
+
+                    // Check for prescription if completed
+                    if (response.data.status === 'completed') {
+                        try {
+                            const prescResponse = await prescriptionService.getPrescriptionByAppointment(response.data._id);
+                            if (prescResponse.success && prescResponse.data) {
+                                setHasPrescription(true);
+                            }
+                        } catch (prescErr) {
+                            console.warn("No prescription found or failed to check:", prescErr);
+                            // Not a fatal error for the whole page
+                        }
+                    }
                 } else {
                     throw new Error(response?.message);
                 }
@@ -431,20 +474,22 @@ const DoctorAppointmentDetails: React.FC = () => {
                                     </div>
                                     <div className="col-span-2 md:col-span-4 lg:col-span-1 flex items-end flex-col gap-2">
                                         {normalized.isUpcoming && normalized.status === 'confirmed' && (
-                                            <button
-                                                onClick={() => navigate(`/doctor/${normalized.appointmentType === 'video' ? 'call' : 'chat'}/${appointment?._id || appointment?.id}`)}
-                                                disabled={!normalized.isSessionReady}
-                                                className={`w-full px-6 py-2.5 font-semibold rounded-lg transition-colors ${normalized.isSessionReady
-                                                    ? 'bg-[#00A1B0] hover:bg-[#008f9c] text-white cursor-pointer'
-                                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                    }`}
-                                            >
-                                                {normalized.isSessionReady ? 'Start Session' : 'Starts at ' + normalized.time.split(' - ')[0]}
-                                            </button>
+                                            normalized.isSessionReady ? (
+                                                <button
+                                                    onClick={() => navigate(`/doctor/${normalized.appointmentType === 'video' ? 'call' : 'chat'}/${appointment?._id || appointment?.id}`)}
+                                                    className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors shadow-sm"
+                                                >
+                                                    Start Session
+                                                </button>
+                                            ) : (
+                                                <div className="w-full px-4 py-3 bg-gray-50 text-gray-500 font-medium rounded-xl border border-dashed border-gray-300 text-center text-sm">
+                                                    Starts at {normalized.time.split(' - ')[0]}
+                                                </div>
+                                            )
                                         )}
 
-                                        {/* Post-Consultation Chat Button for Completed Video Appointments */}
-                                        {normalized.status === 'completed' && normalized.appointmentType === 'video' && (
+                                        {/* Post-Consultation Chat - Only for Video Appointments */}
+                                        {normalized.status === 'completed' && normalized.appointmentType === 'video' && !hasPrescription && (
                                             <div className="w-full flex flex-col gap-3">
                                                 {!appointment?.postConsultationChatWindow?.isActive ? (
                                                     <Button
@@ -462,44 +507,52 @@ const DoctorAppointmentDetails: React.FC = () => {
                                                                 toast.error(error.response?.data?.message || "Failed to enable chat");
                                                             }
                                                         }}
-                                                        className="w-full h-12 bg-gradient-to-br from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-amber-500/20 transition-all active:scale-95 flex items-center justify-center gap-2 rounded-2xl border-none p-0"
+                                                        className="w-full px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
                                                     >
-                                                        <ClipboardList className="h-3.5 w-3.5" />
-                                                        Tests Wanted
+                                                        <ClipboardList className="h-4 w-4" />
+                                                        Tests Needed
                                                     </Button>
                                                 ) : (
                                                     <div className="w-full flex flex-col gap-2">
                                                         <Button
                                                             onClick={() => navigate(`/doctor/chat/${normalized.id}`)}
-                                                            className="w-full h-12 bg-gradient-to-br from-[#00A1B0] to-[#008f9c] hover:from-[#008f9c] hover:to-[#007b8a] text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-[#00A1B0]/20 transition-all active:scale-95 flex items-center justify-center gap-2 rounded-2xl border-none p-0"
+                                                            className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
                                                         >
-                                                            <MessagesSquare className="h-3.5 w-3.5" />
+                                                            <MessagesSquare className="h-4 w-4" />
                                                             Go to Chat
                                                         </Button>
                                                         <Button
-                                                            onClick={async () => {
-                                                                try {
-                                                                    const res = await appointmentService.disablePostConsultationChat(normalized.id);
-                                                                    if (res.success) {
-                                                                        toast.success("Chat window closed manually.");
-                                                                        const response = await appointmentService.getAppointmentById(normalized.id);
-                                                                        if (response?.success) setAppointment(response.data);
-                                                                    } else {
-                                                                        toast.error(res.message);
-                                                                    }
-                                                                } catch (error: any) {
-                                                                    toast.error(error.response?.data?.message || "Failed to close chat");
-                                                                }
-                                                            }}
+                                                            onClick={() => setCloseChatOpen(true)}
                                                             variant="outline"
-                                                            className="w-full h-10 border-red-500/50 text-red-500 hover:bg-red-50 hover:text-red-600 font-black uppercase text-[9px] tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 rounded-2xl p-0"
+                                                            className="w-full px-6 py-2.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-semibold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
                                                         >
-                                                            <XCircle className="h-3 w-3" />
-                                                            Close Window
+                                                            <XCircle className="h-4 w-4" />
+                                                            Wind Up Chat
                                                         </Button>
                                                     </div>
                                                 )}
                                             </div>
+                                        )}
+
+                                        {/* Create/View Prescription Button for Completed Appointments */}
+                                        {normalized.status === 'completed' && (
+                                            hasPrescription ? (
+                                                <Button
+                                                    onClick={() => setPrescriptionViewOpen(true)}
+                                                    className="w-full px-6 py-2.5 bg-white border border-[#00A1B0] text-[#00A1B0] hover:bg-[#00A1B0]/5 font-semibold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
+                                                >
+                                                    <Stethoscope className="w-4 h-4" />
+                                                    View Prescription
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    onClick={() => setPrescriptionOpen(true)}
+                                                    className="w-full px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
+                                                >
+                                                    <ClipboardList className="w-4 h-4" />
+                                                    Create Prescription
+                                                </Button>
+                                            )
                                         )}
                                     </div>
                                 </div>
@@ -576,7 +629,66 @@ const DoctorAppointmentDetails: React.FC = () => {
                     </div>
                 </div>
             )}
-        </div>
+
+            {/* Prescription Modal */}
+            <PrescriptionModal
+                isOpen={prescriptionOpen}
+                onClose={() => setPrescriptionOpen(false)}
+                appointmentId={appointment?._id || appointment?.id}
+                patientId={appointment?.patientId?._id || appointment?.patientId}
+                onSuccess={() => {
+                    setHasPrescription(true);
+                    setPrescriptionOpen(false);
+                }}
+            />
+
+            {/* View Prescription Modal */}
+            <PrescriptionViewModal
+                isOpen={prescriptionViewOpen}
+                onClose={() => setPrescriptionViewOpen(false)}
+                appointmentId={appointment?._id || appointment?.id}
+            />
+            {/* Close Chat Confirmation Dialog */}
+            <Dialog open={closeChatOpen} onOpenChange={setCloseChatOpen}>
+                <DialogContent className="sm:max-w-md bg-white border border-gray-100 shadow-xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold text-gray-900">Wind Up Chat?</DialogTitle>
+                        <DialogDescription className="text-gray-500">
+                            Are you sure you want to close this chat? Both you and the patient will no longer be able to send messages.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="flex gap-2 sm:justify-end">
+                        <Button
+                            variant="secondary"
+                            onClick={() => setCloseChatOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={async () => {
+                                try {
+                                    const res = await appointmentService.disablePostConsultationChat(normalized.id);
+                                    if (res.success) {
+                                        toast.success("Chat window closed manually.");
+                                        const response = await appointmentService.getAppointmentById(normalized.id);
+                                        if (response?.success) setAppointment(response.data);
+                                    } else {
+                                        toast.error(res.message);
+                                    }
+                                } catch (error: any) {
+                                    toast.error(error.response?.data?.message || "Failed to close chat");
+                                } finally {
+                                    setCloseChatOpen(false);
+                                }
+                            }}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                            Confirm Wind Up
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div >
     );
 
 };

@@ -153,6 +153,18 @@ export class AdminController implements IAdminController {
       const patientId = req.params.patientId;
       await this._adminservice.unblockUser(patientId);
       sendSuccess(res, undefined, MESSAGES.PATIENT_UNBLOCKED_SUCCESS);
+      sendSuccess(res, undefined, MESSAGES.PATIENT_UNBLOCKED_SUCCESS);
+    } catch (err: unknown) {
+      next(err);
+    }
+  };
+
+  getDashboardStats = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const startDate = req.query.startDate as string;
+      const endDate = req.query.endDate as string;
+      const stats = await this._adminservice.getDashboardStats(startDate, endDate);
+      sendSuccess(res, stats);
     } catch (err: unknown) {
       next(err);
     }

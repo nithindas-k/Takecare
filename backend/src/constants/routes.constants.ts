@@ -10,6 +10,9 @@ export const BASE_ROUTES = {
     NOTIFICATIONS: "/notifications",
     CHAT: "/chat",
     REVIEWS: "/reviews",
+    PRESCRIPTIONS: "/prescriptions",
+    SPECIALTIES: "/specialties",
+    CONTACT: "/contact",
 } as const;
 
 
@@ -83,6 +86,7 @@ export const APPOINTMENT_ROUTES = {
     UPDATE_SESSION_STATUS: "/:id/session-status",
     ENABLE_CHAT: "/:id/enable-chat",
     DISABLE_CHAT: "/:id/disable-chat",
+    UPDATE_NOTES: "/:id/notes",
 } as const;
 
 export const PAYMENT_ROUTES = {

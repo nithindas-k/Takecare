@@ -439,7 +439,12 @@ export class ScheduleService implements IScheduleService {
             "Friday",
             "Saturday",
         ];
-        return days[date.getDay()];
+
+        // Robust day of week calculation: 
+        // Shift to middle of day in UTC to avoid timezone edges when interpreting calendar dates
+        const dateCopy = new Date(date);
+        dateCopy.setUTCHours(dateCopy.getUTCHours() + 12);
+        return days[dateCopy.getUTCDay()];
     }
 }
 

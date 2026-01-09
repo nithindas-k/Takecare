@@ -103,6 +103,7 @@ export const APPOINTMENT_API_ROUTES = {
   UPDATE_SESSION_STATUS: (id: string): string => `/appointments/${id}/session-status`,
   ENABLE_CHAT: (id: string): string => `/appointments/${id}/enable-chat`,
   DISABLE_CHAT: (id: string): string => `/appointments/${id}/disable-chat`,
+  UPDATE_NOTES: (id: string): string => `/appointments/${id}/notes`,
 } as const;
 
 export const PAYMENT_API_ROUTES = {
@@ -123,6 +124,11 @@ export const CHAT_API_ROUTES = {
   UPLOAD_ATTACHMENT: (appointmentId: string): string => `/chat/${appointmentId}/upload`,
   EDIT_MESSAGE: (messageId: string): string => `/chat/message/${messageId}`,
   DELETE_MESSAGE: (messageId: string): string => `/chat/message/${messageId}`,
+} as const;
+
+export const PRESCRIPTION_API_ROUTES = {
+  CREATE: "/prescriptions",
+  GET_BY_APPOINTMENT: (appointmentId: string): string => `/prescriptions/${appointmentId}`,
 } as const;
 
 export const REVIEW_API_ROUTES = {

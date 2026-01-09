@@ -11,6 +11,7 @@ import { API_BASE_URL } from '../../utils/constants';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { toast } from 'sonner';
+import PrescriptionViewModal from '../../components/Patient/PrescriptionViewModal';
 
 
 const AppointmentDetails: React.FC = () => {
@@ -28,7 +29,7 @@ const AppointmentDetails: React.FC = () => {
     const [cancelError, setCancelError] = useState('');
     const [showCancelReason, setShowCancelReason] = useState(false);
 
-    
+
     const [rescheduleOpen, setRescheduleOpen] = useState(false);
     const [startDate, setStartDate] = useState(new Date());
     const [selectedDay, setSelectedDay] = useState<Date>(new Date());
@@ -37,6 +38,7 @@ const AppointmentDetails: React.FC = () => {
     const [selectedSlot, setSelectedSlot] = useState<any>(null);
     const [rescheduleSubmitting, setRescheduleSubmitting] = useState(false);
     const [reviewFormOpen, setReviewFormOpen] = useState(false);
+    const [prescriptionViewOpen, setPrescriptionViewOpen] = useState(false);
 
     const formatDate = (date: Date) => {
         return {
@@ -76,14 +78,14 @@ const AppointmentDetails: React.FC = () => {
 
     const formatTimeTo12h = (timeStr: string) => {
         if (!timeStr) return 'N/A';
-        
+
         return timeStr.split('-').map(part => {
             const [hours, minutes] = part.trim().split(':');
             let h = parseInt(hours);
             const m = minutes || '00';
             const ampm = h >= 12 ? 'PM' : 'AM';
             h = h % 12;
-            h = h ? h : 12; 
+            h = h ? h : 12;
             return `${h}:${m} ${ampm}`;
         }).join(' - ');
     };
@@ -276,7 +278,7 @@ const AppointmentDetails: React.FC = () => {
                 }
             } catch (fetchError) {
                 console.warn('Failed to refetch appointment, using local update:', fetchError);
-                
+
                 setAppointment((prev: any) => ({
                     ...prev,
                     status: 'cancelled',
@@ -286,7 +288,7 @@ const AppointmentDetails: React.FC = () => {
 
             setCancelOpen(false);
 
-        
+
             toast.success('Appointment cancelled successfully!');
         } catch (e: any) {
             console.error('Cancel error:', e);
@@ -329,7 +331,7 @@ const AppointmentDetails: React.FC = () => {
         try {
             const docObj = appointment.doctor || appointment.doctorId;
             const doctorId = docObj?._id || docObj?.id || (typeof docObj === 'string' ? docObj : null);
-            
+
             const appointmentId = appointment._id || appointment.id;
 
             if (!doctorId) {
@@ -359,10 +361,10 @@ const AppointmentDetails: React.FC = () => {
         if (!appointment) return;
 
         const doctorObj = appointment.doctorId || appointment.doctor || {};
-        
+
         const userObj = doctorObj.userId || doctorObj.user || {};
 
-        
+
         const videoFees = doctorObj.VideoFees || doctorObj.videoFees || appointment.consultationFees || 0;
         const chatFees = doctorObj.ChatFees || doctorObj.chatFees || appointment.consultationFees || 0;
 
@@ -374,7 +376,7 @@ const AppointmentDetails: React.FC = () => {
                 speciality: doctorObj.specialty || doctorObj.department || normalized.department,
                 videoFees,
                 chatFees,
-                fees: appointment.consultationFees 
+                fees: appointment.consultationFees
             },
             appointmentDate: appointment.appointmentDate,
             appointmentTime: appointment.appointmentTime,
@@ -493,7 +495,7 @@ const AppointmentDetails: React.FC = () => {
                                                         {normalized.department}
                                                     </div>
 
-                                                
+
                                                 </div>
                                             </div>
                                         </div>
@@ -694,24 +696,34 @@ const AppointmentDetails: React.FC = () => {
                                     </div>
                                     <div className="col-span-2 md:col-span-4 lg:col-span-1 flex items-end">
                                         {normalized.isUpcoming && normalized.status === 'confirmed' && (
-                                            <button
-                                                onClick={() => navigate(`/patient/${normalized.appointmentType === 'video' ? 'call' : 'chat'}/${appointment?._id || appointment?.id}`)}
-                                                disabled={!normalized.isSessionReady}
-                                                className={`w-full px-6 py-2.5 font-semibold rounded-lg transition-colors ${normalized.isSessionReady
-                                                    ? 'bg-[#00A1B0] hover:bg-[#008f9c] text-white cursor-pointer'
-                                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                    }`}
-                                            >
-                                                {normalized.isSessionReady ? 'Start Session' : 'Starts at ' + normalized.time.split(' - ')[0]}
-                                            </button>
+                                            normalized.isSessionReady ? (
+                                                <button
+                                                    onClick={() => navigate(`/patient/${normalized.appointmentType === 'video' ? 'call' : 'chat'}/${appointment?._id || appointment?.id}`)}
+                                                    className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors shadow-sm"
+                                                >
+                                                    Start Session
+                                                </button>
+                                            ) : (
+                                                <div className="w-full px-4 py-3 bg-gray-50 text-gray-500 font-medium rounded-xl border border-dashed border-gray-300 text-center text-sm">
+                                                    Starts at {normalized.time.split(' - ')[0]}
+                                                </div>
+                                            )
                                         )}
                                         {normalized.status === 'completed' && (
-                                            <button
-                                                onClick={() => setReviewFormOpen(true)}
-                                                className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-                                            >
-                                                <FaStar /> Rate Doctor
-                                            </button>
+                                            <div className="flex flex-col gap-2 w-full">
+                                                <button
+                                                    onClick={() => setReviewFormOpen(true)}
+                                                    className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                                                >
+                                                    <FaStar /> Rate Doctor
+                                                </button>
+                                                <button
+                                                    onClick={() => setPrescriptionViewOpen(true)}
+                                                    className="w-full px-3 py-2.5 bg-white border-2 border-[#00A1B0] text-[#00A1B0] hover:bg-[#00A1B0]/10 font-bold rounded-lg transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95 whitespace-nowrap text-sm"
+                                                >
+                                                    <FaStethoscope className="text-lg" /> View Prescription
+                                                </button>
+                                            </div>
                                         )}
                                         {/* Pending Payment Action */}
                                         {normalized.status === 'pending' && (appointment?.paymentStatus === 'pending' || appointment?.paymentStatus === 'failed') && (
@@ -933,11 +945,26 @@ const AppointmentDetails: React.FC = () => {
                 </div>
             )}
 
+            {/* Add "View Prescription" button here, for example, if it's part of the main appointment actions */}
+            {/* This is a placeholder. The actual placement depends on your UI/UX. */}
+            {/* For example, if an appointment has a prescription, you might show this button next to other appointment details. */}
+            {/* If the button is meant to be inside one of the modals, you'd place it there. */}
+            {/* For demonstration, let's assume it's a general action button for the appointment details page */}
+            {/* <Button onClick={() => setPrescriptionViewOpen(true)} className="mt-4">View Prescription</Button> */}
+
+
             <ReviewForm
                 isOpen={reviewFormOpen}
                 onClose={() => setReviewFormOpen(false)}
                 onSubmit={handleReviewSubmit}
                 title="Rate Your Experience"
+            />
+
+            {/* Prescription View Modal */}
+            <PrescriptionViewModal
+                isOpen={prescriptionViewOpen}
+                onClose={() => setPrescriptionViewOpen(false)}
+                appointmentId={appointment?._id || appointment?.id || id}
             />
 
         </div>

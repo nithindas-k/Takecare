@@ -34,9 +34,21 @@ const NavBar: React.FC = () => {
   return (
     <nav className="w-full bg-[#00A1B0] shadow-md relative">
       <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">
-        <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/')}>
-          <img src="/doctor.png" alt="TakeCare Logo" className="h-7 w-auto mr-2" />
-          <span className="text-white font-extrabold text-xl tracking-wide">TAKECARE</span>
+        <div
+          className="flex flex-col cursor-pointer group select-none transition-all duration-300 transform group-hover:scale-[1.02]"
+          onClick={() => navigate('/')}
+        >
+          <div className="flex items-baseline leading-none">
+            <span className="text-2xl font-bold text-[#0f172a] tracking-tight transition-colors duration-300">
+              Take
+            </span>
+            <span className="text-2xl font-bold text-white tracking-tight transition-all duration-300 group-hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.4)]">
+              Care
+            </span>
+          </div>
+          <span className="text-[9px] font-medium text-white/70 tracking-[0.2em] uppercase mt-0.5 ml-0.5 transition-all duration-300 group-hover:text-white group-hover:tracking-[0.22em]">
+            Healthcare Platform
+          </span>
         </div>
 
         {/* Desktop Links */}
@@ -57,7 +69,7 @@ const NavBar: React.FC = () => {
             <>
               <button
                 onClick={() => navigate('/login')}
-                className="hidden md:block px-6 py-2 bg-white text-[#00A1B0] rounded-full font-semibold shadow hover:bg-[#00A1B0]/10 transition"
+                className="hidden md:block px-6 py-2 bg-white text-[#00A1B0] rounded-full font-semibold shadow hover:bg-gray-100 transition"
               >
                 LOGIN
               </button>
@@ -92,7 +104,7 @@ const NavBar: React.FC = () => {
               <div className="relative">
                 <button
                   onClick={() => setShowLogoutMenu(!showLogoutMenu)}
-                  className="w-9 h-9 bg-white text-[#00A1B0] rounded-full flex items-center justify-center hover:bg-[#00A1B0]/10 transition-colors"
+                  className="w-9 h-9 bg-white text-[#00A1B0] rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors"
                   title="Profile Menu"
                 >
                   <User size={18} />
@@ -163,7 +175,7 @@ const NavBar: React.FC = () => {
                 navigate('/login');
                 setIsMobileMenuOpen(false);
               }}
-              className="w-full px-6 py-2 bg-white text-[#00A1B0] rounded-full font-semibold shadow hover:bg-[#00A1B0]/10 transition text-center"
+              className="w-full px-6 py-2 bg-white text-[#00A1B0] rounded-full font-semibold shadow hover:bg-gray-100 transition text-center"
             >
               LOGIN
             </button>

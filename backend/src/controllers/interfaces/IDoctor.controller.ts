@@ -8,4 +8,5 @@ export interface IDoctorController {
     getVerifiedDoctors: (req: Request, res: Response, next: NextFunction) => Promise<void>;
     getDoctorById: (req: Request, res: Response, next: NextFunction) => Promise<void>;
     getRelatedDocs: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+    getDashboardStats: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }

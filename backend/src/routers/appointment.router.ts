@@ -139,4 +139,10 @@ appointmentRouter.put(
     appointmentController.disablePostConsultationChat
 );
 
+appointmentRouter.put(
+    APPOINTMENT_ROUTES.UPDATE_NOTES,
+    authMiddleware,
+    appointmentController.updateDoctorNotes
+);
+
 export default appointmentRouter;
