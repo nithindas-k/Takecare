@@ -16,7 +16,7 @@ class SocketService {
         });
 
         this.io.on("connection", (socket: Socket) => {
-            // WebRTC Signaling Events
+            // WebRTC  Events
             socket.on("call-user", ({ userToCall, signalData, from, name }) => {
                 this.io?.to(userToCall).emit("call-user", { signal: signalData, from, name });
             });

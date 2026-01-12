@@ -3,6 +3,7 @@ import Sidebar from "../../components/admin/Sidebar";
 import TopNav from "../../components/admin/TopNav";
 import { DollarSign, TrendingUp, Users, Calendar, Download, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { walletService } from '../../services/walletService';
+import { Skeleton } from '../../components/ui/skeleton';
 
 interface TransactionReport {
     _id: string;
@@ -19,8 +20,21 @@ interface TransactionReport {
     };
 }
 
+interface EarningsStats {
+    revenue: number;
+    commission: number;
+    users: number;
+    bookings: number;
+    trends: {
+        revenue: string;
+        commission: string;
+        users: string;
+        bookings: string;
+    };
+}
+
 const AdminEarnings: React.FC = () => {
-    const [stats, setStats] = useState<any>(null);
+    const [stats, setStats] = useState<EarningsStats | null>(null);
     const [transactions, setTransactions] = useState<TransactionReport[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState('');
@@ -122,12 +136,16 @@ const AdminEarnings: React.FC = () => {
                                         <div className={`w-10 h-10 ${s.bg} ${s.color} rounded-xl flex items-center justify-center`}>
                                             {s.icon}
                                         </div>
-                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border ${s.trend.startsWith('+') ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
-                                            {s.trend}
-                                        </span>
+                                        {loading && !stats ? <Skeleton className="h-5 w-12" /> : (
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border ${s.trend.startsWith('+') ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
+                                                {s.trend}
+                                            </span>
+                                        )}
                                     </div>
                                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">{s.label}</p>
-                                    <h2 className="text-xl font-bold text-gray-900 mt-2 tracking-tight">{loading && !stats ? "..." : s.value}</h2>
+                                    <div className="mt-2">
+                                        {loading && !stats ? <Skeleton className="h-7 w-24" /> : <h2 className="text-xl font-bold text-gray-900 tracking-tight">{s.value}</h2>}
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -150,7 +168,15 @@ const AdminEarnings: React.FC = () => {
                                     </thead>
                                     <tbody className="divide-y divide-gray-50">
                                         {loading ? (
-                                            <tr><td colSpan={5} className="px-8 py-10 text-center text-gray-500 text-sm italic">Loading commission data...</td></tr>
+                                            Array.from({ length: 5 }).map((_, i) => (
+                                                <tr key={i}>
+                                                    <td className="px-8 py-5"><Skeleton className="h-4 w-20" /></td>
+                                                    <td className="px-8 py-5"><div className="space-y-1.5"><Skeleton className="h-4 w-48" /><Skeleton className="h-3 w-32" /></div></td>
+                                                    <td className="px-8 py-5"><Skeleton className="h-4 w-24" /></td>
+                                                    <td className="px-8 py-5 text-right"><Skeleton className="h-4 w-16 ml-auto" /></td>
+                                                    <td className="px-8 py-5 text-center"><Skeleton className="h-6 w-16 rounded-full mx-auto" /></td>
+                                                </tr>
+                                            ))
                                         ) : transactions.length === 0 ? (
                                             <tr><td colSpan={5} className="px-8 py-10 text-center text-gray-500 text-sm italic">No commissions recorded for the selected criteria.</td></tr>
                                         ) : (
@@ -187,7 +213,6 @@ const AdminEarnings: React.FC = () => {
                                 </table>
                             </div>
 
-                            {/* Pagination Controls */}
                             {totalPages > 1 && (
                                 <div className="px-8 py-5 border-t border-gray-50 bg-gray-50/20 flex items-center justify-between">
                                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">

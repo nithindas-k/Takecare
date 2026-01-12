@@ -1,23 +1,45 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FaBell, FaCircle } from 'react-icons/fa';
 import { useSocket } from '../../context/SocketContext';
 import { notificationService } from '../../services/notificationService';
 import { formatDistanceToNow } from 'date-fns';
 import AlertDialog from './AlertDialog';
 
-const NotificationDropdown: React.FC = () => {
+interface Notification {
+    _id: string;
+    message: string;
+    createdAt: string;
+    isRead: boolean;
+    type: string;
+    title: string;
+}
+
+interface NotificationDropdownProps {
+    color?: string;
+}
+
+const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ color = 'text-white' }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [notifications, setNotifications] = useState<any[]>([]);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const { socket } = useSocket();
 
-    useEffect(() => {
-        fetchNotifications();
+    const fetchNotifications = useCallback(async () => {
+        try {
+            const data = await notificationService.getNotifications();
+            setNotifications(data);
+        } catch (error) {
+            console.error('Failed to fetch notifications:', error);
+        }
     }, []);
 
     useEffect(() => {
+        fetchNotifications();
+    }, [fetchNotifications]);
+
+    useEffect(() => {
         if (socket) {
-            const handleNotification = (notification: any) => {
+            const handleNotification = (notification: Notification) => {
                 setNotifications((prev) => [notification, ...prev]);
             };
 
@@ -34,15 +56,6 @@ const NotificationDropdown: React.FC = () => {
             };
         }
     }, [socket]);
-
-    const fetchNotifications = async () => {
-        try {
-            const data = await notificationService.getNotifications();
-            setNotifications(data);
-        } catch (error) {
-            console.error('Failed to fetch notifications:', error);
-        }
-    };
 
     const markAllAsRead = async () => {
         try {
@@ -77,7 +90,7 @@ const NotificationDropdown: React.FC = () => {
         }
     };
 
-    const handleNotificationClick = async (notif: any) => {
+    const handleNotificationClick = async (notif: Notification) => {
         if (!notif.isRead) {
             try {
                 await notificationService.markAsRead(notif._id);
@@ -94,7 +107,7 @@ const NotificationDropdown: React.FC = () => {
         <div className="relative">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="relative p-2.5 text-white hover:bg-white/10 rounded-full transition-all duration-300 active:scale-95"
+                className={`relative p-2.5 ${color} ${color.includes('white') ? 'hover:bg-white/10' : 'hover:bg-slate-50'} rounded-full transition-all duration-300 active:scale-95`}
             >
                 <FaBell size={20} className={unreadCount > 0 ? "animate-pulse" : ""} />
                 {unreadCount > 0 && (

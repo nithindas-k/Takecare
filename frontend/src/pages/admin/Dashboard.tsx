@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import Sidebar from "../../components/admin/Sidebar";
 import TopNav from "../../components/admin/TopNav";
@@ -35,6 +36,7 @@ import { subDays, startOfDay, endOfDay } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { DatePicker } from "../../components/ui/date-picker";
 import { Button } from "../../components/ui/button";
+import { Skeleton } from "../../components/ui/skeleton";
 
 const statusChartConfig = {
   appointments: {
@@ -51,6 +53,10 @@ const statusChartConfig = {
   pending: {
     label: "Pending",
     color: "#F59E0B",
+  },
+  confirmed: {
+    label: "Confirmed",
+    color: "#6366F1",
   },
 } satisfies ChartConfig;
 
@@ -81,29 +87,12 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        console.log('🔍 Fetching stats with date range:', {
-          from: dateRange?.from?.toISOString(),
-          to: dateRange?.to?.toISOString()
-        });
-
         const startDate = dateRange?.from?.toISOString();
         const endDate = dateRange?.to?.toISOString();
         const response = await adminService.getDashboardStats(startDate, endDate);
 
-        console.log('📊 Dashboard stats response:', response);
-
         if (response && response.success && response.data) {
-          console.log('📊 Complete stats data:', {
-            totalAppointments: response.data.totalAppointments,
-            totalRevenue: response.data.totalRevenue,
-            statusDistribution: response.data.statusDistribution,
-            revenueGraph: response.data.revenueGraph?.length,
-            topDoctors: response.data.topDoctors?.length
-          });
           setStats(response.data);
-          console.log('✅ Stats updated successfully');
-        } else {
-          console.warn('⚠️ No data received from API');
         }
       } catch (error) {
         console.error("❌ Error fetching stats:", error);
@@ -116,11 +105,15 @@ const Dashboard = () => {
     fetchStats();
   }, [dateRange]);
 
-  const statusData = stats ? [
-    { name: "Completed", value: stats.statusDistribution.completed, fill: "#00A1B0" },
-    { name: "Cancelled", value: stats.statusDistribution.cancelled, fill: "#F43F5E" },
-    { name: "Pending", value: stats.statusDistribution.pending, fill: "#F59E0B" },
-  ] : [];
+  const statusData = useMemo(() => {
+    if (!stats) return [];
+    return [
+      { name: "Completed", value: stats.statusDistribution.completed, fill: "#00A1B0" },
+      { name: "Confirmed", value: stats.statusDistribution.confirmed, fill: "#6366F1" },
+      { name: "Pending", value: stats.statusDistribution.pending, fill: "#F59E0B" },
+      { name: "Cancelled", value: stats.statusDistribution.cancelled, fill: "#F43F5E" },
+    ];
+  }, [stats]);
 
   const totalAppointments = useMemo(() => {
     return statusData.reduce((acc, curr) => acc + curr.value, 0);
@@ -145,17 +138,55 @@ const Dashboard = () => {
   ] : [];
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50">Loading...</div>;
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <div className="hidden lg:block w-64 fixed inset-y-0 left-0 z-50"><Sidebar /></div>
+        <div className="flex-1 flex flex-col lg:pl-64 min-w-0">
+          <TopNav onMenuClick={() => setSidebarOpen(true)} />
+          <main className="flex-1 px-8 py-6">
+            <div className="w-full max-w-7xl mx-auto space-y-8">
+              <Skeleton className="h-40 w-full rounded-lg" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="bg-white rounded-xl shadow-sm p-6 flex items-center gap-4 border border-gray-100">
+                    <Skeleton className="w-14 h-14 rounded-xl" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-8 w-20" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6 border border-gray-100 space-y-6">
+                  <div className="flex justify-between">
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-10 w-32" />
+                  </div>
+                  <Skeleton className="h-[400px] w-full rounded-xl" />
+                </div>
+                <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 space-y-6">
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-64 w-64 rounded-full mx-auto" />
+                  <div className="space-y-4">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="flex min-h-screen bg-gray-50 no-scrollbar">
-      {/* Sidebar - Desktop */}
       <div className="hidden lg:block w-64 fixed inset-y-0 left-0 z-50">
         <Sidebar />
       </div>
 
-      {/* Sidebar - Mobile Overlay */}
       <AnimatePresence>
         {sidebarOpen && (
           <div className="fixed inset-0 z-[60] lg:hidden">
@@ -183,13 +214,11 @@ const Dashboard = () => {
         <TopNav onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-5 md:py-6">
           <div className="w-full max-w-7xl mx-auto">
-            {/* Header */}
             <div className="bg-primary/10 rounded-lg py-6 sm:py-8 md:py-10 mb-6 text-center">
               <h1 className="text-2xl sm:text-3xl font-bold text-primary">Admin Dashboard</h1>
               <p className="text-gray-500 mt-2">Overview of platform performance</p>
             </div>
 
-            {/* Global Date Filters */}
             <div className="bg-white rounded-xl shadow-sm p-4 mb-6 border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
               <div className="flex flex-col gap-1">
                 <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Global Statistics Filter</h2>
@@ -197,63 +226,25 @@ const Dashboard = () => {
               </div>
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <div className="flex p-1 bg-gray-50 rounded-lg border">
-                  <Button
-                    size="sm"
-                    variant={!dateRange ? "default" : "ghost"}
-                    onClick={() => setDateRange(undefined)}
-                    className="text-[10px] h-7 px-3 rounded-md"
-                  >
-                    Overall
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={dateRange?.from?.toDateString() === new Date().toDateString() ? "default" : "ghost"}
-                    onClick={() => setDateRange({ from: startOfDay(new Date()), to: endOfDay(new Date()) })}
-                    className="text-[10px] h-7 px-3 rounded-md"
-                  >
-                    Today
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={dateRange?.from?.toDateString() === subDays(new Date(), 7).toDateString() ? "default" : "ghost"}
-                    onClick={() => setDateRange({ from: subDays(new Date(), 7), to: new Date() })}
-                    className="text-[10px] h-7 px-3 rounded-md"
-                  >
-                    7 Days
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={dateRange?.from?.toDateString() === subDays(new Date(), 30).toDateString() ? "default" : "ghost"}
-                    onClick={() => setDateRange({ from: subDays(new Date(), 30), to: new Date() })}
-                    className="text-[10px] h-7 px-3 rounded-md"
-                  >
-                    30 Days
-                  </Button>
+                  <Button size="sm" variant={!dateRange ? "default" : "ghost"} onClick={() => setDateRange(undefined)} className="text-[10px] h-7 px-3 rounded-md">Overall</Button>
+                  <Button size="sm" variant={dateRange?.from?.toDateString() === new Date().toDateString() ? "default" : "ghost"} onClick={() => setDateRange({ from: startOfDay(new Date()), to: endOfDay(new Date()) })} className="text-[10px] h-7 px-3 rounded-md">Today</Button>
+                  <Button size="sm" variant={dateRange?.from?.toDateString() === subDays(new Date(), 7).toDateString() ? "default" : "ghost"} onClick={() => setDateRange({ from: subDays(new Date(), 7), to: new Date() })} className="text-[10px] h-7 px-3 rounded-md">7 Days</Button>
+                  <Button size="sm" variant={dateRange?.from?.toDateString() === subDays(new Date(), 30).toDateString() ? "default" : "ghost"} onClick={() => setDateRange({ from: subDays(new Date(), 30), to: new Date() })} className="text-[10px] h-7 px-3 rounded-md">30 Days</Button>
                 </div>
-
                 <div className="flex items-center gap-2 bg-white rounded-lg border px-3 py-1 shadow-sm">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] text-gray-400 font-bold uppercase">From</span>
-                    <DatePicker
-                      date={dateRange?.from}
-                      setDate={(d) => setDateRange(prev => ({ from: d, to: prev?.to }))}
-                      className="w-[125px] h-7 text-[10px] border-none bg-transparent shadow-none"
-                    />
+                    <DatePicker date={dateRange?.from} setDate={(d) => setDateRange(prev => ({ from: d, to: prev?.to }))} className="w-[125px] h-7 text-[10px] border-none bg-transparent shadow-none" />
                   </div>
                   <div className="w-px h-4 bg-gray-200 mx-1" />
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] text-gray-400 font-bold uppercase">To</span>
-                    <DatePicker
-                      date={dateRange?.to}
-                      setDate={(d) => setDateRange(prev => ({ from: prev?.from, to: d }))}
-                      className="w-[125px] h-7 text-[10px] border-none bg-transparent shadow-none"
-                    />
+                    <DatePicker date={dateRange?.to} setDate={(d) => setDateRange(prev => ({ from: prev?.from, to: d }))} className="w-[125px] h-7 text-[10px] border-none bg-transparent shadow-none" />
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Stat Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
               {statCards.map((card, idx) => (
                 <div key={idx} className="bg-white rounded-xl shadow-sm p-6 flex items-center gap-4 border border-gray-100 hover:shadow-md transition-shadow">
@@ -266,9 +257,7 @@ const Dashboard = () => {
               ))}
             </div>
 
-            {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              {/* Revenue Bar Chart */}
               <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6 border border-gray-100">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-lg font-semibold text-gray-800">Revenue Overview</h3>
@@ -280,40 +269,15 @@ const Dashboard = () => {
                 <div className="h-[480px] bg-white">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                      <XAxis
-                        dataKey="date"
-                        stroke="#9CA3AF"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={{ stroke: '#E5E7EB' }}
-                      />
-                      <YAxis
-                        stroke="#9CA3AF"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={{ stroke: '#E5E7EB' }}
-                      />
-                      <RechartsTooltip
-                        contentStyle={{
-                          backgroundColor: 'white',
-                          border: '1px solid #E5E7EB',
-                          borderRadius: '8px',
-                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                        }}
-                        cursor={{ fill: 'rgba(0, 161, 176, 0.1)' }}
-                      />
-                      <Bar
-                        dataKey="revenue"
-                        fill="#00A1B0"
-                        radius={[8, 8, 0, 0]}
-                        barSize={48}
-                      />
+                      <XAxis dataKey="date" stroke="#9CA3AF" fontSize={12} tickLine={false} axisLine={{ stroke: '#E5E7EB' }} />
+                      <YAxis stroke="#9CA3AF" fontSize={12} tickLine={false} axisLine={{ stroke: '#E5E7EB' }} />
+                      <RechartsTooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} cursor={{ fill: 'rgba(0, 161, 176, 0.1)' }} />
+                      <Bar dataKey="revenue" fill="#00A1B0" radius={[8, 8, 0, 0]} barSize={48} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              {/* Interactive Pie Chart */}
               <Card data-chart="status-pie" className="flex flex-col shadow-sm border-gray-100">
                 <ChartStyle id="status-pie" config={statusChartConfig} />
                 <CardHeader className="flex-row items-start space-y-0 pb-0">
@@ -322,26 +286,16 @@ const Dashboard = () => {
                     <CardDescription className="text-xs text-gray-500">Distribution for selected period</CardDescription>
                   </div>
                   <Select value={activeStatus} onValueChange={setActiveStatus}>
-                    <SelectTrigger
-                      className="ml-auto h-7 w-[130px] rounded-lg pl-2.5 text-xs"
-                      aria-label="Select status"
-                    >
+                    <SelectTrigger className="ml-auto h-7 w-[130px] rounded-lg pl-2.5 text-xs" aria-label="Select status">
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent align="end" className="rounded-xl">
                       {statusData.map((item) => {
                         const key = item.name.toLowerCase();
                         return (
-                          <SelectItem
-                            key={key}
-                            value={key}
-                            className="rounded-lg [&_span]:flex"
-                          >
+                          <SelectItem key={key} value={key} className="rounded-lg [&_span]:flex">
                             <div className="flex items-center gap-2 text-xs">
-                              <span
-                                className="flex h-3 w-3 shrink-0 rounded-sm"
-                                style={{ backgroundColor: item.fill }}
-                              />
+                              <span className="flex h-3 w-3 shrink-0 rounded-sm" style={{ backgroundColor: item.fill }} />
                               {item.name}
                             </div>
                           </SelectItem>
@@ -351,16 +305,9 @@ const Dashboard = () => {
                   </Select>
                 </CardHeader>
                 <CardContent className="flex flex-1 justify-center pb-0">
-                  <ChartContainer
-                    id="status-pie"
-                    config={statusChartConfig}
-                    className="mx-auto aspect-square w-full max-w-[300px]"
-                  >
+                  <ChartContainer id="status-pie" config={statusChartConfig} className="mx-auto aspect-square w-full max-w-[300px]">
                     <PieChart>
-                      <ChartTooltip
-                        cursor={false}
-                        content={<ChartTooltipContent hideLabel />}
-                      />
+                      <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
                       <Pie
                         data={statusData}
                         dataKey="value"
@@ -373,11 +320,7 @@ const Dashboard = () => {
                           return (
                             <g>
                               <Sector {...rest} outerRadius={outerRadius + 10} />
-                              <Sector
-                                {...rest}
-                                outerRadius={outerRadius + 25}
-                                innerRadius={outerRadius + 12}
-                              />
+                              <Sector {...rest} outerRadius={outerRadius + 25} innerRadius={outerRadius + 12} />
                             </g>
                           )
                         }}
@@ -386,26 +329,9 @@ const Dashboard = () => {
                           content={({ viewBox }) => {
                             if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                               return (
-                                <text
-                                  x={viewBox.cx}
-                                  y={viewBox.cy}
-                                  textAnchor="middle"
-                                  dominantBaseline="middle"
-                                >
-                                  <tspan
-                                    x={viewBox.cx}
-                                    y={viewBox.cy}
-                                    className="fill-foreground text-3xl font-bold"
-                                  >
-                                    {statusData[activeIndex]?.value.toLocaleString() || 0}
-                                  </tspan>
-                                  <tspan
-                                    x={viewBox.cx}
-                                    y={(viewBox.cy || 0) + 24}
-                                    className="fill-muted-foreground text-xs"
-                                  >
-                                    {statusData[activeIndex]?.name}
-                                  </tspan>
+                                <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
+                                  <tspan x={viewBox.cx} y={viewBox.cy} className="fill-foreground text-3xl font-bold">{statusData[activeIndex]?.value.toLocaleString() || 0}</tspan>
+                                  <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 24} className="fill-muted-foreground text-xs">{statusData[activeIndex]?.name}</tspan>
                                 </text>
                               )
                             }
@@ -416,45 +342,48 @@ const Dashboard = () => {
                   </ChartContainer>
                 </CardContent>
 
-                {/* Color Legend */}
                 <div className="px-6 pb-4 pt-2">
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 gap-3 mb-3">
                     <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-cyan-50/50 border border-cyan-100">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-[#00A1B0]"></div>
                         <span className="text-xs font-medium text-gray-700">Completed</span>
                       </div>
-                      <span className="text-lg font-bold text-cyan-600">{statusData.find(s => s.name === "Completed")?.value || 0}</span>
+                      <span className="text-lg font-bold text-cyan-600">{stats?.statusDistribution.completed || 0}</span>
                     </div>
+                    <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-indigo-50/50 border border-indigo-100">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-[#6366F1]"></div>
+                        <span className="text-xs font-medium text-gray-700">Confirmed</span>
+                      </div>
+                      <span className="text-lg font-bold text-indigo-600">{stats?.statusDistribution.confirmed || 0}</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-amber-50/50 border border-amber-100">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-[#F59E0B]"></div>
                         <span className="text-xs font-medium text-gray-700">Pending</span>
                       </div>
-                      <span className="text-lg font-bold text-amber-600">{statusData.find(s => s.name === "Pending")?.value || 0}</span>
+                      <span className="text-lg font-bold text-amber-600">{stats?.statusDistribution.pending || 0}</span>
                     </div>
                     <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-rose-50/50 border border-rose-100">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-[#F43F5E]"></div>
                         <span className="text-xs font-medium text-gray-700">Cancelled</span>
                       </div>
-                      <span className="text-lg font-bold text-rose-600">{statusData.find(s => s.name === "Cancelled")?.value || 0}</span>
+                      <span className="text-lg font-bold text-rose-600">{stats?.statusDistribution.cancelled || 0}</span>
                     </div>
                   </div>
                 </div>
 
                 <CardFooter className="flex-col gap-2 text-sm pt-0">
-                  <div className="flex items-center gap-2 leading-none font-medium text-gray-900">
-                    {completedPercentage}% completion rate <TrendingUp className="h-4 w-4 text-cyan-600" />
-                  </div>
-                  <div className="text-gray-500 leading-none text-xs">
-                    Total {totalAppointments} appointments in selected range
-                  </div>
+                  <div className="flex items-center gap-2 leading-none font-medium text-gray-900">{completedPercentage}% completion rate <TrendingUp className="h-4 w-4 text-cyan-600" /></div>
+                  <div className="text-gray-500 leading-none text-xs">Total {totalAppointments} appointments in selected range</div>
                 </CardFooter>
               </Card>
             </div>
 
-            {/* Top Doctors Table */}
             <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
               <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
                 <h3 className="text-lg font-semibold text-gray-800">Top Performing Doctors</h3>
@@ -493,3 +422,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+

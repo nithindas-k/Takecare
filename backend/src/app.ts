@@ -122,7 +122,8 @@ const scheduleRepository = new ScheduleRepository();
 const appointmentReminderService = new AppointmentReminderService(
   appointmentRepository,
   scheduleRepository,
-  notificationService
+  notificationService,
+  new LoggerService("AppointmentReminderService")
 );
 appointmentReminderService.start();
 

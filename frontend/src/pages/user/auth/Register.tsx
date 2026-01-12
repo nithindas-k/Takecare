@@ -6,7 +6,7 @@ import authService from "../../../services/authService";
 import type { RegisterRequest } from "../../../types";
 
 // Extend RegisterRequest for form (same fields)
-interface FormData extends RegisterRequest { }
+
 
 interface FormErrors {
   name?: string;
@@ -30,7 +30,7 @@ const PHONE_REGEX = /^[0-9]{10}$/;
 const PatientRegister: React.FC = () => {
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<RegisterRequest>({
     name: "",
     email: "",
     phone: "",
@@ -198,7 +198,8 @@ const PatientRegister: React.FC = () => {
       } else {
         setServerError(response.message || "Registration failed");
       }
-    } catch (err: any) {
+    } catch (e: unknown) {
+      const err = e as { message?: string };
       console.error("Registration error:", err);
       setServerError(err.message || "An error occurred. Please try again later.");
     } finally {

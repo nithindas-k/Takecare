@@ -21,11 +21,16 @@ import { notificationService } from "./notification.router";
 
 const walletService = new WalletService(walletRepository, null, null, null, notificationService);
 
+import { LoggerService } from "../services/logger.service";
+
+const paymentServiceLogger = new LoggerService("PaymentService");
+
 const paymentService = new PaymentService(
     appointmentRepository,
     doctorRepository,
     userRepository,
     walletService,
+    paymentServiceLogger,
     notificationService
 );
 const paymentController = new PaymentController(paymentService);
@@ -39,7 +44,7 @@ paymentRouter.post(
 );
 
 paymentRouter.post(
-    PAYMENT_ROUTES.RAZORPAY_VERIFY, 
+    PAYMENT_ROUTES.RAZORPAY_VERIFY,
     authMiddleware,
     checkUserBlocked,
     requirePatient,

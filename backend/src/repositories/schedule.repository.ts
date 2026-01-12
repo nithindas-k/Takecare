@@ -90,55 +90,46 @@ export class ScheduleRepository
         doctorId: string | Types.ObjectId,
         slotId: string,
         isBooked: boolean,
-        appointmentDate?: Date,
-        startTime?: string,
+        _appointmentDate?: Date,
+        _startTime?: string,
         session?: any
     ): Promise<boolean> {
-        try {
-            const id = typeof doctorId === "string" ? new Types.ObjectId(doctorId) : doctorId;
+        const id = typeof doctorId === "string" ? new Types.ObjectId(doctorId) : doctorId;
 
-            // 1. Strict Atomic Update using slotId
-            // We ensure that we only match the document if the specific slot matches our criteria.
-            const query: any = { doctorId: id };
+      
+        const query: any = { doctorId: id };
 
-            if (isBooked) {
-                // LOCKING: Ensure the slot is NOT already booked
-                query.weeklySchedule = {
-                    $elemMatch: {
-                        slots: {
-                            $elemMatch: {
-                                customId: slotId,
-                                booked: { $ne: true } // Atomic check: only match if NOT booked
-                            }
+        if (isBooked) {
+            
+            query.weeklySchedule = {
+                $elemMatch: {
+                    slots: {
+                        $elemMatch: {
+                            customId: slotId,
+                            booked: { $ne: true } 
                         }
                     }
-                };
-            } else {
-                // UNLOCKING: Just find the slot
-                query["weeklySchedule.slots.customId"] = slotId;
-            }
-
-            const result = await this.model.updateOne(
-                query,
-                { $set: { "weeklySchedule.$[day].slots.$[slot].booked": isBooked } },
-                {
-                    arrayFilters: [
-                        { "day.slots.customId": slotId },
-                        { "slot.customId": slotId }
-                    ],
-                    session
                 }
-            );
-
-            // If we successfully modified a document, it means:
-            // 1. The document exists
-            // 2. The slot was found
-            // 3. The 'booked' condition was met (i.e., it was false if we are booking)
-            // 4. The update was applied
-            return result.modifiedCount > 0;
-        } catch (error) {
-            throw error;
+            };
+        } else {
+        
+            query["weeklySchedule.slots.customId"] = slotId;
         }
+
+        const result = await this.model.updateOne(
+            query,
+            { $set: { "weeklySchedule.$[day].slots.$[slot].booked": isBooked } },
+            {
+                arrayFilters: [
+                    { "day.slots.customId": slotId },
+                    { "slot.customId": slotId }
+                ],
+                session
+            }
+        );
+
+      
+        return result.modifiedCount > 0;
     }
 
     async existsByDoctorId(doctorId: string | Types.ObjectId, session?: any): Promise<boolean> {

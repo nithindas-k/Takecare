@@ -8,7 +8,7 @@ const OTP_LENGTH = 6;
 const PatientForgotPasswordOTP: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const email = (location.state as any)?.email || "";
+  const email = (location.state as { email?: string })?.email || "";
 
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [errors, setErrors] = useState<{ otp?: string }>({});
@@ -94,7 +94,8 @@ const PatientForgotPasswordOTP: React.FC = () => {
         } else {
           setServerError(response.message || "OTP verification failed");
         }
-      } catch (err: any) {
+      } catch (e: unknown) {
+        const err = e as { message?: string };
         setServerError(err.message || "Invalid OTP. Please try again.");
       } finally {
         setSubmitting(false);
@@ -112,7 +113,8 @@ const PatientForgotPasswordOTP: React.FC = () => {
       if (!response.success) {
         setServerError(response.message || "Failed to resend OTP");
       }
-    } catch (err: any) {
+    } catch (e: unknown) {
+      const err = e as { message?: string };
       setServerError(err.message || "Failed to resend OTP");
     }
   }, [email]);

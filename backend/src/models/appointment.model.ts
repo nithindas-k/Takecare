@@ -141,11 +141,22 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
         },
 
 
-        doctorNotes: {
-            type: String,
-            default: null,
-            trim: true,
-        },
+        doctorNotes: [
+            {
+                id: { type: String, required: true },
+                title: { type: String, required: true },
+                description: { type: String, required: false, default: '' },
+                category: {
+                    type: String,
+                    enum: ['observation', 'diagnosis', 'medicine', 'lab_test'],
+                    default: 'observation'
+                },
+                dosage: { type: String, default: null },
+                frequency: { type: String, default: null },
+                duration: { type: String, default: null },
+                createdAt: { type: Date, default: Date.now },
+            },
+        ],
 
 
         prescriptionUrl: {
@@ -154,7 +165,7 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
         },
         sessionStatus: {
             type: String,
-            enum: ["idle", "ACTIVE", "WAITING_FOR_DOCTOR", "CONTINUED_BY_DOCTOR", "ENDED"],
+            enum: ["idle", "ACTIVE", "WAITING_FOR_DOCTOR", "CONTINUED_BY_DOCTOR", "ENDED", "TEST_NEEDED"],
             default: "idle",
         },
         extensionCount: {
@@ -162,6 +173,14 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
             default: 0,
         },
         reminderSent: {
+            type: Boolean,
+            default: false,
+        },
+        startNotificationSent: {
+            type: Boolean,
+            default: false,
+        },
+        TEST_NEEDED: {
             type: Boolean,
             default: false,
         },

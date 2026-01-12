@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FaCheckCircle, FaArrowLeft } from 'react-icons/fa';
 import NavBar from '../../components/common/NavBar';
 import Footer from '../../components/common/Footer';
 import doctorService from '../../services/doctorService';
 import { toast } from 'sonner';
+import type { DoctorResponseDTO } from '../../types/doctor.types';
 
 interface AvailableSlot {
     startTime: string;
@@ -29,33 +30,22 @@ const BookingPage: React.FC = () => {
     const [selectedDay, setSelectedDay] = useState<Date | null>(new Date());
     const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
     const [loading, setLoading] = useState(false);
-    const [doctor, setDoctor] = useState<any>(null);
+    const [doctor, setDoctor] = useState<DoctorResponseDTO | null>(null);
 
-    useEffect(() => {
-        if (doctorId) {
-            fetchDoctorDetails();
-        }
-    }, [doctorId]);
-
-    useEffect(() => {
-        if (doctorId && selectedDay) {
-            fetchAvailableSlots();
-        }
-    }, [doctorId, selectedDay]);
-
-    const fetchDoctorDetails = async () => {
+    const fetchDoctorDetails = useCallback(async () => {
         if (!doctorId) return;
         try {
             const response = await doctorService.getDoctorById(doctorId);
             if (response && response.success && response.data) {
                 setDoctor(response.data);
             }
-        } catch (error) {
+        } catch (e: unknown) {
+            const error = e as { message?: string };
             console.error('Failed to fetch doctor details', error);
         }
-    };
+    }, [doctorId]);
 
-    const fetchAvailableSlots = async () => {
+    const fetchAvailableSlots = useCallback(async () => {
         if (!doctorId || !selectedDay) return;
         setLoading(true);
         try {
@@ -66,7 +56,7 @@ const BookingPage: React.FC = () => {
             const response = await doctorService.getAvailableSlots(doctorId, dateStr);
             if (response && response.success && response.data) {
                 let normalizedSlots: AvailableSlot[] = Array.isArray(response.data)
-                    ? response.data.map((slot: any) => ({
+                    ? response.data.map((slot: AvailableSlot) => ({
                         startTime: slot.startTime,
                         endTime: slot.endTime,
                         available: typeof slot.available === 'boolean'
@@ -75,7 +65,8 @@ const BookingPage: React.FC = () => {
                         isAvailable: slot.isAvailable,
                         bookedCount: slot.bookedCount || 0,
                         maxPatients: slot.maxPatients || 1,
-                        slotId: slot.slotId || slot.customId || slot._id || slot.id || `${slot.startTime}-${slot.endTime}`,
+                        slotId: slot.slotId || (slot as any).customId || (slot as any)._id || (slot as any).id || `${slot.startTime}-${slot.endTime}`,
+                        booked: slot.booked
                     }))
                     : [];
 
@@ -95,14 +86,29 @@ const BookingPage: React.FC = () => {
             } else {
                 setAvailableSlots([]);
             }
-        } catch (error) {
+        } catch (e: unknown) {
+            const error = e as { message?: string };
             console.error('Failed to fetch available slots', error);
             setAvailableSlots([]);
-            toast.error('Failed to load available slots');
+            toast.error(error.message || 'Failed to load available slots');
         } finally {
             setLoading(false);
         }
-    };
+    }, [doctorId, selectedDay]);
+
+    useEffect(() => {
+        if (doctorId) {
+            fetchDoctorDetails();
+        }
+    }, [doctorId, fetchDoctorDetails]);
+
+    useEffect(() => {
+        if (doctorId && selectedDay) {
+            fetchAvailableSlots();
+        }
+    }, [doctorId, selectedDay, fetchAvailableSlots]);
+
+
 
     const formatDate = (date: Date) => {
         return {

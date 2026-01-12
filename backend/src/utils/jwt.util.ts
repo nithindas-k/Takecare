@@ -18,7 +18,9 @@ export const generateAccessToken = (user: IUserDocument, doctorId?: string): str
     userId: user._id.toString(),
     email: user.email,
     role: user.role,
-    ...(doctorId && { doctorId }), 
+    name: user.name,
+    profileImage: user.profileImage,
+    ...(doctorId && { doctorId }),
   };
 
   return jwt.sign(payload, ACCESS_TOKEN_SECRET, {
@@ -35,7 +37,9 @@ export const generateRefreshToken = (user: IUserDocument, doctorId?: string): st
     userId: user._id.toString(),
     email: user.email,
     role: user.role,
-    ...(doctorId && { doctorId }), 
+    name: user.name,
+    profileImage: user.profileImage,
+    ...(doctorId && { doctorId }),
   };
 
   return jwt.sign(payload, REFRESH_TOKEN_SECRET, {

@@ -17,15 +17,15 @@ import { Types } from "mongoose";
 import { DayOfWeek } from "../types/schedule.type";
 import { IDGenerator } from "../utils/idGenerator.util";
 
-export class ScheduleService implements IScheduleService {
-    private readonly logger: LoggerService;
+import { ILoggerService } from "./interfaces/ILogger.service";
 
+export class ScheduleService implements IScheduleService {
     constructor(
         private _scheduleRepository: IScheduleRepository,
         private _appointmentRepository: IAppointmentRepository,
-        private _doctorRepository: IDoctorRepository
+        private _doctorRepository: IDoctorRepository,
+        private logger: ILoggerService
     ) {
-        this.logger = new LoggerService("ScheduleService");
     }
 
 
@@ -440,8 +440,7 @@ export class ScheduleService implements IScheduleService {
             "Saturday",
         ];
 
-        // Robust day of week calculation: 
-        // Shift to middle of day in UTC to avoid timezone edges when interpreting calendar dates
+     
         const dateCopy = new Date(date);
         dateCopy.setUTCHours(dateCopy.getUTCHours() + 12);
         return days[dateCopy.getUTCDay()];

@@ -11,22 +11,27 @@ import { ScheduleRepository } from "../repositories/schedule.repository";
 import { AppointmentRepository } from "../repositories/appointment.repository";
 import { ScheduleService } from "../services/schedule.service";
 
+import { LoggerService } from "services/logger.service";
+
 const router = Router();
 
 const doctorRepository = new DoctorRepository();
 const userRepository = new UserRepository();
 const appointmentRepository = new AppointmentRepository();
-const doctorService = new DoctorService(doctorRepository, userRepository, appointmentRepository);
+const doctorServiceLogger = new LoggerService("DoctorService");
+const doctorService = new DoctorService(doctorRepository, userRepository, appointmentRepository, doctorServiceLogger);
 
 const doctorController = new DoctorController(doctorService);
 
 
 const scheduleRepository = new ScheduleRepository();
-// appointmentRepository already created above
+const scheduleServiceLogger = new LoggerService("ScheduleService");
+
 const scheduleService = new ScheduleService(
   scheduleRepository,
   appointmentRepository,
-  doctorRepository
+  doctorRepository,
+  scheduleServiceLogger
 );
 const scheduleController = new ScheduleController(scheduleService);
 

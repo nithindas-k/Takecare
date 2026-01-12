@@ -14,19 +14,19 @@ import { IChatService } from "./interfaces/IChatService";
 import { INotificationService } from "./notification.service";
 import { socketService } from "./socket.service";
 
-export class AppointmentService implements IAppointmentService {
-    private readonly logger: LoggerService;
+import { ILoggerService } from "./interfaces/ILogger.service";
 
+export class AppointmentService implements IAppointmentService {
     constructor(
         private _appointmentRepository: IAppointmentRepository,
         private _userRepository: IUserRepository,
         private _doctorRepository: IDoctorRepository,
         private _scheduleRepository: IScheduleRepository,
         private _walletService: IWalletService,
+        private logger: ILoggerService,
         private _notificationService?: INotificationService,
         private _chatService?: IChatService
     ) {
-        this.logger = new LoggerService("AppointmentService");
     }
 
     private async requireDoctorIdByUserId(doctorUserId: string): Promise<string> {
@@ -77,7 +77,6 @@ export class AppointmentService implements IAppointmentService {
                 );
             }
 
-            // 1. Pre-check availability (still useful inside transaction)
             if (appointmentData.slotId) {
                 const schedule = await this._scheduleRepository.findByDoctorId(appointmentData.doctorId, session);
                 if (schedule) {
@@ -93,7 +92,7 @@ export class AppointmentService implements IAppointmentService {
                             date: appointmentData.appointmentDate
                         });
 
-                        // Convert IDs safely
+                        
                         let pId, dId;
                         try {
                             pId = typeof patientId === 'string' ? new Types.ObjectId(patientId) : patientId;
@@ -103,14 +102,14 @@ export class AppointmentService implements IAppointmentService {
                             throw new AppError(MESSAGES.INVALID_ID_FORMAT, HttpStatus.BAD_REQUEST);
                         }
 
-                        // Use a broader date search to be timezone-safe
+                    
                         const searchDate = new Date(appointmentData.appointmentDate);
                         if (isNaN(searchDate.getTime())) {
                             this.logger.error("Invalid appointment date provided", { date: appointmentData.appointmentDate });
                             throw new AppError("Invalid appointment date", HttpStatus.BAD_REQUEST);
                         }
 
-                        // Normalize to 12 hours before and after for safety
+                        
                         const startDate = new Date(searchDate);
                         startDate.setHours(startDate.getHours() - 12);
                         const endDate = new Date(searchDate);
@@ -133,7 +132,7 @@ export class AppointmentService implements IAppointmentService {
                                 previousStatus: existingAppointment.status
                             });
 
-                            // Update the existing appointment
+                            
                             const adminCommission = (consultationFees * PAYMENT_COMMISSION.ADMIN_PERCENT) / 100;
                             const doctorEarnings = (consultationFees * PAYMENT_COMMISSION.DOCTOR_PERCENT) / 100;
 
@@ -144,7 +143,7 @@ export class AppointmentService implements IAppointmentService {
                                 doctorEarnings,
                                 reason: appointmentData.reason || existingAppointment.reason,
                                 appointmentTime: appointmentData.appointmentTime,
-                                appointmentDate: new Date(appointmentData.appointmentDate) // Update to requested date just in case
+                                appointmentDate: new Date(appointmentData.appointmentDate) 
                             }, session);
 
                             const populatedAppointment = await this._appointmentRepository.findByIdPopulated(updated!._id.toString());
@@ -182,7 +181,7 @@ export class AppointmentService implements IAppointmentService {
                 paymentMethod: null,
             };
 
-            // 2. Mark slot as booked inside transaction (CRITICAL: Do this BEFORE creating appointment to prevent duplicates)
+
             if (appointmentData.slotId) {
                 const [startTime] = appointmentData.appointmentTime.split("-").map((t: string) => t.trim());
                 const slotUpdated = await this._scheduleRepository.updateSlotBookedStatus(
@@ -203,7 +202,6 @@ export class AppointmentService implements IAppointmentService {
                 }
             }
 
-            // 3. Create appointment inside transaction
             const appointment = await this._appointmentRepository.create(appointmentToCreate, session);
 
             if (this._notificationService) {
@@ -357,7 +355,7 @@ export class AppointmentService implements IAppointmentService {
                 throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
             }
 
-            // 1. Update appointment status
+            
             const updatedAppointment = await this._appointmentRepository.updateById(appointmentId, {
                 status: APPOINTMENT_STATUS.CANCELLED,
                 cancelledBy: userRole === ROLES.PATIENT ? "patient" : userRole === ROLES.ADMIN ? "admin" : "doctor",
@@ -365,7 +363,7 @@ export class AppointmentService implements IAppointmentService {
                 cancelledAt: new Date(),
             }, session);
 
-            // 2. Handle refund if paid
+        
             if (appointment.paymentStatus === PAYMENT_STATUS.PAID) {
                 const totalFee = appointment.consultationFees;
                 const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
@@ -406,7 +404,6 @@ export class AppointmentService implements IAppointmentService {
                 }, session);
             }
 
-            // 3. Release slot
             if (appointment.slotId) {
                 const [startTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
                 const docId = getIdString(appointment.doctorId);
@@ -422,7 +419,6 @@ export class AppointmentService implements IAppointmentService {
                 }
             }
 
-            // Notify (after commit, though best effort)
             if (this._notificationService) {
                 const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
                 const patient = await this._userRepository.findById(appointment.patientId.toString());
@@ -482,20 +478,19 @@ export class AppointmentService implements IAppointmentService {
                 throw new AppError(MESSAGES.APPOINTMENT_CANNOT_MODIFY, HttpStatus.BAD_REQUEST);
             }
 
-            // 1. Release old slot
+     
             if (appointment.slotId) {
                 const [oldStartTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
                 await this._scheduleRepository.updateSlotBookedStatus(
                     appointment.doctorId.toString(),
                     appointment.slotId,
-                    false, // Unbook
+                    false,
                     new Date(appointment.appointmentDate),
                     oldStartTime,
                     session
                 );
             }
 
-            // 2. Pre-check new slot availability
             if (rescheduleData.slotId) {
                 const schedule = await this._scheduleRepository.findByDoctorId(appointment.doctorId.toString(), session);
                 if (schedule) {
@@ -509,13 +504,13 @@ export class AppointmentService implements IAppointmentService {
                 }
             }
 
-            // 3. Book new slot
+          
             if (rescheduleData.slotId) {
                 const [newStartTime] = rescheduleData.appointmentTime.split("-").map((t: string) => t.trim());
                 const slotUpdated = await this._scheduleRepository.updateSlotBookedStatus(
                     appointment.doctorId.toString(),
                     rescheduleData.slotId,
-                    true, // Book
+                    true,
                     new Date(rescheduleData.appointmentDate),
                     newStartTime,
                     session
@@ -526,7 +521,7 @@ export class AppointmentService implements IAppointmentService {
                 }
             }
 
-            // 4. Update appointment
+          
             const updatedAppointment = await this._appointmentRepository.updateById(appointmentId, {
                 appointmentDate: new Date(rescheduleData.appointmentDate),
                 appointmentTime: rescheduleData.appointmentTime,
@@ -561,12 +556,15 @@ export class AppointmentService implements IAppointmentService {
                 throw new AppError(MESSAGES.APPOINTMENT_NOT_PENDING, HttpStatus.BAD_REQUEST);
             }
 
+            if (appointment.paymentStatus !== PAYMENT_STATUS.PAID) {
+                throw new AppError("Only paid appointments can be approved.", HttpStatus.BAD_REQUEST);
+            }
+
             await this._appointmentRepository.updateById(appointmentId, {
                 status: APPOINTMENT_STATUS.CONFIRMED,
             }, session);
 
-            // Release global slot lock so other dates/weeks can be booked.
-            // We rely on date-specific appointment counts to block this specific date.
+          
             if (appointment.slotId) {
                 const [startTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
                 await this._scheduleRepository.updateSlotBookedStatus(
@@ -612,13 +610,13 @@ export class AppointmentService implements IAppointmentService {
                 throw new AppError(MESSAGES.APPOINTMENT_NOT_PENDING, HttpStatus.BAD_REQUEST);
             }
 
-            // 1. Update appointment status
+        
             await this._appointmentRepository.updateById(appointmentId, {
                 status: APPOINTMENT_STATUS.REJECTED,
                 rejectionReason,
             }, session);
 
-            // 2. Handle refund if paid
+        
             if (appointment.paymentStatus === PAYMENT_STATUS.PAID) {
                 const patient = await this._userRepository.findById(appointment.patientId.toString());
                 const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
@@ -636,7 +634,7 @@ export class AppointmentService implements IAppointmentService {
                 }, session);
             }
 
-            // 3. Release slot
+   
             if (appointment.slotId) {
                 const [startTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
                 const getIdString = (value: any): string | null => {
@@ -661,7 +659,7 @@ export class AppointmentService implements IAppointmentService {
                 }
             }
 
-            // Notify
+            
             if (this._notificationService) {
                 await this._notificationService.notify(appointment.patientId.toString(), {
                     title: "Appointment Rejected",
@@ -692,14 +690,15 @@ export class AppointmentService implements IAppointmentService {
             throw new AppError(MESSAGES.APPOINTMENT_NOT_CONFIRMED, HttpStatus.BAD_REQUEST);
         }
 
-        await this._appointmentRepository.updateById(appointmentId, {
+        const updateData: any = {
             status: APPOINTMENT_STATUS.COMPLETED,
-            doctorNotes: doctorNotes || null,
             prescriptionUrl: prescriptionUrl || null,
             sessionEndTime: new Date(),
-        });
+        };
 
-        // Release slot lock so it can be booked for other dates/weeks
+        await this._appointmentRepository.updateById(appointmentId, updateData);
+
+        
         if (appointment.slotId) {
             const [startTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
             await this._scheduleRepository.updateSlotBookedStatus(
@@ -807,14 +806,12 @@ export class AppointmentService implements IAppointmentService {
             extensionCount: updateData.extensionCount || appointment.extensionCount
         };
 
-        // Notify session status update to targeted users
         if (pUserId) socketService.emitToUser(pUserId, "session-status-updated", statusData);
         if (dUserId) socketService.emitToUser(dUserId, "session-status-updated", statusData);
 
-        // Also keep room broadcast
         socketService.emitToRoom(appointmentId, "session-status-updated", statusData);
 
-        // Add a system message to the chat
+  
         if (this._chatService) {
             let messageContent = "";
             if (status === "ACTIVE") {
@@ -864,7 +861,7 @@ export class AppointmentService implements IAppointmentService {
             throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        // Logic check: Allow only if completed
+        
         if (appointment.status !== APPOINTMENT_STATUS.COMPLETED) {
             throw new AppError("Chat can only be enabled for completed appointments", HttpStatus.BAD_REQUEST);
         }
@@ -873,6 +870,8 @@ export class AppointmentService implements IAppointmentService {
         expiresAt.setHours(expiresAt.getHours() + 24);
 
         await this._appointmentRepository.updateById(appointmentId, {
+            sessionStatus: "TEST_NEEDED",
+            TEST_NEEDED: true,
             postConsultationChatWindow: {
                 isActive: true,
                 expiresAt
@@ -904,14 +903,22 @@ export class AppointmentService implements IAppointmentService {
             const populatedDoctor = await this._doctorRepository.findById(doctorId);
             const doctorUserId = populatedDoctor?.userId?.toString();
 
-            if (patientUserId) socketService.emitToUser(patientUserId, "receive-message", message);
-            if (doctorUserId) socketService.emitToUser(doctorUserId, "receive-message", message);
-            socketService.emitMessage(realAptId, message);
+            const messagePayload = {
+                ...message.toObject(),
+                id: (message as any)._id.toString(),
+                persistentRoomId
+            };
+
+            if (patientUserId) socketService.emitToUser(patientUserId, "receive-message", messagePayload);
+            if (doctorUserId) socketService.emitToUser(doctorUserId, "receive-message", messagePayload);
+            socketService.emitMessage(realAptId, messagePayload);
+            if (persistentRoomId) socketService.emitToRoom(persistentRoomId, "receive-message", messagePayload);
 
             const statusUpdate = {
                 appointmentId: realAptId,
                 customId: appointment.customId,
-                status: appointment.sessionStatus || "ENDED",
+                status: "TEST_NEEDED",
+                TEST_NEEDED: true,
                 postConsultationChatWindow: {
                     isActive: true,
                     expiresAt
@@ -925,6 +932,9 @@ export class AppointmentService implements IAppointmentService {
             const dUserId = doctorData?.userId?._id?.toString() || doctorData?.userId?.toString() || doctorData?._id?.toString() || doctorData?.toString();
 
             socketService.emitToRoom(realAptId, "session-status-updated", statusUpdate);
+           
+            if (persistentRoomId) socketService.emitToRoom(persistentRoomId, "session-status-updated", statusUpdate);
+
             if (pUserId) socketService.emitToUser(pUserId, "session-status-updated", statusUpdate);
             if (dUserId) socketService.emitToUser(dUserId, "session-status-updated", statusUpdate);
         }
@@ -944,6 +954,8 @@ export class AppointmentService implements IAppointmentService {
         }
 
         await this._appointmentRepository.updateById(appointmentId, {
+            sessionStatus: "ENDED",
+            TEST_NEEDED: false,
             postConsultationChatWindow: {
                 isActive: false,
                 expiresAt: new Date()
@@ -979,6 +991,7 @@ export class AppointmentService implements IAppointmentService {
             const statusUpdate = {
                 appointmentId: realAptId,
                 status: "ENDED",
+                TEST_NEEDED: false,
                 postConsultationChatWindow: {
                     isActive: false,
                     expiresAt: appointment.postConsultationChatWindow?.expiresAt
@@ -999,15 +1012,14 @@ export class AppointmentService implements IAppointmentService {
                 sessionStatus: "ENDED"
             });
 
-            // Also emit session-ended to clear any active states
             socketService.emitToRoom(realAptId, "session-ended", { appointmentId: realAptId });
             if (pUserId) socketService.emitToUser(pUserId, "session-ended", { appointmentId: realAptId });
             if (dUserId) socketService.emitToUser(dUserId, "session-ended", { appointmentId: realAptId });
         }
     }
 
-    async updateDoctorNotes(appointmentId: string, doctorUserId: string, notes: string): Promise<void> {
-        this.logger.info("Updating doctor notes", { appointmentId, doctorUserId, notesLength: notes?.length });
+    async updateDoctorNotes(appointmentId: string, doctorUserId: string, note: any): Promise<void> {
+        this.logger.info("Updating doctor notes", { appointmentId, doctorUserId, note });
 
         const appointment = await this._appointmentRepository.findById(appointmentId);
         if (!appointment) {
@@ -1022,7 +1034,7 @@ export class AppointmentService implements IAppointmentService {
         }
 
         const result = await this._appointmentRepository.updateById(appointmentId, {
-            doctorNotes: notes
+            $push: { doctorNotes: note }
         });
 
         if (!result) {

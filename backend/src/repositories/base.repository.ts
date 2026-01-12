@@ -55,4 +55,8 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
     const count = await this.model.countDocuments(query).session(session);
     return count > 0;
   }
+
+  async countDocuments(filter: Record<string, any>, session?: any): Promise<number> {
+    return await this.model.countDocuments(filter).session(session).exec();
+  }
 }

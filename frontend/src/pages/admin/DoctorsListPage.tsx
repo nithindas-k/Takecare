@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -40,10 +40,10 @@ const DoctorsListPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const fetchDoctors = async (currentPage: number) => {
+  const fetchDoctors = useCallback(async (currentPage: number) => {
     setLoading(true);
     try {
-      const filters: any = {};
+      const filters: { search?: string; specialty?: string; isActive?: string } = {};
       if (debouncedSearch) filters.search = debouncedSearch;
       if (specialty) filters.specialty = specialty;
       if (isActive !== "all") filters.isActive = isActive;
@@ -56,16 +56,17 @@ const DoctorsListPage: React.FC = () => {
       } else {
         toast.error(res.message || "Failed to fetch doctors");
       }
-    } catch (e: any) {
-      toast.error(e.message || "Error fetching doctors");
+    } catch (e: unknown) {
+      const error = e as { message?: string };
+      toast.error(error.message || "Error fetching doctors");
     } finally {
       setLoading(false);
     }
-  };
+  }, [debouncedSearch, specialty, isActive, limit]);
 
   useEffect(() => {
     fetchDoctors(page);
-  }, [page, debouncedSearch, specialty, isActive]);
+  }, [page, fetchDoctors]);
 
   const pagesToShow = useMemo(() => {
     const items: number[] = [];

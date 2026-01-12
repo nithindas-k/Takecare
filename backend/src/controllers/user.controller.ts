@@ -42,13 +42,17 @@ export class UserController {
       if (typeof req.body.information === 'string') {
         try {
           dto.information = JSON.parse(req.body.information);
-        } catch (e) { }
+        } catch {
+          
+        }
       }
 
       if (typeof req.body.additionalInformation === 'string') {
         try {
           dto.additionalInformation = JSON.parse(req.body.additionalInformation);
-        } catch (e) { }
+        } catch {
+          
+        }
       }
 
       const file = req.file;

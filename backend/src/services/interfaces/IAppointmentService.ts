@@ -78,5 +78,5 @@ export interface IAppointmentService {
 
     enablePostConsultationChat(appointmentId: string, doctorUserId: string): Promise<void>;
     disablePostConsultationChat(appointmentId: string, doctorUserId: string): Promise<void>;
-    updateDoctorNotes(appointmentId: string, doctorUserId: string, notes: string): Promise<void>;
+    updateDoctorNotes(appointmentId: string, doctorUserId: string, notes: any): Promise<void>;
 }

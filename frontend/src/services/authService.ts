@@ -14,13 +14,16 @@ import type {
   OtpRequest,
 } from "../types";
 
-// JWT Payload interface
+
 interface JwtPayload {
+  userId: string;
   id: string;
   role: 'patient' | 'doctor' | 'admin';
   exp: number;
   email: string;
   name?: string;
+  profileImage?: string;
+  doctorId?: string;
 }
 
 interface ApiErrorResponse {
@@ -70,7 +73,7 @@ class AuthService {
     localStorage.setItem("authToken", token);
   }
 
- 
+
   getToken(): string | null {
     return localStorage.getItem("authToken");
   }
@@ -79,10 +82,17 @@ class AuthService {
   getCurrentUserInfo(): JwtPayload | null {
     const token = this.getToken();
     if (!token) return null;
-    return this.decodeToken<JwtPayload>(token);
+    const decoded = this.decodeToken<JwtPayload>(token);
+    if (!decoded) return null;
+
+    return {
+      ...decoded,
+      id: decoded.id || decoded.userId,
+      userId: decoded.userId || decoded.id,
+    } as JwtPayload;
   }
 
- 
+
   isAuthenticated(): boolean {
     const token = this.getToken();
     return !!(token && !this.isTokenExpired(token));
@@ -271,7 +281,7 @@ class AuthService {
   }
 
 
-  saveUser(_user: AuthUser): void {
+  saveUser(_user: any): void {
     console.warn('saveUser is deprecated. User data should not be stored in localStorage.');
   }
 
@@ -351,5 +361,6 @@ class AuthService {
 }
 
 export default new AuthService();
+
 
 

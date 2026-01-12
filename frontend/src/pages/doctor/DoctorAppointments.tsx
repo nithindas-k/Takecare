@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DoctorNavbar from '../../components/Doctor/DoctorNavbar';
 import DoctorLayout from '../../components/Doctor/DoctorLayout';
@@ -7,6 +7,7 @@ import { FaVideo, FaComments, FaEye, FaSearch } from 'react-icons/fa';
 import { appointmentService } from '../../services/appointmentService';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import type { PopulatedAppointment } from '../../types/appointment.types';
 
 
 
@@ -14,7 +15,7 @@ const DoctorAppointments: React.FC = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'upcoming' | 'cancelled' | 'completed'>('upcoming');
     const [searchQuery, setSearchQuery] = useState('');
-    const [appointments, setAppointments] = useState<any[]>([]);
+    const [appointments, setAppointments] = useState<PopulatedAppointment[]>([]);
     const [tabCounts, setTabCounts] = useState<{ upcoming: number; cancelled: number; completed: number }>({
         upcoming: 0,
         cancelled: 0,
@@ -25,64 +26,64 @@ const DoctorAppointments: React.FC = () => {
     const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
     const [error, setError] = useState('');
 
+    const fetchCounts = useCallback(async () => {
+        try {
+            const [upcomingRes, cancelledRes, completedRes] = await Promise.all([
+                appointmentService.getDoctorAppointments('confirmed', 1, 1),
+                appointmentService.getDoctorAppointments('cancelled', 1, 1),
+                appointmentService.getDoctorAppointments('completed', 1, 1),
+            ]);
+
+            setTabCounts({
+                upcoming: upcomingRes?.success ? upcomingRes?.data?.total || 0 : 0,
+                cancelled: cancelledRes?.success ? cancelledRes?.data?.total || 0 : 0,
+                completed: completedRes?.success ? completedRes?.data?.total || 0 : 0,
+            });
+        } catch (err) {
+            console.warn('Failed to fetch counts:', err);
+        }
+    }, []);
+
+    const fetchAppointments = useCallback(async () => {
+        try {
+            if (!hasLoadedOnce) {
+                setLoading(true);
+            } else {
+                setRefreshing(true);
+            }
+            setError('');
+            const status = activeTab === 'upcoming' ? 'confirmed' : activeTab;
+            const response = await appointmentService.getDoctorAppointments(status, 1, 100);
+
+            if (response?.success) {
+                const nextAppointments = response.data.appointments || [];
+                setAppointments(nextAppointments);
+
+                if (typeof response?.data?.total === 'number') {
+                    setTabCounts((prev) => {
+                        if (activeTab === 'upcoming') return { ...prev, upcoming: response.data.total };
+                        if (activeTab === 'cancelled') return { ...prev, cancelled: response.data.total };
+                        return { ...prev, completed: response.data.total };
+                    });
+                }
+            } else {
+                throw new Error(response?.message || 'Failed to fetch appointments');
+            }
+        } catch (err: any) {
+            console.error('Failed to fetch appointments:', err);
+            setError(err?.response?.data?.message || err?.message || 'Failed to fetch appointments');
+            toast.error('Failed to load appointments');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+            setHasLoadedOnce(true);
+        }
+    }, [activeTab, hasLoadedOnce]);
+
     useEffect(() => {
-        const fetchCounts = async () => {
-            try {
-                const [upcomingRes, cancelledRes, completedRes] = await Promise.all([
-                    appointmentService.getDoctorAppointments('confirmed', 1, 1),
-                    appointmentService.getDoctorAppointments('cancelled', 1, 1),
-                    appointmentService.getDoctorAppointments('completed', 1, 1),
-                ]);
-
-                setTabCounts({
-                    upcoming: upcomingRes?.success ? upcomingRes?.data?.total || 0 : 0,
-                    cancelled: cancelledRes?.success ? cancelledRes?.data?.total || 0 : 0,
-                    completed: completedRes?.success ? completedRes?.data?.total || 0 : 0,
-                });
-            } catch {
-
-            }
-        };
-
-        const fetchAppointments = async () => {
-            try {
-                if (!hasLoadedOnce) {
-                    setLoading(true);
-                } else {
-                    setRefreshing(true);
-                }
-                setError('');
-                const status = activeTab === 'upcoming' ? 'confirmed' : activeTab;
-                const response = await appointmentService.getDoctorAppointments(status, 1, 100);
-
-                if (response?.success) {
-                    const nextAppointments = response.data.appointments || [];
-                    setAppointments(nextAppointments);
-
-                    if (typeof response?.data?.total === 'number') {
-                        setTabCounts((prev) => {
-                            if (activeTab === 'upcoming') return { ...prev, upcoming: response.data.total };
-                            if (activeTab === 'cancelled') return { ...prev, cancelled: response.data.total };
-                            return { ...prev, completed: response.data.total };
-                        });
-                    }
-                } else {
-                    throw new Error(response?.message || 'Failed to fetch appointments');
-                }
-            } catch (err: any) {
-                console.error('Failed to fetch appointments:', err);
-                setError(err?.response?.data?.message || err?.message || 'Failed to fetch appointments');
-                toast.error('Failed to load appointments');
-            } finally {
-                setLoading(false);
-                setRefreshing(false);
-                setHasLoadedOnce(true);
-            }
-        };
-
         fetchCounts();
         fetchAppointments();
-    }, [activeTab, hasLoadedOnce]);
+    }, [fetchCounts, fetchAppointments]);
 
     const filteredAppointments = appointments.filter(
         (apt) => apt.patientId?.name && apt.patientId.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -341,7 +342,7 @@ const DoctorAppointments: React.FC = () => {
                                                     {/* Action Buttons */}
                                                     <div className="flex gap-2">
                                                         <button
-                                                            onClick={() => handleViewDetails(appointment.customId || appointment._id)}
+                                                            onClick={() => handleViewDetails(appointment._id)}
                                                             className="w-full px-4 py-2 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                                                         >
                                                             <FaEye size={14} />

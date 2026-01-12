@@ -16,6 +16,17 @@ export type PaymentMethod = "card" | "upi" | "wallet" | "netbanking" | null;
 
 export type CancelledBy = "patient" | "doctor" | "admin" | null;
 
+export interface IDoctorNote {
+    id: string;
+    title: string;
+    description?: string;
+    category?: 'observation' | 'diagnosis' | 'medicine' | 'lab_test';
+    dosage?: string;
+    frequency?: string;
+    duration?: string;
+    createdAt: Date;
+}
+
 export interface IAppointment {
     customId?: string;
 
@@ -47,13 +58,16 @@ export interface IAppointment {
     sessionEndTime?: Date | null;
     sessionDuration?: number | null;
 
-    doctorNotes?: string | null;
+    doctorNotes?: IDoctorNote[] | null;
     prescriptionUrl?: string | null;
 
-    sessionStatus?: "idle" | "ACTIVE" | "WAITING_FOR_DOCTOR" | "CONTINUED_BY_DOCTOR" | "ENDED";
+    sessionStatus?: "idle" | "ACTIVE" | "WAITING_FOR_DOCTOR" | "CONTINUED_BY_DOCTOR" | "ENDED" | "TEST_NEEDED";
     extensionCount?: number;
 
     reminderSent?: boolean;
+    startNotificationSent?: boolean;
+
+    TEST_NEEDED?: boolean;
 
     postConsultationChatWindow?: {
         isActive: boolean;
@@ -100,6 +114,7 @@ export interface DashboardStats {
         completed: number;
         cancelled: number;
         pending: number;
+        confirmed: number;
     };
     revenueGraph: { date: string; amount: number }[];
     topDoctors?: { doctorId: string; name: string; revenue: number; appointments: number }[];

@@ -1,9 +1,10 @@
 import axiosInstance from "../api/axiosInstance";
 import { APPOINTMENT_API_ROUTES } from "../utils/constants";
+import type { AppointmentData, AppointmentFilters } from "../types/appointment.types";
 
 export const appointmentService = {
 
-    createAppointment: async (appointmentData: any) => {
+    createAppointment: async (appointmentData: AppointmentData) => {
         const response = await axiosInstance.post(
             APPOINTMENT_API_ROUTES.CREATE,
             appointmentData
@@ -73,7 +74,7 @@ export const appointmentService = {
     },
 
     // Admin: Get All
-    getAllAppointments: async (page: number = 1, limit: number = 10, filters: any = {}) => {
+    getAllAppointments: async (page: number = 1, limit: number = 10, filters: AppointmentFilters = {}) => {
         const response = await axiosInstance.get(APPOINTMENT_API_ROUTES.ADMIN_ALL, {
             params: { page, limit, ...filters },
         });
@@ -97,8 +98,8 @@ export const appointmentService = {
         return response.data;
     },
 
-    updateDoctorNotes: async (id: string, notes: string) => {
-        const response = await axiosInstance.put(APPOINTMENT_API_ROUTES.UPDATE_NOTES(id), { notes });
+    updateDoctorNotes: async (id: string, note: unknown) => {
+        const response = await axiosInstance.put(APPOINTMENT_API_ROUTES.UPDATE_NOTES(id), { notes: note });
         return response.data;
     }
 };

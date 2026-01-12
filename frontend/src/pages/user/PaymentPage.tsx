@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FaCheckCircle, FaArrowLeft, FaCreditCard } from 'react-icons/fa';
@@ -457,3 +458,4 @@ const PaymentPage: React.FC = () => {
 };
 
 export default PaymentPage;
+

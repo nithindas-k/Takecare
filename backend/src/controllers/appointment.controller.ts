@@ -7,10 +7,13 @@ import { MESSAGES, HttpStatus, PAGINATION, ROLES, APPOINTMENT_STATUS } from "../
 
 import { LoggerService } from "../services/logger.service";
 
-export class AppointmentController implements IAppointmentController {
-    private readonly logger = new LoggerService("AppointmentController");
+import { ILoggerService } from "../services/interfaces/ILogger.service";
 
-    constructor(private _appointmentService: IAppointmentService) { }
+export class AppointmentController implements IAppointmentController {
+    constructor(
+        private _appointmentService: IAppointmentService,
+        private logger: ILoggerService
+    ) { }
 
     createAppointment = async (
         req: Request,
@@ -433,6 +436,7 @@ export class AppointmentController implements IAppointmentController {
             }
 
             await this._appointmentService.enablePostConsultationChat(appointmentId, userId);
+            console.log("helo.......................................")
 
             sendSuccess(res, undefined, "Post-consultation chat enabled for 24 hours.");
         } catch (err: unknown) {

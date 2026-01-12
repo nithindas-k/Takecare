@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -29,6 +30,7 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
+import { Skeleton } from "../../components/ui/skeleton";
 
 const getInitials = (name: string) =>
   name
@@ -259,15 +261,30 @@ const AdminAppointmentDetailsPage: React.FC = () => {
               </button>
             </div>
 
-            {loading && (
-              <div className="mt-6 text-center text-gray-500">Loading appointment details...</div>
-            )}
-
-            {!loading && !appointment && (
-              <div className="mt-6 text-center text-gray-500">No appointment details found.</div>
-            )}
-
-            {!loading && appointment && (
+            {loading ? (
+              <div className="mt-5 sm:mt-6 space-y-6">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-5 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="w-10 h-10 rounded-xl" />
+                      <div className="space-y-1">
+                        <Skeleton className="h-3 w-20" />
+                        <Skeleton className="h-4 w-40" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-6 w-24 rounded-full" />
+                      <Skeleton className="h-6 w-24 rounded-full" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                    <div className="lg:col-span-4"><Skeleton className="h-64 w-full rounded-2xl border border-gray-100" /></div>
+                    <div className="lg:col-span-4"><Skeleton className="h-64 w-full rounded-2xl border border-gray-100" /></div>
+                    <div className="lg:col-span-4"><Skeleton className="h-64 w-full rounded-2xl border border-gray-100" /></div>
+                  </div>
+                </div>
+              </div>
+            ) : appointment ? (
               <div className="mt-5 sm:mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-12">
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -378,7 +395,7 @@ const AdminAppointmentDetailsPage: React.FC = () => {
 
                               <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
                                 <div className="text-xs text-gray-500 mb-1">Department</div>
-                                <div className="font-semibold text-gray-900">{doctor.specialty}</div>
+                                <div className="font-semibold text-gray-900">{doctor?.specialty}</div>
                               </div>
 
                               <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
@@ -498,6 +515,8 @@ const AdminAppointmentDetailsPage: React.FC = () => {
                   </div>
                 </div>
               </div>
+            ) : (
+              <div className="mt-6 text-center text-gray-500">No appointment details found.</div>
             )}
           </div>
         </main>
@@ -507,3 +526,4 @@ const AdminAppointmentDetailsPage: React.FC = () => {
 };
 
 export default AdminAppointmentDetailsPage;
+

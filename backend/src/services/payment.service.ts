@@ -13,8 +13,9 @@ import type { INotificationService } from "./notification.service";
 import type { CreateRazorpayOrderDTO, VerifyRazorpayPaymentDTO } from "../dtos/payment.dtos/razorpay.dto";
 import { LoggerService } from "./logger.service";
 
+import { ILoggerService } from "./interfaces/ILogger.service";
+
 export class PaymentService implements IPaymentService {
-    private readonly logger: LoggerService;
     private readonly razorpay: any;
 
     constructor(
@@ -22,10 +23,9 @@ export class PaymentService implements IPaymentService {
         private _doctorRepository: IDoctorRepository,
         private _userRepository: IUserRepository,
         private _walletService: IWalletService,
+        private logger: ILoggerService,
         private _notificationService?: INotificationService
     ) {
-        this.logger = new LoggerService("PaymentService");
-
         this.razorpay = new (Razorpay as any)({
             key_id: env.RAZORPAY_API_KEY,
             key_secret: env.RAZORPAY_API_SECRET,

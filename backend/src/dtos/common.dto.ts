@@ -50,6 +50,7 @@ export interface BaseUserResponseDTO {
   role: string;
   profileImage?: string | null;
   phone?: string | null;
+  customId?: string;
 }
 
 

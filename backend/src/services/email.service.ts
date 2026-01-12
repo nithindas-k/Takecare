@@ -4,20 +4,17 @@ import type { IEmailService } from "../services/interfaces/IEmailService";
 import type { EmailConfig, SmtpConfig } from "../types/email.type";
 import { CONFIG, HttpStatus, MESSAGES } from "../constants/constants";
 import { AppError } from "../errors/AppError";
-import { LoggerService } from "./logger.service";
+import { ILoggerService } from "./interfaces/ILogger.service";
 
 export class EmailService implements IEmailService {
   private transporter: Transporter;
   private readonly fromAddress: string;
-  private readonly logger: LoggerService;
 
-  constructor(config?: SmtpConfig) {
+  constructor(private logger: ILoggerService, config?: SmtpConfig) {
     const emailConfig = config || this.getDefaultConfig();
 
     this.transporter = nodemailer.createTransport(emailConfig);
     this.fromAddress = `"TakeCare" <${env.SMTP_USER}>`;
-
-    this.logger = new LoggerService("EmailService");
 
     this.verifyConnection();
   }
@@ -157,6 +154,89 @@ export class EmailService implements IEmailService {
         MESSAGES.EMAIL_SEND_FAILED.replace("{error}", String(error?.message || error)),
         HttpStatus.INTERNAL_ERROR
       );
+    }
+  }
+
+  async sendContactNotification(data: { name: string, email: string, phone?: string, subject: string, message: string }): Promise<void> {
+    try {
+      const html = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+          <h2 style="color: #00A1B0; margin-bottom: 24px;">New Contact Form Submission</h2>
+          <div style="margin-bottom: 16px;">
+            <strong style="color: #64748b;">From:</strong> ${data.name} (${data.email})
+          </div>
+          ${data.phone ? `<div style="margin-bottom: 16px;"><strong style="color: #64748b;">Phone:</strong> ${data.phone}</div>` : ''}
+          <div style="margin-bottom: 16px;">
+            <strong style="color: #64748b;">Subject:</strong> ${data.subject}
+          </div>
+          <div style="padding: 16px; bg-color: #f8fafc; border-radius: 8px; border-left: 4px solid #00A1B0;">
+            <strong style="display: block; margin-bottom: 8px; color: #64748b;">Message:</strong>
+            <p style="white-space: pre-wrap; margin: 0; color: #1e293b;">${data.message}</p>
+          </div>
+          <div style="margin-top: 24px; font-size: 12px; color: #94a3b8;">
+            Sent from TakeCare Contact Form
+          </div>
+        </div>
+      `;
+
+      await this.transporter.sendMail({
+        from: this.fromAddress,
+        to: env.SMTP_USER, // Send to the admin (self)
+        subject: `[Contact Form] ${data.subject}`,
+        html
+      });
+      this.logger.info("Contact notification email sent");
+    } catch (error: any) {
+      this.logger.error("Failed to send contact notification email", error);
+    }
+  }
+
+  async sendContactReplyEmail(userEmail: string, userName: string, originalSubject: string, replyMessage: string): Promise<void> {
+    try {
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 10px;">
+          <div style="background-color: #14b8a6; padding: 20px; border-radius: 10px 10px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">TakeCare Support</h1>
+          </div>
+          
+          <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb; border-top: none;">
+            <h2 style="color: #14b8a6; margin-top: 0;">Hello ${userName},</h2>
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
+              Thank you for reaching out to us regarding <strong>"${originalSubject}"</strong>.
+            </p>
+            
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #14b8a6; margin: 24px 0;">
+              <p style="margin: 0; color: #1e293b; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">${replyMessage}</p>
+            </div>
+            
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
+              If you have any further questions, please don't hesitate to reply to this email.
+            </p>
+            
+            <p style="color: #64748b; font-size: 14px; margin-top: 32px;">
+              Best regards,<br>
+              <strong>The TakeCare Team</strong>
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            
+            <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 0;">
+              © 2025 TakeCare Healthcare. All rights reserved.
+            </p>
+          </div>
+        </div>
+      `;
+
+      await this.transporter.sendMail({
+        from: this.fromAddress,
+        to: userEmail,
+        subject: `Re: ${originalSubject} - TakeCare Support`,
+        html
+      });
+      this.logger.info("Reply email sent to user", { userEmail });
+    } catch (error: any) {
+      this.logger.error("Failed to send contact reply email", error);
+      throw new AppError("Failed to send reply email", HttpStatus.INTERNAL_ERROR);
     }
   }
 

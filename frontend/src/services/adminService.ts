@@ -1,13 +1,23 @@
 import axiosInstance from "../api/axiosInstance";
 import { ADMIN_API_ROUTES } from "../utils/constants";
 
+interface ApiError {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+  message?: string;
+}
+
 class AdminService {
   async fetchDoctorRequests() {
     try {
       const res = await axiosInstance.get(ADMIN_API_ROUTES.GET_DOCTOR_REQUESTS);
       return res.data;
-    } catch (error: any) {
-      return { success: false, message: error.response?.data?.message || "Error", data: [] };
+    } catch (error) {
+      const err = error as ApiError;
+      return { success: false, message: err.response?.data?.message || err.message || "Error", data: [] };
     }
   }
 
@@ -15,8 +25,9 @@ class AdminService {
     try {
       const res = await axiosInstance.get(ADMIN_API_ROUTES.GET_DOCTOR_BY_ID(doctorId));
       return res.data;
-    } catch (error: any) {
-      return { success: false, message: error.response?.data?.message || "Error" };
+    } catch (error) {
+      const err = error as ApiError;
+      return { success: false, message: err.response?.data?.message || err.message || "Error" };
     }
   }
 
@@ -24,8 +35,9 @@ class AdminService {
     try {
       const res = await axiosInstance.post(ADMIN_API_ROUTES.APPROVE_DOCTOR(doctorId));
       return res.data;
-    } catch (error: any) {
-      return { success: false, message: error.response?.data?.message || "Approve failed" };
+    } catch (error) {
+      const err = error as ApiError;
+      return { success: false, message: err.response?.data?.message || err.message || "Approve failed" };
     }
   }
 
@@ -33,8 +45,9 @@ class AdminService {
     try {
       const res = await axiosInstance.post(ADMIN_API_ROUTES.REJECT_DOCTOR(doctorId), { reason });
       return res.data;
-    } catch (error: any) {
-      return { success: false, message: error.response?.data?.message || "Reject failed" };
+    } catch (error) {
+      const err = error as ApiError;
+      return { success: false, message: err.response?.data?.message || err.message || "Reject failed" };
     }
   }
 
@@ -44,18 +57,19 @@ class AdminService {
         params: { page, limit, ...filters }
       });
       return res.data;
-    } catch (error: any) {
-      return { success: false, message: error.response?.data?.message || "Error", data: [] };
+    } catch (error) {
+      const err = error as ApiError;
+      return { success: false, message: err.response?.data?.message || err.message || "Error", data: [] };
     }
   }
-
 
   async banDoctor(doctorId: string) {
     try {
       const res = await axiosInstance.post(`${ADMIN_API_ROUTES.GET_ALL_DOCTORS}/${doctorId}/ban`);
       return res.data;
-    } catch (error: any) {
-      return { success: false, message: error.response?.data?.message || "Error banning doctor" };
+    } catch (error) {
+      const err = error as ApiError;
+      return { success: false, message: err.response?.data?.message || err.message || "Error banning doctor" };
     }
   }
 
@@ -63,8 +77,9 @@ class AdminService {
     try {
       const res = await axiosInstance.post(`${ADMIN_API_ROUTES.GET_ALL_DOCTORS}/${doctorId}/unban`);
       return res.data;
-    } catch (error: any) {
-      return { success: false, message: error.response?.data?.message || "Error unbanning doctor" };
+    } catch (error) {
+      const err = error as ApiError;
+      return { success: false, message: err.response?.data?.message || err.message || "Error unbanning doctor" };
     }
   }
 
@@ -74,8 +89,9 @@ class AdminService {
         params: { page, limit, ...filters }
       });
       return res.data;
-    } catch (error: any) {
-      return { success: false, message: error.response?.data?.message || "Error fetching patients", data: [] };
+    } catch (error) {
+      const err = error as ApiError;
+      return { success: false, message: err.response?.data?.message || err.message || "Error fetching patients", data: [] };
     }
   }
 
@@ -83,8 +99,9 @@ class AdminService {
     try {
       const res = await axiosInstance.get(ADMIN_API_ROUTES.GET_PATIENT_BY_ID(patientId));
       return res.data;
-    } catch (error: any) {
-      return { success: false, message: error.response?.data?.message || "Error fetching patient details" };
+    } catch (error) {
+      const err = error as ApiError;
+      return { success: false, message: err.response?.data?.message || err.message || "Error fetching patient details" };
     }
   }
 
@@ -92,8 +109,9 @@ class AdminService {
     try {
       const res = await axiosInstance.post(ADMIN_API_ROUTES.BLOCK_PATIENT(patientId));
       return res.data;
-    } catch (error: any) {
-      return { success: false, message: error.response?.data?.message || "Error blocking patient" };
+    } catch (error) {
+      const err = error as ApiError;
+      return { success: false, message: err.response?.data?.message || err.message || "Error blocking patient" };
     }
   }
 
@@ -101,8 +119,9 @@ class AdminService {
     try {
       const res = await axiosInstance.post(ADMIN_API_ROUTES.UNBLOCK_PATIENT(patientId));
       return res.data;
-    } catch (error: any) {
-      return { success: false, message: error.response?.data?.message || "Error unblocking patient" };
+    } catch (error) {
+      const err = error as ApiError;
+      return { success: false, message: err.response?.data?.message || err.message || "Error unblocking patient" };
     }
   }
 
@@ -112,8 +131,9 @@ class AdminService {
         params: { startDate, endDate },
       });
       return response.data;
-    } catch (error: any) {
-      return { success: false, message: error.response?.data?.message || "Error fetching dashboard stats" };
+    } catch (error) {
+      const err = error as ApiError;
+      return { success: false, message: err.response?.data?.message || err.message || "Error fetching dashboard stats" };
     }
   }
 }

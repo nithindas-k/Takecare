@@ -8,8 +8,7 @@ export class PrescriptionController {
 
     createPrescription = async (req: Request, res: Response, next: NextFunction) => {
         try {
-            // @ts-ignore
-            const userId = req.user?.userId;
+            const userId = (req as any).user?.userId;
 
             if (!userId) {
                 throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -28,10 +27,8 @@ export class PrescriptionController {
 
     getPrescription = async (req: Request, res: Response, next: NextFunction) => {
         try {
-            // @ts-ignore
-            const userId = req.user?.userId;
-            // @ts-ignore
-            const role = req.user?.role;
+            const userId = (req as any).user?.userId;
+            const role = (req as any).user?.role;
             const { appointmentId } = req.params;
 
             if (!userId || !role) {

@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Printer, Pill, Calendar, User, Stethoscope, FlaskConical, FileText, Clock } from 'lucide-react';
 import { prescriptionService } from '../../services/prescriptionService';
 import { API_BASE_URL } from '../../utils/constants';
+import type { Prescription, Medicine } from '../../types/prescription.types';
 
 interface PrescriptionViewModalProps {
     isOpen: boolean;
@@ -11,17 +12,11 @@ interface PrescriptionViewModalProps {
 }
 
 const PrescriptionViewModal: React.FC<PrescriptionViewModalProps> = ({ isOpen, onClose, appointmentId }) => {
-    const [prescription, setPrescription] = useState<any>(null);
+    const [prescription, setPrescription] = useState<Prescription | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    useEffect(() => {
-        if (isOpen && appointmentId) {
-            fetchPrescription();
-        }
-    }, [isOpen, appointmentId]);
-
-    const fetchPrescription = async () => {
+    const fetchPrescription = useCallback(async () => {
         try {
             setLoading(true);
             setError('');
@@ -37,7 +32,13 @@ const PrescriptionViewModal: React.FC<PrescriptionViewModalProps> = ({ isOpen, o
         } finally {
             setLoading(false);
         }
-    };
+    }, [appointmentId]);
+
+    useEffect(() => {
+        if (isOpen && appointmentId) {
+            fetchPrescription();
+        }
+    }, [isOpen, appointmentId, fetchPrescription]);
 
     const handlePrint = () => {
         window.print();
@@ -328,7 +329,7 @@ const PrescriptionViewModal: React.FC<PrescriptionViewModalProps> = ({ isOpen, o
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-50">
-                                                    {prescription.medicines?.map((med: any, idx: number) => (
+                                                    {prescription?.medicines?.map((med: Medicine, idx: number) => (
                                                         <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
                                                             <td className="px-6 py-5">
                                                                 <div className="font-bold text-gray-900">{med.name}</div>

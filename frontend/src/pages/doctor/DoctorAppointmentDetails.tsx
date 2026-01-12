@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ClipboardList, MessagesSquare, XCircle, Stethoscope } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DoctorNavbar from '../../components/Doctor/DoctorNavbar';
 import DoctorLayout from '../../components/Doctor/DoctorLayout';
 import Breadcrumbs from '../../components/common/Breadcrumbs';
-import { FaVideo, FaComments, FaPhone, FaTimes, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { FaVideo, FaComments, FaPhone, FaTimes, FaChevronDown, FaChevronUp, FaCheck } from 'react-icons/fa';
 import { appointmentService } from '../../services/appointmentService';
 import { prescriptionService } from '../../services/prescriptionService';
 import { API_BASE_URL } from '../../utils/constants';
@@ -13,6 +14,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import PrescriptionModal from '../../components/Doctor/PrescriptionModal';
 import PrescriptionViewModal from '../../components/Patient/PrescriptionViewModal';
+import { Skeleton } from '../../components/ui/skeleton';
 import {
     Dialog,
     DialogContent,
@@ -91,7 +93,8 @@ const DoctorAppointmentDetails: React.FC = () => {
         }
 
         return {
-            id: apt?.customId || apt?._id || apt?.id,
+            id: apt?._id || apt?.id,
+            customId: apt?.customId || apt?._id || apt?.id,
             patientName,
             patientEmail,
             patientPhone,
@@ -211,7 +214,7 @@ const DoctorAppointmentDetails: React.FC = () => {
                     if (updatedAppointment?.success && updatedAppointment?.data) {
                         setAppointment(updatedAppointment.data);
                     }
-                } catch (refreshError) {
+                } catch {
 
                     setAppointment((prev: any) => ({
                         ...prev,
@@ -232,6 +235,33 @@ const DoctorAppointmentDetails: React.FC = () => {
         }
     };
 
+    const handleApprove = async () => {
+        const appointmentId = normalized.id;
+        if (normalized.paymentStatus !== 'paid') {
+            toast.warning('Payment is pending!');
+            return;
+        }
+        try {
+            const response = await appointmentService.approveAppointment(appointmentId);
+            if (response?.success) {
+                toast.success('Appointment approved!');
+                // Refresh data
+                const updated = await appointmentService.getAppointmentById(appointmentId);
+                if (updated?.success) setAppointment(updated.data);
+            } else {
+                throw new Error(response?.message || 'Failed to approve');
+            }
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || err?.message || 'Failed to approve');
+        }
+    };
+
+    const handleReject = async () => {
+        setCancelReason('');
+        setShowCancelReason(true); // Reuse cancel dialog logic for rejection
+        setCancelOpen(true);
+    };
+
     const breadcrumbItems = [
         { label: 'Home', path: '/doctor/dashboard' },
         { label: 'Appointments', path: '/doctor/appointments' },
@@ -249,443 +279,167 @@ const DoctorAppointmentDetails: React.FC = () => {
             />
 
             <DoctorLayout>
-
-                {/* Loading */}
-                {loading && (
-                    <div className="flex justify-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00A1B0]" />
+                {loading ? (
+                    <div className="space-y-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                <div className="lg:col-span-5 flex gap-4">
+                                    <Skeleton className="w-20 h-20 rounded-full" />
+                                    <div className="space-y-2">
+                                        <Skeleton className="h-4 w-24" />
+                                        <Skeleton className="h-6 w-48" />
+                                        <div className="flex gap-4 mt-4">
+                                            <Skeleton className="h-4 w-32" />
+                                            <Skeleton className="h-4 w-24" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="lg:col-span-4">
+                                    <Skeleton className="h-4 w-32 mb-2" />
+                                    <Skeleton className="h-10 w-40 rounded-lg" />
+                                </div>
+                                <div className="lg:col-span-3 text-right space-y-3">
+                                    <Skeleton className="h-8 w-24 rounded-full ml-auto" />
+                                    <Skeleton className="h-6 w-48 ml-auto" />
+                                </div>
+                            </div>
+                            <div className="bg-gray-50 px-6 py-4 border-t border-gray-100">
+                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                    {[1, 2, 3, 4, 5].map(i => (
+                                        <div key={i}>
+                                            <Skeleton className="h-3 w-32 mb-1" />
+                                            <Skeleton className="h-4 w-full" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <Skeleton className="h-32 w-full rounded-xl" />
+                        <Skeleton className="h-32 w-full rounded-xl" />
                     </div>
-                )}
-
-                {/* Error */}
-                {!loading && error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-                        {error}
-                    </div>
-                )}
-
-                {/* Appointment Loaded */}
-                {!loading && !error && appointment && (
+                ) : error ? (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">{error}</div>
+                ) : appointment && (
                     <>
                         {/* MAIN CARD */}
                         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
-
-                            {/* Top Section */}
                             <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-                                {/* Patient Info */}
                                 <div className="lg:col-span-5 flex gap-4">
-                                    <img
-                                        src={normalized.patientImage}
-                                        alt="Patient"
-                                        className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
-                                        onError={(e) => {
-                                            e.currentTarget.src = 'https://via.placeholder.com/100x100?text=Patient';
-                                        }}
-                                    />
-
+                                    <img src={normalized.patientImage} alt="Patient" className="w-20 h-20 rounded-full object-cover border-2 border-gray-200" onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/100x100?text=Patient'; }} />
                                     <div>
-                                        <p className="text-sm text-gray-500 mb-1">
-                                            {normalized.id}
-                                        </p>
-
-                                        <h3 className="text-xl font-bold text-gray-800">
-                                            {normalized.patientName}
-                                        </h3>
-
+                                        <p className="text-sm text-gray-500 mb-1 font-mono uppercase tracking-wider">#{normalized.customId}</p>
+                                        <h3 className="text-xl font-bold text-gray-800">{normalized.patientName}</h3>
                                         <div className="flex items-center gap-3 mt-4">
-                                            <div className="flex items-center gap-2">
-                                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19h14a2 2 0 002-2V7H3v10a2 2 0 002 2z" />
-                                                </svg>
-                                                <span className="text-sm text-gray-600">{normalized.patientEmail}</span>
-                                            </div>
-
-                                            <div className="flex items-center gap-2">
-                                                <FaPhone size={14} className="text-gray-400" />
-                                                <span className="text-sm text-gray-600">{normalized.patientPhone}</span>
-                                            </div>
+                                            <div className="flex items-center gap-2"><svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19h14a2 2 0 002-2V7H3v10a2 2 0 002 2z" /></svg><span className="text-sm text-gray-600">{normalized.patientEmail}</span></div>
+                                            <div className="flex items-center gap-2"><FaPhone size={14} className="text-gray-400" /><span className="text-sm text-gray-600">{normalized.patientPhone}</span></div>
                                         </div>
-
-
                                     </div>
                                 </div>
-
-                                {/* Appointment Type */}
                                 <div className="lg:col-span-4">
                                     <p className="text-sm font-semibold text-gray-500 mb-2">Type of Appointment</p>
-
-                                    <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#00A1B0]/10 text-[#00A1B0] font-medium">
-                                        {normalized.appointmentType === 'video'
-                                            ? <FaVideo size={16} />
-                                            : <FaComments size={16} />}
-                                        {normalized.appointmentType === 'video' ? 'Video Call' : 'Chat'}
-                                    </div>
+                                    <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#00A1B0]/10 text-[#00A1B0] font-medium">{normalized.appointmentType === 'video' ? <FaVideo size={16} /> : <FaComments size={16} />}{normalized.appointmentType === 'video' ? 'Video Call' : 'Chat'}</div>
                                 </div>
-
-                                {/* Status & Fees */}
                                 <div className="lg:col-span-3">
                                     <div className="text-right">
-                                        <span
-                                            className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mb-3 ${getStatusColor(
-                                                normalized.status
-                                            )}`}
-                                        >
-                                            {normalized.displayStatus}
-                                        </span>
-                                        <p className="text-sm font-semibold text-gray-800">
-                                            Consultation Fees: ₹{normalized.consultationFees}
-                                        </p>
+                                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mb-3 ${getStatusColor(normalized.status)}`}>{normalized.displayStatus}</span>
+                                        <p className="text-sm font-semibold text-gray-800">Consultation Fees: ₹{normalized.consultationFees}</p>
                                         <div className="flex justify-end gap-2 mt-3">
-                                            {normalized.isUpcoming && (
-                                                <button
-                                                    onClick={handleCancelAppointment}
-                                                    className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg flex items-center gap-1"
-                                                >
-                                                    <FaTimes size={14} />
-                                                    Cancel
-                                                </button>
+                                            {normalized.status === 'pending' && (
+                                                <>
+                                                    <button
+                                                        onClick={handleApprove}
+                                                        className={`px-4 py-2 rounded-lg flex items-center gap-1 font-medium transition-colors ${normalized.paymentStatus === 'paid'
+                                                            ? 'bg-green-50 hover:bg-green-100 text-green-600'
+                                                            : 'bg-amber-50 hover:bg-amber-100 text-amber-600'
+                                                            }`}
+                                                        title={normalized.paymentStatus !== 'paid' ? "Payment pending" : "Approve appointment"}
+                                                    >
+                                                        <FaCheck size={14} />Approve
+                                                    </button>
+                                                    <button onClick={handleReject} className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg flex items-center gap-1 font-medium"><FaTimes size={14} />Reject</button>
+                                                </>
+                                            )}
+                                            {normalized.isUpcoming && normalized.status !== 'pending' && normalized.status !== 'cancelled' && normalized.status !== 'rejected' && (
+                                                <button onClick={handleCancelAppointment} className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg flex items-center gap-1 font-medium"><FaTimes size={14} />Cancel</button>
                                             )}
                                         </div>
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Rejection Reason Section */}
                             {appointment?.status === 'rejected' && appointment?.rejectionReason && (
                                 <div className="px-6 py-4 bg-red-50 border-t border-red-200">
                                     <div className="flex items-start gap-3">
-                                        <div className="flex-shrink-0 w-5 h-5 text-red-600 mt-0.5">
-                                            <svg
-                                                className="w-full h-full"
-                                                fill="currentColor"
-                                                viewBox="0 0 20 20"
-                                            >
-                                                <path
-                                                    fillRule="evenodd"
-                                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                                                    clipRule="evenodd"
-                                                />
-                                            </svg>
-                                        </div>
-                                        <div className="flex-1">
-                                            <h6 className="text-sm font-semibold text-red-800 mb-1">
-                                                Rejection Reason
-                                            </h6>
-                                            <p className="text-sm text-red-700">
-                                                {appointment.rejectionReason}
-                                            </p>
-                                        </div>
+                                        <div className="flex-shrink-0 w-5 h-5 text-red-600 mt-0.5"><svg className="w-full h-full" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg></div>
+                                        <div className="flex-1"><h6 className="text-sm font-semibold text-red-800 mb-1">Rejection Reason</h6><p className="text-sm text-red-700">{appointment.rejectionReason}</p></div>
                                     </div>
                                 </div>
                             )}
-
-                            {/* Cancellation Reason Section */}
                             {appointment?.status === 'cancelled' && (appointment?.cancellationReason || appointment?.reason) && (
                                 <div className="px-6 py-4 bg-red-50 border-t border-red-100">
-                                    <button
-                                        onClick={() => setShowCancelReason(!showCancelReason)}
-                                        className="w-full flex items-center justify-between text-left hover:bg-red-100/50 rounded-lg p-2 -m-2 transition-colors"
-                                    >
+                                    <button onClick={() => setShowCancelReason(!showCancelReason)} className="w-full flex items-center justify-between text-left hover:bg-red-100/50 rounded-lg p-2 -m-2 transition-colors">
                                         <div className="flex items-start gap-3">
-                                            <div className="flex-shrink-0 w-5 h-5 text-red-500 mt-0.5">
-                                                <svg
-                                                    className="w-full h-full"
-                                                    fill="currentColor"
-                                                    viewBox="0 0 20 20"
-                                                >
-                                                    <path
-                                                        fillRule="evenodd"
-                                                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                                                        clipRule="evenodd"
-                                                    />
-                                                </svg>
-                                            </div>
-                                            <div>
-                                                <h6 className="text-sm font-semibold text-red-800">
-                                                    Cancellation Reason{appointment?.cancelledBy ? ` (${appointment.cancelledBy})` : ''}
-                                                </h6>
-                                            </div>
+                                            <div className="flex-shrink-0 w-5 h-5 text-red-500 mt-0.5"><svg className="w-full h-full" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg></div>
+                                            <div><h6 className="text-sm font-semibold text-red-800">Cancellation Reason{appointment?.cancelledBy ? ` (${appointment.cancelledBy})` : ''}</h6></div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm text-red-600 font-medium">
-                                                {showCancelReason ? 'Show Less' : 'Show More'}
-                                            </span>
-                                            {showCancelReason ? (
-                                                <FaChevronUp size={14} className="text-red-600" />
-                                            ) : (
-                                                <FaChevronDown size={14} className="text-red-600" />
-                                            )}
-                                        </div>
+                                        <div className="flex items-center gap-2"><span className="text-sm text-red-600 font-medium">{showCancelReason ? 'Show Less' : 'Show More'}</span>{showCancelReason ? (<FaChevronUp size={14} className="text-red-600" />) : (<FaChevronDown size={14} className="text-red-600" />)}</div>
                                     </button>
-                                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showCancelReason ? 'max-h-96 opacity-100 mt-3' : 'max-h-0 opacity-0'}`}>
-                                        <div className="pl-8">
-                                            <p className="text-sm text-red-700 leading-relaxed">
-                                                {appointment.cancellationReason || appointment.reason}
-                                            </p>
-                                            {appointment.cancelledAt && (
-                                                <p className="text-xs text-red-600 mt-2">
-                                                    Cancelled on {new Date(appointment.cancelledAt).toLocaleDateString('en-US', {
-                                                        day: 'numeric',
-                                                        month: 'short',
-                                                        year: 'numeric',
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    })}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
+                                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showCancelReason ? 'max-h-96 opacity-100 mt-3' : 'max-h-0 opacity-0'}`}><div className="pl-8"><p className="text-sm text-red-700 leading-relaxed">{appointment.cancellationReason || appointment.reason}</p>{appointment.cancelledAt && (<p className="text-xs text-red-600 mt-2">Cancelled on {new Date(appointment.cancelledAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>)}</div></div>
                                 </div>
                             )}
-
-                            {/* Bottom Section */}
                             <div className="bg-gray-50 px-6 py-4 border-t border-gray-100">
                                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                    <div>
-                                        <h6 className="text-xs font-semibold text-gray-500 mb-1">
-                                            Appointment Date & Time
-                                        </h6>
-                                        <p className="text-sm font-medium text-gray-800">
-                                            {normalized.hasValidDate
-                                                ? new Date(normalized.date).toLocaleDateString('en-US', {
-                                                    day: 'numeric',
-                                                    month: 'short',
-                                                    year: 'numeric',
-                                                })
-                                                : 'N/A'}{' '}
-                                            - {normalized.time || 'N/A'}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <h6 className="text-xs font-semibold text-gray-500 mb-1">Reason</h6>
-                                        <p className="text-sm font-medium text-gray-800">{normalized.reason || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <h6 className="text-xs font-semibold text-gray-500 mb-1">Payment Status</h6>
-                                        <p className="text-sm font-medium text-gray-800">{normalized.paymentStatus}</p>
-                                    </div>
-                                    <div>
-                                        <h6 className="text-xs font-semibold text-gray-500 mb-1">Appointment Type</h6>
-                                        <p className="text-sm font-medium text-gray-800">
-                                            {normalized.appointmentType === 'video' ? 'Video Call' : 'Chat'}
-                                        </p>
-                                    </div>
+                                    <div><h6 className="text-xs font-semibold text-gray-500 mb-1">Appointment Date & Time</h6><p className="text-sm font-medium text-gray-800">{normalized.hasValidDate ? new Date(normalized.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'} - {normalized.time || 'N/A'}</p></div>
+                                    <div><h6 className="text-xs font-semibold text-gray-500 mb-1">Reason</h6><p className="text-sm font-medium text-gray-800">{normalized.reason || 'N/A'}</p></div>
+                                    <div><h6 className="text-xs font-semibold text-gray-500 mb-1">Payment Status</h6><p className="text-sm font-medium text-gray-800">{normalized.paymentStatus}</p></div>
+                                    <div><h6 className="text-xs font-semibold text-gray-500 mb-1">Appointment Type</h6><p className="text-sm font-medium text-gray-800">{normalized.appointmentType === 'video' ? 'Video Call' : 'Chat'}</p></div>
                                     <div className="col-span-2 md:col-span-4 lg:col-span-1 flex items-end flex-col gap-2">
-                                        {normalized.isUpcoming && normalized.status === 'confirmed' && (
-                                            normalized.isSessionReady ? (
-                                                <button
-                                                    onClick={() => navigate(`/doctor/${normalized.appointmentType === 'video' ? 'call' : 'chat'}/${appointment?._id || appointment?.id}`)}
-                                                    className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors shadow-sm"
-                                                >
-                                                    Start Session
-                                                </button>
-                                            ) : (
-                                                <div className="w-full px-4 py-3 bg-gray-50 text-gray-500 font-medium rounded-xl border border-dashed border-gray-300 text-center text-sm">
-                                                    Starts at {normalized.time.split(' - ')[0]}
-                                                </div>
-                                            )
-                                        )}
-
-                                        {/* Post-Consultation Chat - Only for Video Appointments */}
+                                        {normalized.isUpcoming && normalized.status === 'confirmed' && (normalized.isSessionReady ? (<button onClick={() => navigate(`/doctor/${normalized.appointmentType === 'video' ? 'call' : 'chat'}/${appointment?._id || appointment?.id}`)} className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors shadow-sm">Start Session</button>) : (<div className="w-full px-4 py-3 bg-gray-50 text-gray-500 font-medium rounded-xl border border-dashed border-gray-300 text-center text-sm">Starts at {normalized.time.split(' - ')[0]}</div>))}
                                         {normalized.status === 'completed' && normalized.appointmentType === 'video' && !hasPrescription && (
                                             <div className="w-full flex flex-col gap-3">
-                                                {!appointment?.postConsultationChatWindow?.isActive ? (
-                                                    <Button
-                                                        onClick={async () => {
-                                                            try {
-                                                                const res = await appointmentService.enablePostConsultationChat(normalized.id);
-                                                                if (res.success) {
-                                                                    toast.success("Chat enabled for 24 hours. Message sent to patient.");
-                                                                    const response = await appointmentService.getAppointmentById(normalized.id);
-                                                                    if (response?.success) setAppointment(response.data);
-                                                                } else {
-                                                                    toast.error(res.message);
-                                                                }
-                                                            } catch (error: any) {
-                                                                toast.error(error.response?.data?.message || "Failed to enable chat");
-                                                            }
-                                                        }}
-                                                        className="w-full px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
-                                                    >
-                                                        <ClipboardList className="h-4 w-4" />
-                                                        Tests Needed
-                                                    </Button>
-                                                ) : (
+                                                {!appointment?.TEST_NEEDED ? (<Button onClick={async () => { try { const res = await appointmentService.enablePostConsultationChat(normalized.id); if (res.success) { toast.success("Chat enabled for 24 hours. Message sent to patient."); const response = await appointmentService.getAppointmentById(normalized.id); if (response?.success) setAppointment(response.data); } else { toast.error(res.message); } } catch (error: any) { toast.error(error.response?.data?.message || "Failed to enable chat"); } }} className="w-full px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"><ClipboardList className="h-4 w-4" />Tests Needed</Button>) : (
                                                     <div className="w-full flex flex-col gap-2">
-                                                        <Button
-                                                            onClick={() => navigate(`/doctor/chat/${normalized.id}`)}
-                                                            className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
-                                                        >
-                                                            <MessagesSquare className="h-4 w-4" />
-                                                            Go to Chat
-                                                        </Button>
-                                                        <Button
-                                                            onClick={() => setCloseChatOpen(true)}
-                                                            variant="outline"
-                                                            className="w-full px-6 py-2.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-semibold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
-                                                        >
-                                                            <XCircle className="h-4 w-4" />
-                                                            Wind Up Chat
-                                                        </Button>
+                                                        <Button onClick={() => navigate(`/doctor/chat/${normalized.id}`)} className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"><MessagesSquare className="h-4 w-4" />Go to Chat</Button>
+                                                        <Button onClick={() => setCloseChatOpen(true)} variant="outline" className="w-full px-6 py-2.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-semibold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"><XCircle className="h-4 w-4" />Wind Up Chat</Button>
                                                     </div>
                                                 )}
                                             </div>
                                         )}
-
-                                        {/* Create/View Prescription Button for Completed Appointments */}
-                                        {normalized.status === 'completed' && (
-                                            hasPrescription ? (
-                                                <Button
-                                                    onClick={() => setPrescriptionViewOpen(true)}
-                                                    className="w-full px-6 py-2.5 bg-white border border-[#00A1B0] text-[#00A1B0] hover:bg-[#00A1B0]/5 font-semibold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
-                                                >
-                                                    <Stethoscope className="w-4 h-4" />
-                                                    View Prescription
-                                                </Button>
-                                            ) : (
-                                                <Button
-                                                    onClick={() => setPrescriptionOpen(true)}
-                                                    className="w-full px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"
-                                                >
-                                                    <ClipboardList className="w-4 h-4" />
-                                                    Create Prescription
-                                                </Button>
-                                            )
-                                        )}
+                                        {normalized.status === 'completed' && (hasPrescription ? (<Button onClick={() => setPrescriptionViewOpen(true)} className="w-full px-6 py-2.5 bg-white border border-[#00A1B0] text-[#00A1B0] hover:bg-[#00A1B0]/5 font-semibold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"><Stethoscope className="w-4 h-4" />View Prescription</Button>) : (<Button onClick={() => setPrescriptionOpen(true)} className="w-full px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2"><ClipboardList className="w-4 h-4" />Create Prescription</Button>))}
                                     </div>
                                 </div>
                             </div>
                         </div>
-
-                        {/* MEDICAL HISTORY */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-                            <h5 className="text-lg font-bold text-gray-800 mb-4">Patient Medical History</h5>
-                            <p className="text-gray-500 text-sm">No medical history available.</p>
-                        </div>
-
-                        {/* PREVIOUS CONSULTATIONS */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                            <h5 className="text-lg font-bold text-gray-800 mb-4">Previous Consultations</h5>
-                            <p className="text-gray-500 text-sm">No previous consultations to display.</p>
-                        </div>
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6"><h5 className="text-lg font-bold text-gray-800 mb-4">Patient Medical History</h5><p className="text-gray-500 text-sm">No medical history available.</p></div>
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"><h5 className="text-lg font-bold text-gray-800 mb-4">Previous Consultations</h5><p className="text-gray-500 text-sm">No previous consultations to display.</p></div>
                     </>
                 )}
             </DoctorLayout>
 
-            {/* Cancel Appointment Dialog */}
             {cancelOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div
-                        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-                        onClick={() => {
-                            if (!cancelSubmitting) setCancelOpen(false);
-                        }}
-                    />
-
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { if (!cancelSubmitting) setCancelOpen(false); }} />
                     <div className="relative z-50 w-full max-w-lg mx-4">
                         <Card>
-                            <CardHeader>
-                                <CardTitle>Cancel Appointment</CardTitle>
-                                <CardDescription>
-                                    Please confirm cancellation and provide a reason. This helps the patient and our support team.
-                                </CardDescription>
-                            </CardHeader>
-
+                            <CardHeader><CardTitle>Cancel Appointment</CardTitle><CardDescription>Please confirm cancellation and provide a reason. This helps the patient and our support team.</CardDescription></CardHeader>
                             <CardContent className="space-y-3">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-gray-800">
-                                        Reason for Cancellation
-                                    </label>
-                                    <textarea
-                                        value={cancelReason}
-                                        onChange={(e) => setCancelReason(e.target.value)}
-                                        placeholder="Eg: Emergency, Schedule conflict, Patient not available"
-                                        rows={4}
-                                        disabled={cancelSubmitting}
-                                        className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00A1B0]/40 disabled:opacity-50"
-                                    />
+                                    <label className="text-sm font-medium text-gray-800">Reason for Cancellation</label>
+                                    <textarea value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder="Eg: Emergency, Schedule conflict, Patient not available" rows={4} disabled={cancelSubmitting} className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00A1B0]/40 disabled:opacity-50" />
                                 </div>
                             </CardContent>
-
-                            <CardFooter className="justify-end gap-2">
-                                <Button
-                                    variant="secondary"
-                                    onClick={() => setCancelOpen(false)}
-                                    disabled={cancelSubmitting}
-                                >
-                                    Close
-                                </Button>
-                                <Button
-                                    onClick={handleConfirmCancel}
-                                    disabled={cancelSubmitting}
-                                    className="bg-red-600 hover:bg-red-700"
-                                >
-                                    {cancelSubmitting ? 'Cancelling...' : 'Cancel Appointment'}
-                                </Button>
-                            </CardFooter>
+                            <CardFooter className="justify-end gap-2"><Button variant="secondary" onClick={() => setCancelOpen(false)} disabled={cancelSubmitting}>Close</Button><Button onClick={handleConfirmCancel} disabled={cancelSubmitting} className="bg-red-600 hover:bg-red-700">{cancelSubmitting ? 'Cancelling...' : 'Cancel Appointment'}</Button></CardFooter>
                         </Card>
                     </div>
                 </div>
             )}
 
-            {/* Prescription Modal */}
-            <PrescriptionModal
-                isOpen={prescriptionOpen}
-                onClose={() => setPrescriptionOpen(false)}
-                appointmentId={appointment?._id || appointment?.id}
-                patientId={appointment?.patientId?._id || appointment?.patientId}
-                onSuccess={() => {
-                    setHasPrescription(true);
-                    setPrescriptionOpen(false);
-                }}
-            />
+            <PrescriptionModal isOpen={prescriptionOpen} onClose={() => setPrescriptionOpen(false)} appointmentId={appointment?._id || appointment?.id} patientId={appointment?.patientId?._id || appointment?.patientId} onSuccess={() => { setHasPrescription(true); setPrescriptionOpen(false); }} />
+            <PrescriptionViewModal isOpen={prescriptionViewOpen} onClose={() => setPrescriptionViewOpen(false)} appointmentId={appointment?._id || appointment?.id} />
 
-            {/* View Prescription Modal */}
-            <PrescriptionViewModal
-                isOpen={prescriptionViewOpen}
-                onClose={() => setPrescriptionViewOpen(false)}
-                appointmentId={appointment?._id || appointment?.id}
-            />
-            {/* Close Chat Confirmation Dialog */}
             <Dialog open={closeChatOpen} onOpenChange={setCloseChatOpen}>
                 <DialogContent className="sm:max-w-md bg-white border border-gray-100 shadow-xl">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl font-bold text-gray-900">Wind Up Chat?</DialogTitle>
-                        <DialogDescription className="text-gray-500">
-                            Are you sure you want to close this chat? Both you and the patient will no longer be able to send messages.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter className="flex gap-2 sm:justify-end">
-                        <Button
-                            variant="secondary"
-                            onClick={() => setCloseChatOpen(false)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={async () => {
-                                try {
-                                    const res = await appointmentService.disablePostConsultationChat(normalized.id);
-                                    if (res.success) {
-                                        toast.success("Chat window closed manually.");
-                                        const response = await appointmentService.getAppointmentById(normalized.id);
-                                        if (response?.success) setAppointment(response.data);
-                                    } else {
-                                        toast.error(res.message);
-                                    }
-                                } catch (error: any) {
-                                    toast.error(error.response?.data?.message || "Failed to close chat");
-                                } finally {
-                                    setCloseChatOpen(false);
-                                }
-                            }}
-                            className="bg-red-600 hover:bg-red-700 text-white"
-                        >
-                            Confirm Wind Up
-                        </Button>
-                    </DialogFooter>
+                    <DialogHeader><DialogTitle className="text-xl font-bold text-gray-900">Wind Up Chat?</DialogTitle><DialogDescription className="text-gray-500">Are you sure you want to close this chat? Both you and the patient will no longer be able to send messages.</DialogDescription></DialogHeader>
+                    <DialogFooter className="flex gap-2 sm:justify-end"><Button variant="secondary" onClick={() => setCloseChatOpen(false)}>Cancel</Button><Button onClick={async () => { try { const res = await appointmentService.disablePostConsultationChat(normalized.id); if (res.success) { toast.success("Chat window closed manually."); const response = await appointmentService.getAppointmentById(normalized.id); if (response?.success) setAppointment(response.data); } else { toast.error(res.message); } } catch (error: any) { toast.error(error.response?.data?.message || "Failed to close chat"); } finally { setCloseChatOpen(false); } }} className="bg-red-600 hover:bg-red-700 text-white">Confirm Wind Up</Button></DialogFooter>
                 </DialogContent>
             </Dialog>
         </div >
@@ -694,3 +448,4 @@ const DoctorAppointmentDetails: React.FC = () => {
 };
 
 export default DoctorAppointmentDetails;
+

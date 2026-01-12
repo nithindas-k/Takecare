@@ -127,7 +127,8 @@ const DoctorRegister: React.FC = () => {
         } else {
           setServerError(response.message || "Registration failed. Please try again.");
         }
-      } catch (error: any) {
+      } catch (e: unknown) {
+        const error = e as { message?: string };
         console.error("Registration error:", error);
         setServerError(error.message || "Registration failed. Please try again.");
       } finally {

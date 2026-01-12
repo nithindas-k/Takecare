@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
 import { useSocket } from './SocketContext';
 import { useSelector } from 'react-redux';
@@ -25,6 +26,7 @@ interface VideoCallContextType {
 }
 
 const VideoCallContext = createContext<VideoCallContextType | undefined>(undefined);
+
 
 export const useVideoCall = () => {
     const context = useContext(VideoCallContext);
@@ -60,7 +62,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const user = useSelector(selectCurrentUser);
     const me = user?.id || (user as any)?._id;
 
- 
+
     useEffect(() => {
         if (socket && me) {
             console.log("VideoCallContext: Joining socket room", me);
@@ -133,19 +135,19 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const createPeerConnection = useCallback((targetId: string) => {
         const peer = new RTCPeerConnection(ICE_SERVERS);
 
-       
+
         if (stream) {
             stream.getTracks().forEach(track => peer.addTrack(track, stream));
         }
 
-     
+
         peer.ontrack = (event) => {
             if (userVideo.current) {
                 userVideo.current.srcObject = event.streams[0];
             }
         };
 
-       
+
         peer.onicecandidate = (event) => {
             if (event.candidate) {
                 socket?.emit("ice-candidate", {
@@ -205,7 +207,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (targetId) {
             socket?.emit("end-call", { to: targetId });
         }
-     
+
     };
 
     const toggleMute = () => {
@@ -246,3 +248,4 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         </VideoCallContext.Provider>
     );
 };
+

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -5,7 +6,7 @@ import {
     ChevronLeft, Check, CheckCheck,
     Info, Search, Globe, Plus, Camera, Paperclip, Mic, Trash2, Pause, Play,
     Menu, ArrowLeft, ShieldCheck, Lock, MessagesSquare, X, Download, ExternalLink, XCircle, Clock, ClipboardList,
-    FileText,
+    StickyNote, BookOpen
 } from 'lucide-react';
 import type { EmojiClickData } from 'emoji-picker-react';
 import EmojiPicker from 'emoji-picker-react';
@@ -22,6 +23,7 @@ import {
     DialogTitle,
     DialogFooter,
 } from '../../components/ui/dialog';
+import { Skeleton } from '../../components/ui/skeleton';
 import { useSocket } from '../../context/SocketContext';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../redux/user/userSlice';
@@ -52,6 +54,13 @@ interface Doctor {
     specialty?: string;
 }
 
+interface IDoctorNote {
+    id: string;
+    title: string;
+    description: string;
+    createdAt: string;
+}
+
 interface Appointment {
     _id: string;
     patientId?: Patient;
@@ -59,11 +68,12 @@ interface Appointment {
     appointmentDate?: string | Date;
     appointmentTime?: string;
     status: string;
+    TEST_NEEDED?: boolean;
     postConsultationChatWindow?: {
         isActive: boolean;
         expiresAt: string;
     };
-    doctorNotes?: string;
+    doctorNotes?: IDoctorNote[];
     patient?: any;
     customId?: string;
 }
@@ -103,113 +113,6 @@ interface Message {
     isEdited?: boolean;
 }
 
-const VoicePlayer: React.FC<{ url: string; isUser: boolean }> = ({ url, isUser }) => {
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [progress, setProgress] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const [currentTime, setCurrentTime] = useState(0);
-    const audioRef = useRef<HTMLAudioElement | null>(null);
-
-    const togglePlay = () => {
-        if (audioRef.current) {
-            if (isPlaying) {
-                audioRef.current.pause();
-            } else {
-                audioRef.current.play();
-            }
-            setIsPlaying(!isPlaying);
-        }
-    };
-
-    const onTimeUpdate = () => {
-        if (audioRef.current) {
-            const current = audioRef.current.currentTime;
-            const dur = audioRef.current.duration;
-            setCurrentTime(current);
-            setProgress((current / dur) * 100);
-        }
-    };
-
-    const onLoadedMetadata = () => {
-        if (audioRef.current) {
-            setDuration(audioRef.current.duration);
-        }
-    };
-
-    const onEnded = () => {
-        setIsPlaying(false);
-        setProgress(0);
-        setCurrentTime(0);
-    };
-
-    const formatTime = (time: number) => {
-        const mins = Math.floor(time / 60);
-        const secs = Math.floor(time % 60);
-        return `${mins}:${secs.toString().padStart(2, '0')} `;
-    };
-
-    const handleProgressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newProgress = parseFloat(e.target.value);
-        if (audioRef.current) {
-            const newTime = (newProgress / 100) * duration;
-            audioRef.current.currentTime = newTime;
-            setProgress(newProgress);
-            setCurrentTime(newTime);
-        }
-    };
-
-    return (
-        <div className={`flex items - center gap - 3 py - 2 px - 1 rounded - xl min - w - [240px] md: min - w - [280px]`}>
-            <audio
-                ref={audioRef}
-                src={url}
-                onTimeUpdate={onTimeUpdate}
-                onLoadedMetadata={onLoadedMetadata}
-                onEnded={onEnded}
-            />
-
-            <button
-                onClick={togglePlay}
-                className={`flex - shrink - 0 h - 10 w - 10 rounded - full flex items - center justify - center transition - all active: scale - 90 ${isUser ? 'bg-white text-[#00A1B0]' : 'bg-[#00A1B0] text-white'
-                    } `}
-            >
-                {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
-            </button>
-
-            <div className="flex-1 flex flex-col gap-1">
-                {/* Wave-like progress slider */}
-                <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={progress || 0}
-                    onChange={handleProgressChange}
-                    className={`h - 1.5 w - full appearance - none rounded - full outline - none cursor - pointer voice - range ${isUser ? 'accent-white' : 'accent-[#00A1B0]'
-                        } `}
-                    style={{
-                        background: `linear - gradient(to right, ${isUser ? 'white' : '#00A1B0'} ${progress} %, ${isUser ? 'rgba(255,255,255,0.2)' : 'rgba(0,161,176,0.1)'} ${progress} %)`
-                    }}
-                />
-                <div className="flex justify-between items-center">
-                    <span className={`text - [10px] font - bold ${isUser ? 'text-white/80' : 'text-slate-500'} `}>
-                        {formatTime(currentTime)} / {formatTime(duration)}
-                    </span>
-                    <Mic className={`h - 3 w - 3 ${isUser ? 'text-white/50' : 'text-[#00A1B0]/50'} `} />
-                </div>
-            </div>
-
-            <div className="relative flex-shrink-0">
-                <div className={`h - 10 w - 10 rounded - full flex items - center justify - center overflow - hidden border - 2 ${isUser ? 'border-white/20 bg-white/10' : 'border-[#008f9c]/10 bg-slate-50'
-                    } `}>
-                    <Mic className={`h - 5 w - 5 ${isUser ? 'text-white/60' : 'text-[#00A1B0]'} `} />
-                </div>
-                {!isUser && <span className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 border-2 border-white rounded-full flex items-center justify-center">
-                    <Check className="h-2 w-2 text-white" />
-                </span>}
-            </div>
-        </div>
-    );
-};
 
 
 const ChatPage: React.FC = () => {
@@ -241,7 +144,7 @@ const ChatPage: React.FC = () => {
     const [previewImage, setPreviewImage] = useState<string | null>(null);
 
     const attachmentOptions = [
-        { id: 'doc', label: 'Document', icon: <FileText className="h-5 w-5" />, color: 'bg-[#7f66de]' },
+        { id: 'image', label: 'Image', icon: <Camera className="h-5 w-5" />, color: 'bg-rose-500' },
     ];
 
     useEffect(() => {
@@ -255,11 +158,9 @@ const ChatPage: React.FC = () => {
     }, []);
 
     const handleBackToWebsite = () => {
-        if (id && id !== 'default') {
-            navigate(isDoctor ? `/ doctor / appointments / ${id} ` : ` / patient / appointments / ${id} `);
-        } else {
-            navigate(isDoctor ? '/doctor/dashboard' : '/patient/home');
-        }
+
+        navigate(isDoctor ? '/doctor/dashboard' : '/patient/dashboard');
+
     };
 
     const { socket } = useSocket();
@@ -280,8 +181,67 @@ const ChatPage: React.FC = () => {
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState("");
-    const [noteText, setNoteText] = useState("");
-    const [savedNotes, setSavedNotes] = useState<{ id: number; text: string; time: string }[]>([]);
+
+    const [noteTitle, setNoteTitle] = useState("");
+    const [noteDescription, setNoteDescription] = useState("");
+    const [noteCategory, setNoteCategory] = useState<'observation' | 'diagnosis' | 'medicine' | 'lab_test'>("observation");
+    const [noteDosage, setNoteDosage] = useState("");
+    const [noteFrequency, setNoteFrequency] = useState("");
+    const [noteDuration, setNoteDuration] = useState("");
+    const [isSavingNote, setIsSavingNote] = useState(false);
+
+    const handleSaveNote = async () => {
+        if (!id || !noteTitle.trim()) {
+            toast.error("Please provide at least a title");
+            return;
+        }
+
+        if (noteCategory === 'medicine') {
+            if (!noteDosage.trim() || !noteFrequency.trim() || !noteDuration.trim()) {
+                toast.error("Please provide dosage, frequency and duration");
+                return;
+            }
+        } else {
+            if (!noteDescription.trim()) {
+                toast.error("Please provide a description");
+                return;
+            }
+        }
+
+        try {
+            setIsSavingNote(true);
+            const newNote = {
+                id: Date.now().toString(),
+                title: noteTitle,
+                description: noteDescription,
+                category: noteCategory,
+                dosage: noteCategory === 'medicine' ? noteDosage : undefined,
+                frequency: noteCategory === 'medicine' ? noteFrequency : undefined,
+                duration: noteCategory === 'medicine' ? noteDuration : undefined,
+                createdAt: new Date().toISOString()
+            };
+
+            const res = await appointmentService.updateDoctorNotes(id, newNote);
+            if (res.success) {
+                toast.success(`${noteCategory.replace('_', ' ')} saved successfully`);
+                setAppointment((prev: any) => ({
+                    ...prev,
+                    doctorNotes: [...(prev?.doctorNotes || []), newNote]
+                }));
+             
+                setNoteTitle("");
+                setNoteDescription("");
+                setNoteDosage("");
+                setNoteFrequency("");
+                setNoteDuration("");
+            }
+        } catch (error: any) {
+            toast.error(error.message || "Failed to save note");
+        } finally {
+            setIsSavingNote(false);
+        }
+    };
+
     const [isOtherTyping, setIsOtherTyping] = useState(false);
     const typingTimeoutRef = useRef<number | undefined>(undefined);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -301,6 +261,9 @@ const ChatPage: React.FC = () => {
 
     const currentRoomRef = useRef<string>("");
     const currentCustomIdRef = useRef<string>("");
+    const currentPatientIdRef = useRef<string>("");
+    const currentDoctorIdRef = useRef<string>("");
+    const currentPersistentRoomRef = useRef<string>("");
 
     // Session Control 
     const [sessionStatus, setSessionStatus] = useState<string>("idle");
@@ -356,7 +319,7 @@ const ChatPage: React.FC = () => {
 
         const checkTime = () => {
 
-            if (sessionStatus === "CONTINUED_BY_DOCTOR" || sessionStatus === "ENDED" || extensionCount > 0) {
+            if (sessionStatus === "CONTINUED_BY_DOCTOR" || sessionStatus === "ENDED" || sessionStatus === "TEST_NEEDED" || appointment?.TEST_NEEDED || extensionCount > 0 || isPostConsultationWindowOpen) {
                 if (isTimeOver) setIsTimeOver(false);
                 return;
             }
@@ -388,7 +351,7 @@ const ChatPage: React.FC = () => {
 
         const interval = setInterval(checkTime, 1000);
         return () => clearInterval(interval);
-    }, [appointment, sessionStatus, isDoctor, isTimeOver, extensionCount, updateSessionStatus]);
+    }, [appointment, sessionStatus, isDoctor, isTimeOver, extensionCount, updateSessionStatus, isPostConsultationWindowOpen]);
 
     useEffect(() => {
         if (!socket) return;
@@ -419,7 +382,8 @@ const ChatPage: React.FC = () => {
                         if (!prev) return null;
                         const updated = {
                             ...prev,
-                            postConsultationChatWindow: data.postConsultationChatWindow
+                            postConsultationChatWindow: data.postConsultationChatWindow,
+                            TEST_NEEDED: data.TEST_NEEDED
                         };
                         console.log("[CHAT_PAGE] Updated appointment postConsultationChatWindow:", updated.postConsultationChatWindow);
 
@@ -429,8 +393,14 @@ const ChatPage: React.FC = () => {
 
                     if (data.postConsultationChatWindow.isActive) {
                         toast.success("Consultation Chat Unlocked for 24 Hours");
-
                         setIsTimeOver(false);
+
+                        // Force refresh appointment data to ensure consistency
+                        if (id) {
+                            chatService.getAppointment(id).then((res) => {
+                                if (res.data) setAppointment(res.data);
+                            }).catch(err => console.error("Failed to refresh appointment:", err));
+                        }
                     } else if (data.postConsultationChatWindow.isActive === false) {
                         toast.info("Consultation Chat has been closed");
                     }
@@ -559,9 +529,6 @@ const ChatPage: React.FC = () => {
                     setExtensionCount(currentAppointment.extensionCount || 0);
                 }
 
-                if (currentAppointment.doctorNotes) {
-                    setNoteText(currentAppointment.doctorNotes);
-                }
 
                 if (isDoctor && !currentAppointment.sessionStartTime && currentAppointment.status !== 'completed' && currentAppointment.status !== 'cancelled' && currentAppointment.status !== 'rejected') {
                     await updateSessionStatus("ACTIVE");
@@ -575,6 +542,7 @@ const ChatPage: React.FC = () => {
                     time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                     status: m.read ? 'read' : 'delivered',
                     type: m.type as any,
+                    fileName: m.fileName,
                     isDeleted: m.isDeleted,
                     isEdited: m.isEdited,
                 }));
@@ -584,31 +552,40 @@ const ChatPage: React.FC = () => {
                 if (socket) {
                     const mongoId = String(currentAppointment?._id || "");
                     const customId = String(currentAppointment?.customId || currentAppointment?.id || "");
-                    const pId = currentAppointment.patientId?._id || currentAppointment.patientId;
-                    const dId = currentAppointment.doctorId?._id || currentAppointment.doctorId;
-                    const persistentRoomId = `persistent-${pId}-${dId}`;
+                    const getSafeId = (item: any) => {
+                        if (!item) return "";
+                        if (typeof item === 'string') return item;
+                        return item._id || item.id || "";
+                    };
 
-                    console.log("[INIT] Setting up socket for appointment:", { mongoId, customId, persistentRoomId });
+                    const rawPId = currentAppointment.patientId || currentAppointment.patient;
+                    const rawDId = currentAppointment.doctorId || currentAppointment.doctor;
+
+                    const pId = getSafeId(rawPId);
+                    const dId = getSafeId(rawDId);
+
+                    const persistentRoomId = pId && dId ? `persistent-${pId}-${dId}` : "";
+
+                    console.log("[INIT] Setting up socket for appointment:", { mongoId, customId, persistentRoomId, pId, dId });
 
 
                     currentRoomRef.current = mongoId;
                     currentCustomIdRef.current = customId;
+                    currentPatientIdRef.current = pId;
+                    currentDoctorIdRef.current = dId;
+                    currentPersistentRoomRef.current = persistentRoomId;
 
                     const performJoin = () => {
-                        console.log(`[SOCKET] Joining rooms - MongoID: ${mongoId}, CustomID: ${customId}, Persistent: ${persistentRoomId}`);
+                        console.log(`[SOCKET] Joining rooms - MongoID: ${mongoId}, Persistent: ${persistentRoomId}`);
                         if (mongoId) {
                             socket.emit('join-chat', mongoId);
                             console.log(`[SOCKET] Emitted join-chat for: ${mongoId}`);
-                        }
-                        if (customId && customId !== mongoId) {
-                            socket.emit('join-chat', customId);
-                            console.log(`[SOCKET] Emitted join-chat for: ${customId}`);
                         }
                         if (persistentRoomId) {
                             socket.emit('join-chat', persistentRoomId);
                             console.log(`[SOCKET] Emitted join-chat for: ${persistentRoomId}`);
                         }
-                        socket.emit('mark-read', { appointmentId: mongoId || customId, userId: user.id || (user as any)._id });
+                        socket.emit('mark-read', { appointmentId: mongoId, userId: user.id || (user as any)._id });
                     };
 
 
@@ -621,7 +598,8 @@ const ChatPage: React.FC = () => {
 
                         const isMatch = appointmentIdFromMsg === currentMongoId ||
                             appointmentIdFromMsg === currentCustomId ||
-                            appointmentIdFromMsg === currentUrlId;
+                            appointmentIdFromMsg === currentUrlId ||
+                            ((newMessage as any).persistentRoomId && (newMessage as any).persistentRoomId === currentPersistentRoomRef.current);
 
                         const isFromMe = (newMessage.senderModel === 'User' && !isDoctor) || (newMessage.senderModel === 'Doctor' && isDoctor);
                         const senderType = isFromMe ? 'user' : 'other';
@@ -749,7 +727,7 @@ const ChatPage: React.FC = () => {
                     const onTyping = ({ userId: typingUserId, isTyping, appointmentId: typingAppId }: { userId: string, isTyping: boolean, appointmentId?: string }) => {
                         const myId = String(user?.id || (user as any)?._id || "");
                         if (String(typingUserId) !== myId) {
-                            // Only show typing indicator if it's for the current chat
+                            
                             if (typingAppId === (currentAppointment?._id || id)) {
                                 console.log(`[SOCKET] Typing indicator:`, { userId: typingUserId, isTyping });
                                 setIsOtherTyping(isTyping);
@@ -828,7 +806,7 @@ const ChatPage: React.FC = () => {
             };
         }
         else setIsLoading(false);
-    }, [id, user, isDoctor, socket, isPatientMe]);
+    }, [id, user, isDoctor, socket, isPatientMe, updateSessionStatus]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -838,17 +816,6 @@ const ChatPage: React.FC = () => {
         scrollToBottom();
     }, [messages]);
 
-    const handleSaveNote = async () => {
-        if (!id || id === 'default') return;
-        try {
-            await appointmentService.updateDoctorNotes(id, noteText);
-            toast.success("Notes updated successfully");
-            setSavedNotes([{ id: Date.now(), text: noteText, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }, ...savedNotes]);
-        } catch (error) {
-            console.error("Failed to update notes", error);
-            toast.error("Failed to update notes");
-        }
-    };
 
     const onEmojiClick = (emojiData: EmojiClickData) => {
         setInputValue((prev) => prev + emojiData.emoji);
@@ -992,10 +959,29 @@ const ChatPage: React.FC = () => {
         }
     };
 
+    const handleDownload = async (url: string, fileName: string) => {
+        try {
+            const toastId = toast.loading(`Preparing download...`);
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+            toast.dismiss(toastId);
+        } catch (error) {
+            console.error("Download failed", error);
+            window.open(url, '_blank');
+        }
+    };
+
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || !id) return;
-
 
         if (file.type.startsWith('image/')) {
             const reader = new FileReader();
@@ -1004,42 +990,8 @@ const ChatPage: React.FC = () => {
                 setIsCropping(true);
             });
             reader.readAsDataURL(file);
-            return;
-        }
-
-        setIsUploading(true);
-        try {
-            const fileUrl = await chatService.uploadAttachment(id, file);
-
-            const tempId = `temp-${Date.now()}`;
-            const uiMsg: Message = {
-                id: tempId,
-                sender: 'user',
-                text: fileUrl,
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                status: 'sent',
-                type: 'file',
-                fileName: file.name
-            };
-
-            setMessages(prev => [...prev, uiMsg]);
-
-            if (socket) {
-                const roomId = currentRoomRef.current;
-                socket.emit('send-message', {
-                    appointmentId: roomId,
-                    content: fileUrl,
-                    type: 'file',
-                    senderModel: isDoctor ? 'Doctor' : 'User',
-                    fileName: file.name
-                });
-            }
-        } catch (error) {
-            console.error("Upload error:", error);
-            toast.error("Failed to upload document");
-        } finally {
-            setIsUploading(false);
-            if (fileInputRef.current) fileInputRef.current.value = '';
+        } else {
+            toast.error("Only image files are allowed");
         }
     };
 
@@ -1130,8 +1082,11 @@ const ChatPage: React.FC = () => {
     };
 
     const handleSendAttachment = (option: any) => {
-        if (option.id === 'doc') {
-            fileInputRef.current?.click();
+        if (option.id === 'image') {
+            if (fileInputRef.current) {
+                fileInputRef.current.accept = "image/*";
+                fileInputRef.current.click();
+            }
         }
         setShowAttachmentMenu(false);
     };
@@ -1472,12 +1427,12 @@ const ChatPage: React.FC = () => {
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar no-scrollbar" data-lenis-prevent>
                     {isConversationsLoading ? (
                         <div className="flex flex-col gap-4 p-4">
-                            {[1, 2, 3].map(i => (
-                                <div key={i} className="flex items-center gap-3 animate-pulse">
-                                    <div className="h-12 w-12 rounded-full bg-slate-200" />
-                                    <div className="flex-1">
-                                        <div className="h-3 w-24 bg-slate-200 rounded mb-2" />
-                                        <div className="h-2 w-32 bg-slate-100 rounded" />
+                            {[1, 2, 3, 4, 5].map(i => (
+                                <div key={i} className="flex items-center gap-3">
+                                    <Skeleton className="h-12 w-12 rounded-full shrink-0 bg-slate-200/50 backdrop-blur-sm" />
+                                    <div className="flex-1 space-y-2">
+                                        <Skeleton className="h-3 w-2/3 bg-slate-200/50" />
+                                        <Skeleton className="h-2 w-full bg-slate-100/50" />
                                     </div>
                                 </div>
                             ))}
@@ -1528,11 +1483,11 @@ const ChatPage: React.FC = () => {
                 {id !== 'default' && (
                     <header className="flex items-center justify-between px-6 py-4 bg-white border-b border-slate-100 min-h-[73px]">
                         {isLoading ? (
-                            <div className="flex items-center gap-4 animate-pulse">
-                                <div className="h-10 w-10 rounded-full bg-slate-200" />
+                            <div className="flex items-center gap-4">
+                                <Skeleton className="h-10 w-10 rounded-full bg-slate-200/50" />
                                 <div className="space-y-2">
-                                    <div className="h-4 w-32 bg-slate-200 rounded" />
-                                    <div className="h-3 w-20 bg-slate-100 rounded" />
+                                    <Skeleton className="h-4 w-32 bg-slate-200/50" />
+                                    <Skeleton className="h-3 w-20 bg-slate-100/50" />
                                 </div>
                             </div>
                         ) : (
@@ -1679,131 +1634,121 @@ const ChatPage: React.FC = () => {
                     <>
                         <main className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar chat-doodle-bg scroll-smooth touch-auto relative no-scrollbar" style={{ touchAction: 'auto' }} data-lenis-prevent>
                             <div className="max-w-3xl mx-auto flex flex-col gap-4">
-                                {messages.map((msg) => (
-                                    <motion.div
-                                        key={msg.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                                    >
-                                        <div className={`flex flex-col gap-1 max-w-[80%] ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
-                                            <div className={`group relative ${msg.type === 'image' ? 'p-0' : `px-3 md:px-4 py-2.5 rounded-2xl text-sm leading-relaxed`} ${msg.type === 'image'
-                                                ? ''
-                                                : msg.sender === 'user'
-                                                    ? 'bg-gradient-to-br from-[#00A1B0] to-[#008f9c] text-white shadow-md shadow-[#00A1B0]/20 rounded-tr-sm'
-                                                    : 'bg-white text-slate-800 rounded-tl-sm border border-slate-100 shadow-sm'
-                                                } ${msg.isDeleted ? 'opacity-60 bg-slate-100 text-slate-400 border-dashed' : ''}`}>
-
-                                                {/* Message Actions - Show on Hover */}
-                                                {(msg.sender === 'user' && !msg.isDeleted) && (
-                                                    <div className="absolute -left-20 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-white shadow-lg border border-slate-100 rounded-full px-2 py-1 z-10">
-                                                        {/* Hide Edit for images */}
-                                                        {msg.type !== 'image' && (
-                                                            <button
-                                                                onClick={() => handleEditMessage(msg)}
-                                                                className="p-1.5 hover:bg-slate-50 rounded-full text-slate-400 hover:text-[#00A1B0] transition-colors"
-                                                                title="Edit"
-                                                            >
-                                                                <Plus className="h-3.5 w-3.5 rotate-45" />
-                                                            </button>
-                                                        )}
-                                                        <button
-                                                            onClick={() => setDeleteConfirmMessageId(msg.id)}
-                                                            className="p-1.5 hover:bg-slate-50 rounded-full text-slate-400 hover:text-red-500 transition-colors"
-                                                            title="Delete"
-                                                        >
-                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                        </button>
-                                                    </div>
-                                                )}
-
-                                                {msg.isDeleted ? (
-                                                    <div className="flex items-center gap-2 italic">
-                                                        <Info className="h-3.5 w-3.5" />
-                                                        <span>This message was deleted</span>
-                                                    </div>
-                                                ) : String(editingMessageId) === String(msg.id) ? (
-                                                    <div className="flex flex-col gap-2 min-w-[200px]">
-                                                        <textarea
-                                                            value={editingContent}
-                                                            onChange={(e) => setEditingContent(e.target.value)}
-                                                            className="w-full bg-white/10 text-white border border-white/20 rounded-lg p-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/40 min-h-[60px] resize-none"
-                                                            autoFocus
-                                                        />
-                                                        <div className="flex justify-end gap-2">
-                                                            <button
-                                                                onClick={() => setEditingMessageId(null)}
-                                                                className="px-2 py-1 text-[10px] font-bold uppercase hover:bg-white/10 rounded"
-                                                            >
-                                                                Cancel
-                                                            </button>
-                                                            <button
-                                                                onClick={handleSaveEdit}
-                                                                className="px-2 py-1 text-[10px] font-bold uppercase bg-white text-[#00A1B0] rounded shadow-sm"
-                                                            >
-                                                                Save
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ) : msg.type === 'image' ? (
-                                                    <div className="relative overflow-hidden rounded-2xl border-2 border-slate-100 bg-slate-50 shadow-lg">
-                                                        <img
-                                                            src={msg.text}
-                                                            alt="Shared image"
-                                                            className="max-h-[300px] md:max-h-[400px] w-auto object-cover cursor-pointer hover:opacity-95 transition-all duration-300"
-                                                            onClick={() => setPreviewImage(msg.text)}
-                                                            loading="lazy"
-                                                        />
-                                                        {/* Image Lightbox Controls */}
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                                        <button
-                                                            onClick={() => setPreviewImage(msg.text)}
-                                                            className="absolute top-2 right-2 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-white active:scale-95"
-                                                        >
-                                                            <Search className="h-4 w-4 text-slate-700" />
-                                                        </button>
-                                                    </div>
-                                                ) : msg.type === 'file' &&
-                                                    (msg.text.endsWith('.webm') || msg.text.endsWith('.mp3') || msg.text.endsWith('.wav') ||
-                                                        msg.text.endsWith('.ogg') || msg.text.endsWith('.m4a') || msg.text.endsWith('.mp4') ||
-                                                        msg.text.includes('/video/upload/') || msg.text.includes('res.cloudinary.com')) ? (
-                                                    <VoicePlayer url={msg.text} isUser={msg.sender === 'user'} />
-                                                ) : msg.type === 'file' ? (
-                                                    <div className={`p-3 rounded-xl border flex items-center gap-3 min-w-[200px] ${msg.sender === 'user' ? 'bg-white/10 border-white/20 text-white' : 'bg-slate-50 border-slate-100 text-slate-800'}`}>
-                                                        <div className={`h-10 w-10 flex items-center justify-center rounded-lg ${msg.sender === 'user' ? 'bg-white/20' : 'bg-[#00A1B0]/10 text-[#00A1B0]'}`}>
-                                                            <FileText className="h-5 w-5" />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-xs font-bold truncate">{msg.fileName || 'Document'}</p>
-                                                            <p className={`text-[10px] uppercase font-black tracking-widest opacity-60 ${msg.sender === 'user' ? 'text-white' : 'text-slate-400'}`}>Click to open</p>
-                                                        </div>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => window.open(msg.text, '_blank')}
-                                                            className={`rounded-full ${msg.sender === 'user' ? 'hover:bg-white/10 text-white' : 'hover:bg-slate-100 text-slate-400'}`}
-                                                        >
-                                                            <ExternalLink className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex flex-col gap-0.5">
-                                                        <p className="whitespace-pre-wrap font-medium">{formatMessageText(msg.text, msg.sender === 'user')}</p>
-                                                        {msg.isEdited && (
-                                                            <span className={`text-[9px] uppercase font-bold tracking-tighter self-end opacity-50 ${msg.sender === 'user' ? 'text-white' : 'text-slate-400'}`}>
-                                                                Edited
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                )}
+                                {isLoading ? (
+                                    <div className="space-y-6">
+                                        {[1, 2, 3, 4, 5, 6].map(i => (
+                                            <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`flex flex-col gap-2 max-w-[70%] ${i % 2 === 0 ? 'items-end' : 'items-start'}`}>
+                                                    <Skeleton className={`h-11 ${i % 2 === 0 ? 'w-48 bg-[#00A1B0]/10 rounded-tr-sm' : 'w-64 bg-white/80 rounded-tl-sm'} rounded-2xl backdrop-blur-[2px]`} />
+                                                    <Skeleton className="h-2 w-12 bg-slate-200/40" />
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-1 px-1">
-                                                <span className="text-[10px] text-slate-400 font-bold">{msg.time}</span>
-                                                {msg.sender === 'user' && !msg.isDeleted && (msg.status === 'read' ? <CheckCheck className="h-3 w-3 text-[#00A1B0]" /> : <Check className="h-3 w-3 text-slate-300" />)}
+                                        ))}
+                                    </div>
+                                ) : (
+                                    messages.map((msg) => (
+                                        <motion.div
+                                            key={msg.id}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                                        >
+                                            <div className={`flex flex-col gap-1 max-w-[80%] ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
+                                                <div className={`group relative ${msg.type === 'image' ? 'p-0' : `px-3 md:px-4 py-2.5 rounded-2xl text-sm leading-relaxed`} ${msg.type === 'image'
+                                                    ? ''
+                                                    : msg.sender === 'user'
+                                                        ? 'bg-gradient-to-br from-[#00A1B0] to-[#008f9c] text-white shadow-md shadow-[#00A1B0]/20 rounded-tr-sm'
+                                                        : 'bg-white text-slate-800 rounded-tl-sm border border-slate-100 shadow-sm'
+                                                    } ${msg.isDeleted ? 'opacity-60 bg-slate-100 text-slate-400 border-dashed' : ''}`}>
+
+                                                    {/* Message Actions - Show on Hover */}
+                                                    {(msg.sender === 'user' && !msg.isDeleted) && (
+                                                        <div className="absolute -left-20 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-white shadow-lg border border-slate-100 rounded-full px-2 py-1 z-10">
+                                                            {/* Hide Edit for images */}
+                                                            {msg.type !== 'image' && (
+                                                                <button
+                                                                    onClick={() => handleEditMessage(msg)}
+                                                                    className="p-1.5 hover:bg-slate-50 rounded-full text-slate-400 hover:text-[#00A1B0] transition-colors"
+                                                                    title="Edit"
+                                                                >
+                                                                    <Plus className="h-3.5 w-3.5 rotate-45" />
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={() => setDeleteConfirmMessageId(msg.id)}
+                                                                className="p-1.5 hover:bg-slate-50 rounded-full text-slate-400 hover:text-red-500 transition-colors"
+                                                                title="Delete"
+                                                            >
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    )}
+
+                                                    {msg.isDeleted ? (
+                                                        <div className="flex items-center gap-2 italic">
+                                                            <Info className="h-3.5 w-3.5" />
+                                                            <span>This message was deleted</span>
+                                                        </div>
+                                                    ) : String(editingMessageId) === String(msg.id) ? (
+                                                        <div className="flex flex-col gap-2 min-w-[200px]">
+                                                            <textarea
+                                                                value={editingContent}
+                                                                onChange={(e) => setEditingContent(e.target.value)}
+                                                                className="w-full bg-white/10 text-white border border-white/20 rounded-lg p-2 text-sm focus:outline-none focus:ring-1 focus:ring-white/40 min-h-[60px] resize-none"
+                                                                autoFocus
+                                                            />
+                                                            <div className="flex justify-end gap-2">
+                                                                <button
+                                                                    onClick={() => setEditingMessageId(null)}
+                                                                    className="px-2 py-1 text-[10px] font-bold uppercase hover:bg-white/10 rounded"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                                <button
+                                                                    onClick={handleSaveEdit}
+                                                                    className="px-2 py-1 text-[10px] font-bold uppercase bg-white text-[#00A1B0] rounded shadow-sm"
+                                                                >
+                                                                    Save
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : msg.type === 'image' ? (
+                                                        <div className="relative overflow-hidden rounded-2xl border-2 border-slate-100 bg-slate-50 shadow-lg">
+                                                            <img
+                                                                src={msg.text}
+                                                                alt="Shared image"
+                                                                className="max-h-[300px] md:max-h-[400px] w-auto object-cover cursor-pointer hover:opacity-95 transition-all duration-300"
+                                                                onClick={() => setPreviewImage(msg.text)}
+                                                                loading="lazy"
+                                                            />
+                                                            {/* Image Lightbox Controls */}
+                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                                            <button
+                                                                onClick={() => setPreviewImage(msg.text)}
+                                                                className="absolute top-2 right-2 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-white active:scale-95"
+                                                            >
+                                                                <Search className="h-4 w-4 text-slate-700" />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <p className="whitespace-pre-wrap font-medium">{formatMessageText(msg.text, msg.sender === 'user')}</p>
+                                                            {msg.isEdited && (
+                                                                <span className={`text-[9px] uppercase font-bold tracking-tighter self-end opacity-50 ${msg.sender === 'user' ? 'text-white' : 'text-slate-400'}`}>
+                                                                    Edited
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-1 px-1">
+                                                    <span className="text-[10px] text-slate-400 font-bold">{msg.time}</span>
+                                                    {msg.sender === 'user' && !msg.isDeleted && (msg.status === 'read' ? <CheckCheck className="h-3 w-3 text-[#00A1B0]" /> : <Check className="h-3 w-3 text-slate-300" />)}
+                                                </div>
                                             </div>
-                                        </div>
-                                    </motion.div>
-                                ))}
+                                        </motion.div>
+                                    ))
+                                )}
                                 {isOtherTyping && (
                                     <div className="flex justify-start">
                                         <div className="bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-1">
@@ -1818,7 +1763,7 @@ const ChatPage: React.FC = () => {
                         </main>
 
                         <footer className="p-4 bg-white border-t border-slate-100 relative">
-                            {((sessionStatus === "ENDED" || (sessionStatus !== "ACTIVE" && sessionStatus !== "CONTINUED_BY_DOCTOR")) && !isPostConsultationWindowOpen) ? (
+                            {((sessionStatus === "ENDED" || (sessionStatus !== "ACTIVE" && sessionStatus !== "CONTINUED_BY_DOCTOR" && sessionStatus !== "TEST_NEEDED" && !appointment?.TEST_NEEDED)) && !isPostConsultationWindowOpen) ? (
                                 <div className="max-w-3xl mx-auto py-2">
                                     <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-center justify-center gap-3 text-slate-500">
                                         <Lock className="h-5 w-5 text-[#00A1B0]" />
@@ -1832,7 +1777,7 @@ const ChatPage: React.FC = () => {
                                 </div>
                             ) : (
                                 <>
-                                    {isPostConsultationWindowOpen && sessionStatus === "ENDED" && (
+                                    {isPostConsultationWindowOpen && (sessionStatus === "ENDED" || sessionStatus === "TEST_NEEDED" || appointment?.TEST_NEEDED) && (
                                         <div className="max-w-3xl mx-auto mb-4">
                                             <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/50 rounded-2xl p-4 flex items-center justify-between shadow-sm">
                                                 <div className="flex items-center gap-3">
@@ -1841,10 +1786,10 @@ const ChatPage: React.FC = () => {
                                                     </div>
                                                     <div>
                                                         <p className="text-[10px] font-black text-amber-800 uppercase tracking-widest leading-none mb-1">
-                                                            Follow-up Window Active
+                                                            {(sessionStatus === "TEST_NEEDED" || appointment?.TEST_NEEDED) ? "Tests Needed - Chat Open" : "Follow-up Window Active"}
                                                         </p>
                                                         <p className="text-[12px] font-bold text-amber-600/80 leading-tight">
-                                                            Chat is open for submitting test results & discussion
+                                                            {(sessionStatus === "TEST_NEEDED" || appointment?.TEST_NEEDED) ? "Please upload your test results or discuss with the doctor" : "Chat is open for submitting test results & discussion"}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -1945,7 +1890,8 @@ const ChatPage: React.FC = () => {
                             )}
                         </footer>
                     </>
-                )}
+                )
+                }
 
                 {/* Preview Image UI (Instead of main container content) */}
                 <AnimatePresence>
@@ -1981,15 +1927,15 @@ const ChatPage: React.FC = () => {
                                     >
                                         <ExternalLink className="h-4 w-4" />
                                     </Button>
-                                    <a
-                                        href={previewImage}
-                                        download
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="h-10 w-10 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleDownload(previewImage!, `TakeCare-Image-${Date.now()}.jpg`)}
+                                        className="text-white/70 hover:text-white hover:bg-white/10 rounded-full"
+                                        title="Download Locally"
                                     >
                                         <Download className="h-4 w-4" />
-                                    </a>
+                                    </Button>
                                 </div>
                             </div>
 
@@ -2013,66 +1959,218 @@ const ChatPage: React.FC = () => {
                         </motion.div>
                     )}
                 </AnimatePresence>
-            </div>
+            </div >
 
             {/* Right Sidebar */}
-            {id !== 'default' && isDoctor && (
-                <aside className="w-80 bg-slate-50/50 border-l border-slate-100 hidden lg:flex flex-col overflow-y-auto p-6 space-y-6 custom-scrollbar">
-                    <Card className="shadow-none border-slate-100 bg-white">
-                        <CardHeader className="p-4 flex flex-col items-center text-center space-y-3">
-                            <div className="h-20 w-20 rounded-full p-1 border-2 border-[#00A1B0]/10">
-                                <img src={activeChat.avatar} alt="" className="h-full w-full rounded-full object-cover" />
-                            </div>
-                            <div>
-                                <h3 className="font-extrabold text-[#00A1B0] tracking-tight">{appointment?.patientId?.name || 'Patient'}</h3>
-                                <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em] mt-1">Patient ID: {appointment?.patientId?.customId}</p>
-                            </div>
-                        </CardHeader>
-                    </Card>
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between px-1">
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Medical Profile</h4>
-                            <Info className="h-3 w-3 text-slate-300" />
-                        </div>
-                        <div className="grid grid-cols-1 gap-2">
-                            <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm">
-                                <p className="text-[9px] text-slate-400 font-black uppercase mb-1.5 tracking-tighter">Gender / Age</p>
-                                <p className="text-xs font-bold text-slate-700">{appointment?.patientId?.gender} • {appointment?.patientId?.dob ? new Date().getFullYear() - new Date(appointment.patientId.dob).getFullYear() : 'N/A'} yrs</p>
-                            </div>
-                            <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm">
-                                <p className="text-[9px] text-slate-400 font-black uppercase mb-1.5 tracking-tighter">Blood Group</p>
-                                <p className="text-xs font-bold text-slate-700">{appointment?.patientId?.bloodGroup || 'N/A'}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="space-y-4 pt-2">
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Clinical Notes</h4>
-                        <textarea
-                            className="w-full bg-white rounded-2xl p-4 border border-slate-100 text-xs h-36 resize-none outline-none focus:ring-4 focus:ring-[#00A1B0]/5 transition-all font-medium placeholder:text-slate-300"
-                            placeholder="Add consultation notes here..."
-                            value={noteText}
-                            onChange={(e) => setNoteText(e.target.value)}
-                        />
-                        <Button onClick={handleSaveNote} className="w-full bg-[#00A1B0] hover:bg-[#008f9c] rounded-xl h-12 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[#00A1B0]/10 transition-all active:scale-95"><Plus className="h-4 w-4 mr-2" /> Update Notes</Button>
-                    </div>
-
-                    <div className="pt-4 space-y-4">
-                        {savedNotes.length > 0 && (
-                            <>
-                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">History</h4>
-                                <div className="space-y-3">
-                                    {savedNotes.map(note => (
-                                        <div key={note.id} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
-                                            <p className="text-xs text-slate-600 font-semibold leading-relaxed">{note.text}</p>
-                                            <p className="text-[8px] text-slate-400 font-black uppercase mt-2">{note.time}</p>
+            {
+                id !== 'default' && isDoctor && (
+                    <aside className="w-80 bg-slate-50/50 border-l border-slate-100 hidden lg:flex flex-col overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                        {isLoading ? (
+                            <div className="space-y-6">
+                                <Card className="shadow-none border-slate-100 bg-white/80 backdrop-blur-sm">
+                                    <CardHeader className="p-4 flex flex-col items-center text-center space-y-3">
+                                        <Skeleton className="h-20 w-20 rounded-full bg-slate-200/50" />
+                                        <div className="space-y-2 w-full flex flex-col items-center">
+                                            <Skeleton className="h-4 w-3/4 bg-slate-200/50" />
+                                            <Skeleton className="h-3 w-1/2 bg-slate-100/50" />
+                                            <Skeleton className="h-3 w-2/3 bg-slate-100/30" />
                                         </div>
-                                    ))}
+                                    </CardHeader>
+                                </Card>
+                                <div className="space-y-4">
+                                    <Skeleton className="h-3 w-24 px-1 bg-slate-200/40" />
+                                    <div className="grid grid-cols-1 gap-2">
+                                        <Skeleton className="h-16 rounded-2xl w-full bg-white/60" />
+                                        <Skeleton className="h-16 rounded-2xl w-full bg-white/60" />
+                                    </div>
+                                </div>
+                                <div className="space-y-4 pt-2">
+                                    <Skeleton className="h-3 w-24 px-1 bg-slate-200/40" />
+                                    <Skeleton className="h-36 rounded-2xl w-full bg-white/60" />
+                                    <Skeleton className="h-12 rounded-xl w-full bg-[#00A1B0]/10" />
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <Card className="shadow-none border-slate-100 bg-white">
+                                    <CardHeader className="p-4 flex flex-col items-center text-center space-y-3">
+                                        <div className="h-20 w-20 rounded-full p-1 border-2 border-[#00A1B0]/10">
+                                            <img src={activeChat.avatar} alt="" className="h-full w-full rounded-full object-cover" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-extrabold text-[#00A1B0] tracking-tight">{appointment?.patientId?.name || 'Patient'}</h3>
+                                            <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em] mt-1">Patient ID: {appointment?.patientId?.customId}</p>
+                                            <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em] mt-0.5">APT ID: {appointment?.customId}</p>
+                                        </div>
+                                    </CardHeader>
+                                </Card>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between px-1">
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Medical Profile</h4>
+                                        <Info className="h-3 w-3 text-slate-300" />
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm">
+                                            <p className="text-[9px] text-slate-400 font-black uppercase mb-1.5 tracking-tighter">Gender / Age</p>
+                                            <p className="text-xs font-bold text-slate-700">{appointment?.patientId?.gender} • {appointment?.patientId?.dob ? new Date().getFullYear() - new Date(appointment.patientId.dob).getFullYear() : 'N/A'} yrs</p>
+                                        </div>
+                                        <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm">
+                                            <p className="text-[9px] text-slate-400 font-black uppercase mb-1.5 tracking-tighter">Blood Group</p>
+                                            <p className="text-xs font-bold text-slate-700">{appointment?.patientId?.bloodGroup || 'N/A'}</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </>
                         )}
-                    </div>
-                </aside>
-            )}
+                        <div className="space-y-4 pt-4 border-t border-slate-200/60">
+                            <div className="flex items-center gap-2 px-1 mb-2">
+                                <div className="h-6 w-6 rounded-lg bg-[#00A1B0]/10 flex items-center justify-center text-[#00A1B0]">
+                                    <StickyNote size={14} />
+                                </div>
+                                <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Clinical Observations</h4>
+                            </div>
+
+                            {/* New Note Form */}
+                            <div className="space-y-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                {/* Category Selector */}
+                                <div className="flex flex-wrap gap-1.5 mb-1">
+                                    {(['observation', 'diagnosis', 'medicine', 'lab_test'] as const).map((cat) => (
+                                        <button
+                                            key={cat}
+                                            onClick={() => setNoteCategory(cat)}
+                                            className={`px-2.5 py-1 rounded-lg text-[7px] font-black uppercase tracking-widest transition-all ${noteCategory === cat
+                                                ? 'bg-[#00A1B0] text-white shadow-md shadow-[#00A1B0]/10'
+                                                : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                                                }`}
+                                        >
+                                            {cat.replace('_', ' ')}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <input
+                                    type="text"
+                                    placeholder={
+                                        noteCategory === 'medicine' ? "Medicine Name" :
+                                            noteCategory === 'lab_test' ? "Test Name" :
+                                                noteCategory === 'diagnosis' ? "Diagnosis Title" : "Symptom / Title"
+                                    }
+                                    value={noteTitle}
+                                    onChange={(e) => setNoteTitle(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:ring-1 focus:ring-[#00A1B0]/30 outline-none font-bold tracking-wider transition-all"
+                                />
+
+                                {noteCategory === 'medicine' ? (
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Dosage"
+                                            value={noteDosage}
+                                            onChange={(e) => setNoteDosage(e.target.value)}
+                                            className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-[10px] text-slate-900 placeholder:text-slate-400 focus:ring-1 focus:ring-[#00A1B0]/30 outline-none font-bold transition-all"
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Freq"
+                                            value={noteFrequency}
+                                            onChange={(e) => setNoteFrequency(e.target.value)}
+                                            className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-[10px] text-slate-900 placeholder:text-slate-400 focus:ring-1 focus:ring-[#00A1B0]/30 outline-none font-bold transition-all"
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Dur"
+                                            value={noteDuration}
+                                            onChange={(e) => setNoteDuration(e.target.value)}
+                                            className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-[10px] text-slate-900 placeholder:text-slate-400 focus:ring-1 focus:ring-[#00A1B0]/30 outline-none font-bold transition-all"
+                                        />
+                                    </div>
+                                ) : (
+                                    <textarea
+                                        placeholder={
+                                            noteCategory === 'lab_test' ? "Reason for test / Details" :
+                                                "Description / Observations"
+                                        }
+                                        value={noteDescription}
+                                        onChange={(e) => setNoteDescription(e.target.value)}
+                                        rows={3}
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:ring-1 focus:ring-[#00A1B0]/30 outline-none font-medium leading-relaxed resize-none transition-all"
+                                    />
+                                )}
+                                <Button
+                                    onClick={handleSaveNote}
+                                    disabled={
+                                        isSavingNote ||
+                                        !noteTitle.trim() ||
+                                        (noteCategory === 'medicine'
+                                            ? (!noteDosage.trim() || !noteFrequency.trim() || !noteDuration.trim())
+                                            : !noteDescription.trim())
+                                    }
+                                    className="w-full h-10 bg-[#00A1B0] hover:bg-[#008f9c] text-white rounded-xl font-black uppercase tracking-widest text-[9px] shadow-md shadow-[#00A1B0]/10 disabled:opacity-50 transition-all active:scale-95"
+                                >
+                                    {isSavingNote ? (
+                                        <div className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <Plus size={14} /> Save {noteCategory.replace('_', ' ')}
+                                        </div>
+                                    )}
+                                </Button>
+                            </div>
+
+                            {/* Notes List */}
+                            <div className="space-y-3 mt-4">
+                                {appointment?.doctorNotes && appointment.doctorNotes.length > 0 ? (
+                                    [...appointment.doctorNotes].reverse().map((note: any, idx: number) => (
+                                        <motion.div
+                                            key={note.id || idx}
+                                            initial={{ opacity: 0, x: 20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:border-[#00A1B0]/30 transition-all group"
+                                        >
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-[#00A1B0]"></div>
+                                                <span className="text-[10px] font-black text-slate-900 tracking-widest leading-none">{note.title}</span>
+                                                {note.category && note.category !== 'observation' && (
+                                                    <span className="px-1.5 py-0.5 rounded bg-[#00A1B0]/5 text-[7px] font-black text-[#00A1B0] uppercase tracking-tighter border border-[#00A1B0]/10">
+                                                        {note.category.replace('_', ' ')}
+                                                    </span>
+                                                )}
+                                                <span className="ml-auto text-[8px] font-bold text-slate-400">
+                                                    {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                            {note.category === 'medicine' ? (
+                                                <div className="flex gap-2">
+                                                    <div className="bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 text-[8px] font-black text-[#00A1B0] tracking-tighter">
+                                                        {note.dosage}
+                                                    </div>
+                                                    <div className="bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 text-[8px] font-black text-[#00A1B0] tracking-tighter">
+                                                        {note.frequency}
+                                                    </div>
+                                                    <div className="bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 text-[8px] font-black text-[#00A1B0] tracking-tighter">
+                                                        {note.duration}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <p className="text-xs text-slate-500 font-medium leading-relaxed whitespace-pre-wrap">
+                                                    {note.description}
+                                                </p>
+                                            )}
+                                        </motion.div>
+                                    ))
+                                ) : (
+                                    <div className="py-8 flex flex-col items-center justify-center text-center opacity-40">
+                                        <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                                            <BookOpen size={20} className="text-slate-400" />
+                                        </div>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No observations yet</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </aside>
+                )
+            }
             {/* Deletion Confirmation Dialog */}
             <Dialog open={!!deleteConfirmMessageId} onOpenChange={() => setDeleteConfirmMessageId(null)}>
                 <DialogContent>
@@ -2155,18 +2253,39 @@ const ChatPage: React.FC = () => {
                                 The appointment time has ended. You can choose to continue the session or wind it up. Patient is currently waiting for your response.
                             </p>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="flex flex-col gap-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Button
+                                        onClick={() => updateSessionStatus("CONTINUED_BY_DOCTOR")}
+                                        className="bg-green-500 hover:bg-green-600 text-white rounded-2xl h-14 font-black uppercase text-xs tracking-widest shadow-lg shadow-green-500/20"
+                                    >
+                                        ✅ Continue
+                                    </Button>
+                                    <Button
+                                        onClick={() => updateSessionStatus("ENDED")}
+                                        className="bg-red-500 hover:bg-red-600 text-white rounded-2xl h-14 font-black uppercase text-xs tracking-widest shadow-lg shadow-red-500/20"
+                                    >
+                                        ❌ Wind Up
+                                    </Button>
+                                </div>
                                 <Button
-                                    onClick={() => updateSessionStatus("CONTINUED_BY_DOCTOR")}
-                                    className="bg-green-500 hover:bg-green-600 text-white rounded-2xl h-14 font-black uppercase text-xs tracking-widest shadow-lg shadow-green-500/20"
+                                    onClick={async () => {
+                                        if (!appointment?._id) return;
+                                        try {
+                                            const res = await appointmentService.enablePostConsultationChat(appointment._id);
+                                            if (res.success) {
+                                                toast.success("Chat enabled for 24 hours. Request sent.");
+                                                setIsTimeOver(false);
+                                            } else {
+                                                toast.error(res.message);
+                                            }
+                                        } catch (error: any) {
+                                            toast.error(error.response?.data?.message || "Failed to trigger tests needed");
+                                        }
+                                    }}
+                                    className="w-full bg-amber-500 hover:bg-amber-600 text-white rounded-2xl h-14 font-black uppercase text-xs tracking-widest shadow-lg shadow-amber-500/20"
                                 >
-                                    ✅ Continue
-                                </Button>
-                                <Button
-                                    onClick={() => updateSessionStatus("ENDED")}
-                                    className="bg-red-500 hover:bg-red-600 text-white rounded-2xl h-14 font-black uppercase text-xs tracking-widest shadow-lg shadow-red-500/20"
-                                >
-                                    ❌ Wind Up
+                                    📋 Tests Needed
                                 </Button>
                             </div>
 
@@ -2179,8 +2298,9 @@ const ChatPage: React.FC = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 };
 
 export default ChatPage;
+

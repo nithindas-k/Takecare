@@ -14,7 +14,7 @@ const DoctorOTPVerify: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const email = (location.state as any)?.email || "";
+  const email = (location.state as { email?: string })?.email || "";
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [errors, setErrors] = useState<{ otp?: string }>({});
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -29,7 +29,7 @@ const DoctorOTPVerify: React.FC = () => {
     }
   }, [email, navigate]);
 
-  
+
   useEffect(() => {
 
     if (timer === 0 && timerRef.current !== null) {
@@ -38,7 +38,7 @@ const DoctorOTPVerify: React.FC = () => {
       return;
     }
 
-   
+
     if (timer > 0 && timerRef.current === null) {
       timerRef.current = window.setInterval(() => {
         setTimer((prev) => prev - 1);
@@ -151,7 +151,8 @@ const DoctorOTPVerify: React.FC = () => {
           setOtp(Array(OTP_LENGTH).fill(""));
           inputRefs.current[0]?.focus();
         }
-      } catch (err: any) {
+      } catch (e: unknown) {
+        const err = e as { message?: string };
         console.error("Doctor OTP error:", err);
         const errorMsg = err?.message || "Verification failed. Please try again.";
         setErrors({ otp: errorMsg });
@@ -180,7 +181,8 @@ const DoctorOTPVerify: React.FC = () => {
         const msg = response?.message || "Could not resend OTP.";
         setServerMessage(msg);
       }
-    } catch (err: any) {
+    } catch (e: unknown) {
+      const err = e as { message?: string };
       setServerMessage(err?.message || "Could not resend OTP.");
     } finally {
       setSubmitting(false);

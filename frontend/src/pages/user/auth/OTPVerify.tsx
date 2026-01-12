@@ -24,7 +24,7 @@ const PatientOTPVerify: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const email = (location.state as any)?.email || "";
+  const email = (location.state as { email?: string })?.email || "";
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -173,7 +173,8 @@ const PatientOTPVerify: React.FC = () => {
           setOtp(Array(OTP_LENGTH).fill(""));
           inputRefs.current[0]?.focus();
         }
-      } catch (error: any) {
+      } catch (e: unknown) {
+        const error = e as { message?: string };
         console.error("❌ OTP Verification Error:", error);
         setServerError(
           error.message || "Verification failed. Please try again."
@@ -220,7 +221,8 @@ const PatientOTPVerify: React.FC = () => {
           setServerError(errorMsg);
         }
       }
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err as { message?: string };
       const errorMsg = error.message || "Failed to resend OTP.";
 
       if (errorMsg.includes("already registered")) {

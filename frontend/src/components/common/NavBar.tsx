@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut, User, Menu, X } from "lucide-react";
+import { FaCalendarCheck } from "react-icons/fa";
 import authService from "../../services/authService";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../../redux/store";
@@ -28,7 +29,7 @@ const NavBar: React.FC = () => {
     { label: "DOCTORS", path: "/doctors" },
     { label: "ABOUT", path: "/about" },
     { label: "CONTACT", path: "/contact" },
-    { label: "BLOGS", path: "/blogs" },
+
   ];
 
   return (
@@ -68,7 +69,7 @@ const NavBar: React.FC = () => {
           {!isAuthenticated ? (
             <>
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/patient/login')}
                 className="hidden md:block px-6 py-2 bg-white text-[#00A1B0] rounded-full font-semibold shadow hover:bg-gray-100 transition"
               >
                 LOGIN
@@ -112,6 +113,16 @@ const NavBar: React.FC = () => {
 
                 {showLogoutMenu && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                    <button
+                      onClick={() => {
+                        setShowLogoutMenu(false);
+                        navigate("/patient/dashboard");
+                      }}
+                      className="w-full px-4 py-2 text-left text-gray-700 hover:bg-[#00A1B0]/10 hover:text-[#00A1B0] flex items-center gap-2 transition-colors"
+                    >
+                      <FaCalendarCheck size={18} />
+                      <span className="font-medium">Dashboard</span>
+                    </button>
                     <button
                       onClick={() => {
                         setShowLogoutMenu(false);

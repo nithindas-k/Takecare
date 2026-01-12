@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     FaMicrophone, FaMicrophoneSlash,
@@ -25,7 +26,7 @@ import {
 } from "../../components/ui/dialog";
 import { useSocket } from '../../context/SocketContext';
 import { toast } from 'sonner';
-import { Lock, ClipboardList, Clock } from 'lucide-react';
+import { Lock, ClipboardList, Clock, StickyNote, Plus, BookOpen, X } from 'lucide-react';
 
 const VideoCallContent: React.FC = () => {
     const { id } = useParams();
@@ -59,6 +60,68 @@ const VideoCallContent: React.FC = () => {
     const [extensionCount, setExtensionCount] = React.useState(0);
     const [endSessionDialogOpen, setEndSessionDialogOpen] = React.useState(false);
 
+    // Notes Panel State
+    const [isNotesOpen, setIsNotesOpen] = React.useState(false);
+    const [noteTitle, setNoteTitle] = React.useState("");
+    const [noteDescription, setNoteDescription] = React.useState("");
+    const [noteCategory, setNoteCategory] = React.useState<'observation' | 'diagnosis' | 'medicine' | 'lab_test'>("observation");
+    const [noteDosage, setNoteDosage] = React.useState("");
+    const [noteFrequency, setNoteFrequency] = React.useState("");
+    const [noteDuration, setNoteDuration] = React.useState("");
+    const [isSavingNote, setIsSavingNote] = React.useState(false);
+
+    const handleSaveNote = async () => {
+        if (!id || !noteTitle.trim()) {
+            toast.error("Please provide at least a title");
+            return;
+        }
+
+        if (noteCategory === 'medicine') {
+            if (!noteDosage.trim() || !noteFrequency.trim() || !noteDuration.trim()) {
+                toast.error("Please provide dosage, frequency and duration");
+                return;
+            }
+        } else {
+            if (!noteDescription.trim()) {
+                toast.error("Please provide a description");
+                return;
+            }
+        }
+
+        try {
+            setIsSavingNote(true);
+            const newNote = {
+                id: Date.now().toString(),
+                title: noteTitle,
+                description: noteDescription,
+                category: noteCategory,
+                dosage: noteCategory === 'medicine' ? noteDosage : undefined,
+                frequency: noteCategory === 'medicine' ? noteFrequency : undefined,
+                duration: noteCategory === 'medicine' ? noteDuration : undefined,
+                createdAt: new Date().toISOString()
+            };
+
+            const res = await appointmentService.updateDoctorNotes(id, newNote);
+            if (res.success) {
+                toast.success(`${noteCategory.replace('_', ' ')} saved successfully`);
+                setAppointment((prev: any) => ({
+                    ...prev,
+                    doctorNotes: [...(prev?.doctorNotes || []), newNote]
+                }));
+                // Reset fields
+                setNoteTitle("");
+                setNoteDescription("");
+                setNoteDosage("");
+                setNoteFrequency("");
+                setNoteDuration("");
+            }
+        } catch (error: any) {
+            toast.error(error.message || "Failed to save note");
+        } finally {
+            setIsSavingNote(false);
+        }
+    };
+
     const isPostConsultationWindowOpen = React.useMemo(() => {
         if (!appointment?.postConsultationChatWindow?.isActive) return false;
         const expiresAt = new Date(appointment.postConsultationChatWindow.expiresAt);
@@ -80,7 +143,8 @@ const VideoCallContent: React.FC = () => {
                         postConsultationChatWindow: {
                             isActive: true,
                             expiresAt: expiresAt.toISOString()
-                        }
+                        },
+                        TEST_NEEDED: true
                     };
                 });
             }
@@ -89,7 +153,7 @@ const VideoCallContent: React.FC = () => {
         }
     };
 
-    const updateSessionStatus = async (status: "ACTIVE" | "WAITING_FOR_DOCTOR" | "CONTINUED_BY_DOCTOR" | "ENDED") => {
+    const updateSessionStatus = useCallback(async (status: "ACTIVE" | "WAITING_FOR_DOCTOR" | "CONTINUED_BY_DOCTOR" | "ENDED") => {
         if (!id) return;
         try {
             await appointmentService.updateSessionStatus(id, status);
@@ -105,7 +169,7 @@ const VideoCallContent: React.FC = () => {
                 toast.error(message);
             }
         }
-    };
+    }, [id, leaveCall, navigate]);
 
     // Call duration timer
     useEffect(() => {
@@ -213,7 +277,7 @@ const VideoCallContent: React.FC = () => {
             const timeStr = appointment.appointmentTime;
             if (!timeStr) return;
 
-            const [_, endTimeStr] = timeStr.split('-');
+            const [, endTimeStr] = timeStr.split('-');
             if (!endTimeStr) return;
 
             const [hours, minutes] = endTimeStr.trim().split(':');
@@ -234,7 +298,7 @@ const VideoCallContent: React.FC = () => {
 
         const interval = setInterval(checkTime, 1000);
         return () => clearInterval(interval);
-    }, [appointment, sessionStatus, isDoctor, isTimeOver, extensionCount]);
+    }, [appointment, sessionStatus, isDoctor, isTimeOver, extensionCount, updateSessionStatus]);
 
     useEffect(() => {
         if (!socket || !id) return;
@@ -252,7 +316,8 @@ const VideoCallContent: React.FC = () => {
                         if (!prev) return null;
                         return {
                             ...prev,
-                            postConsultationChatWindow: data.postConsultationChatWindow
+                            postConsultationChatWindow: data.postConsultationChatWindow,
+                            TEST_NEEDED: data.TEST_NEEDED
                         };
                     });
                 }
@@ -281,7 +346,7 @@ const VideoCallContent: React.FC = () => {
             socket.off("session-status-updated", onSessionStatusUpdated);
             socket.off("session-ended", onSessionEnded);
         };
-    }, [socket, appointment?._id, id, isDoctor, navigate, leaveCall]);
+    }, [socket, appointment?._id, id, isDoctor, navigate, leaveCall, updateSessionStatus]);
 
     const toggleFullscreen = () => {
         setIsFullscreen(!isFullscreen);
@@ -434,6 +499,202 @@ const VideoCallContent: React.FC = () => {
                                     <FaEllipsisV size={16} />
                                 </button>
                             </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Notes Toggle Button (Doctor Only) - Positioned below header */}
+            {isDoctor && (
+                <div className="absolute top-24 left-6 z-50">
+                    <button
+                        onClick={() => setIsNotesOpen(!isNotesOpen)}
+                        className={`group flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg transition-all duration-300 ${isNotesOpen
+                            ? 'bg-[#00A1B0] text-white'
+                            : 'bg-[#1C1F24]/90 text-[#8696A0] hover:text-white hover:bg-[#2A2F32]'
+                            }`}
+                    >
+                        <StickyNote size={18} className={isNotesOpen ? 'animate-bounce' : ''} />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Clinical Notes</span>
+                        {appointment?.doctorNotes?.length > 0 && (
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-black text-[#00A1B0] shadow-sm">
+                                {appointment.doctorNotes.length}
+                            </span>
+                        )}
+                    </button>
+                </div>
+            )}
+
+            {/* Notes Panel (Doctor Only) */}
+            <AnimatePresence>
+                {isDoctor && isNotesOpen && (
+                    <motion.div
+                        initial={{ x: '100%', opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        exit={{ x: '100%', opacity: 0 }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                        className="absolute right-0 top-0 bottom-0 w-80 md:w-96 bg-[#111418]/95 backdrop-blur-xl border-l border-white/5 z-[60] flex flex-col shadow-2xl"
+                    >
+                        {/* Panel Header */}
+                        <div className="p-6 border-b border-white/5 bg-white/5">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-[#00A1B0]/20 flex items-center justify-center">
+                                        <BookOpen size={20} className="text-[#00A1B0]" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-white font-black uppercase tracking-wider text-sm">Patient Observations</h3>
+                                        <p className="text-[10px] text-[#8696A0] font-bold uppercase">Structured Notes</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setIsNotesOpen(false)}
+                                    className="p-2 hover:bg-white/10 rounded-lg text-[#8696A0] hover:text-white transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Notes List */}
+                        <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+                            {appointment?.doctorNotes && appointment.doctorNotes.length > 0 ? (
+                                [...appointment.doctorNotes].reverse().map((note: any, idx: number) => (
+                                    <motion.div
+                                        key={note.id || idx}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-[#00A1B0]/30 transition-all group"
+                                    >
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-[#00A1B0]"></div>
+                                            <span className="text-[10px] font-black text-white tracking-widest">{note.title}</span>
+                                            {note.category && note.category !== 'observation' && (
+                                                <span className="px-1.5 py-0.5 rounded bg-white/10 text-[7px] font-black text-[#00A1B0] uppercase tracking-tighter">
+                                                    {note.category.replace('_', ' ')}
+                                                </span>
+                                            )}
+                                            <span className="ml-auto text-[8px] font-bold text-[#8696A0]">
+                                                {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                        {note.category === 'medicine' ? (
+                                            <div className="flex gap-2">
+                                                <div className="bg-white/5 rounded px-2 py-1 text-[8px] font-bold text-[#00A1B0]">
+                                                    {note.dosage}
+                                                </div>
+                                                <div className="bg-white/5 rounded px-2 py-1 text-[8px] font-bold text-[#00A1B0]">
+                                                    {note.frequency}
+                                                </div>
+                                                <div className="bg-white/5 rounded px-2 py-1 text-[8px] font-bold text-[#00A1B0]">
+                                                    {note.duration}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-[#8696A0] font-medium leading-relaxed group-hover:text-gray-300 transition-colors whitespace-pre-wrap">
+                                                {note.description}
+                                            </p>
+                                        )}
+                                    </motion.div>
+                                ))
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-center px-4 opacity-40">
+                                    <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+                                        <StickyNote size={32} className="text-[#8696A0]" />
+                                    </div>
+                                    <p className="text-xs font-black text-[#8696A0] uppercase tracking-widest">No notes added yet</p>
+                                    <p className="text-[10px] text-[#8696A0] mt-2 font-bold leading-relaxed lowercase">Add symptoms or observations below to track them during the session.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Add New Note Input */}
+                        <div className="p-6 bg-white/5 border-t border-white/5 space-y-4">
+                            {/* Category Selector */}
+                            <div className="flex flex-wrap gap-2">
+                                {(['observation', 'diagnosis', 'medicine', 'lab_test'] as const).map((cat) => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => setNoteCategory(cat)}
+                                        className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${noteCategory === cat
+                                            ? 'bg-[#00A1B0] text-white shadow-lg shadow-[#00A1B0]/20'
+                                            : 'bg-white/5 text-[#8696A0] hover:bg-white/10'
+                                            }`}
+                                    >
+                                        {cat.replace('_', ' ')}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="space-y-3">
+                                <input
+                                    type="text"
+                                    placeholder={
+                                        noteCategory === 'medicine' ? "Medicine Name (e.g. Paracetamol)" :
+                                            noteCategory === 'lab_test' ? "Test Name (e.g. Blood Test)" :
+                                                noteCategory === 'diagnosis' ? "Diagnosis Title" : "Symptom / Title"
+                                    }
+                                    value={noteTitle}
+                                    onChange={(e) => setNoteTitle(e.target.value)}
+                                    className="w-full bg-[#0B1014] border border-white/5 rounded-xl px-4 py-3 text-xs text-white placeholder:text-gray-600 focus:border-[#00A1B0]/50 outline-none font-bold tracking-widest transition-all"
+                                />
+
+                                {noteCategory === 'medicine' ? (
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Dosage"
+                                            value={noteDosage}
+                                            onChange={(e) => setNoteDosage(e.target.value)}
+                                            className="bg-[#0B1014] border border-white/5 rounded-xl px-4 py-3 text-[10px] text-white placeholder:text-gray-600 focus:border-[#00A1B0]/50 outline-none font-bold transition-all"
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Freq"
+                                            value={noteFrequency}
+                                            onChange={(e) => setNoteFrequency(e.target.value)}
+                                            className="bg-[#0B1014] border border-white/5 rounded-xl px-4 py-3 text-[10px] text-white placeholder:text-gray-600 focus:border-[#00A1B0]/50 outline-none font-bold transition-all"
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder="Dur"
+                                            value={noteDuration}
+                                            onChange={(e) => setNoteDuration(e.target.value)}
+                                            className="bg-[#0B1014] border border-white/5 rounded-xl px-4 py-3 text-[10px] text-white placeholder:text-gray-600 focus:border-[#00A1B0]/50 outline-none font-bold transition-all"
+                                        />
+                                    </div>
+                                ) : (
+                                    <textarea
+                                        placeholder={
+                                            noteCategory === 'lab_test' ? "Reason for test / Details" :
+                                                "Observations / Description"
+                                        }
+                                        value={noteDescription}
+                                        onChange={(e) => setNoteDescription(e.target.value)}
+                                        rows={3}
+                                        className="w-full bg-[#0B1014] border border-white/5 rounded-xl px-4 py-3 text-xs text-white placeholder:text-gray-600 focus:border-[#00A1B0]/50 outline-none font-medium leading-relaxed resize-none transition-all"
+                                    />
+                                )}
+                            </div>
+                            <Button
+                                onClick={handleSaveNote}
+                                disabled={
+                                    isSavingNote ||
+                                    !noteTitle.trim() ||
+                                    (noteCategory === 'medicine'
+                                        ? (!noteDosage.trim() || !noteFrequency.trim() || !noteDuration.trim())
+                                        : !noteDescription.trim())
+                                }
+                                className="w-full h-12 bg-[#00A1B0] hover:bg-[#008f9c] text-white rounded-xl font-black uppercase tracking-[0.2em] text-[10px] shadow-lg shadow-[#00A1B0]/20 disabled:opacity-50 transition-all active:scale-95"
+                            >
+                                {isSavingNote ? (
+                                    <div className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <Plus size={14} /> SAVE {noteCategory.replace('_', ' ')}
+                                    </div>
+                                )}
+                            </Button>
                         </div>
                     </motion.div>
                 )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ReviewCard from './ReviewCard';
 import ReviewForm from './ReviewForm';
 import { Button } from '../ui/button';
@@ -14,15 +14,30 @@ interface ReviewsListProps {
     appointmentId?: string;
 }
 
+interface Review {
+    id: string;
+    _id: string;
+    patientId: {
+        id?: string;
+        _id?: string;
+        name: string;
+        profileImage?: string;
+    };
+    rating: number;
+    comment: string;
+    createdAt: string;
+    isOwnReview?: boolean;
+}
+
 const ReviewsList: React.FC<ReviewsListProps> = ({ doctorId, isCompletedAppointment, appointmentId }) => {
-    const [reviews, setReviews] = useState<any[]>([]);
+    const [reviews, setReviews] = useState<Review[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isFormOpen, setIsFormOpen] = useState(false);
-    const [editingReview, setEditingReview] = useState<any>(null);
+    const [editingReview, setEditingReview] = useState<Review | null>(null);
     const user = useSelector(selectCurrentUser);
-    const currentUserId = user?.id || (user as any)?._id;
+    const currentUserId = user?.id || user?._id;
 
-    const fetchReviews = async () => {
+    const fetchReviews = useCallback(async () => {
         setIsLoading(true);
         try {
             const data = await reviewService.getDoctorReviews(doctorId);
@@ -32,13 +47,13 @@ const ReviewsList: React.FC<ReviewsListProps> = ({ doctorId, isCompletedAppointm
             console.error("Failed to load reviews:", error);
             setIsLoading(false);
         }
-    };
+    }, [doctorId]);
 
     useEffect(() => {
         if (doctorId) {
             fetchReviews();
         }
-    }, [doctorId]);
+    }, [doctorId, fetchReviews]);
 
     const handleAddReview = async (data: { rating: number; comment: string }) => {
         if (!appointmentId) {
@@ -59,6 +74,7 @@ const ReviewsList: React.FC<ReviewsListProps> = ({ doctorId, isCompletedAppointm
     };
 
     const handleEditReview = async (data: { rating: number; comment: string }) => {
+        if (!editingReview) return;
         try {
             await reviewService.updateReview(editingReview.id || editingReview._id, data);
             toast.success("Review updated successfully!");

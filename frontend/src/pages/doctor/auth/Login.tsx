@@ -64,24 +64,25 @@ const DoctorLogin: React.FC = () => {
       try {
         setSubmitting(true);
 
-        // Call backend login API
+
         const response = await authService.doctorLogin({
           email: formData.email.trim().toLowerCase(),
           password: formData.password,
           role: "doctor"
         });
 
-        if (response.success && response.data.token) {
-          // Token is automatically saved in authService
-          const userInfo = authService.getCurrentUserInfo();
+        if (response.success && response.data) {
+          const { user } = response.data;
 
-          if (userInfo) {
-            // Update Redux with user info from response or token
+          if (user) {
             dispatch(setUser({
-              _id: userInfo.id,
-              name: userInfo.name || '',
-              email: userInfo.email,
-              role: userInfo.role as any,
+              _id: user.id || user._id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              profileImage: user.profileImage,
+              customId: user.customId,
+              phone: user.phone,
             }));
           }
 
@@ -90,7 +91,8 @@ const DoctorLogin: React.FC = () => {
         } else {
           toast.error(response.message || "Login failed. Please try again.");
         }
-      } catch (error: any) {
+      } catch (e: unknown) {
+        const error = e as { message?: string };
         console.error("Login error:", error);
         toast.error(error.message || "Login failed. Please try again.");
       } finally {

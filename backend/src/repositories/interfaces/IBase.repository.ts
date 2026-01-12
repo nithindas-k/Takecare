@@ -10,4 +10,5 @@ export interface IBaseRepository<T extends Document> {
   find(filter: Record<string, any>, session?: any): Promise<T[]>;
   findWithPopulate(filter: Record<string, any>, populateField: string, session?: any): Promise<T[]>;
   existsByField(fieldName: string, value: unknown, session?: any): Promise<boolean>;
+  countDocuments(filter: Record<string, any>, session?: any): Promise<number>;
 }

@@ -3,32 +3,28 @@
 import axiosInstance from "../api/axiosInstance";
 import { DOCTOR_API_ROUTES } from "../utils/constants";
 
+interface ApiError {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+  message?: string;
+}
+
 class DoctorService {
   async getVerificationFormData() {
     try {
       const response = await axiosInstance.get(DOCTOR_API_ROUTES.VERIFICATION);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as ApiError;
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to fetch verification data",
+        message: err.response?.data?.message || err.message || "Failed to fetch verification data",
       };
     }
   }
-
-  // async submitVerification(formData: FormData) {
-  //   try {
-  //     const response = await axiosInstance.post(DOCTOR_API_ROUTES.VERIFICATION, formData, {
-  //       headers: { "Content-Type": "multipart/form-data" },
-  //     });
-  //     return response.data;
-  //   } catch (error: any) {
-  //     return {
-  //       success: false,
-  //       message: error.response?.data?.message || "Verification submission failed",
-  //     };
-  //   }
-  // }
 
   async submitVerification(formData: FormData) {
     try {
@@ -36,10 +32,11 @@ class DoctorService {
         headers: { "Content-Type": "multipart/form-data" },
       });
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as ApiError;
       return {
         success: false,
-        message: error.response?.data?.message || "Verification submission failed",
+        message: err.response?.data?.message || err.message || "Verification submission failed",
       };
     }
   }
@@ -48,10 +45,11 @@ class DoctorService {
     try {
       const response = await axiosInstance.get(DOCTOR_API_ROUTES.PROFILE);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as ApiError;
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to fetch doctor profile",
+        message: err.response?.data?.message || err.message || "Failed to fetch doctor profile",
       };
     }
   }
@@ -62,23 +60,25 @@ class DoctorService {
         headers: { "Content-Type": "multipart/form-data" },
       });
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as ApiError;
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to update profile",
+        message: err.response?.data?.message || err.message || "Failed to update profile",
       };
     }
   }
 
   // Schedule methods
-  async createSchedule(scheduleData: any) {
+  async createSchedule(scheduleData: unknown) {
     try {
       const response = await axiosInstance.post(DOCTOR_API_ROUTES.SCHEDULE, scheduleData);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as ApiError;
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to create schedule",
+        message: err.response?.data?.message || err.message || "Failed to create schedule",
       };
     }
   }
@@ -88,24 +88,25 @@ class DoctorService {
       const url = doctorId ? DOCTOR_API_ROUTES.SCHEDULE_BY_ID(doctorId) : DOCTOR_API_ROUTES.SCHEDULE;
       const response = await axiosInstance.get(url);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as ApiError;
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to fetch schedule",
+        message: err.response?.data?.message || err.message || "Failed to fetch schedule",
       };
     }
   }
 
-  async updateSchedule(scheduleData: any, doctorId?: string) {
+  async updateSchedule(scheduleData: unknown, doctorId?: string) {
     try {
-      console.log("===================" + doctorId)
       const url = doctorId ? `${DOCTOR_API_ROUTES.SCHEDULE_BY_ID(doctorId)}` : DOCTOR_API_ROUTES.SCHEDULE;
       const response = await axiosInstance.put(url, scheduleData);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as ApiError;
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to update schedule",
+        message: err.response?.data?.message || err.message || "Failed to update schedule",
       };
     }
   }
@@ -115,10 +116,11 @@ class DoctorService {
       const url = DOCTOR_API_ROUTES.BLOCK_DATE(doctorId);
       const response = await axiosInstance.post(url, { date, reason, slots });
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as ApiError;
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to block date",
+        message: err.response?.data?.message || err.message || "Failed to block date",
       };
     }
   }
@@ -128,10 +130,11 @@ class DoctorService {
       const url = DOCTOR_API_ROUTES.UNBLOCK_DATE(doctorId);
       const response = await axiosInstance.delete(url, { data: { date } });
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as ApiError;
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to unblock date",
+        message: err.response?.data?.message || err.message || "Failed to unblock date",
       };
     }
   }
@@ -142,10 +145,11 @@ class DoctorService {
         params: { date },
       });
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as ApiError;
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to fetch available slots",
+        message: err.response?.data?.message || err.message || "Failed to fetch available slots",
       };
     }
   }
@@ -164,10 +168,11 @@ class DoctorService {
         },
       });
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as ApiError;
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to fetch doctors",
+        message: err.response?.data?.message || err.message || "Failed to fetch doctors",
       };
     }
   }
@@ -176,10 +181,11 @@ class DoctorService {
     try {
       const response = await axiosInstance.get(`/doctors/${doctorId}`);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as ApiError;
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to fetch doctor details",
+        message: err.response?.data?.message || err.message || "Failed to fetch doctor details",
       };
     }
   }
@@ -188,10 +194,11 @@ class DoctorService {
     try {
       const response = await axiosInstance.get(`/doctors/${doctorId}/related`);
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as ApiError;
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to fetch related doctors",
+        message: err.response?.data?.message || err.message || "Failed to fetch related doctors",
       };
     }
   }
@@ -202,10 +209,11 @@ class DoctorService {
         params: { startDate, endDate },
       });
       return response.data;
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as ApiError;
       return {
         success: false,
-        message: error.response?.data?.message || "Failed to fetch dashboard stats",
+        message: err.response?.data?.message || err.message || "Failed to fetch dashboard stats",
       };
     }
   }

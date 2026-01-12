@@ -29,7 +29,7 @@ export const runInTransaction = async <T>(
             await session.abortTransaction();
         }
 
-        // Check if the error is due to lack of Replica Set support (standalone instance)
+       
         if (
             error.message &&
             (error.message.includes("Transaction numbers are only allowed on a replica set member") ||
@@ -37,7 +37,7 @@ export const runInTransaction = async <T>(
                 error.codeName === "IllegalOperation")
         ) {
             console.warn("MongoDB Transaction failed (likely standalone instance). Retrying without transaction.");
-            // Retry the operation without a session
+          
             return await callback(undefined);
         }
 

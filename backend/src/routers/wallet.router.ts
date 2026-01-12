@@ -26,7 +26,10 @@ const walletService = new WalletService(
     notificationService
 );
 
-const walletController = new WalletController(walletService);
+import { LoggerService } from "../services/logger.service";
+
+const walletControllerLogger = new LoggerService("WalletController");
+const walletController = new WalletController(walletService, walletControllerLogger);
 
 
 walletRouter.get("/my-wallet", authMiddleware, walletController.getWallet.bind(walletController));

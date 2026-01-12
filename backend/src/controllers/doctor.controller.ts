@@ -109,7 +109,7 @@ export class DoctorController implements IDoctorController {
 
       let bodyData = { ...req.body };
 
-      // Parse nested JSON strings if they exist (handling frontend format)
+
       if (req.body.information) {
         try {
           const info = JSON.parse(req.body.information);

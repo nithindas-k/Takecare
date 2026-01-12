@@ -12,43 +12,43 @@ import {
 
 export interface IAuthController {
   register(
-    req: Request<{}, unknown, RegisterDTO>,
+    req: Request<Record<string, never>, unknown, RegisterDTO>,
     res: Response,
     next: NextFunction
   ): Promise<void>;
 
   verifyOtp(
-    req: Request<{}, unknown, VerifyOtpDTO & { role?: Role }>,
+    req: Request<Record<string, never>, unknown, VerifyOtpDTO & { role?: Role }>,
     res: Response,
     next: NextFunction
   ): Promise<void>;
 
   resendOtp(
-    req: Request<{}, unknown, ResendOtpDTO>,
+    req: Request<Record<string, never>, unknown, ResendOtpDTO>,
     res: Response,
     next: NextFunction
   ): Promise<void>;
 
   login(
-    req: Request<{}, unknown, LoginDTO & { role?: Role }>,
+    req: Request<Record<string, never>, unknown, LoginDTO & { role?: Role }>,
     res: Response,
     next: NextFunction
   ): Promise<void>;
 
   forgotPassword(
-    req: Request<{}, unknown, ForgotPasswordDTO & { role?: Role }>,
+    req: Request<Record<string, never>, unknown, ForgotPasswordDTO & { role?: Role }>,
     res: Response,
     next: NextFunction
   ): Promise<void>;
 
   forgotPasswordVerify(
-    req: Request<{}, unknown, ForgotPasswordVerifyOtpDTO>,
+    req: Request<Record<string, never>, unknown, ForgotPasswordVerifyOtpDTO>,
     res: Response,
     next: NextFunction
   ): Promise<void>;
 
   resetPassword(
-    req: Request<{}, unknown, ResetPasswordDTO>,
+    req: Request<Record<string, never>, unknown, ResetPasswordDTO>,
     res: Response,
     next: NextFunction
   ): Promise<void>;

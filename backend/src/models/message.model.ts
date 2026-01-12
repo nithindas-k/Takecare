@@ -5,7 +5,8 @@ export interface IMessage extends Document {
     senderId: mongoose.Types.ObjectId;
     senderModel: 'User' | 'Doctor';
     content: string;
-    type: 'text' | 'image' | 'file' | 'system'; 
+    fileName?: string;
+    type: 'text' | 'image' | 'file' | 'system';
     read: boolean;
     isDeleted: boolean;
     isEdited: boolean;
@@ -34,6 +35,10 @@ const MessageSchema = new Schema<IMessage>(
         content: {
             type: String,
             required: true,
+            trim: true
+        },
+        fileName: {
+            type: String,
             trim: true
         },
         type: {

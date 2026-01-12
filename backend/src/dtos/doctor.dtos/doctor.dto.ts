@@ -2,8 +2,7 @@ import { BaseUserResponseDTO, AuthResponseDTO, LoginDTO, RegisterDTO, VerifyOtpD
 
 export { LoginDTO as LoginDoctorDTO, VerifyOtpDTO, ResendOtpDTO, ForgotPasswordDTO, ForgotPasswordVerifyOtpDTO, ResetPasswordDTO };
 
-export interface RegisterDoctorDTO extends RegisterDTO {
-}
+export type RegisterDoctorDTO = RegisterDTO;
 export enum VerificationStatus {
   Pending = "pending",
   Approved = "approved",

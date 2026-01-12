@@ -14,8 +14,8 @@ type Errors = Partial<Record<keyof FormData, string>>;
 const PatientResetPassword: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const email = (location.state as any)?.email || "";
-  const resetToken = (location.state as any)?.resetToken || "";
+  const email = (location.state as { email?: string })?.email || "";
+  const resetToken = (location.state as { resetToken?: string })?.resetToken || "";
 
   const [formData, setFormData] = useState<FormData>({
     newPassword: "",
@@ -71,7 +71,8 @@ const PatientResetPassword: React.FC = () => {
         } else {
           setServerError(response.message || "Failed to reset password.");
         }
-      } catch (err: any) {
+      } catch (e: unknown) {
+        const err = e as { message?: string };
         setServerError(err.message || "An unexpected error occurred.");
       } finally {
         setSubmitting(false);

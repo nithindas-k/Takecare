@@ -1,9 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Trash2, Pill, Stethoscope, Calendar, FileText, FlaskConical } from 'lucide-react';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
 import { prescriptionService } from '../../services/prescriptionService';
+import { appointmentService } from '../../services/appointmentService';
+import { BookOpen } from 'lucide-react';
 
 interface PrescriptionModalProps {
     isOpen: boolean;
@@ -33,6 +36,23 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
     const signatureCanvasRef = React.useRef<HTMLCanvasElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [hasSignature, setHasSignature] = useState(false);
+    const [appointment, setAppointment] = useState<any>(null);
+
+    React.useEffect(() => {
+        const fetchAppointment = async () => {
+            try {
+                const res = await appointmentService.getAppointmentById(appointmentId);
+                if (res.success) {
+                    setAppointment(res.data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch appointment for prescription", err);
+            }
+        };
+        if (isOpen && appointmentId) {
+            fetchAppointment();
+        }
+    }, [isOpen, appointmentId]);
 
 
     // Signature functions
@@ -229,6 +249,124 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
                             </div>
 
                             <div className="p-8 space-y-8">
+                                {/* Doctor's Consultation Notes Reference */}
+                                {appointment?.doctorNotes && appointment.doctorNotes.length > 0 && (
+                                    <div className="p-6 rounded-3xl bg-teal-50/50 border border-teal-100 space-y-6">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-2xl bg-teal-600 flex items-center justify-center text-white shadow-lg shadow-teal-200">
+                                                    <BookOpen className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-xs font-black text-gray-800 uppercase tracking-widest">Session Highlights</h3>
+                                                    <p className="text-[10px] text-teal-600 font-bold uppercase tracking-tighter">Clinical observations & suggestions</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        const relevant = appointment.doctorNotes.filter((n: any) => n.category === 'diagnosis' || n.category === 'observation' || !n.category);
+                                                        const text = relevant.map((n: any) => `• ${n.title}: ${n.description}`).join('\n');
+                                                        setDiagnosis(prev => prev ? `${prev}\n${text}` : text);
+                                                        toast.success("Diagnosis notes copied");
+                                                    }}
+                                                    className="text-[9px] font-black border-teal-200 text-teal-700 hover:bg-teal-100 rounded-xl px-4 h-9"
+                                                >
+                                                    COPY DIAGNOSIS
+                                                </Button>
+                                                <Button
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        const meds = appointment.doctorNotes.filter((n: any) => n.category === 'medicine');
+                                                        if (meds.length === 0) {
+                                                            toast.error("No medicine notes found");
+                                                            return;
+                                                        }
+                                                        const existingEmpty = medicines.length === 1 && !medicines[0].name;
+                                                        const newMeds = meds.map((n: any) => ({
+                                                            name: n.title,
+                                                            dosage: n.dosage || "",
+                                                            frequency: n.frequency || "",
+                                                            duration: n.duration || "",
+                                                            instructions: ""
+                                                        }));
+                                                        setMedicines(prev => existingEmpty ? newMeds : [...prev, ...newMeds]);
+                                                        toast.success(`Imported ${meds.length} medicines`);
+                                                    }}
+                                                    className="text-[9px] font-black bg-teal-600 text-white hover:bg-teal-700 rounded-xl px-4 h-9 shadow-sm"
+                                                >
+                                                    IMPORT ALL MEDS
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {appointment.doctorNotes.map((note: any, idx: number) => (
+                                                <div key={idx} className="group p-4 bg-white rounded-2xl border border-teal-100 shadow-sm hover:shadow-md transition-all relative">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className={`px-2 py-0.5 rounded-lg text-[7px] font-black uppercase tracking-tighter ${note.category === 'medicine' ? 'bg-amber-100 text-amber-700' :
+                                                            note.category === 'lab_test' ? 'bg-indigo-100 text-indigo-700' :
+                                                                note.category === 'diagnosis' ? 'bg-red-100 text-red-700' :
+                                                                    'bg-teal-100 text-teal-700'
+                                                            }`}>
+                                                            {note.category || 'observation'}
+                                                        </span>
+                                                        <span className="text-[8px] text-gray-400 font-bold ml-auto">{new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                    </div>
+                                                    <h4 className="text-[11px] font-bold text-gray-800 mb-1 truncate">{note.title}</h4>
+                                                    {note.category === 'medicine' ? (
+                                                        <div className="flex flex-wrap gap-1 mt-2">
+                                                            <div className="bg-teal-50 text-[8px] font-black text-teal-600 px-1.5 py-0.5 rounded border border-teal-100">
+                                                                {note.dosage}
+                                                            </div>
+                                                            <div className="bg-teal-50 text-[8px] font-black text-teal-600 px-1.5 py-0.5 rounded border border-teal-100">
+                                                                {note.frequency}
+                                                            </div>
+                                                            <div className="bg-teal-50 text-[8px] font-black text-teal-600 px-1.5 py-0.5 rounded border border-teal-100">
+                                                                {note.duration}
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-[11px] text-gray-500 line-clamp-2 font-medium leading-relaxed">{note.description}</p>
+                                                    )}
+
+                                                    {/* Contextual Copy Button */}
+                                                    <button
+                                                        onClick={() => {
+                                                            if (note.category === 'medicine') {
+                                                                const existingEmpty = medicines.length === 1 && !medicines[0].name;
+                                                                const newMed = {
+                                                                    name: note.title,
+                                                                    dosage: note.dosage || "",
+                                                                    frequency: note.frequency || "",
+                                                                    duration: note.duration || "",
+                                                                    instructions: ""
+                                                                };
+                                                                setMedicines(prev => existingEmpty ? [newMed] : [...prev, newMed]);
+                                                                toast.success(`Added ${note.title} to medicines`);
+                                                            } else if (note.category === 'lab_test') {
+                                                                const existingEmpty = labTests.length === 1 && !labTests[0];
+                                                                setLabTests(prev => existingEmpty ? [note.title] : [...prev, note.title]);
+                                                                toast.success(`Added ${note.title} to lab tests`);
+                                                            } else {
+                                                                setDiagnosis(prev => prev ? `${prev}\n• ${note.title}: ${note.description}` : `${note.title}: ${note.description}`);
+                                                                toast.success(`Ported to diagnosis`);
+                                                            }
+                                                        }}
+                                                        className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-white shadow-lg border border-teal-100 text-teal-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-teal-600 hover:text-white transform group-hover:scale-110"
+                                                        title="Copy to respective field"
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Diagnosis Section */}
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2 border-b border-[#00A1B0]/20 pb-2">
@@ -475,3 +613,4 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
 };
 
 export default PrescriptionModal;
+

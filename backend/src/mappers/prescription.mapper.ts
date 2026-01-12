@@ -2,14 +2,14 @@ export class PrescriptionMapper {
     static toResponseDTO(prescription: any) {
         if (!prescription) return null;
 
-        // Extract doctor info from populated data
+     
         const doctorData = prescription.doctorId;
         const doctorUser = doctorData?.userId;
 
-        // Extract patient info
+  
         const patientData = prescription.patientId;
 
-        // Extract appointment info
+   
         const appointmentData = prescription.appointmentId;
 
         return {

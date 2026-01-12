@@ -10,6 +10,7 @@ import {
   DollarSign,
   Settings,
   Lock,
+  Mail,
   LogOut,
   Activity,
   X
@@ -29,8 +30,9 @@ const sidebarItems = [
   { label: "Appointments", icon: Calendar, path: "/admin/appointments" },
   { label: "Speciality", icon: Grid, path: "/admin/speciality" },
   { label: "Earnings", icon: DollarSign, path: "/admin/earnings" },
-  { label: "Profile Settings", icon: Settings, path: "/admin/profile-settings" },
-  { label: "Change Password", icon: Lock, path: "/admin/change-password" },
+  { label: "Messages", icon: Mail, path: "/admin/messages" },
+  // { label: "Profile Settings", icon: Settings, path: "/admin/profile-settings" },
+  // { label: "Change Password", icon: Lock, path: "/admin/change-password" },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ onMobileClose }) => {
@@ -39,7 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onMobileClose }) => {
       await authService.logout();
       toast.success("Logged out successfully");
       window.location.href = "/admin/login";
-    } catch (error) {
+    } catch {
       toast.error("Logout failed");
     }
   };

@@ -17,7 +17,7 @@ const ForgotPasswordOTP: React.FC = () => {
   const email = location.state?.email || "";
 
   useEffect(() => {
-    let interval: any;
+    let interval: ReturnType<typeof setInterval>;
     if (resendTimer > 0) {
       interval = setInterval(() => setResendTimer(t => t - 1), 1000);
     }
@@ -85,7 +85,8 @@ const ForgotPasswordOTP: React.FC = () => {
         } else {
           setErrors({ otp: response.message || "Invalid OTP. Please try again." });
         }
-      } catch (err: any) {
+      } catch (e: unknown) {
+        const err = e as { message?: string };
         setErrors({ otp: err.message || "Invalid OTP. Please try again." });
       } finally {
         setSubmitting(false);
@@ -106,7 +107,8 @@ const ForgotPasswordOTP: React.FC = () => {
       } else {
         setErrors({ otp: response.message || "Could not resend OTP." });
       }
-    } catch (err: any) {
+    } catch (e: unknown) {
+      const err = e as { message?: string };
       setErrors({ otp: err.message || "Could not resend OTP." });
     } finally {
       setSubmitting(false);

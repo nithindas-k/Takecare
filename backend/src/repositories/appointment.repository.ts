@@ -11,15 +11,12 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
     }
 
     async create(appointmentData: any, session?: any): Promise<IAppointmentDocument> {
-        // When using sessions with .create(), it must be an array
+        
         const created = await this.model.create([appointmentData], { session });
         return created[0];
     }
 
     async findById(appointmentId: string, session?: any): Promise<IAppointmentDocument | null> {
-        const appointment = await this.model.findOne({ customId: appointmentId }).session(session);
-        if (appointment) return appointment;
-
         if (!Types.ObjectId.isValid(appointmentId)) {
             return null;
         }
@@ -30,31 +27,15 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
 
 
     async findByIdPopulated(appointmentId: string, session?: any): Promise<any> {
-        const appointment = await this.model
-            .findOne({ customId: appointmentId })
-            .session(session)
-            .populate({
-                path: "patientId",
-                select: "customId name email phone profileImage userId",
-            })
-            .populate({
-                path: "doctorId",
-                select: "customId userId specialty experienceYears VideoFees ChatFees",
-                populate: {
-                    path: "userId",
-                    select: "customId name email phone profileImage",
-                },
-            })
-            .lean();
-
-        if (appointment) return appointment;
-
-        if (!Types.ObjectId.isValid(appointmentId)) {
-            return null;
+        let query: any;
+        if (Types.ObjectId.isValid(appointmentId)) {
+            query = { _id: appointmentId };
+        } else {
+            query = { customId: appointmentId };
         }
 
         return await this.model
-            .findById(appointmentId)
+            .findOne(query)
             .session(session)
             .populate({
                 path: "patientId",
@@ -224,27 +205,19 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
     ): Promise<IAppointmentDocument | null> {
         console.log(`[AppointmentRepository] updateById called for ${appointmentId}`, updateData);
 
-        const byCustomId = await this.model.findOneAndUpdate(
-            { customId: appointmentId },
-            { $set: updateData },
-            { new: true, runValidators: true, session }
-        );
-
-        if (byCustomId) {
-            console.log(`[AppointmentRepository] Updated by customId: ${appointmentId}`);
-            return byCustomId;
-        }
-
         if (!Types.ObjectId.isValid(appointmentId)) {
-            console.warn(`[AppointmentRepository] Invalid ObjectId and not found by customId: ${appointmentId}`);
+            console.warn(`[AppointmentRepository] Invalid ObjectId: ${appointmentId}`);
             return null;
         }
 
         console.log(`[AppointmentRepository] Updating by _id: ${appointmentId}`);
-        // Explicitly use $set to ensure partial update
+        const update = Object.keys(updateData).some(key => key.startsWith('$'))
+            ? updateData
+            : { $set: updateData };
+
         const result = await this.model.findByIdAndUpdate(
             appointmentId,
-            { $set: updateData },
+            update,
             { new: true, runValidators: true, session }
         ).exec();
 
@@ -280,18 +253,16 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
 
 
     async getAdminDashboardStats(startDate?: Date, endDate?: Date): Promise<DashboardStats> {
-        // Build date filter query
-        let dateQuery: any = {};
+    
+        const dateQuery: any = {};
         if (startDate || endDate) {
             dateQuery.createdAt = {};
             if (startDate) dateQuery.createdAt.$gte = startDate;
             if (endDate) dateQuery.createdAt.$lte = endDate;
         }
 
-        // Apply date filter to total appointments count
         const totalAppointments = await this.model.countDocuments(dateQuery);
 
-        // Apply date filter to revenue and status distribution
         const pipeline: any[] = [];
         if (Object.keys(dateQuery).length > 0) {
             pipeline.push({ $match: dateQuery });
@@ -304,14 +275,14 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
                 completed: { $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] } },
                 cancelled: { $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] } },
                 pending: { $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] } },
+                confirmed: { $sum: { $cond: [{ $eq: ["$status", "confirmed"] }, 1, 0] } },
             }
         });
 
         const [revenueAndStatus] = await this.model.aggregate(pipeline);
 
-        // Revenue Graph
-        // Default to last 7 days if no range provided
-        let matchDateQuery: any = {};
+   
+        const matchDateQuery: any = {};
 
         if (startDate || endDate) {
             matchDateQuery.createdAt = {};
@@ -334,8 +305,7 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
             },
             { $sort: { _id: 1 } }
         ]);
-
-        // Top Doctors (by Revenue)
+        
         const topDoctors = await this.model.aggregate([
             { $match: { status: 'completed' } },
             {
@@ -381,7 +351,8 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
             statusDistribution: {
                 completed: revenueAndStatus?.completed || 0,
                 cancelled: revenueAndStatus?.cancelled || 0,
-                pending: revenueAndStatus?.pending || 0
+                pending: revenueAndStatus?.pending || 0,
+                confirmed: revenueAndStatus?.confirmed || 0
             },
             revenueGraph: revenueGraph.map(g => ({ date: g._id, amount: g.amount })),
             topDoctors
@@ -403,10 +374,10 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
             }
         ]);
 
-        // Count unique patients manually from the set
+       
         const totalPatients = earningsStats?.uniquePatients?.length || 0;
 
-        // Appointments Today
+        //Appointments Today
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
         const endOfDay = new Date();
@@ -418,8 +389,7 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
             status: { $in: ['pending', 'confirmed'] }
         });
 
-        // Revenue Graph
-        let matchDateQuery: any = {};
+        const matchDateQuery: any = {};
 
         if (startDate || endDate) {
             matchDateQuery.createdAt = {};
@@ -442,12 +412,12 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
             { $sort: { _id: 1 } }
         ]);
 
-        // Next Upcoming Appointment
+    
         const nextAppointment = await this.model.findOne({
             doctorId: docId,
-            appointmentDate: { $gte: new Date() },
+            appointmentDate: { $gte: startOfDay },
             status: { $in: ['pending', 'confirmed'] }
-        }).sort({ appointmentDate: 1 }).populate({
+        }).sort({ appointmentDate: 1, appointmentTime: 1 }).populate({
             path: 'patientId',
             select: 'name profileImage'
         });

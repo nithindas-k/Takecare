@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import DoctorNavbar from '../../components/Doctor/DoctorNavbar';
 import DoctorLayout from '../../components/Doctor/DoctorLayout';
 import Breadcrumbs from '../../components/common/Breadcrumbs';
@@ -6,6 +6,7 @@ import AlertDialog from '../../components/common/AlertDialog';
 import { FaPlus, FaTrash, FaClock, FaToggleOn, FaToggleOff, FaCalendarTimes } from 'react-icons/fa';
 import doctorService from '../../services/doctorService';
 import { toast } from 'sonner';
+import { Skeleton } from '../../components/ui/skeleton';
 
 interface TimeSlot {
     id: string;
@@ -23,11 +24,6 @@ interface DaySchedule {
 const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 const getDefaultSchedule = (): DaySchedule[] => {
-    return DAYS_OF_WEEK.map(day => ({
-        day,
-        enabled: false,
-        slots: [],
-    }));
     return DAYS_OF_WEEK.map(day => ({
         day,
         enabled: false,
@@ -58,11 +54,7 @@ const DoctorSchedule: React.FC = () => {
     const [selectedBlockSlots, setSelectedBlockSlots] = useState<string[]>([]);
 
 
-    useEffect(() => {
-        fetchSchedule();
-    }, []);
-
-    const fetchSchedule = async () => {
+    const fetchSchedule = useCallback(async () => {
         setLoading(true);
         try {
             const response = await doctorService.getSchedule();
@@ -72,9 +64,6 @@ const DoctorSchedule: React.FC = () => {
                 const scheduleData = response.data;
                 console.log('Schedule data:', JSON.stringify(scheduleData, null, 2));
                 setHasSchedule(true);
-
-
-
 
                 const scheduleMap = new Map();
                 if (scheduleData.weeklySchedule && Array.isArray(scheduleData.weeklySchedule)) {
@@ -138,13 +127,15 @@ const DoctorSchedule: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchSchedule();
+    }, [fetchSchedule]);
 
     const toggleDay = async (dayIndex: number) => {
         const updatedSchedule = [...schedule];
         updatedSchedule[dayIndex].enabled = !updatedSchedule[dayIndex].enabled;
-
-
 
         setSchedule(updatedSchedule);
 
@@ -191,12 +182,44 @@ const DoctorSchedule: React.FC = () => {
     const addTimeSlot = (dayIndex: number) => {
         const updatedSchedule = [...schedule];
         const daySchedule = updatedSchedule[dayIndex];
-        const slotIndex = daySchedule.slots.length;
-        const newSlot: TimeSlot = {
+        const slots = daySchedule.slots;
+        const slotIndex = slots.length;
 
-            id: `slot-${daySchedule.day}-09:00-10:00-${slotIndex}`,
-            startTime: '09:00',
-            endTime: '10:00',
+        let startTime = '09:00';
+        let endTime = '09:30';
+
+        if (slots.length > 0) {
+            const lastSlot = slots[slots.length - 1];
+            // Helper to parse time string "HH:MM" to minutes
+            const toMinutes = (time: string) => {
+                const [h, m] = time.split(':').map(Number);
+                return h * 60 + m;
+            };
+            // Helper to format minutes to "HH:MM"
+            const toTimeStr = (mins: number) => {
+                const h = Math.floor(mins / 60) % 24;
+                const m = mins % 60;
+                return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+            };
+
+            const lastStartMins = toMinutes(lastSlot.startTime);
+            const lastEndMins = toMinutes(lastSlot.endTime);
+
+            // Calculate duration of previous slot (handle crossing midnight if necessary, though simple subtraction usually works for schedule within a day)
+            let duration = lastEndMins - lastStartMins;
+            if (duration <= 0) duration = 30; // Default to 30 minutes if calculation fails or is weird
+
+            const newStartMins = lastEndMins;
+            const newEndMins = lastEndMins + duration;
+
+            startTime = toTimeStr(newStartMins);
+            endTime = toTimeStr(newEndMins);
+        }
+
+        const newSlot: TimeSlot = {
+            id: `slot-${daySchedule.day}-${startTime}-${endTime}-${slotIndex}`,
+            startTime,
+            endTime,
             enabled: true,
         };
         updatedSchedule[dayIndex].slots.push(newSlot);
@@ -395,7 +418,7 @@ const DoctorSchedule: React.FC = () => {
             return false;
         }
 
-       
+
         for (const daySchedule of schedule) {
             if (daySchedule.enabled) {
                 if (daySchedule.slots.length === 0) {
@@ -450,7 +473,6 @@ const DoctorSchedule: React.FC = () => {
             }
         }
 
-        return true;
         return true;
     };
 
@@ -560,28 +582,9 @@ const DoctorSchedule: React.FC = () => {
         { label: 'Schedule Settings' },
     ];
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50">
-                <DoctorNavbar />
-                <Breadcrumbs
-                    items={breadcrumbItems}
-                    title="Schedule Settings"
-                    subtitle="Manage your weekly availability and time slots"
-                />
-                <DoctorLayout>
-                    <div className="flex items-center justify-center">
-                        <div className="animate-spin h-12 w-12 border-b-2 border-[#00A1B0] rounded-full"></div>
-                    </div>
-                </DoctorLayout>
-            </div>
-        );
-    }
-
     return (
         <div className="min-h-screen bg-gray-50">
             <DoctorNavbar />
-
             <Breadcrumbs
                 items={breadcrumbItems}
                 title="Schedule Settings"
@@ -589,385 +592,173 @@ const DoctorSchedule: React.FC = () => {
             />
 
             <DoctorLayout>
-                {/* Tabs */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
-                    <div className="border-b border-gray-100">
-                        <div className="flex gap-1 p-2">
-                            <button
-                                onClick={() => setActiveTab('available')}
-                                className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'available'
-                                    ? 'bg-[#00A1B0] text-white'
-                                    : 'text-gray-600 hover:bg-gray-50'
-                                    }`}
-                            >
-                                Available Timings
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('unavailable')}
-                                className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'unavailable'
-                                    ? 'bg-[#00A1B0] text-white'
-                                    : 'text-gray-600 hover:bg-gray-50'
-                                    }`}
-                            >
-                                Unavailable Dates
-                            </button>
+                {loading ? (
+                    <div className="space-y-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-2">
+                            <div className="flex gap-1">
+                                <Skeleton className="flex-1 h-10 rounded-lg" />
+                                <Skeleton className="flex-1 h-10 rounded-lg" />
+                            </div>
                         </div>
-                    </div>
-                </div>
-
-                {/* Available Timings Section */}
-                {activeTab === 'available' && (
-                    <>
-                        {/* Info Banner */}
-                        <div className="bg-blue-50 rounded-lg p-3.5 mb-5 flex items-center gap-2.5 text-sm border border-blue-100">
-                            <FaClock className="text-blue-600 flex-shrink-0" size={18} />
-                            <p className="text-blue-700">
-                                Configure your weekly availability. Patients can book appointments during your enabled time slots.
-                            </p>
-                        </div>
-
-                        {/* Weekly Schedule */}
-                        <div className="space-y-3.5">
-                            {schedule.map((daySchedule, dayIndex) => (
-                                <div
-                                    key={daySchedule.day}
-                                    className={`bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all ${!daySchedule.enabled ? 'opacity-50' : ''}`}
-                                >
-                                    {/* Day Header */}
-                                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                                        <div className="flex items-center gap-2.5">
-                                            <h3 className="font-bold text-gray-800">{daySchedule.day}</h3>
-                                            {daySchedule.enabled && (
-                                                <span className="px-2.5 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded">
-                                                    Active
-                                                </span>
-                                            )}
-                                        </div>
-                                        <button
-                                            onClick={() => toggleDay(dayIndex)}
-                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${daySchedule.enabled
-                                                ? 'bg-[#00A1B0]/10 text-[#00A1B0] hover:bg-[#00A1B0]/20'
-                                                : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                                                }`}
-                                        >
-                                            {daySchedule.enabled ? (
-                                                <FaToggleOn size={18} />
-                                            ) : (
-                                                <FaToggleOff size={18} />
-                                            )}
-                                        </button>
+                        <Skeleton className="h-12 w-full rounded-lg" />
+                        <div className="space-y-4">
+                            {[1, 2, 3, 4, 5].map(i => (
+                                <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                                        <Skeleton className="h-5 w-32" />
+                                        <Skeleton className="h-8 w-16 rounded-lg" />
                                     </div>
-
-                                    {/* Time Slots */}
-                                    <div className="p-4">
-                                        {daySchedule.slots.length === 0 ? (
-                                            <p className="text-center text-gray-400 text-sm py-3">
-                                                {daySchedule.enabled ? 'No time slots added' : 'Day is disabled - slots preserved'}
-                                            </p>
-                                        ) : (
-                                            <div className="space-y-2.5 mb-3">
-                                                {!daySchedule.enabled && daySchedule.slots.length > 0 && (
-                                                    <div className="mb-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
-                                                        <p className="text-xs text-amber-700">
-                                                            <strong>Note:</strong> This day is disabled. Slots are preserved and will be available when you re-enable this day.
-                                                        </p>
-                                                    </div>
-                                                )}
-                                                {daySchedule.slots.map((slot) => (
-                                                    <div
-                                                        key={slot.id}
-                                                        className={`flex items-center gap-2.5 p-2.5 rounded-lg border ${!slot.enabled
-                                                            ? 'bg-gray-100 border-gray-300 opacity-60'
-                                                            : daySchedule.enabled
-                                                                ? 'bg-gray-50 border-gray-200'
-                                                                : 'bg-gray-100 border-gray-300 opacity-75'
-                                                            }`}
-                                                    >
-                                                        <div className="flex items-center gap-2 flex-1">
-                                                            <input
-                                                                type="time"
-                                                                value={slot.startTime}
-                                                                onChange={(e) =>
-                                                                    updateTimeSlot(dayIndex, slot.id, 'startTime', e.target.value)
-                                                                }
-                                                                disabled={!daySchedule.enabled || !slot.enabled}
-                                                                className={`text-sm px-2.5 py-1.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A1B0] focus:border-transparent ${daySchedule.enabled
-                                                                    ? 'border-gray-300 bg-white'
-                                                                    : 'border-gray-300 bg-gray-200 cursor-not-allowed'
-                                                                    }`}
-                                                            />
-                                                            <span className="text-gray-400">—</span>
-                                                            <input
-                                                                type="time"
-                                                                value={slot.endTime}
-                                                                onChange={(e) =>
-                                                                    updateTimeSlot(dayIndex, slot.id, 'endTime', e.target.value)
-                                                                }
-                                                                disabled={!daySchedule.enabled || !slot.enabled}
-                                                                className={`text-sm px-2.5 py-1.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A1B0] focus:border-transparent ${daySchedule.enabled
-                                                                    ? 'border-gray-300 bg-white'
-                                                                    : 'border-gray-300 bg-gray-200 cursor-not-allowed'
-                                                                    }`}
-                                                            />
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <button
-                                                                onClick={() => toggleSlot(dayIndex, slot.id)}
-                                                                disabled={!daySchedule.enabled}
-                                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${slot.enabled
-                                                                    ? 'bg-[#00A1B0]/10 text-[#00A1B0] hover:bg-[#00A1B0]/20'
-                                                                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                                                                    } ${!daySchedule.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                                title={daySchedule.enabled ? (slot.enabled ? 'Disable slot' : 'Enable slot') : 'Enable day to toggle slots'}
-                                                            >
-                                                                {slot.enabled ? (
-                                                                    <FaToggleOn size={18} />
-                                                                ) : (
-                                                                    <FaToggleOff size={18} />
-                                                                )}
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDeleteClick(dayIndex, slot.id)}
-                                                                disabled={!daySchedule.enabled}
-                                                                className={`p-2 rounded-lg transition-colors ${daySchedule.enabled
-                                                                    ? 'bg-red-50 hover:bg-red-100 text-red-600'
-                                                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                                                    }`}
-                                                                title={daySchedule.enabled ? 'Delete slot' : 'Enable day to delete slots'}
-                                                            >
-                                                                <FaTrash size={12} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Action Buttons */}
-                                        {daySchedule.enabled && (
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => addTimeSlot(dayIndex)}
-                                                    className="flex-1 px-4 py-2 bg-[#00A1B0]/10 hover:bg-[#00A1B0]/20 text-[#00A1B0] text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                                                >
-                                                    <FaPlus size={12} />
-                                                    Add Time Slot
-                                                </button>
-                                                {daySchedule.slots.length > 0 && (
-                                                    <button
-                                                        onClick={() => handleClearAllClick(dayIndex)}
-                                                        className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                                                        title="Clear all slots (day will be disabled)"
-                                                    >
-                                                        <FaTrash size={12} />
-                                                        Clear All
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )}
+                                    <div className="p-4 space-y-3">
+                                        <Skeleton className="h-10 w-full rounded-lg" />
+                                        <div className="flex gap-2">
+                                            <Skeleton className="flex-1 h-10 rounded-lg" />
+                                            <Skeleton className="w-24 h-10 rounded-lg" />
+                                        </div>
                                     </div>
                                 </div>
                             ))}
                         </div>
-
-                        {/* Save Button */}
-                        <div className="mt-5 flex justify-end">
-                            <button
-                                onClick={handleSaveSchedule}
-                                disabled={saving}
-                                className="px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {saving ? 'Saving...' : 'Save Schedule'}
-                            </button>
-                        </div>
-                    </>
-                )}
-
-                {/* Unavailable Dates Section */}
-                {activeTab === 'unavailable' && (
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-2 bg-red-100 rounded-lg text-red-600">
-                                <FaCalendarTimes size={24} />
+                    </div>
+                ) : (
+                    <>
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
+                            <div className="border-b border-gray-100">
+                                <div className="flex gap-1 p-2">
+                                    <button
+                                        onClick={() => setActiveTab('available')}
+                                        className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'available'
+                                            ? 'bg-[#00A1B0] text-white'
+                                            : 'text-gray-600 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        Available Timings
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('unavailable')}
+                                        className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'unavailable'
+                                            ? 'bg-[#00A1B0] text-white'
+                                            : 'text-gray-600 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        Unavailable Dates
+                                    </button>
+                                </div>
                             </div>
-                            <div>
-                                <h2 className="text-lg font-bold text-gray-800">Unavailable Dates</h2>
-                                <p className="text-sm text-gray-500">Block specific dates when you are not available (holidays, leave, etc.)</p>
-                            </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-4">
-                                <h3 className="font-semibold text-gray-700">Add Unavailable Date</h3>
-                                <div className="space-y-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                                        <input
-                                            type="date"
-                                            value={newBlockDate}
-                                            min={new Date().toISOString().split('T')[0]}
-                                            onChange={(e) => {
-                                                setNewBlockDate(e.target.value);
-                                                setSelectedBlockSlots([]);
-                                                setBlockWholeDay(true);
-                                            }}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-colors"
-                                        />
-                                    </div>
+                        {activeTab === 'available' && (
+                            <>
+                                <div className="bg-blue-50 rounded-lg p-3.5 mb-5 flex items-center gap-2.5 text-sm border border-blue-100">
+                                    <FaClock className="text-blue-600 flex-shrink-0" size={18} />
+                                    <p className="text-blue-700">Configure your weekly availability. Patients can book appointments during your enabled time slots.</p>
+                                </div>
 
-                                    {newBlockDate && (
-                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-3">
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="checkbox"
-                                                    id="blockWholeDay"
-                                                    checked={blockWholeDay}
-                                                    onChange={(e) => setBlockWholeDay(e.target.checked)}
-                                                    className="rounded text-red-600 focus:ring-red-500"
-                                                />
-                                                <label htmlFor="blockWholeDay" className="text-sm font-medium text-gray-700">
-                                                    Block entire day
-                                                </label>
+                                <div className="space-y-3.5">
+                                    {schedule.map((daySchedule, dayIndex) => (
+                                        <div key={daySchedule.day} className={`bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden transition-all ${!daySchedule.enabled ? 'opacity-50' : ''}`}>
+                                            <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                                                <div className="flex items-center gap-2.5">
+                                                    <h3 className="font-bold text-gray-800">{daySchedule.day}</h3>
+                                                    {daySchedule.enabled && (<span className="px-2.5 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded">Active</span>)}
+                                                </div>
+                                                <button onClick={() => toggleDay(dayIndex)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${daySchedule.enabled ? 'bg-[#00A1B0]/10 text-[#00A1B0] hover:bg-[#00A1B0]/20' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>{daySchedule.enabled ? (<FaToggleOn size={18} />) : (<FaToggleOff size={18} />)}</button>
                                             </div>
-
-                                            {!blockWholeDay && (
-                                                <div className="pl-6 space-y-2">
-                                                    <p className="text-xs text-gray-500 font-medium">Select slots to block:</p>
-                                                    <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                                                        {getSlotsForDate(newBlockDate).map((slot, idx) => (
-                                                            <label key={idx} className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={selectedBlockSlots.includes(slot.startTime)}
-                                                                    onChange={(e) => {
-                                                                        if (e.target.checked) {
-                                                                            setSelectedBlockSlots([...selectedBlockSlots, slot.startTime]);
-                                                                        } else {
-                                                                            setSelectedBlockSlots(selectedBlockSlots.filter(s => s !== slot.startTime));
-                                                                        }
-                                                                    }}
-                                                                    className="rounded text-red-600 focus:ring-red-500"
-                                                                />
-                                                                {slot.startTime} - {slot.endTime}
-                                                            </label>
+                                            <div className="p-4">
+                                                {daySchedule.slots.length === 0 ? (<p className="text-center text-gray-400 text-sm py-3">{daySchedule.enabled ? 'No time slots added' : 'Day is disabled - slots preserved'}</p>) : (
+                                                    <div className="space-y-2.5 mb-3">
+                                                        {!daySchedule.enabled && daySchedule.slots.length > 0 && (<div className="mb-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg"><p className="text-xs text-amber-700"><strong>Note:</strong> This day is disabled. Slots are preserved and will be available when you re-enable this day.</p></div>)}
+                                                        {daySchedule.slots.map((slot) => (
+                                                            <div key={slot.id} className={`flex items-center gap-2.5 p-2.5 rounded-lg border ${!slot.enabled ? 'bg-gray-100 border-gray-300 opacity-60' : daySchedule.enabled ? 'bg-gray-50 border-gray-200' : 'bg-gray-100 border-gray-300 opacity-75'}`}>
+                                                                <div className="flex items-center gap-2 flex-1">
+                                                                    <input type="time" value={slot.startTime} onChange={(e) => updateTimeSlot(dayIndex, slot.id, 'startTime', e.target.value)} disabled={!daySchedule.enabled || !slot.enabled} className={`text-sm px-2.5 py-1.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A1B0] focus:border-transparent ${daySchedule.enabled ? 'border-gray-300 bg-white' : 'border-gray-300 bg-gray-200 cursor-not-allowed'}`} />
+                                                                    <span className="text-gray-400">—</span>
+                                                                    <input type="time" value={slot.endTime} onChange={(e) => updateTimeSlot(dayIndex, slot.id, 'endTime', e.target.value)} disabled={!daySchedule.enabled || !slot.enabled} className={`text-sm px-2.5 py-1.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A1B0] focus:border-transparent ${daySchedule.enabled ? 'border-gray-300 bg-white' : 'border-gray-300 bg-gray-200 cursor-not-allowed'}`} />
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <button onClick={() => toggleSlot(dayIndex, slot.id)} disabled={!daySchedule.enabled} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${slot.enabled ? 'bg-[#00A1B0]/10 text-[#00A1B0] hover:bg-[#00A1B0]/20' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'} ${!daySchedule.enabled ? 'opacity-50 cursor-not-allowed' : ''}`} title={daySchedule.enabled ? (slot.enabled ? 'Disable slot' : 'Enable slot') : 'Enable day to toggle slots'}>{slot.enabled ? (<FaToggleOn size={18} />) : (<FaToggleOff size={18} />)}</button>
+                                                                    <button onClick={() => handleDeleteClick(dayIndex, slot.id)} disabled={!daySchedule.enabled} className={`p-2 rounded-lg transition-colors ${daySchedule.enabled ? 'bg-red-50 hover:bg-red-100 text-red-600' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`} title={daySchedule.enabled ? 'Delete slot' : 'Enable day to delete slots'}><FaTrash size={12} /></button>
+                                                                </div>
+                                                            </div>
                                                         ))}
-                                                        {getSlotsForDate(newBlockDate).length === 0 && (
-                                                            <p className="text-xs text-red-500 col-span-2">No slots configured for this day.</p>
-                                                        )}
+                                                    </div>
+                                                )}
+                                                {daySchedule.enabled && (
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => addTimeSlot(dayIndex)} className="flex-1 px-4 py-2 bg-[#00A1B0]/10 hover:bg-[#00A1B0]/20 text-[#00A1B0] text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"><FaPlus size={12} />Add Time Slot</button>
+                                                        {daySchedule.slots.length > 0 && (<button onClick={() => handleClearAllClick(dayIndex)} className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2" title="Clear all slots (day will be disabled)"><FaTrash size={12} />Clear All</button>)}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="mt-8 mb-12">
+                                    <button onClick={handleSaveSchedule} disabled={saving} className={`w-full py-4 rounded-xl font-bold text-white shadow-xl transition-all transform hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-3 ${saving ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-[#00A1B0] to-[#00818d] shadow-[#00A1B0]/30 hover:shadow-[#00A1B0]/40'}`}>{saving ? (<><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />Saving Changes...</>) : (<>Save Weekly Schedule</>)}</button>
+                                </div>
+                            </>
+                        )}
+
+                        {activeTab === 'unavailable' && (
+                            <div className="space-y-6">
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><FaCalendarTimes className="text-red-500" />Block Time Off</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Select Date</label>
+                                            <input type="date" value={newBlockDate} onChange={(e) => setNewBlockDate(e.target.value)} min={new Date().toISOString().split('T')[0]} className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#00A1B0]" />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Reason (Optional)</label>
+                                            <input type="text" value={newBlockReason} onChange={(e) => setNewBlockReason(e.target.value)} placeholder="Vacation, family emergency, etc." className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#00A1B0]" />
+                                        </div>
+                                    </div>
+                                    {newBlockDate && (
+                                        <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
+                                            <div className="flex items-center gap-6 mb-4">
+                                                <label className="flex items-center gap-2.5 cursor-pointer group"><input type="radio" checked={blockWholeDay} onChange={() => setBlockWholeDay(true)} className="w-4 h-4 text-[#00A1B0] focus:ring-[#00A1B0]" /><span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">Block Entire Day</span></label>
+                                                <label className="flex items-center gap-2.5 cursor-pointer group"><input type="radio" checked={!blockWholeDay} onChange={() => setBlockWholeDay(false)} className="w-4 h-4 text-[#00A1B0] focus:ring-[#00A1B0]" /><span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">Block Specific Slots</span></label>
+                                            </div>
+                                            {!blockWholeDay && (
+                                                <div className="space-y-3">
+                                                    <p className="text-xs font-bold text-gray-400 uppercase">Select slots to block:</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {getSlotsForDate(newBlockDate).length > 0 ? (getSlotsForDate(newBlockDate).map((slot) => {
+                                                            const isSelected = selectedBlockSlots.includes(slot.startTime);
+                                                            return (<button key={slot.startTime} onClick={() => setSelectedBlockSlots(prev => isSelected ? prev.filter(s => s !== slot.startTime) : [...prev, slot.startTime])} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isSelected ? 'bg-red-500 text-white shadow-md' : 'bg-white border border-gray-200 text-gray-600 hover:border-red-200 hover:text-red-500'}`}>{slot.startTime} - {slot.endTime}</button>);
+                                                        })) : (<p className="text-sm text-gray-500 italic">No available slots found for this day.</p>)}
                                                     </div>
                                                 </div>
                                             )}
                                         </div>
                                     )}
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Reason (Optional)</label>
-                                        <input
-                                            type="text"
-                                            value={newBlockReason}
-                                            onChange={(e) => setNewBlockReason(e.target.value)}
-                                            placeholder="e.g. Personal Leave, Conference"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-colors"
-                                        />
+                                    <button onClick={handleBlockDate} disabled={blockSubmitting} className={`w-full py-3 rounded-lg font-bold text-white shadow-lg flex items-center justify-center gap-2 transition-all ${blockSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600 shadow-red-500/20'}`}>{blockSubmitting ? (<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />) : (<FaCalendarTimes />)}Add to Unavailable Dates</button>
+                                </div>
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                    <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-bold text-gray-800">Your Blocked Dates</h3></div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-gray-50"><tr className="text-[10px] font-bold text-gray-400 uppercase tracking-widest"><th className="px-6 py-4">Date</th><th className="px-6 py-4">Status</th><th className="px-6 py-4">Reason</th><th className="px-6 py-4 text-right">Action</th></tr></thead>
+                                            <tbody className="divide-y divide-gray-100">
+                                                {blockedDates.length === 0 ? (<tr><td colSpan={4} className="px-6 py-10 text-center text-gray-400 italic">No blocked dates found.</td></tr>) : (blockedDates.map((block, i) => (
+                                                    <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                                                        <td className="px-6 py-4"><span className="text-sm font-bold text-gray-800">{new Date(block.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span></td>
+                                                        <td className="px-6 py-4"><span className="px-2.5 py-1 bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-red-100">Blocked</span></td>
+                                                        <td className="px-6 py-4 font-medium text-gray-500 text-sm">{block.reason || 'None provided'}</td>
+                                                        <td className="px-6 py-4 text-right"><button onClick={() => handleUnblockDate(block.date)} className="p-2 text-gray-400 hover:text-red-500 transition-colors" title="Remove block"><FaTrash size={14} /></button></td>
+                                                    </tr>
+                                                )))}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                    <button
-                                        onClick={handleBlockDate}
-                                        disabled={blockSubmitting || !newBlockDate}
-                                        className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                    >
-                                        <FaCalendarTimes />
-                                        {blockWholeDay ? 'Block Entire Date' : 'Block Selected Slots'}
-                                    </button>
                                 </div>
                             </div>
-
-                            <div className="max-h-[600px] overflow-y-auto">
-                                <h3 className="font-semibold text-gray-700 mb-4">Currently Unavailable</h3>
-                                {blockedDates.length === 0 ? (
-                                    <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                                        <p className="text-gray-400 text-sm">No dates blocked</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3 pr-2">
-                                        {blockedDates.map((blocked, index) => (
-                                            <div key={index} className="flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-lg">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="text-center bg-white px-2 py-1 rounded border border-red-100 shadow-sm">
-                                                        <span className="block text-xs font-bold text-red-600 uppercase">
-                                                            {new Date(blocked.date).toLocaleString('default', { month: 'short' })}
-                                                        </span>
-                                                        <span className="block text-lg font-bold text-gray-800 leading-none">
-                                                            {new Date(blocked.date).getDate()}
-                                                        </span>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm font-medium text-gray-900">
-                                                            {new Date(blocked.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric' })}
-                                                        </p>
-                                                        {blocked.reason && (
-                                                            <p className="text-xs text-red-600">{blocked.reason}</p>
-                                                        )}
-                                                        {(blocked as any).slots && (blocked as any).slots.length > 0 ? (
-                                                            <p className="text-xs text-gray-500 mt-1">
-                                                                <span className="font-semibold">{(blocked as any).slots.length} slots blocked</span>
-                                                                : {(blocked as any).slots.slice(0, 3).join(', ')}
-                                                                {(blocked as any).slots.length > 3 ? '...' : ''}
-                                                            </p>
-                                                        ) : (
-                                                            <p className="text-xs text-gray-500 mt-1 italic">
-                                                                Whole day blocked
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={() => handleUnblockDate(blocked.date)}
-                                                    className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-                                                    title="Unblock date"
-                                                >
-                                                    <FaTrash size={14} />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
+                        )}
+                    </>
                 )}
             </DoctorLayout>
 
-            {/* Delete Slot Confirmation Dialog */}
-            <AlertDialog
-                open={deleteDialogOpen}
-                onOpenChange={setDeleteDialogOpen}
-                title="Delete Time Slot"
-                description={
-                    slotToDelete
-                        ? `Are you sure you want to delete the time slot ${slotToDelete.slotTime} on ${slotToDelete.dayName}? ${schedule[slotToDelete.dayIndex]?.slots.length === 1 ? 'This is the last slot - the day will be disabled.' : ''} This action cannot be undone.`
-                        : 'Are you sure you want to delete this time slot?'
-                }
-                confirmText="Delete"
-                cancelText="Cancel"
-                onConfirm={confirmDeleteSlot}
-                variant="destructive"
-            />
-
-            {/* Clear All Slots Confirmation Dialog */}
-            <AlertDialog
-                open={clearAllDialogOpen}
-                onOpenChange={setClearAllDialogOpen}
-                title="Clear All Slots"
-                description={
-                    dayToClear
-                        ? `Are you sure you want to clear all slots for ${dayToClear.dayName}? The day will be automatically disabled. This action cannot be undone.`
-                        : 'Are you sure you want to clear all slots? The day will be automatically disabled.'
-                }
-                confirmText="Clear All"
-                cancelText="Cancel"
-                onConfirm={confirmClearAllSlots}
-                variant="destructive"
-            />
+            <AlertDialog open={clearAllDialogOpen} onOpenChange={setClearAllDialogOpen} title="Clear all slots?" description={`Are you sure you want to clear all time slots for ${dayToClear?.dayName}? This will also disable the day.`} confirmText="Clear All" cancelText="Cancel" variant="destructive" onConfirm={confirmClearAllSlots} />
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} title="Delete time slot?" description={`Are you sure you want to delete the slot for ${slotToDelete?.slotTime} on ${slotToDelete?.dayName}?`} confirmText="Delete" cancelText="Cancel" variant="destructive" onConfirm={confirmDeleteSlot} />
         </div>
     );
 };

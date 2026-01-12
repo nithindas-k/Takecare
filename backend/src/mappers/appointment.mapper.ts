@@ -52,10 +52,9 @@ export class AppointmentMapper {
         }
 
         const response = { ...apt };
+        response.id = apt._id;
         if (apt.customId) {
-            response.id = apt.customId;
-        } else {
-            response.id = apt._id;
+            response.customId = apt.customId;
         }
 
         response.patient = patientData;

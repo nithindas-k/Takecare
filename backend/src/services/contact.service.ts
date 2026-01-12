@@ -1,19 +1,24 @@
-import { ContactModel } from '../models/contact.model';
-import DoctorModel from '../models/doctor.model';
-import UserModel from '../models/user.model';
-import AppointmentModel from '../models/appointment.model';
+import { ILoggerService } from './interfaces/ILogger.service';
+import { IContactRepository } from '../repositories/interfaces/IContact.repository';
+import { IDoctorRepository } from '../repositories/interfaces/IDoctor.repository';
+import { IUserRepository } from '../repositories/interfaces/IUser.repository';
+import { IAppointmentRepository } from '../repositories/interfaces/IAppointmentRepository';
+import { IContactService } from './interfaces/IContactService';
 
-interface IContactData {
-    name: string;
-    email: string;
-    phone?: string;
-    subject: string;
-    message: string;
-}
+import { IEmailService } from './interfaces/IEmailService';
 
-export class ContactService {
-    async createContactSubmission(data: IContactData) {
-        const contact = await ContactModel.create({
+export class ContactService implements IContactService {
+    constructor(
+        private _contactRepository: IContactRepository,
+        private _doctorRepository: IDoctorRepository,
+        private _userRepository: IUserRepository,
+        private _appointmentRepository: IAppointmentRepository,
+        private logger: ILoggerService,
+        private _emailService: IEmailService
+    ) { }
+
+    async createContactSubmission(data: any) {
+        const contact = await this._contactRepository.create({
             name: data.name,
             email: data.email,
             phone: data.phone,
@@ -23,30 +28,35 @@ export class ContactService {
             createdAt: new Date()
         });
 
+        // Send email notification to admin asynchronously
+        this._emailService.sendContactNotification({
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+            subject: data.subject,
+            message: data.message
+        }).catch(err => this.logger.error("Failed to send contact email notification", err));
+
         return contact;
     }
 
     async getStats() {
         try {
-            // Get total approved doctors (verificationStatus is 'approved')
-            const totalDoctors = await DoctorModel.countDocuments({
+            const totalDoctors = await this._doctorRepository.countDocuments({
                 verificationStatus: 'approved',
                 isActive: true
             });
 
-            // Get total patients (users with role 'patient')
-            const totalPatients = await UserModel.countDocuments({ role: 'patient' });
+            const totalPatients = await this._userRepository.countDocuments({ role: 'patient' });
 
-            // Get total completed appointments
-            const totalAppointments = await AppointmentModel.countDocuments({
+            const totalAppointments = await this._appointmentRepository.countDocuments({
                 status: 'completed'
             });
 
-            // Calculate average experience from approved doctors
-            const doctors = await DoctorModel.find({
+            const doctors = await this._doctorRepository.find({
                 verificationStatus: 'approved',
                 isActive: true
-            }).select('experienceYears');
+            });
 
             const avgExperience = doctors.length > 0
                 ? Math.round(doctors.reduce((sum: number, doc: any) => sum + (doc.experienceYears || 0), 0) / doctors.length)
@@ -59,7 +69,39 @@ export class ContactService {
                 avgExperience
             };
         } catch (error) {
-            console.error('Error fetching stats:', error);
+            this.logger.error('Error fetching stats:', error);
+            throw error;
+        }
+    }
+
+    async getAllSubmissions() {
+        try {
+            return await this._contactRepository.findAll();
+        } catch (error) {
+            this.logger.error('Error fetching all submissions:', error);
+            throw error;
+        }
+    }
+
+    async replyToContact(contactId: string, replyMessage: string) {
+        try {
+            const contact = await this._contactRepository.findById(contactId);
+            if (!contact) {
+                throw new Error('Contact message not found');
+            }
+
+        
+            await this._emailService.sendContactReplyEmail(
+                contact.email,
+                contact.name,
+                contact.subject,
+                replyMessage
+            );
+
+         
+            return await this._contactRepository.updateById(contactId, { status: 'responded' as any });
+        } catch (error) {
+            this.logger.error('Error replying to contact:', error);
             throw error;
         }
     }

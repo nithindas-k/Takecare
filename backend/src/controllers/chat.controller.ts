@@ -56,7 +56,7 @@ export class ChatController {
     ): Promise<void> => {
         try {
             const appointmentId = req.params.appointmentId;
-            const { content, type } = req.body;
+            const { content, type, fileName } = req.body;
             const userId = req.user?.userId;
             const userRole = req.user?.role;
 
@@ -69,7 +69,8 @@ export class ChatController {
                 userId,
                 userRole,
                 content,
-                type || 'text'
+                type || 'text',
+                fileName
             );
 
             sendSuccess(res, message);

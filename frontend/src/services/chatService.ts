@@ -7,6 +7,7 @@ export interface IMessage {
     senderId: string;
     senderModel: 'User' | 'Doctor';
     content: string;
+    fileName?: string;
     type: 'text' | 'image' | 'file' | 'system';
     read: boolean;
     isDeleted: boolean;
@@ -22,8 +23,8 @@ export const chatService = {
         return response.data.data;
     },
 
-    sendMessage: async (appointmentId: string, content: string, type: 'text' | 'image' | 'file' = 'text'): Promise<IMessage> => {
-        const response = await axiosInstance.post(CHAT_API_ROUTES.SEND_MESSAGE(appointmentId), { content, type });
+    sendMessage: async (appointmentId: string, content: string, type: 'text' | 'image' | 'file' = 'text', fileName?: string): Promise<IMessage> => {
+        const response = await axiosInstance.post(CHAT_API_ROUTES.SEND_MESSAGE(appointmentId), { content, type, fileName });
         return response.data.data;
     },
 

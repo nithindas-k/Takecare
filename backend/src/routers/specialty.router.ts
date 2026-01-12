@@ -6,37 +6,27 @@ import { validateSpecialtyCreation, validateSpecialtyUpdate } from "../validator
 import { SpecialtyRepository } from "../repositories/specialty.repository";
 import { SpecialtyService } from "../services/specialty.service";
 
+import { LoggerService } from "../services/logger.service";
+
 const router = Router();
 
 const specialtyRepository = new SpecialtyRepository();
-const specialtyService = new SpecialtyService(specialtyRepository);
-const specialtyController = new SpecialtyController(specialtyService);
+const specialtyServiceLogger = new LoggerService("SpecialtyService");
+const specialtyControllerLogger = new LoggerService("SpecialtyController");
 
-// Apply authentication to all routes
+const specialtyService = new SpecialtyService(specialtyRepository, specialtyServiceLogger);
+const specialtyController = new SpecialtyController(specialtyService, specialtyControllerLogger);
+
 router.use(authMiddleware);
 
-// GET /api/specialties/active - Get all active specialties (for dropdowns)
 router.get("/active", specialtyController.getActiveSpecialties);
 
-// Admin only routes
 router.use(requireAdmin);
-
-// GET /api/specialties - Get all specialties with pagination and search
 router.get("/", specialtyController.getAllSpecialties);
-
-// GET /api/specialties/:id - Get specialty by ID
 router.get("/:id", specialtyController.getSpecialtyById);
-
-// POST /api/specialties - Create new specialty
 router.post("/", validateSpecialtyCreation, specialtyController.createSpecialty);
-
-// PUT /api/specialties/:id - Update specialty
 router.put("/:id", validateSpecialtyUpdate, specialtyController.updateSpecialty);
-
-// PATCH /api/specialties/:id/toggle - Toggle specialty active status
 router.patch("/:id/toggle", specialtyController.toggleSpecialtyStatus);
-
-// DELETE /api/specialties/:id - Delete specialty
 router.delete("/:id", specialtyController.deleteSpecialty);
 
 export default router;

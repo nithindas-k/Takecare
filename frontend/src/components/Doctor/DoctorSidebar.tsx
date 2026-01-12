@@ -34,7 +34,7 @@ const sidebarLinks: SidebarLink[] = [
   { label: "Appointment Requests", icon: <FaClock />, path: "/doctor/appointment-requests" },
   { label: "Appointments", icon: <FaRegCalendarCheck />, path: "/doctor/appointments" },
   { label: "Available Timings", icon: <FaClock />, path: "/doctor/schedule" },
-  { label: "My Patients", icon: <FaUserMd />, path: "/doctor/patients" },
+  // { label: "My Patients", icon: <FaUserMd />, path: "/doctor/patients" },
   { label: "Wallet", icon: <FaMoneyBillWave />, path: "/doctor/wallet" },
   { label: "Profile Settings", icon: <FaCog />, path: "/doctor/profile-settings" },
   { label: "Messages", icon: <FaComments />, path: "/doctor/chat/default", badge: "dot" },

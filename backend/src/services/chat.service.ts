@@ -9,15 +9,15 @@ import { AppError } from "../errors/AppError";
 import { HttpStatus } from "../constants/constants";
 import { Types } from "mongoose";
 
-export class ChatService implements IChatService {
-    private readonly logger: LoggerService;
+import { ILoggerService } from "./interfaces/ILogger.service";
 
+export class ChatService implements IChatService {
     constructor(
         private _messageRepository: IMessageRepository,
         private _appointmentRepository: IAppointmentRepository,
-        private _doctorRepository: IDoctorRepository
+        private _doctorRepository: IDoctorRepository,
+        private logger: ILoggerService
     ) {
-        this.logger = new LoggerService("ChatService");
     }
 
     async saveMessage(
@@ -25,13 +25,15 @@ export class ChatService implements IChatService {
         senderId: string,
         senderModel: 'User' | 'Doctor',
         content: string,
-        type: 'text' | 'image' | 'file' | 'system' = 'text'
+        type: 'text' | 'image' | 'file' | 'system' = 'text',
+        fileName?: string
     ): Promise<IMessage> {
         return await this._messageRepository.create({
             appointmentId: new Types.ObjectId(appointmentId) as any,
             senderId: new Types.ObjectId(senderId) as any,
             senderModel,
             content,
+            fileName,
             type,
             read: false,
             isDeleted: false
@@ -43,25 +45,37 @@ export class ChatService implements IChatService {
         userId: string,
         userRole: string,
         content: string,
-        type: 'text' | 'image' | 'file' | 'system' = 'text'
+        type: 'text' | 'image' | 'file' | 'system' = 'text',
+        fileName?: string
     ): Promise<IMessage> {
         const appointment = await this._appointmentRepository.findById(appointmentId);
         if (!appointment) {
             throw new AppError('Appointment not found', HttpStatus.NOT_FOUND);
         }
 
-        if (appointment.sessionStatus === "ENDED" || appointment.status === "completed") {
-            // Check if post-consultation window is active
-            const window = appointment.postConsultationChatWindow;
-            const now = new Date();
-            const isWindowOpen = window?.isActive && window.expiresAt && new Date(window.expiresAt) > now;
+        let targetAppointment = appointment;
+        const now = new Date();
 
-            if (!isWindowOpen) {
-                throw new AppError("This session has ended. No further messages can be sent.", HttpStatus.BAD_REQUEST);
+        const isSessionActive = (apt: any) => {
+            if (apt.sessionStatus !== "ENDED" && apt.status !== "completed") return true;
+            const window = apt.postConsultationChatWindow;
+            return window?.isActive && window.expiresAt && new Date(window.expiresAt) > now;
+        };
+
+        if (!isSessionActive(appointment)) {
+            const pId = appointment.patientId.toString();
+            const dId = appointment.doctorId.toString();
+            const { appointments } = await this._appointmentRepository.findAll({ patientId: pId, doctorId: dId }, 0, 100);
+
+            const activeApt = appointments.find(apt => isSessionActive(apt));
+            if (activeApt) {
+                targetAppointment = activeApt;
+            } else {
+                throw new AppError("This session and all other related sessions have ended. No further messages can be sent.", HttpStatus.BAD_REQUEST);
             }
         }
 
-        const realAppointmentId = (appointment as any)._id.toString();
+        const realAppointmentId = (targetAppointment as any)._id.toString();
 
         let senderModel: 'User' | 'Doctor' = 'User';
         let actualSenderId = userId;
@@ -80,7 +94,8 @@ export class ChatService implements IChatService {
             actualSenderId,
             senderModel,
             content,
-            type
+            type,
+            fileName
         );
 
         const patient = await (this as any)._appointmentRepository.findByIdPopulated(realAppointmentId);
@@ -89,11 +104,29 @@ export class ChatService implements IChatService {
 
         console.log(`[CHAT_SERVICE] Broadcasting to users: ${patientUserId}, ${doctorUserId}`);
 
-        if (patientUserId) socketService.emitToUser(patientUserId, "receive-message", message);
-        if (doctorUserId) socketService.emitToUser(doctorUserId, "receive-message", message);
+       
+        const pId = patient?.patientId?._id?.toString() || patient?.patientId?.toString();
+        const dId = (patient?.doctorId as any)?._id?.toString() || (patient?.doctorId as any)?.toString();
+        let persistentRoomId = "";
+        if (pId && dId) {
+            persistentRoomId = `persistent-${pId}-${dId}`;
+        }
 
-        // Also keep room broadcast for safety/WebRTC compatibility if any
-        socketService.emitMessage(realAppointmentId, message);
+        const messagePayload = {
+            ...message.toObject(),
+            id: (message as any)._id.toString(),
+            persistentRoomId
+        };
+
+        if (patientUserId) socketService.emitToUser(patientUserId, "receive-message", messagePayload);
+        if (doctorUserId) socketService.emitToUser(doctorUserId, "receive-message", messagePayload);
+
+        if (persistentRoomId) {
+            socketService.emitToRoom(persistentRoomId, "receive-message", messagePayload);
+        }
+
+      
+        socketService.emitMessage(realAppointmentId, messagePayload);
 
         return message;
     }
@@ -210,8 +243,7 @@ export class ChatService implements IChatService {
             throw new AppError('Message not found', HttpStatus.NOT_FOUND);
         }
 
-        // Check if user is the sender
-        // Note: senderId could be User ID or Doctor ID
+    
         let actualUserId = userId;
         const doctor = await this._doctorRepository.findByUserId(userId);
         if (doctor) {
@@ -222,7 +254,7 @@ export class ChatService implements IChatService {
             throw new AppError('Unauthorized to edit this message', HttpStatus.FORBIDDEN);
         }
 
-        // Cannot edit deleted messages
+        
         if (message.isDeleted) {
             throw new AppError('Cannot edit a deleted message', HttpStatus.BAD_REQUEST);
         }

@@ -48,13 +48,14 @@ const DoctorForgotPassword: React.FC = () => {
       try {
         setSubmitting(true);
         setServerError("");
-        const response = await authService.forgotPassword(formData.email,"doctor");
+        const response = await authService.forgotPassword(formData.email, "doctor");
         if (response.success) {
           navigate("/doctor/forgot-password-otp", { state: { email: formData.email } });
         } else {
           setServerError(response.message || "Failed to send OTP. Please try again.");
         }
-      } catch (err: any) {
+      } catch (e: unknown) {
+        const err = e as { message?: string };
         setServerError(err.message || "An unexpected error occurred.");
       } finally {
         setSubmitting(false);

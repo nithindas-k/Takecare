@@ -15,21 +15,19 @@ import { PatientListItem, DoctorListItem, UserListItem } from "../types/common";
 import { DashboardStats } from "../types/appointment.type";
 import { IUserDocument } from "../types/user.type";
 import { IDoctorDocument } from "../types/doctor.type";
-import { AppError, UnauthorizedError } from "../errors/AppError";
-import { LoggerService } from "./logger.service";
+import { UnauthorizedError } from "../errors/AppError";
+import { ILoggerService } from "./interfaces/ILogger.service";
 import { VerificationStatus } from "../dtos/doctor.dtos/doctor.dto";
-import { HttpStatus } from "../constants/constants";
+
 
 export class AdminService implements IAdminService {
-  private readonly logger: LoggerService;
-
   constructor(
     private _adminRepository: IAdminRepository,
     private _doctorRepository: IDoctorRepository,
     private _userRepository: IUserRepository,
-    private _appointmentRepository: IAppointmentRepository
+    private _appointmentRepository: IAppointmentRepository,
+    private logger: ILoggerService
   ) {
-    this.logger = new LoggerService("AdminService");
   }
 
   async loginAdmin(data: LoginAdminDTO): Promise<AuthResponseDTO> {
@@ -88,7 +86,7 @@ export class AdminService implements IAdminService {
     });
   }
 
-  async getAllUsers(filters?: UserFilterDTO): Promise<UserListItem[]> {
+  async getAllUsers(_filters?: UserFilterDTO): Promise<UserListItem[]> {
     return [];
   }
 

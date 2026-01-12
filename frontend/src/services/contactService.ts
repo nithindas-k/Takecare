@@ -18,6 +18,16 @@ class ContactService {
         const response = await axiosInstance.get('/contact/stats');
         return response.data;
     }
+
+    async getAllSubmissions() {
+        const response = await axiosInstance.get('/contact/submissions');
+        return response.data;
+    }
+
+    async replyToMessage(id: string, message: string) {
+        const response = await axiosInstance.post(`/contact/reply/${id}`, { message });
+        return response.data;
+    }
 }
 
 export const contactService = new ContactService();

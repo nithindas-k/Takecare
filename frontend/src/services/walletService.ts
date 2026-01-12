@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axiosInstance from "../api/axiosInstance";
 import { WALLET_API_ROUTES } from "../utils/constants";
 
@@ -29,3 +30,4 @@ export const walletService = {
         return response.data;
     }
 };
+

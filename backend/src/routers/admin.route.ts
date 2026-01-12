@@ -11,13 +11,17 @@ import { checkUserBlocked } from "../middlewares/check-user-blocked.middleware";
 import { ADMIN_ROUTES } from "../constants/routes.constants";
 
 
+import { LoggerService } from "../services/logger.service";
+
+
 const router = Router();
 
 const adminRepository = new AdminRepository();
 const userRepository = new UserRepository();
 const doctorRepository = new DoctorRepository();
 const appointmentRepository = new AppointmentRepository();
-const adminService = new AdminService(adminRepository, doctorRepository, userRepository, appointmentRepository);
+const adminServiceLogger = new LoggerService("AdminService");
+const adminService = new AdminService(adminRepository, doctorRepository, userRepository, appointmentRepository, adminServiceLogger);
 const adminController = new AdminController(adminService);
 
 

@@ -5,11 +5,13 @@ import { LoggerService } from "../services/logger.service";
 import { sendSuccess } from "../utils/response.util";
 import { AppError } from "../errors/AppError";
 
-export class WalletController {
-    private logger: LoggerService;
+import { ILoggerService } from "../services/interfaces/ILogger.service";
 
-    constructor(private _walletService: IWalletService) {
-        this.logger = new LoggerService("WalletController");
+export class WalletController {
+    constructor(
+        private _walletService: IWalletService,
+        private logger: ILoggerService
+    ) {
     }
 
     getWallet = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -26,7 +28,7 @@ export class WalletController {
             const type = req.query.type as string;
             const date = req.query.date as string;
 
-            const { transactions, total } = await this._walletService.getTransactions(userId, page, limit, { search, type, date });
+            const { transactions, total, earnings, deductions } = await this._walletService.getTransactions(userId, page, limit, { search, type, date });
 
             sendSuccess(res, {
                 balance,
@@ -34,7 +36,9 @@ export class WalletController {
                 total,
                 page,
                 limit,
-                totalPages: Math.ceil(total / limit)
+                totalPages: Math.ceil(total / limit),
+                earnings,
+                deductions
             });
         } catch (error: any) {
             next(error);

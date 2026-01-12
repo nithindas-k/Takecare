@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { LogOut, User, Menu, Search } from "lucide-react";
+import { LogOut, User, Menu } from "lucide-react";
 import authService from "../../services/authService";
 import NotificationDropdown from "../common/NotificationDropdown";
 
@@ -27,20 +27,13 @@ const TopNav: React.FC<TopNavProps> = ({ onMenuClick }) => {
           <Menu size={20} />
         </button>
 
-        <div className="hidden sm:flex items-center relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-[#00A1B0] transition-colors" />
-          <input
-            type="text"
-            placeholder="Search anything..."
-            className="pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-[#00A1B0]/20 w-64 outline-none transition-all"
-          />
-        </div>
+
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
         {/* Notification */}
         <div className="relative">
-          <NotificationDropdown />
+          <NotificationDropdown color="text-[#000000]" />
         </div>
 
         {/* User Profile */}

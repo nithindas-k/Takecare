@@ -3,13 +3,13 @@ import { Specialty, CreateSpecialtyDTO, UpdateSpecialtyDTO, SpecialtyListRespons
 import { ISpecialtyRepository } from "../repositories/interfaces/ISpecialtyRepository";
 import { MESSAGES, STATUS, PAGINATION } from "../constants/constants";
 import { AppError, NotFoundError, ConflictError } from "../errors/AppError";
-import { LoggerService } from "./logger.service";
+import { ILoggerService } from "./interfaces/ILogger.service";
 
 export class SpecialtyService implements ISpecialtyService {
-  private logger: LoggerService;
-
-  constructor(private _specialtyRepository: ISpecialtyRepository) {
-    this.logger = new LoggerService("SpecialtyService");
+  constructor(
+    private _specialtyRepository: ISpecialtyRepository,
+    private logger: ILoggerService
+  ) {
   }
 
   async createSpecialty(data: CreateSpecialtyDTO): Promise<Specialty> {
@@ -33,7 +33,7 @@ export class SpecialtyService implements ISpecialtyService {
 
   async getAllSpecialties(page: number = PAGINATION.DEFAULT_PAGE, limit: number = PAGINATION.DEFAULT_LIMIT, search?: string): Promise<SpecialtyListResponse> {
     const { specialties, total } = await this._specialtyRepository.findAll(page, limit, search);
-    
+
     return {
       specialties,
       total,

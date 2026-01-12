@@ -1,16 +1,16 @@
 import { Request, Response, NextFunction } from "express";
 import { ISpecialtyService } from "../services/interfaces/ISpecialtyService";
-import { STATUS, MESSAGES, PAGINATION } from "../constants/constants";
-import { LoggerService } from "../services/logger.service";
+import { STATUS, PAGINATION } from "../constants/constants";
+import { ILoggerService } from "../services/interfaces/ILogger.service";
 import { sendSuccess } from "../utils/response.util";
-import { AppError, NotFoundError, ConflictError } from "../errors/AppError";
+import { AppError } from "../errors/AppError";
 import { CreateSpecialtyDTO, UpdateSpecialtyDTO } from "../types/specialty.type";
 
 export class SpecialtyController {
-  private logger: LoggerService;
-
-  constructor(private _specialtyService: ISpecialtyService) {
-    this.logger = new LoggerService("SpecialtyController");
+  constructor(
+    private _specialtyService: ISpecialtyService,
+    private logger: ILoggerService
+  ) {
   }
 
   createSpecialty = async (req: Request, res: Response, next: NextFunction): Promise<void> => {

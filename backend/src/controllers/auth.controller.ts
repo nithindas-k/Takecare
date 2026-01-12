@@ -16,13 +16,13 @@ import { IAuthController } from "./interfaces/IAuth.controller";
 import { AppError } from "../types/error.type";
 import { sendSuccess, sendError } from "../utils/response.util";
 import { generateAccessToken, generateRefreshToken } from "../utils/jwt.util";
-import { LoggerService } from "../services/logger.service";
+import { ILoggerService } from "../services/interfaces/ILogger.service";
 
 export class AuthController implements IAuthController {
-
-  private readonly logger = new LoggerService("AuthController");
-
-  constructor(private _authService: IAuthService) { }
+  constructor(
+    private _authService: IAuthService,
+    private logger: ILoggerService
+  ) { }
 
   private parseRole(role?: string): Role {
     if (!role) return Role.Patient as Role;
@@ -153,7 +153,7 @@ export class AuthController implements IAuthController {
     }
   };
 
-  userGoogleCallback = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  userGoogleCallback = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {
         return res.redirect(
@@ -194,7 +194,7 @@ export class AuthController implements IAuthController {
     }
   };
 
-  doctorGoogleCallback = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  doctorGoogleCallback = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {
         return res.redirect(
@@ -231,7 +231,7 @@ export class AuthController implements IAuthController {
     }
   };
 
-  logout = (req: Request, res: Response, next: NextFunction): void => {
+  logout = (req: Request, res: Response, _next: NextFunction): void => {
     req.logout((err) => {
       if (err) {
         this.logger.error("Logout error", err);

@@ -2,9 +2,7 @@ import { BaseUserResponseDTO, AuthResponseDTO, LoginDTO, RegisterDTO, VerifyOtpD
 
 export { LoginDTO as LoginUserDTO, VerifyOtpDTO, ResendOtpDTO, ForgotPasswordDTO, ForgotPasswordVerifyOtpDTO, ResetPasswordDTO };
 
-export interface RegisterUserDTO extends RegisterDTO {
-
-}
+export type RegisterUserDTO = RegisterDTO;
 
 export interface UserResponseDTO extends BaseUserResponseDTO {
   gender?: "male" | "female" | "other" | null;

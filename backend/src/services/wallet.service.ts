@@ -19,7 +19,7 @@ export class WalletService implements IWalletService {
         return wallet ? wallet.balance : 0;
     }
 
-    async getTransactions(userId: string, page: number, limit: number, filters?: { search?: string, type?: string, date?: string }): Promise<{ transactions: any[], total: number }> {
+    async getTransactions(userId: string, page: number, limit: number, filters?: { search?: string, type?: string, date?: string }): Promise<{ transactions: any[], total: number, earnings: number, deductions: number }> {
         const skip = (page - 1) * limit;
         return await this._walletRepository.getTransactionsByUserId(userId, skip, limit, filters);
     }

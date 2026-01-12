@@ -3,11 +3,10 @@ import { AppointmentRepository } from "../repositories/appointment.repository";
 import { ScheduleRepository } from "../repositories/schedule.repository";
 import { NotificationService } from "./notification.service";
 import { socketService } from "./socket.service";
-import { LoggerService } from "./logger.service";
+import { ILoggerService } from "./interfaces/ILogger.service";
 import { APPOINTMENT_STATUS } from "../constants/constants";
 
 export class AppointmentReminderService {
-    private readonly logger: LoggerService;
     private appointmentRepository: AppointmentRepository;
     private scheduleRepository: ScheduleRepository;
     private notificationService: NotificationService;
@@ -16,9 +15,9 @@ export class AppointmentReminderService {
     constructor(
         appointmentRepository: AppointmentRepository,
         scheduleRepository: ScheduleRepository,
-        notificationService: NotificationService
+        notificationService: NotificationService,
+        private logger: ILoggerService
     ) {
-        this.logger = new LoggerService("AppointmentReminderService");
         this.appointmentRepository = appointmentRepository;
         this.scheduleRepository = scheduleRepository;
         this.notificationService = notificationService;
@@ -30,7 +29,7 @@ export class AppointmentReminderService {
             await this.checkUpcomingAppointments();
         });
 
-        // clean up in ev 5  minutes
+        // clean up in  5  minutes
         cron.schedule("*/5 * * * *", async () => {
             await this.cleanupPendingAppointments();
         });
@@ -60,7 +59,7 @@ export class AppointmentReminderService {
 
                 let deletedCount = 0;
                 for (const appt of pendingAppointments) {
-                    // Release the slot before deleting the appointment
+
                     if (appt.slotId && appt.doctorId) {
                         const [startTime] = appt.appointmentTime.split("-").map((t: string) => t.trim());
                         await this.scheduleRepository.updateSlotBookedStatus(
@@ -98,7 +97,10 @@ export class AppointmentReminderService {
                     $lte: endOfDay
                 },
                 status: APPOINTMENT_STATUS.CONFIRMED,
-                reminderSent: { $ne: true }
+                $or: [
+                    { reminderSent: { $ne: true } },
+                    { startNotificationSent: { $ne: true } }
+                ]
             }, "doctorId");
 
             this.logger.debug(`Found ${appointments.length} confirmed appointments for today to check for reminders.`);
@@ -123,7 +125,7 @@ export class AppointmentReminderService {
                     minutesUntilStart: minutesDiff.toFixed(2)
                 });
 
-                if (minutesDiff > 4.5 && minutesDiff <= 5.5) {
+                if (minutesDiff > 4.5 && minutesDiff <= 5.5 && !appointment.reminderSent) {
                     this.logger.info(`Sending 5-minute reminder for appointment ${appointment.customId}`);
 
                     const reminderData = {
@@ -137,33 +139,67 @@ export class AppointmentReminderService {
                     const doctorUserId = doctorDoc?.userId?.toString();
                     const patientId = appointment.patientId.toString();
 
-                    if (!doctorUserId) {
-                        this.logger.warn(`Could not find doctor userId for appointment ${appointment.customId}`);
-                        continue;
+                    if (doctorUserId) {
+                        await this.notificationService.notify(patientId, {
+                            ...reminderData,
+                            type: "warning",
+                        });
+
+                        await this.notificationService.notify(doctorUserId, {
+                            ...reminderData,
+                            type: "warning",
+                        });
+
+                        socketService.sendReminder(patientId, reminderData);
+                        socketService.sendReminder(doctorUserId, reminderData);
+
+                        await this.appointmentRepository.updateById(appointment._id.toString(), {
+                            reminderSent: true
+                        });
+
+                        this.logger.info(`5-minute reminder sent for appointment ${appointment.customId}`);
                     }
+                }
+
+                // Start Time
+                if (minutesDiff <= 0 && minutesDiff >= -2 && !appointment.startNotificationSent) {
+                    this.logger.info(`Sending start-time notification for appointment ${appointment.customId}`);
+
+                    const startData = {
+                        title: "Consultation Ready!",
+                        message: `Your appointment #${appointment.customId} is starting now. You can join the session.`,
+                        appointmentId: appointment._id.toString(),
+                        customId: appointment.customId,
+                        type: "appointment_started"
+                    };
+
+                    const doctorDoc = appointment.doctorId as any;
+                    const doctorUserId = doctorDoc?.userId?.toString();
+                    const patientId = appointment.patientId.toString();
+
+                    if (doctorUserId) {
+
+                        await this.notificationService.notify(patientId, {
+                            ...startData,
+                            type: "success",
+                        });
 
 
-                    await this.notificationService.notify(patientId, {
-                        ...reminderData,
-                        type: "warning",
-                    });
+                        await this.notificationService.notify(doctorUserId, {
+                            ...startData,
+                            type: "success",
+                        });
 
 
-                    await this.notificationService.notify(doctorUserId, {
-                        ...reminderData,
-                        type: "warning",
-                    });
+                        socketService.sendReminder(patientId, startData);
+                        socketService.sendReminder(doctorUserId, startData);
 
+                        await this.appointmentRepository.updateById(appointment._id.toString(), {
+                            startNotificationSent: true
+                        });
 
-                    socketService.sendReminder(patientId, reminderData);
-                    socketService.sendReminder(doctorUserId, reminderData);
-
-
-                    await this.appointmentRepository.updateById(appointment._id.toString(), {
-                        reminderSent: true
-                    });
-
-                    this.logger.info(`5-minute reminder sent for appointment ${appointment.customId}`);
+                        this.logger.info(`Start-time notification sent for appointment ${appointment.customId}`);
+                    }
                 }
             }
         } catch (error) {

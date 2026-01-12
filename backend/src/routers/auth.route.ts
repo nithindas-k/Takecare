@@ -10,11 +10,17 @@ import { AUTH_ROUTES } from "../constants/routes.constants";
 import { AuthValidator } from "../validators/auth.validator";
 import { validate } from "../middlewares/validation.middleware";
 
+import { LoggerService } from "services/logger.service";
+
 const userRepository = new UserRepository();
 const doctorRepository = new DoctorRepository();
-const otpService = new OTPService();
-const authService = new AuthService(userRepository, otpService, doctorRepository);
-const authController = new AuthController(authService);
+const otpServiceLogger = new LoggerService("OTPService");
+const otpService = new OTPService(otpServiceLogger);
+const authServiceLogger = new LoggerService("AuthService");
+const authControllerLogger = new LoggerService("AuthController");
+
+const authService = new AuthService(userRepository, otpService, doctorRepository, authServiceLogger);
+const authController = new AuthController(authService, authControllerLogger);
 const router = Router();
 
 

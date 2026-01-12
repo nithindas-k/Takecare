@@ -12,6 +12,7 @@ export class UserMapper {
             role: user.role,
             phone: user.phone,
             profileImage: user.profileImage,
+            customId: user.customId,
         };
     }
 

@@ -10,6 +10,7 @@ import { WalletRepository } from "../repositories/wallet.repository";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireAdmin, requireRole } from "../middlewares/role.middleware";
 import { APPOINTMENT_ROUTES } from "../constants/routes.constants";
+import { LoggerService } from "../services/logger.service";
 
 const appointmentRouter = Router();
 
@@ -25,17 +26,21 @@ import { chatService } from "./chat.router";
 
 const walletService = new WalletService(walletRepository, null, null, null, notificationService);
 
+const appointmentServiceLogger = new LoggerService("AppointmentService");
+const appointmentControllerLogger = new LoggerService("AppointmentController");
+
 const appointmentService = new AppointmentService(
     appointmentRepository,
     userRepository,
     doctorRepository,
     scheduleRepository,
     walletService,
+    appointmentServiceLogger,
     notificationService,
     chatService
 );
 
-const appointmentController = new AppointmentController(appointmentService);
+const appointmentController = new AppointmentController(appointmentService, appointmentControllerLogger);
 
 
 appointmentRouter.post(

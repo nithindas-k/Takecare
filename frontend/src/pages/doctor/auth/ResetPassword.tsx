@@ -70,7 +70,8 @@ const ResetPassword: React.FC = () => {
         } else {
           setServerError(response.message || "Failed to reset password");
         }
-      } catch (err: any) {
+      } catch (e: unknown) {
+        const err = e as { message?: string };
         setServerError(err.message || "An unexpected error occurred.");
       } finally {
         setSubmitting(false);

@@ -25,7 +25,7 @@ export class WalletRepository implements IWalletRepository {
         return await TransactionModel.create([data], { session }).then(docs => docs[0]);
     }
 
-    async getTransactionsByUserId(userId: string, skip: number, limit: number, filters?: { search?: string, type?: string, date?: string }): Promise<{ transactions: ITransactionDocument[], total: number }> {
+    async getTransactionsByUserId(userId: string, skip: number, limit: number, filters?: { search?: string, type?: string, date?: string }): Promise<{ transactions: ITransactionDocument[], total: number, earnings: number, deductions: number }> {
         const query: any = { userId: new Types.ObjectId(userId) };
 
         if (filters?.search) {
@@ -53,15 +53,35 @@ export class WalletRepository implements IWalletRepository {
             };
         }
 
-        const [transactions, total] = await Promise.all([
+        const [transactions, total, summary] = await Promise.all([
             TransactionModel.find(query)
                 .populate('appointmentId', 'customId')
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
-            TransactionModel.countDocuments(query)
+            TransactionModel.countDocuments(query),
+            TransactionModel.aggregate([
+                { $match: query },
+                {
+                    $group: {
+                        _id: null,
+                        earnings: {
+                            $sum: { $cond: [{ $gt: ["$amount", 0] }, "$amount", 0] }
+                        },
+                        deductions: {
+                            $sum: { $cond: [{ $lt: ["$amount", 0] }, "$amount", 0] }
+                        }
+                    }
+                }
+            ])
         ]);
-        return { transactions, total };
+
+        return {
+            transactions,
+            total,
+            earnings: summary[0]?.earnings || 0,
+            deductions: Math.abs(summary[0]?.deductions || 0)
+        };
     }
 
     async getAdminTransactions(skip: number, limit: number, filters?: { date?: string }): Promise<{ transactions: any[], total: number }> {

@@ -40,8 +40,7 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
   );
 }
 
-export interface DialogContentProps
-  extends React.HTMLAttributes<HTMLDivElement> { }
+export type DialogContentProps = React.HTMLAttributes<HTMLDivElement>;
 
 export function DialogContent({ className, children, ...props }: DialogContentProps) {
   const ctx = React.useContext(DialogContext);
@@ -96,10 +95,12 @@ export function DialogTitle({
   );
 }
 
+export type DialogDescriptionProps = React.HTMLAttributes<HTMLParagraphElement>;
+
 export function DialogDescription({
   className,
   ...props
-}: React.HTMLAttributes<HTMLParagraphElement>) {
+}: DialogDescriptionProps) {
   return <p className={cn("text-sm text-gray-500", className)} {...props} />;
 }
 
@@ -125,8 +126,7 @@ export function DialogFooter({
   );
 }
 
-export interface DialogCloseProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> { }
+export type DialogCloseProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
 
 export function DialogClose({ className, ...props }: DialogCloseProps) {
   const ctx = React.useContext(DialogContext);

@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import NavBar from '../../components/common/NavBar';
 import Footer from '../../components/common/Footer';
@@ -6,6 +7,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import doctorService from '../../services/doctorService';
 import { API_BASE_URL } from '../../utils/constants';
+import { Skeleton } from '../../components/ui/skeleton';
 
 import { FaUserMd, FaBrain, FaBone, FaHeartbeat, FaTooth, FaCalendarCheck, FaCheck, FaHandHoldingMedical, FaClock, FaVials, FaShieldAlt } from 'react-icons/fa';
 
@@ -33,6 +35,25 @@ const Home: React.FC = () => {
   const [latestDoctors, setLatestDoctors] = useState<any[]>([]);
   const [totalDoctors, setTotalDoctors] = useState<number>(0);
   const doctorCountLabel = totalDoctors > 0 ? `${totalDoctors}+` : "—";
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchLatestDoctors = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const result = await doctorService.getAllDoctors({ page: 1, limit: 4 });
+      const list = result?.data?.doctors ?? result?.doctors ?? [];
+      const total = result?.data?.total ?? result?.total ?? 0;
+      setLatestDoctors(Array.isArray(list) ? list : []);
+      setTotalDoctors(Number.isFinite(total) ? total : 0);
+    } catch (err) {
+      console.warn('Failed to load latest doctors', err);
+      setLatestDoctors([]);
+      setTotalDoctors(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     // Hero Animations - Smooth & Elegant
@@ -137,23 +158,9 @@ const Home: React.FC = () => {
       }
     );
 
-    const fetchLatestDoctors = async () => {
-      try {
-        const result = await doctorService.getAllDoctors({ page: 1, limit: 4 });
-        const list = result?.data?.doctors ?? result?.doctors ?? [];
-        const total = result?.data?.total ?? result?.total ?? 0;
-        setLatestDoctors(Array.isArray(list) ? list : []);
-        setTotalDoctors(Number.isFinite(total) ? total : 0);
-      } catch (err) {
-        console.warn('Failed to load latest doctors', err);
-        setLatestDoctors([]);
-        setTotalDoctors(0);
-      }
-    };
-
     fetchLatestDoctors();
 
-  }, []);
+  }, [fetchLatestDoctors]);
 
   const getImageUrl = (imagePath: string | null | undefined) => {
     if (!imagePath) return '/doctor.png';
@@ -277,24 +284,36 @@ const Home: React.FC = () => {
                 className="absolute bottom-10 sm:bottom-20 left-0 sm:left-[-10px] lg:left-[-40px] bg-white p-4 sm:p-5 rounded-2xl shadow-xl flex flex-col gap-1 z-20 animate-bounce-slow max-w-[140px] lg:max-w-[160px] transition-all duration-500 hover:shadow-2xl hover:scale-105"
                 style={{ transform: 'translateZ(60px) rotateY(5deg)' }}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="flex -space-x-2">
-                    <img
-                      src={statImageUrl1}
-                      alt="Doctor"
-                      className="w-6 h-6 lg:w-7 lg:h-7 rounded-full border border-white object-cover shadow-sm"
-                      onError={(e) => ((e.target as HTMLImageElement).src = '/doctor.png')}
-                    />
-                    <img
-                      src={statImageUrl2}
-                      alt="Doctor"
-                      className="w-6 h-6 lg:w-7 lg:h-7 rounded-full border border-white object-cover shadow-sm"
-                      onError={(e) => ((e.target as HTMLImageElement).src = '/doctor.png')}
-                    />
+                {isLoading ? (
+                  <div className="space-y-2">
+                    <div className="flex -space-x-2">
+                      <Skeleton className="w-6 h-6 lg:w-7 lg:h-7 rounded-full" />
+                      <Skeleton className="w-6 h-6 lg:w-7 lg:h-7 rounded-full" />
+                    </div>
+                    <Skeleton className="h-3 w-12" />
                   </div>
-                  <span className="text-xs font-bold text-gray-800">{doctorCountLabel}</span>
-                </div>
-                <p className="text-[10px] sm:text-xs text-gray-500 leading-tight">Expert doctors ready to help you.</p>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="flex -space-x-2">
+                        <img
+                          src={statImageUrl1}
+                          alt="Doctor"
+                          className="w-6 h-6 lg:w-7 lg:h-7 rounded-full border border-white object-cover shadow-sm"
+                          onError={(e) => ((e.target as HTMLImageElement).src = '/doctor.png')}
+                        />
+                        <img
+                          src={statImageUrl2}
+                          alt="Doctor"
+                          className="w-6 h-6 lg:w-7 lg:h-7 rounded-full border border-white object-cover shadow-sm"
+                          onError={(e) => ((e.target as HTMLImageElement).src = '/doctor.png')}
+                        />
+                      </div>
+                      <span className="text-xs font-bold text-gray-800">{doctorCountLabel}</span>
+                    </div>
+                    <p className="text-[10px] sm:text-xs text-gray-500 leading-tight">Expert doctors ready to help you.</p>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -359,7 +378,20 @@ const Home: React.FC = () => {
             <p className="text-gray-500 max-w-2xl mx-auto">Discover the latest verified doctors.</p>
           </div>
 
-          {latestDoctors.length === 0 ? (
+          {isLoading ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm p-4 space-y-4">
+                  <Skeleton className="h-40 sm:h-64 w-full rounded-lg" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : latestDoctors.length === 0 ? (
             <div className="bg-white border border-gray-100 rounded-xl p-6 text-center text-gray-500">
               No doctors available right now.
             </div>
@@ -527,5 +559,6 @@ const Home: React.FC = () => {
 };
 
 export default Home;
+
 
 

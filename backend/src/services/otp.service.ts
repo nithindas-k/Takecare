@@ -3,19 +3,21 @@ import { EmailService } from "./email.service";
 import { generateOtp, getOtpExpiry, isOtpExpired } from "../utils/otp.util";
 import type { IOTPService } from "./interfaces/IOtpService";
 import type { OTPData, OTPUserData } from "../types/otp.type";
-import { LoggerService } from "./logger.service";
+import { ILoggerService } from "./interfaces/ILogger.service";
 import { AppError, ValidationError } from "../errors/AppError";
 import { HttpStatus, MESSAGES } from "../constants/constants";
 
 export class OTPService implements IOTPService {
   private otpRepository: OTPRepository;
   private emailService: EmailService;
-  private readonly logger: LoggerService;
 
-  constructor(otpRepository?: OTPRepository, emailService?: EmailService) {
+  constructor(
+    private logger: ILoggerService,
+    otpRepository?: OTPRepository,
+    emailService?: EmailService
+  ) {
     this.otpRepository = otpRepository || new OTPRepository();
-    this.emailService = emailService || new EmailService();
-    this.logger = new LoggerService("OTPService");
+    this.emailService = emailService || new EmailService(logger);
   }
 
   async createAndSendOtp(

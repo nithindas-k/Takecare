@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useSelector } from 'react-redux';
@@ -13,6 +14,7 @@ interface SocketContextType {
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useSocket = () => {
     const context = useContext(SocketContext);
     if (!context) {
@@ -35,7 +37,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (userId) {
             const newSocket = io(API_BASE_URL, {
                 withCredentials: true,
-                transports: ['websocket', 'polling'], 
+                transports: ['websocket', 'polling'],
                 reconnectionAttempts: 5,
             });
 
@@ -53,13 +55,13 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             newSocket.on('disconnect', (reason) => {
                 console.warn("Socket Disconnected:", reason);
             });
-           
+
             newSocket.on('appointment-reminder', (data: any) => {
                 setReminderData(data);
                 setIsReminderOpen(true);
             });
 
-           
+
             newSocket.on('notification', (notification: any) => {
                 const toastOptions = {
                     description: notification.message,
@@ -99,6 +101,17 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 isOpen={isReminderOpen}
                 onClose={() => setIsReminderOpen(false)}
                 data={reminderData}
+                onAction={() => {
+                    if (reminderData?.appointmentId) {
+                        // Determine route based on user role and session type
+                        // For simplicity, we can redirect to the appointment details page
+                        const path = userRole === 'doctor'
+                            ? `/doctor/appointments/${reminderData.appointmentId}`
+                            : `/patient/appointments/${reminderData.appointmentId}`;
+                        window.location.href = path; // Using window.location to ensure immediate transition
+                    }
+                    setIsReminderOpen(false);
+                }}
             />
         </SocketContext.Provider>
     );

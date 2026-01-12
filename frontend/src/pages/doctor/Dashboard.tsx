@@ -1,12 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { setUser } from "../../redux/user/userSlice";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import {
   FaUserInjured,
   FaCalendarCheck,
-  FaVideo,
-  FaComments,
   FaArrowUp,
   FaMoneyBillWave
 } from "react-icons/fa";
@@ -19,6 +20,7 @@ import doctorService from "../../services/doctorService";
 import { walletService } from "../../services/walletService";
 import { Button } from "../../components/ui/button";
 import { DatePickerWithRange } from "../../components/ui/date-range-picker";
+import { Skeleton } from "../../components/ui/skeleton";
 
 interface DoctorProfile {
   name: string;
@@ -29,6 +31,7 @@ interface DoctorProfile {
 
 const DoctorDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [profile, setProfile] = useState<DoctorProfile | null>(null);
   const [stats, setStats] = useState<any>(null);
   const [walletBalance, setWalletBalance] = useState<number>(0);
@@ -38,8 +41,6 @@ const DoctorDashboard: React.FC = () => {
 
   useEffect(() => {
     async function fetchData() {
-      // Don't set loading true on every date change to avoid flicker, or do if preferred.
-      // setLoading(true); 
       try {
         const startDate = dateRange?.from?.toISOString();
         const endDate = dateRange?.to?.toISOString();
@@ -50,13 +51,15 @@ const DoctorDashboard: React.FC = () => {
           walletService.getMyWallet(1, 1)
         ]);
 
-        console.log("DoctorDashboard statsRes:", statsRes);
-        console.log("DoctorDashboard walletRes:", walletRes);
         if (profileRes.success && profileRes.data) {
           setProfile(profileRes.data);
+          // Sync with Redux for sidebar and other components
+          dispatch(setUser({
+            ...profileRes.data,
+            _id: profileRes.data.id || profileRes.data._id || profileRes.data.userId
+          }));
         }
         if (statsRes && statsRes.success && statsRes.data) {
-          console.log("Setting stats to:", statsRes.data);
           setStats(statsRes.data);
         }
         if (walletRes && walletRes.success && walletRes.data) {
@@ -69,7 +72,7 @@ const DoctorDashboard: React.FC = () => {
       }
     }
     fetchData();
-  }, [dateRange]);
+  }, [dateRange, dispatch]);
 
   const handleReVerify = () => {
     navigate("/doctor/verification");
@@ -77,11 +80,46 @@ const DoctorDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00A1B0]"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+      <div className="min-h-screen bg-gray-50">
+        <DoctorNavbar />
+        <div className="bg-white border-b border-gray-200 py-8 px-4">
+          <div className="max-w-7xl mx-auto space-y-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-10 w-64" />
+            <Skeleton className="h-4 w-48" />
+          </div>
         </div>
+        <DoctorLayout>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+                <div className="flex justify-between">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-10 w-32" />
+                  </div>
+                  <Skeleton className="h-12 w-12 rounded-xl" />
+                </div>
+                <Skeleton className="h-4 w-24" />
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6 space-y-6">
+              <div className="flex justify-between items-center">
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-10 w-64 rounded-lg" />
+              </div>
+              <Skeleton className="h-80 w-full rounded-xl" />
+            </div>
+            <div className="bg-white rounded-2xl shadow-sm p-6 flex flex-col items-center justify-center space-y-4">
+              <Skeleton className="h-16 w-16 rounded-full" />
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-10 w-full rounded-lg" />
+            </div>
+          </div>
+        </DoctorLayout>
       </div>
     );
   }
@@ -128,8 +166,6 @@ const DoctorDashboard: React.FC = () => {
       <DoctorNavbar />
       <Breadcrumbs items={breadcrumbItems} title="Dashboard" subtitle={`Welcome back, Dr. ${profile?.name || ''}`} />
       <DoctorLayout>
-
-        {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-2xl shadow-sm p-6 flex flex-col justify-between hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start">
@@ -153,9 +189,7 @@ const DoctorDashboard: React.FC = () => {
               </div>
               <div className="p-3 bg-purple-100 rounded-xl text-purple-600"><FaCalendarCheck size={24} /></div>
             </div>
-            <div className="mt-4 text-sm text-gray-400">
-              Scheduled for today
-            </div>
+            <div className="mt-4 text-sm text-gray-400">Scheduled for today</div>
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm p-6 flex flex-col justify-between hover:shadow-md transition-shadow">
@@ -174,44 +208,15 @@ const DoctorDashboard: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Chart */}
           <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
               <h3 className="text-lg font-bold text-gray-800">Earnings Overview</h3>
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant={!dateRange ? "default" : "outline"}
-                    onClick={() => setDateRange(undefined)}
-                    className="text-xs h-8"
-                  >
-                    Overall
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setDateRange({ from: startOfDay(new Date()), to: endOfDay(new Date()) })}
-                    className="text-xs h-8"
-                  >
-                    Today
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setDateRange({ from: startOfWeek(new Date()), to: endOfWeek(new Date()) })}
-                    className="text-xs h-8"
-                  >
-                    This Week
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setDateRange({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) })}
-                    className="text-xs h-8"
-                  >
-                    This Month
-                  </Button>
+                  <Button size="sm" variant={!dateRange ? "default" : "outline"} onClick={() => setDateRange(undefined)} className="text-xs h-8">Overall</Button>
+                  <Button size="sm" variant="outline" onClick={() => setDateRange({ from: startOfDay(new Date()), to: endOfDay(new Date()) })} className="text-xs h-8">Today</Button>
+                  <Button size="sm" variant="outline" onClick={() => setDateRange({ from: startOfWeek(new Date()), to: endOfWeek(new Date()) })} className="text-xs h-8">This Week</Button>
+                  <Button size="sm" variant="outline" onClick={() => setDateRange({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) })} className="text-xs h-8">This Month</Button>
                 </div>
                 <DatePickerWithRange date={dateRange} setDate={setDateRange} className="w-auto" />
               </div>
@@ -228,7 +233,6 @@ const DoctorDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Upcoming Appointment Widget */}
           <div>
             {stats?.nextAppointment ? (
               <div className="bg-gradient-to-br from-[#00A1B0] to-teal-600 rounded-2xl p-6 text-white h-full relative overflow-hidden">
@@ -257,31 +261,28 @@ const DoctorDashboard: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex gap-3">
-                    <button onClick={() => navigate(`/doctor/consultation/video/${stats.nextAppointment.customId}`)} className="flex-1 bg-white text-teal-600 py-2.5 rounded-lg font-medium hover:bg-white/90 transition-colors flex items-center justify-center gap-2">
-                      <FaVideo /> Join Call
-                    </button>
-                    <button onClick={() => navigate(`/doctor/consultation/chat/${stats.nextAppointment.customId}`)} className="flex-1 bg-white/20 text-white py-2.5 rounded-lg font-medium hover:bg-white/30 transition-colors flex items-center justify-center gap-2">
-                      <FaComments /> Chat
+                    <button
+                      onClick={() => navigate(`/doctor/appointments/${stats.nextAppointment.id || stats.nextAppointment._id}`)}
+                      className="flex-1 bg-white text-teal-600 py-2.5 rounded-lg font-medium hover:bg-white/90 transition-colors flex items-center justify-center gap-2"
+                    >
+                      Details
                     </button>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="bg-white rounded-2xl shadow-sm p-6 h-full flex flex-col items-center justify-center text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <FaCalendarCheck className="text-gray-400 text-2xl" />
-                </div>
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"><FaCalendarCheck className="text-gray-400 text-2xl" /></div>
                 <h3 className="font-bold text-gray-800">No Upcoming Appointments</h3>
                 <p className="text-gray-500 text-sm mt-2">You don't have any pending appointments scheduled for today.</p>
               </div>
             )}
           </div>
         </div>
-
-
       </DoctorLayout>
     </div>
   );
 };
 
 export default DoctorDashboard;
+

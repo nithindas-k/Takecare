@@ -8,19 +8,17 @@ import { IUserRepository } from "../repositories/interfaces/IUser.repository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
 import { IOTPService } from "./interfaces/IOtpService";
 import { ConflictError, UnauthorizedError, NotFoundError, ForbiddenError } from "../errors/AppError";
-import { LoggerService } from "./logger.service";
+import { ILoggerService } from "./interfaces/ILogger.service";
 import { UserMapper } from "../mappers/user.mapper";
 import { VerificationStatus } from "../dtos/doctor.dtos/doctor.dto";
 
 export class AuthService implements IAuthService {
-  private readonly logger: LoggerService;
-
   constructor(
     private _userRepository: IUserRepository,
     private _otpService: IOTPService,
-    private _doctorRepository: IDoctorRepository
+    private _doctorRepository: IDoctorRepository,
+    private logger: ILoggerService
   ) {
-    this.logger = new LoggerService("AuthService");
   }
 
   async register(data: RegisterDTO): Promise<{ email: string }> {

@@ -8,16 +8,14 @@ import authService from "../../../services/authService";
 import type { LoginRequest, ApiResponse, LoginResponse } from "../../../types";
 import { toast } from "sonner";
 
-interface FormData extends LoginRequest { }
-
-type Errors = Partial<Record<keyof FormData, string>>;
+type Errors = Partial<Record<keyof LoginRequest, string>>;
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const PatientLogin: React.FC = () => {
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<LoginRequest>({
     email: "",
     password: "",
     role: "patient",
@@ -26,7 +24,7 @@ const PatientLogin: React.FC = () => {
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  const validate = useCallback((data: FormData): Errors => {
+  const validate = useCallback((data: LoginRequest): Errors => {
     const e: Errors = {};
     if (!data.email.trim()) e.email = "Email is required.";
     else if (!EMAIL_REGEX.test(data.email)) e.email = "Enter a valid email.";
@@ -42,7 +40,7 @@ const PatientLogin: React.FC = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => {
       const next = { ...prev };
-      delete next[name as keyof FormData];
+      delete next[name as keyof LoginRequest];
       return next;
     });
   }, []);
@@ -88,7 +86,8 @@ const PatientLogin: React.FC = () => {
         } else {
           toast.error(response.message || "Login failed");
         }
-      } catch (err: any) {
+      } catch (e: unknown) {
+        const err = e as { message?: string };
         console.error("Login error:", err);
         toast.error(err.message || "An error occurred. Please try again.");
       } finally {

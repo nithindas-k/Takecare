@@ -1,0 +1,82 @@
+
+export interface AppointmentData {
+    doctorId: string;
+    patientId: string;
+    appointmentDate: string | Date;
+    appointmentTime: string;
+    slotId?: string;
+    appointmentType: 'video' | 'chat';
+    reason: string;
+}
+
+export interface AppointmentFilters {
+    status?: string;
+    page?: number;
+    limit?: number;
+    search?: string;
+    [key: string]: unknown;
+}
+
+export interface Slot {
+    startTime: string;
+    endTime: string;
+    slotId: string;
+    customId?: string;
+    id?: string;
+}
+
+export interface PopulatedAppointment {
+    _id: string;
+    id?: string;
+    customId?: string;
+    doctorId: string | {
+        _id: string;
+        name: string;
+        profileImage?: string;
+        specialty?: string;
+        department?: string;
+        userId?: {
+            name: string;
+            email: string;
+            phone: string;
+            profileImage?: string;
+        };
+        user?: {
+            name: string;
+            email: string;
+            phone: string;
+            profileImage?: string;
+        };
+    };
+    doctor?: any; // To support legacy/alternative structures
+    patientId: {
+        _id: string;
+        id?: string;
+        name: string;
+        profileImage?: string;
+        email?: string;
+        phone?: string;
+    };
+    appointmentDate: string;
+    appointmentTime: string;
+    appointmentType: 'video' | 'chat';
+    status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'rejected' | 'upcoming';
+    paymentStatus: 'pending' | 'paid' | 'failed';
+    consultationFees?: number;
+    reason?: string;
+    rejectionReason?: string;
+    cancellationReason?: string;
+    cancelledBy?: 'doctor' | 'patient' | 'admin' | string;
+    cancelledAt?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    // Normalized aliases used in some components
+    doctorName?: string;
+    doctorEmail?: string;
+    doctorPhone?: string;
+    specialty?: string;
+    doctorImage?: string;
+    date?: string;
+    time?: string;
+    slotId?: string;
+}

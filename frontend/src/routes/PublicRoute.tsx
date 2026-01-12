@@ -3,10 +3,9 @@ import { Navigate } from "react-router-dom";
 
 interface Props {
     children: React.ReactNode;
-    role: "doctor" | "admin" | "patient";
 }
 
-const PublicRoute: React.FC<Props> = ({ children, role: _role }) => {
+const PublicRoute: React.FC<Props> = ({ children }) => {
     const token = localStorage.getItem(`authToken`);
 
 

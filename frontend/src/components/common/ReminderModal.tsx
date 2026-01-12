@@ -9,6 +9,7 @@ interface ReminderModalProps {
         title: string;
         message: string;
         customId: string;
+        type?: string;
     } | null;
     onAction?: () => void;
 }
@@ -38,9 +39,13 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, data, on
                         <div className="px-8 pb-8 flex flex-col items-center text-center">
                             {/* Animated Icon Container */}
                             <div className="relative mb-6">
-                                <div className="absolute inset-0 bg-[#00A1B0]/10 rounded-full animate-ping"></div>
-                                <div className="relative bg-[#00A1B0]/5 p-5 rounded-full">
-                                    <FaClock size={32} className="text-[#00A1B0]" />
+                                <div className={`absolute inset-0 ${data.type === 'appointment_started' ? 'bg-green-500/10' : 'bg-[#00A1B0]/10'} rounded-full animate-ping`}></div>
+                                <div className={`relative ${data.type === 'appointment_started' ? 'bg-green-50' : 'bg-[#00A1B0]/5'} p-5 rounded-full`}>
+                                    {data.type === 'appointment_started' ? (
+                                        <FaStethoscope size={32} className="text-green-500" />
+                                    ) : (
+                                        <FaClock size={32} className="text-[#00A1B0]" />
+                                    )}
                                 </div>
                             </div>
 
@@ -56,18 +61,27 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, data, on
                                     <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Reference ID</span>
                                     <span className="text-sm font-semibold text-gray-700">#{data.customId}</span>
                                 </div>
-                                <div className="flex items-center justify-center gap-2 text-[11px] text-[#00A1B0] font-bold uppercase tracking-wide">
-                                    <FaStethoscope size={12} />
-                                    <span>Preparation Required</span>
+                                <div className={`flex items-center justify-center gap-2 text-[11px] ${data.type === 'appointment_started' ? 'text-green-500' : 'text-[#00A1B0]'} font-bold uppercase tracking-wide`}>
+                                    {data.type === 'appointment_started' ? (
+                                        <>
+                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                                            <span>Session is Live</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FaClock size={12} />
+                                            <span>Preparation Required</span>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
                             <div className="w-full flex flex-col gap-2">
                                 <button
                                     onClick={onAction || onClose}
-                                    className="w-full bg-[#00A1B0] hover:bg-[#008f9c] text-white py-3.5 rounded-xl font-bold transition-all duration-300 active:scale-[0.98] shadow-sm"
+                                    className={`w-full ${data.type === 'appointment_started' ? 'bg-green-600 hover:bg-green-700' : 'bg-[#00A1B0] hover:bg-[#008f9c]'} text-white py-3.5 rounded-xl font-bold transition-all duration-300 active:scale-[0.98] shadow-sm`}
                                 >
-                                    {onAction ? 'Join Now' : 'Get Started'}
+                                    {data.type === 'appointment_started' ? 'Join Session Now' : 'Get Started'}
                                 </button>
                                 <button
                                     onClick={onClose}

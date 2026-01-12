@@ -1,6 +1,6 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, Model } from "mongoose";
 
-import { IDoctor, IDoctorDocument } from "types/doctor.type";
+import { IDoctorDocument } from "types/doctor.type";
 import { VerificationStatus } from "../dtos/doctor.dtos/doctor.dto";
 
 const DoctorSchema = new Schema<IDoctorDocument>(

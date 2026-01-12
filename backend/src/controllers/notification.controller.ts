@@ -9,7 +9,7 @@ export class NotificationController {
             const userId = (req as any).user.userId;
             const notifications = await this.notificationService.getNotifications(userId);
             res.status(200).json(notifications);
-        } catch (error) {
+        } catch {
             res.status(500).json({ message: "Internal server error" });
         }
     };
@@ -19,7 +19,7 @@ export class NotificationController {
             const { id } = req.params;
             await this.notificationService.markAsRead(id);
             res.status(200).json({ message: "Notification marked as read" });
-        } catch (error) {
+        } catch {
             res.status(500).json({ message: "Internal server error" });
         }
     };
@@ -29,7 +29,7 @@ export class NotificationController {
             const userId = (req as any).user.userId;
             await this.notificationService.markAllAsRead(userId);
             res.status(200).json({ message: "All notifications marked as read" });
-        } catch (error) {
+        } catch {
             res.status(500).json({ message: "Internal server error" });
         }
     };
@@ -39,7 +39,7 @@ export class NotificationController {
             const userId = (req as any).user.userId;
             await this.notificationService.clearAll(userId);
             res.status(200).json({ message: "All notifications cleared" });
-        } catch (error) {
+        } catch {
             res.status(500).json({ message: "Internal server error" });
         }
     };
@@ -49,7 +49,7 @@ export class NotificationController {
             const { id } = req.params;
             await this.notificationService.deleteNotification(id);
             res.status(200).json({ message: "Notification deleted" });
-        } catch (error) {
+        } catch {
             res.status(500).json({ message: "Internal server error" });
         }
     };

@@ -6,7 +6,8 @@ export interface IChatService {
         senderId: string,
         senderModel: 'User' | 'Doctor',
         content: string,
-        type?: 'text' | 'image' | 'file' | 'system'
+        type?: 'text' | 'image' | 'file' | 'system',
+        fileName?: string
     ): Promise<IMessage>;
 
     sendMessage(
@@ -14,7 +15,8 @@ export interface IChatService {
         userId: string,
         userRole: string,
         content: string,
-        type?: 'text' | 'image' | 'file' | 'system'
+        type?: 'text' | 'image' | 'file' | 'system',
+        fileName?: string
     ): Promise<IMessage>;
 
     getMessages(appointmentId: string): Promise<IMessage[]>;

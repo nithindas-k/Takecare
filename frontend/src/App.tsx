@@ -42,6 +42,7 @@ import Appointments from "./pages/user/Appointments";
 import AppointmentDetails from "./pages/user/AppointmentDetails";
 import About from "./pages/user/About";
 import Contact from "./pages/user/Contact";
+import PatientDashboard from "./pages/user/Dashboard";
 
 // Admin Routes
 import AdminLogin from "./pages/admin/auth/Login";
@@ -54,6 +55,7 @@ import PatientsListPage from "./pages/admin/PatientsListPage";
 import PatientDetailPage from "./pages/admin/PatientDetailPage";
 import AdminAppointmentsListPage from "./pages/admin/AppointmentsListPage";
 import AdminAppointmentDetailsPage from "./pages/admin/AdminAppointmentDetailsPage";
+import ContactMessages from "./pages/admin/ContactMessages";
 import AuthCallback from "./pages/AuthCallback";
 
 // Wallet and Earnings
@@ -85,11 +87,20 @@ import { Toaster } from "./components/ui/sonner";
 import userService from "./services/userService";
 import AppointmentReminder from "./components/common/AppointmentReminder";
 
+
 const App: React.FC = () => {
   const dispatch = useDispatch()
 
   useEffect(() => {
-    const lenis = new Lenis()
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+      wheelMultiplier: 1,
+      touchMultiplier: 2,
+    })
 
     function raf(time: number) {
       lenis.raf(time)
@@ -99,21 +110,26 @@ const App: React.FC = () => {
     requestAnimationFrame(raf)
 
     async function userFetch() {
-      const response = await userService.getProfile()
-      const user = response.data;
-
-      dispatch(setUser(user))
+      try {
+        const response = await userService.getProfile()
+        if (response.success && response.data) {
+          dispatch(setUser(response.data))
+        }
+      } catch (error) {
+        console.error("Failed to fetch user profile", error);
+      }
     }
     userFetch()
 
     return () => {
       lenis.destroy()
     }
-  }, [])
+  }, [dispatch])
 
   return (
     <BrowserRouter>
       <Toaster />
+
       <AppointmentReminder />
       <Routes>
 
@@ -121,14 +137,46 @@ const App: React.FC = () => {
           <Home />
         </ProtectedRoute>} />
 
-        <Route path="/doctors" element={<Doctors />} />
-        <Route path="/doctors/:id" element={<DoctorProfile />} />
-        <Route path="/doctor-profile" element={<DoctorProfile />} />
-        <Route path="/booking/:id" element={<BookingPage />} />
-        <Route path="/patient-details" element={<PatientDetails />} />
-        <Route path="/consultation-type" element={<ConsultationType />} />
-        <Route path="/payment" element={<PaymentPage />} />
-        <Route path="/booking-success" element={<BookingSuccess />} />
+        <Route path="/doctors" element={
+          <ProtectedRoute role="patient">
+            <Doctors />
+          </ProtectedRoute>
+        } />
+        <Route path="/doctors/:id" element={
+          <ProtectedRoute role="patient">
+            <DoctorProfile />
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor-profile" element={
+          <ProtectedRoute role="patient">
+            <DoctorProfile />
+          </ProtectedRoute>
+        } />
+        <Route path="/booking/:id" element={
+          <ProtectedRoute role="patient">
+            <BookingPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/patient-details" element={
+          <ProtectedRoute role="patient">
+            <PatientDetails />
+          </ProtectedRoute>
+        } />
+        <Route path="/consultation-type" element={
+          <ProtectedRoute role="patient">
+            <ConsultationType />
+          </ProtectedRoute>
+        } />
+        <Route path="/payment" element={
+          <ProtectedRoute role="patient">
+            <PaymentPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/booking-success" element={
+          <ProtectedRoute role="patient">
+            <BookingSuccess />
+          </ProtectedRoute>
+        } />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
 
@@ -137,7 +185,7 @@ const App: React.FC = () => {
           <Route
             path="login"
             element={
-              <PublicRoute role="doctor">
+              <PublicRoute>
                 <DoctorLogin />
               </PublicRoute>
             }
@@ -145,7 +193,7 @@ const App: React.FC = () => {
           <Route
             path="register"
             element={
-              <PublicRoute role="doctor">
+              <PublicRoute>
                 <DoctorRegister />
               </PublicRoute>
             }
@@ -238,7 +286,7 @@ const App: React.FC = () => {
           <Route
             path="login"
             element={
-              <PublicRoute role="patient">
+              <PublicRoute>
                 <PatientLogin />
               </PublicRoute>
             }
@@ -246,7 +294,7 @@ const App: React.FC = () => {
           <Route
             path="register"
             element={
-              <PublicRoute role="patient">
+              <PublicRoute>
                 <PatientRegister />
               </PublicRoute>
             }
@@ -267,6 +315,14 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute role="patient">
                 <Home />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="dashboard"
+            element={
+              <ProtectedRoute role="patient">
+                <PatientDashboard />
               </ProtectedRoute>
             }
           />
@@ -325,7 +381,7 @@ const App: React.FC = () => {
           <Route
             path="login"
             element={
-              <PublicRoute role="admin">
+              <PublicRoute>
                 <AdminLogin />
               </PublicRoute>
             }
@@ -425,6 +481,15 @@ const App: React.FC = () => {
             }
           />
 
+          <Route
+            path="messages"
+            element={
+              <ProtectedRoute role="admin">
+                <ContactMessages />
+              </ProtectedRoute>
+            }
+          />
+
         </Route>
 
 
@@ -436,3 +501,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+

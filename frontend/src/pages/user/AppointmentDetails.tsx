@@ -12,6 +12,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { toast } from 'sonner';
 import PrescriptionViewModal from '../../components/Patient/PrescriptionViewModal';
+import type { PopulatedAppointment, Slot } from '../../types/appointment.types';
 
 
 const AppointmentDetails: React.FC = () => {
@@ -19,7 +20,7 @@ const AppointmentDetails: React.FC = () => {
     const navigate = useNavigate();
     const lastFetchedId = useRef<string | null>(null);
 
-    const [appointment, setAppointment] = useState<any>(null);
+    const [appointment, setAppointment] = useState<PopulatedAppointment | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string>('');
 
@@ -33,9 +34,9 @@ const AppointmentDetails: React.FC = () => {
     const [rescheduleOpen, setRescheduleOpen] = useState(false);
     const [startDate, setStartDate] = useState(new Date());
     const [selectedDay, setSelectedDay] = useState<Date>(new Date());
-    const [availableSlots, setAvailableSlots] = useState<any[]>([]);
+    const [availableSlots, setAvailableSlots] = useState<Slot[]>([]);
     const [loadingSlots, setLoadingSlots] = useState(false);
-    const [selectedSlot, setSelectedSlot] = useState<any>(null);
+    const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
     const [rescheduleSubmitting, setRescheduleSubmitting] = useState(false);
     const [reviewFormOpen, setReviewFormOpen] = useState(false);
     const [prescriptionViewOpen, setPrescriptionViewOpen] = useState(false);
@@ -120,8 +121,9 @@ const AppointmentDetails: React.FC = () => {
                 setError(e?.response?.data?.message || e?.message || 'Failed to fetch appointment');
 
             } finally {
-                if (!isMounted) return;
-                setLoading(false);
+                if (isMounted) {
+                    setLoading(false);
+                }
             }
         };
 
@@ -129,11 +131,11 @@ const AppointmentDetails: React.FC = () => {
         return () => {
             isMounted = false;
         };
-    }, [id]);
+    }, [id, appointment]); // Added appointment to dependencies as hinted by linter
 
     useEffect(() => {
         const fetchSlots = async () => {
-            if (!rescheduleOpen || !appointment?.doctorId?._id || !selectedDay) return;
+            if (!rescheduleOpen || !appointment?.doctorId || !selectedDay) return;
 
             setLoadingSlots(true);
             try {
@@ -141,8 +143,9 @@ const AppointmentDetails: React.FC = () => {
                 const month = String(selectedDay.getMonth() + 1).padStart(2, '0');
                 const day = String(selectedDay.getDate()).padStart(2, '0');
                 const dateStr = `${year}-${month}-${day}`;
+                const docId = typeof appointment.doctorId === 'object' ? appointment.doctorId._id : appointment.doctorId;
 
-                const response = await doctorService.getAvailableSlots(appointment.doctorId._id, dateStr);
+                const response = await doctorService.getAvailableSlots(docId!, dateStr);
                 if (response?.success) {
                     setAvailableSlots(response.data || []);
                 }
@@ -155,7 +158,7 @@ const AppointmentDetails: React.FC = () => {
         };
 
         fetchSlots();
-    }, [rescheduleOpen, selectedDay, appointment?.doctorId?._id]);
+    }, [rescheduleOpen, selectedDay, appointment?.doctorId]);
 
     const getImageUrl = (imagePath: string | null | undefined) => {
         if (!imagePath) return '/doctor.png';
@@ -179,23 +182,23 @@ const AppointmentDetails: React.FC = () => {
             doctor?.userId?.profileImage ||
             apt?.doctorImage;
 
-        const status = apt?.status || apt?.status;
+        const status = apt?.status;
         const displayStatus = status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
 
-        const date = apt?.appointmentDate || apt?.date;
-        const time = apt?.appointmentTime || apt?.time;
+        const dateStr = apt?.appointmentDate || apt?.date || '';
+        const timeStr = apt?.appointmentTime || apt?.time || '';
 
-        const dateObj = date ? new Date(date) : null;
+        const dateObj = dateStr ? new Date(dateStr) : null;
         const hasValidDate = !!dateObj && !Number.isNaN(dateObj.getTime());
 
         const isUpcoming = status === 'pending' || status === 'confirmed' || status === 'upcoming';
 
         let isSessionReady = false;
-        if (hasValidDate && time) {
+        if (hasValidDate && timeStr) {
             const now = new Date();
-            const [startTimeStr] = time.split('-');
+            const [startTimeStr] = timeStr.split('-');
             const [hours, minutes] = startTimeStr.trim().split(':');
-            const sessionStart = new Date(date);
+            const sessionStart = new Date(dateStr);
             sessionStart.setHours(parseInt(hours), parseInt(minutes), 0, 0);
             isSessionReady = now >= sessionStart;
         }
@@ -208,12 +211,12 @@ const AppointmentDetails: React.FC = () => {
             department: department || 'N/A',
             doctorImage: getImageUrl(doctorImage),
             appointmentType: apt?.appointmentType,
-            date,
+            date: dateStr,
             hasValidDate,
-            time: formatTimeTo12h(time),
-            status,
+            time: formatTimeTo12h(timeStr || ''),
+            status: status || 'unknown',
             displayStatus,
-            consultationFees: apt?.consultationFees ?? apt?.consultationFees ?? 0,
+            consultationFees: apt?.consultationFees ?? 0,
             reason: apt?.reason || '',
             isUpcoming,
             isSessionReady,
@@ -276,8 +279,8 @@ const AppointmentDetails: React.FC = () => {
                         cancellationReason: reason,
                     }));
                 }
-            } catch (fetchError) {
-                console.warn('Failed to refetch appointment, using local update:', fetchError);
+            } catch {
+                console.warn('Failed to refetch appointment, using local update');
 
                 setAppointment((prev: any) => ({
                     ...prev,
@@ -332,7 +335,7 @@ const AppointmentDetails: React.FC = () => {
             const docObj = appointment.doctor || appointment.doctorId;
             const doctorId = docObj?._id || docObj?.id || (typeof docObj === 'string' ? docObj : null);
 
-            const appointmentId = appointment._id || appointment.id;
+            const appointmentId = appointment._id || appointment.id || '';
 
             if (!doctorId) {
                 toast.error("Doctor information missing");
@@ -369,7 +372,7 @@ const AppointmentDetails: React.FC = () => {
         const chatFees = doctorObj.ChatFees || doctorObj.chatFees || appointment.consultationFees || 0;
 
         const bookingData = {
-            doctorId: doctorObj._id || doctorObj.id || appointment.doctorId,
+            doctorId: (typeof doctorObj === 'object' ? doctorObj._id || doctorObj.id : doctorObj) || (typeof appointment.doctorId === 'object' ? appointment.doctorId._id : appointment.doctorId),
             doctor: {
                 name: userObj.name || doctorObj.name || normalized.doctorName,
                 image: userObj.profileImage || userObj.image || doctorObj.image || normalized.doctorImage,
@@ -388,8 +391,8 @@ const AppointmentDetails: React.FC = () => {
         };
 
         sessionStorage.setItem('bookingData', JSON.stringify(bookingData));
-        sessionStorage.setItem('tempAppointmentId', appointment._id || appointment.id);
-        navigate('/payment', { state: { appointmentId: appointment._id || appointment.id } });
+        sessionStorage.setItem('tempAppointmentId', appointment._id || appointment.id || '');
+        navigate('/payment', { state: { appointmentId: appointment._id || appointment.id || '' } });
     };
 
     if (loading) {
@@ -964,7 +967,7 @@ const AppointmentDetails: React.FC = () => {
             <PrescriptionViewModal
                 isOpen={prescriptionViewOpen}
                 onClose={() => setPrescriptionViewOpen(false)}
-                appointmentId={appointment?._id || appointment?.id || id}
+                appointmentId={(appointment?._id || appointment?.id || id || '') as string}
             />
 
         </div>

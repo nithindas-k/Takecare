@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { toast } from "sonner";
 import Sidebar from "../../components/admin/Sidebar";
 import TopNav from "../../components/admin/TopNav";
 import { appointmentService } from "../../services/appointmentService";
-import { ChevronLeft, ChevronRight, Eye, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -106,7 +106,7 @@ const AdminAppointmentsListPage: React.FC = () => {
     navigate(`/admin/appointment/${appointmentId}`);
   };
 
-  const fetchAppointments = async (currentPage: number) => {
+  const fetchAppointments = useCallback(async (currentPage: number) => {
     setLoading(true);
     try {
       const filters: any = {};
@@ -125,12 +125,12 @@ const AdminAppointmentsListPage: React.FC = () => {
       toast.error(e?.response?.data?.message || e?.message || "Error fetching appointments");
     }
     setLoading(false);
-  };
+  }, [debouncedSearch, status, limit]);
 
 
   useEffect(() => {
     fetchAppointments(page);
-  }, [page, debouncedSearch, status]);
+  }, [page, fetchAppointments]);
 
   const pagesToShow = useMemo(() => {
     const items: number[] = [];
@@ -431,7 +431,7 @@ const AdminAppointmentsListPage: React.FC = () => {
                                     <Eye size={14} />
                                   </button>
 
-                                
+
                                 </div>
                               </td>
                             </tr>

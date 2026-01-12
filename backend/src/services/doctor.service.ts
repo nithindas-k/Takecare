@@ -10,15 +10,15 @@ import { AppError, NotFoundError, UnauthorizedError } from "../errors/AppError";
 import { LoggerService } from "./logger.service";
 import { DoctorMapper } from "../mappers/doctor.mapper";
 
-export class DoctorService implements IDoctorService {
-  private readonly logger: LoggerService;
+import { ILoggerService } from "./interfaces/ILogger.service";
 
+export class DoctorService implements IDoctorService {
   constructor(
     private _doctorRepository: IDoctorRepository,
     private _userRepository: IUserRepository,
-    private _appointmentRepository: IAppointmentRepository
+    private _appointmentRepository: IAppointmentRepository,
+    private logger: ILoggerService
   ) {
-    this.logger = new LoggerService("DoctorService");
   }
 
   async submitVerification(

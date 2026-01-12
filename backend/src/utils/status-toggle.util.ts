@@ -1,4 +1,4 @@
-import { LoggerService } from "../services/logger.service";
+import { ILoggerService } from "../services/interfaces/ILogger.service";
 import { StatusToggleRepository } from "../types/repository.type";
 
 export const toggleEntityStatus = async (
@@ -6,7 +6,7 @@ export const toggleEntityStatus = async (
     entityId: string,
     isActive: boolean,
     entityName: string,
-    logger?: LoggerService
+    logger?: ILoggerService
 ): Promise<void> => {
     const action = isActive ? "Activating" : "Deactivating";
     const actionPast = isActive ? "activated" : "deactivated";

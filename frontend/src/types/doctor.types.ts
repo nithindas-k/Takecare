@@ -12,12 +12,14 @@ export interface DoctorResponseDTO {
   licenseNumber?: string | null;
   qualifications: string[];
   specialty?: string | null;
+  speciality?: string | null; // Alias
   experienceYears?: number | null;
   VideoFees?: number | null;
   ChatFees?: number | null;
   languages?: string[];
   ratingAvg?: number;
   ratingCount?: number;
+  image?: string | null; // Alias
 }
 
 

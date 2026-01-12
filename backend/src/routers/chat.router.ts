@@ -7,17 +7,21 @@ import { DoctorRepository } from "../repositories/doctor.repository";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/upload.middleware";
 
+import { LoggerService } from "../services/logger.service";
+
 const chatRouter = Router();
 
 
 const messageRepository = new MessageRepository();
 const appointmentRepository = new AppointmentRepository();
 const doctorRepository = new DoctorRepository();
+const chatServiceLogger = new LoggerService("ChatService");
 
 const chatService = new ChatService(
     messageRepository,
     appointmentRepository,
-    doctorRepository
+    doctorRepository,
+    chatServiceLogger
 );
 
 
