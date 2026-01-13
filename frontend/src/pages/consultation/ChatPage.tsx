@@ -1,5 +1,4 @@
-﻿/* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Send, Smile, MoreVertical,
@@ -91,7 +90,7 @@ interface Conversation {
     };
     isOnline?: boolean;
     unreadCount: number;
-}
+}   
 
 interface ActiveChat {
     id: string;
