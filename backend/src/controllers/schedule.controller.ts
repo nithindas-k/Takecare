@@ -9,6 +9,7 @@ import {
     UpdateScheduleDTO,
     BlockDateDTO,
 } from "../dtos/schedule.dtos/schedule.dto";
+import { RecurringSlotsDTO } from "../dtos/schedule.dtos/recurringSlots.dto";
 
 export class ScheduleController implements IScheduleController {
     constructor(private _scheduleService: IScheduleService) { }
@@ -214,6 +215,82 @@ export class ScheduleController implements IScheduleController {
             }
 
             sendSuccess(res, null, MESSAGES.SCHEDULE_DELETED, STATUS.OK);
+        } catch (error: unknown) {
+            return next(error);
+        }
+    };
+
+    addRecurringSlots = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = this.getUserIdFromReq(req);
+            if (!userId) {
+                throw new AppError(MESSAGES.UNAUTHORIZED, STATUS.UNAUTHORIZED);
+            }
+
+            const dto: RecurringSlotsDTO = {
+                startTime: req.body.startTime,
+                endTime: req.body.endTime,
+                days: req.body.days,
+                skipOverlappingDays: req.body.skipOverlappingDays,
+            };
+
+            const result = await this._scheduleService.addRecurringSlots(userId, dto);
+
+            sendSuccess(res, result, MESSAGES.SCHEDULE_UPDATED, STATUS.OK);
+        } catch (error: unknown) {
+            return next(error);
+        }
+    };
+
+    deleteRecurringSlot = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = this.getUserIdFromReq(req);
+            if (!userId) {
+                throw new AppError(MESSAGES.UNAUTHORIZED, STATUS.UNAUTHORIZED);
+            }
+
+            const { day, slotId } = req.params;
+
+            if (!day || !slotId) {
+                throw new AppError("Day and slot ID are required", STATUS.BAD_REQUEST);
+            }
+
+            const result = await this._scheduleService.deleteRecurringSlot(userId, day, slotId);
+
+            sendSuccess(res, result, "Recurring slot deleted successfully", STATUS.OK);
+        } catch (error: unknown) {
+            return next(error);
+        }
+    };
+
+    deleteRecurringSlotByTime = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = this.getUserIdFromReq(req);
+            if (!userId) {
+                throw new AppError(MESSAGES.UNAUTHORIZED, STATUS.UNAUTHORIZED);
+            }
+
+            const { startTime, endTime } = req.params;
+
+            if (!startTime || !endTime) {
+                throw new AppError("Start time and end time are required", STATUS.BAD_REQUEST);
+            }
+
+            const result = await this._scheduleService.deleteRecurringSlotByTime(userId, startTime, endTime);
+
+            sendSuccess(res, result, "Recurring slots deleted successfully from all days", STATUS.OK);
         } catch (error: unknown) {
             return next(error);
         }

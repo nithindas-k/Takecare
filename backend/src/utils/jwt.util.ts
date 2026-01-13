@@ -24,7 +24,7 @@ export const generateAccessToken = (user: IUserDocument, doctorId?: string): str
   };
 
   return jwt.sign(payload, ACCESS_TOKEN_SECRET, {
-    expiresIn: JWT_CONFIG.expiresIn as any,
+    expiresIn: JWT_CONFIG.expiresIn,
   });
 };
 
@@ -43,7 +43,7 @@ export const generateRefreshToken = (user: IUserDocument, doctorId?: string): st
   };
 
   return jwt.sign(payload, REFRESH_TOKEN_SECRET, {
-    expiresIn: JWT_CONFIG.refreshExpiresIn as any,
+    expiresIn: JWT_CONFIG.refreshExpiresIn,
   });
 };
 

@@ -55,7 +55,9 @@ import PatientsListPage from "./pages/admin/PatientsListPage";
 import PatientDetailPage from "./pages/admin/PatientDetailPage";
 import AdminAppointmentsListPage from "./pages/admin/AppointmentsListPage";
 import AdminAppointmentDetailsPage from "./pages/admin/AdminAppointmentDetailsPage";
+
 import ContactMessages from "./pages/admin/ContactMessages";
+import ReviewsPage from "./pages/admin/ReviewsPage";
 import AuthCallback from "./pages/AuthCallback";
 
 // Wallet and Earnings
@@ -486,6 +488,14 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute role="admin">
                 <ContactMessages />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reviews"
+            element={
+              <ProtectedRoute role="admin">
+                <ReviewsPage />
               </ProtectedRoute>
             }
           />

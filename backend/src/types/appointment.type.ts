@@ -126,5 +126,5 @@ export interface DoctorDashboardStats {
     totalEarnings: number;
     appointmentsToday: number;
     revenueGraph: { date: string; amount: number }[];
-    nextAppointment: any; // Using any for simplicity as it involves populated fields
+    nextAppointment: (IAppointmentDocument & { patientId: { name: string; profileImage?: string } }) | null;
 }

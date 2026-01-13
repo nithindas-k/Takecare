@@ -170,6 +170,27 @@ router.delete(
   scheduleController.deleteSchedule
 );
 
+router.post(
+  "/schedule/recurring-slots",
+  authMiddleware,
+  requireDoctor,
+  scheduleController.addRecurringSlots
+);
+
+router.delete(
+  "/schedule/recurring-slots/:day/:slotId",
+  authMiddleware,
+  requireDoctor,
+  scheduleController.deleteRecurringSlot
+);
+
+router.delete(
+  "/schedule/recurring-slots/by-time/:startTime/:endTime",
+  authMiddleware,
+  requireDoctor,
+  scheduleController.deleteRecurringSlotByTime
+);
+
 router.get(
   "/:id",
   doctorController.getDoctorById

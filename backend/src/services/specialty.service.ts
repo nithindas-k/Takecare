@@ -8,7 +8,7 @@ import { ILoggerService } from "./interfaces/ILogger.service";
 export class SpecialtyService implements ISpecialtyService {
   constructor(
     private _specialtyRepository: ISpecialtyRepository,
-    private logger: ILoggerService
+    private _logger: ILoggerService
   ) {
   }
 
@@ -19,7 +19,7 @@ export class SpecialtyService implements ISpecialtyService {
     }
 
     const specialty = await this._specialtyRepository.create(data);
-    this.logger.info(`Specialty created: ${specialty.name}`);
+    this._logger.info(`Specialty created: ${specialty.name}`);
     return specialty;
   }
 
@@ -57,7 +57,7 @@ export class SpecialtyService implements ISpecialtyService {
     }
 
     const updatedSpecialty = await this._specialtyRepository.updateById(id, data);
-    this.logger.info(`Specialty updated: ${updatedSpecialty?.name}`);
+    this._logger.info(`Specialty updated: ${updatedSpecialty?.name}`);
     return updatedSpecialty;
   }
 
@@ -69,7 +69,7 @@ export class SpecialtyService implements ISpecialtyService {
 
     const deleted = await this._specialtyRepository.deleteById(id);
     if (deleted) {
-      this.logger.info(`Specialty deleted: ${specialty.name}`);
+      this._logger.info(`Specialty deleted: ${specialty.name}`);
     }
     return deleted;
   }
@@ -81,7 +81,7 @@ export class SpecialtyService implements ISpecialtyService {
     }
 
     const updatedSpecialty = await this._specialtyRepository.toggleActive(id);
-    this.logger.info(`Specialty status toggled: ${updatedSpecialty?.name} - ${updatedSpecialty?.isActive ? 'Active' : 'Inactive'}`);
+    this._logger.info(`Specialty status toggled: ${updatedSpecialty?.name} - ${updatedSpecialty?.isActive ? 'Active' : 'Inactive'}`);
     return updatedSpecialty;
   }
 

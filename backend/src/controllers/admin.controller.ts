@@ -75,7 +75,7 @@ export class AdminController implements IAdminController {
         search: req.query.search as string,
         specialty: req.query.specialty as string,
         verificationStatus: req.query.verificationStatus as string,
-        isActive: req.query.isActive as any,
+        isActive: req.query.isActive as string,
         page: parseInt(req.query.page as string) || PAGINATION.DEFAULT_PAGE,
         limit: parseInt(req.query.limit as string) || PAGINATION.DEFAULT_LIMIT,
       };
@@ -111,7 +111,7 @@ export class AdminController implements IAdminController {
     try {
       const filters = {
         search: req.query.search as string,
-        isActive: req.query.isActive as any,
+        isActive: req.query.isActive as string,
         page: parseInt(req.query.page as string) || PAGINATION.DEFAULT_PAGE,
         limit: parseInt(req.query.limit as string) || PAGINATION.DEFAULT_LIMIT,
       };

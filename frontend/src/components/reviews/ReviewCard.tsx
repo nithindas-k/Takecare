@@ -22,7 +22,7 @@ interface ReviewCardProps {
 
 const ReviewCard: React.FC<ReviewCardProps> = ({ review, onEdit, onDelete }) => {
     const getAvatarUrl = (path?: string) => {
-        if (!path) return `https://api.dicebear.com/7.x/avataaars/svg?seed=${review.patientId.name}`;
+        if (!path) return `https://api.dicebear.com/7.x/avataaars/svg?seed=${review.patientId?.name || 'User'}`;
         if (path.startsWith('http')) return path;
         return `${API_BASE_URL}/${path.replace(/\\/g, '/')}`;
     };
@@ -32,12 +32,12 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onEdit, onDelete }) => 
             <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-4">
                     <img
-                        src={getAvatarUrl(review.patientId.profileImage)}
-                        alt={review.patientId.name}
+                        src={getAvatarUrl(review.patientId?.profileImage)}
+                        alt={review.patientId?.name || 'User'}
                         className="w-12 h-12 rounded-full object-cover border border-gray-100"
                     />
                     <div>
-                        <h4 className="font-bold text-gray-800 text-sm">{review.patientId.name}</h4>
+                        <h4 className="font-bold text-gray-800 text-sm">{review.patientId?.name || 'Anonymous User'}</h4>
                         <div className="flex items-center gap-2">
                             <StarRating rating={review.rating} readonly size={14} />
                             <span className="text-gray-400 text-[10px]">

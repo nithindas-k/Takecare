@@ -385,33 +385,93 @@ const Dashboard = () => {
             </div>
 
             <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-              <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+              <div className="px-6 py-4 border-b border-gray-100">
                 <h3 className="text-lg font-semibold text-gray-800">Top Performing Doctors</h3>
+                <p className="text-xs text-gray-500 mt-1">Based on completed appointments</p>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50/50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Appointments</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue Generated</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {stats?.topDoctors?.map((doc: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{doc.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{doc.appointments}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-bold">₹{doc.revenue.toLocaleString()}</td>
-                      </tr>
-                    ))}
-                    {!stats?.topDoctors?.length && (
-                      <tr>
-                        <td colSpan={3} className="px-6 py-4 text-center text-gray-400 italic">No data available for this range</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+
+              <div className="p-6">
+                {stats?.topDoctors?.length > 0 ? (
+                  <div className="space-y-4">
+                    {stats.topDoctors.map((doc: any, idx: number) => {
+                      // Helper function to get profile image URL
+                      const getProfileImageUrl = (profileImage: string | undefined) => {
+                        if (!profileImage) return null;
+                        if (profileImage.startsWith('http')) return profileImage;
+                        return `http://localhost:5000${profileImage}`;
+                      };
+
+                      const profileImageUrl = getProfileImageUrl(doc.profileImage);
+
+                      return (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-4 rounded-lg border border-gray-100 hover:border-primary/30 hover:bg-gray-50/50 transition-all"
+                        >
+                          {/* Left: Rank + Doctor Info */}
+                          <div className="flex items-center gap-4 flex-1 min-w-0">
+                            {/* Rank */}
+                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                              <span className="text-sm font-bold text-primary">#{idx + 1}</span>
+                            </div>
+
+                            {/* Profile Image */}
+                            <div className="flex-shrink-0">
+                              {profileImageUrl ? (
+                                <img
+                                  src={profileImageUrl}
+                                  alt={doc.name}
+                                  className="w-12 h-12 rounded-full object-cover border-2 border-gray-100"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                    if (fallback) fallback.style.display = 'flex';
+                                  }}
+                                />
+                              ) : null}
+                              <div
+                                className={cn(
+                                  "w-12 h-12 rounded-full bg-gradient-to-br from-primary to-cyan-600 flex items-center justify-center text-white text-lg font-semibold border-2 border-gray-100",
+                                  profileImageUrl && "hidden"
+                                )}
+                              >
+                                {doc.name.charAt(0).toUpperCase()}
+                              </div>
+                            </div>
+
+                            {/* Name & Specialty */}
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 truncate">Dr. {doc.name}</h4>
+                              <p className="text-sm text-gray-500 truncate">{doc.specialty || 'Medical Professional'}</p>
+                            </div>
+                          </div>
+
+                          {/* Right: Stats */}
+                          <div className="flex items-center gap-6 ml-4">
+                            {/* Appointments */}
+                            <div className="text-center">
+                              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Appointments</p>
+                              <p className="text-xl font-bold text-primary">{doc.appointments}</p>
+                            </div>
+
+                            {/* Revenue */}
+                            <div className="text-center">
+                              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Revenue</p>
+                              <p className="text-xl font-bold text-gray-900">₹{doc.revenue.toLocaleString()}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <span className="text-3xl">📊</span>
+                    </div>
+                    <p className="text-gray-500">No data available for the selected date range</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

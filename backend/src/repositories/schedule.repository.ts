@@ -2,7 +2,7 @@ import { BaseRepository } from "./base.repository";
 import { IScheduleRepository } from "./interfaces/ISchedule.repository";
 import { IDoctorScheduleDocument } from "../types/schedule.type";
 import DoctorScheduleModel from "../models/doctorSchedule.model";
-import { Types } from "mongoose";
+import { Types, ClientSession } from "mongoose";
 
 export class ScheduleRepository
     extends BaseRepository<IDoctorScheduleDocument>
@@ -13,21 +13,37 @@ export class ScheduleRepository
 
     async findByDoctorId(
         doctorId: string | Types.ObjectId,
-        session?: any
+        session?: ClientSession | undefined
     ): Promise<IDoctorScheduleDocument | null> {
         const id = typeof doctorId === "string" ? new Types.ObjectId(doctorId) : doctorId;
-        return await this.model.findOne({ doctorId: id }).session(session).exec();
+        return await this.model.findOne({ doctorId: id }).session(session || null).exec();
     }
 
     async updateByDoctorId(
         doctorId: string | Types.ObjectId,
         update: Partial<IDoctorScheduleDocument>,
-        session?: any
+        session?: ClientSession | undefined
     ): Promise<IDoctorScheduleDocument | null> {
         const id = typeof doctorId === "string" ? new Types.ObjectId(doctorId) : doctorId;
-        return await this.model
-            .findOneAndUpdate({ doctorId: id }, update, { new: true, session })
-            .exec();
+
+        // Find the document first
+        const schedule = await this.model.findOne({ doctorId: id }).session(session || null);
+        if (!schedule) return null;
+
+        // Update the schedule
+        Object.assign(schedule, update);
+
+        // Mark nested arrays as modified (critical for Mongoose to detect changes)
+        if (update.weeklySchedule) {
+            schedule.markModified('weeklySchedule');
+        }
+        if (update.blockedDates) {
+            schedule.markModified('blockedDates');
+        }
+
+        // Save and return
+        const result = await schedule.save({ session: session || undefined });
+        return result;
     }
 
     async addBlockedDate(
@@ -35,10 +51,10 @@ export class ScheduleRepository
         date: Date,
         reason?: string,
         slots?: string[],
-        session?: any
+        session?: ClientSession | undefined
     ): Promise<IDoctorScheduleDocument | null> {
         const id = typeof doctorId === "string" ? new Types.ObjectId(doctorId) : doctorId;
-        const schedule = await this.model.findOne({ doctorId: id }).session(session).exec();
+        const schedule = await this.model.findOne({ doctorId: id }).session(session || null).exec();
 
         if (!schedule) {
             return null;
@@ -63,16 +79,16 @@ export class ScheduleRepository
             });
         }
 
-        return await schedule.save({ session });
+        return await schedule.save({ session: session || undefined });
     }
 
     async removeBlockedDate(
         doctorId: string | Types.ObjectId,
         date: Date,
-        session?: any
+        session?: ClientSession | undefined
     ): Promise<IDoctorScheduleDocument | null> {
         const id = typeof doctorId === "string" ? new Types.ObjectId(doctorId) : doctorId;
-        const schedule = await this.model.findOne({ doctorId: id }).session(session).exec();
+        const schedule = await this.model.findOne({ doctorId: id }).session(session || null).exec();
 
         if (!schedule) {
             return null;
@@ -83,7 +99,7 @@ export class ScheduleRepository
             (blocked) => blocked.date.toISOString().split("T")[0] !== dateStr
         ) || [];
 
-        return await schedule.save({ session });
+        return await schedule.save({ session: session || undefined });
     }
 
     async updateSlotBookedStatus(
@@ -92,27 +108,27 @@ export class ScheduleRepository
         isBooked: boolean,
         _appointmentDate?: Date,
         _startTime?: string,
-        session?: any
+        session?: ClientSession | undefined
     ): Promise<boolean> {
         const id = typeof doctorId === "string" ? new Types.ObjectId(doctorId) : doctorId;
 
-      
-        const query: any = { doctorId: id };
+
+        const query: Record<string, unknown> = { doctorId: id };
 
         if (isBooked) {
-            
+
             query.weeklySchedule = {
                 $elemMatch: {
                     slots: {
                         $elemMatch: {
                             customId: slotId,
-                            booked: { $ne: true } 
+                            booked: { $ne: true }
                         }
                     }
                 }
             };
         } else {
-        
+
             query["weeklySchedule.slots.customId"] = slotId;
         }
 
@@ -124,17 +140,17 @@ export class ScheduleRepository
                     { "day.slots.customId": slotId },
                     { "slot.customId": slotId }
                 ],
-                session
+                session: session || undefined
             }
         );
 
-      
+
         return result.modifiedCount > 0;
     }
 
-    async existsByDoctorId(doctorId: string | Types.ObjectId, session?: any): Promise<boolean> {
+    async existsByDoctorId(doctorId: string | Types.ObjectId, session?: ClientSession | undefined): Promise<boolean> {
         const id = typeof doctorId === "string" ? new Types.ObjectId(doctorId) : doctorId;
-        const count = await this.model.countDocuments({ doctorId: id }).session(session);
+        const count = await this.model.countDocuments({ doctorId: id }).session(session || null);
         return count > 0;
     }
 }

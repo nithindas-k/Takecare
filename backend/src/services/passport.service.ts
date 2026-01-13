@@ -5,6 +5,8 @@ import { UserRepository } from "../repositories/user.repository";
 import { DoctorRepository } from "../repositories/doctor.repository";
 import { VerificationStatus } from "../dtos/doctor.dtos/doctor.dto";
 import { MESSAGES, ROLES } from "../constants/constants";
+import { IUserDocument } from "../types/user.type";
+import { Request } from "express";
 
 const userRepository = new UserRepository();
 const doctorRepository = new DoctorRepository();
@@ -17,7 +19,7 @@ passport.use(
       ...googleOAuthConfig,
       passReqToCallback: true,
     },
-    async (req: any, accessToken, refreshToken, profile, done) => {
+    async (req: Request, accessToken: string, refreshToken: string, profile: import("passport-google-oauth20").Profile, done: (error: Error | null, user?: IUserDocument) => void) => {
       try {
         const email = profile.emails?.[0]?.value;
         if (!email) {
@@ -62,16 +64,16 @@ passport.use(
           }
         }
 
-        return done(null, user as any);
+        return done(null, user);
       } catch (error) {
-        return done(error);
+        return done(error as Error);
       }
     }
   )
 );
 
-passport.serializeUser((user: any, done) => done(null, user._id));
-passport.deserializeUser(async (id: string, done) => {
+passport.serializeUser((user: IUserDocument, done) => done(null, user._id.toString()));
+passport.deserializeUser(async (id: string, done: (error: Error | null, user?: IUserDocument | null) => void) => {
   const user = await userRepository.findById(id);
-  done(null, user as any);
+  done(null, user);
 });

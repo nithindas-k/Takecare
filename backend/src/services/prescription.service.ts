@@ -1,4 +1,4 @@
-import { IPrescriptionService } from "./interfaces/IPrescriptionService";
+import { IPrescriptionService, CreatePrescriptionData, PrescriptionResponseDTO } from "./interfaces/IPrescriptionService";
 import { IPrescriptionRepository } from "../repositories/interfaces/IPrescription.repository";
 import { IAppointmentRepository } from "../repositories/interfaces/IAppointmentRepository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
@@ -13,7 +13,7 @@ export class PrescriptionService implements IPrescriptionService {
         private _doctorRepository: IDoctorRepository
     ) { }
 
-    async createPrescription(userId: string, data: any): Promise<any> {
+    async createPrescription(userId: string, data: CreatePrescriptionData): Promise<PrescriptionResponseDTO> {
         
         const doctor = await this._doctorRepository.findByUserId(userId);
         if (!doctor) {
@@ -65,7 +65,7 @@ export class PrescriptionService implements IPrescriptionService {
         return PrescriptionMapper.toResponseDTO(await this._prescriptionRepository.findByAppointmentId(appointment._id.toString()));
     }
 
-    async getPrescriptionByAppointment(userId: string, role: string, appointmentId: string): Promise<any> {
+    async getPrescriptionByAppointment(userId: string, role: string, appointmentId: string): Promise<PrescriptionResponseDTO> {
         const prescription = await this._prescriptionRepository.findByAppointmentId(appointmentId);
         if (!prescription) {
             throw new AppError("Prescription not found", HttpStatus.NOT_FOUND);

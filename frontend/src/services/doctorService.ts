@@ -217,6 +217,46 @@ class DoctorService {
       };
     }
   }
+
+  // Recurring slots methods
+  async addRecurringSlots(recurringData: { startTime: string; endTime: string; days: string[]; skipOverlappingDays?: boolean }) {
+    try {
+      const response = await axiosInstance.post(DOCTOR_API_ROUTES.RECURRING_SLOTS, recurringData);
+      return response.data;
+    } catch (error) {
+      const err = error as ApiError;
+      return {
+        success: false,
+        message: err.response?.data?.message || err.message || "Failed to add recurring slots",
+      };
+    }
+  }
+
+  async deleteRecurringSlot(day: string, slotId: string) {
+    try {
+      const response = await axiosInstance.delete(DOCTOR_API_ROUTES.DELETE_RECURRING_SLOT(day, slotId));
+      return response.data;
+    } catch (error) {
+      const err = error as ApiError;
+      return {
+        success: false,
+        message: err.response?.data?.message || err.message || "Failed to delete recurring slot",
+      };
+    }
+  }
+
+  async deleteRecurringSlotByTime(startTime: string, endTime: string) {
+    try {
+      const response = await axiosInstance.delete(DOCTOR_API_ROUTES.DELETE_RECURRING_SLOT_BY_TIME(startTime, endTime));
+      return response.data;
+    } catch (error) {
+      const err = error as ApiError;
+      return {
+        success: false,
+        message: err.response?.data?.message || err.message || "Failed to delete recurring slots from all days",
+      };
+    }
+  }
 }
 
 export default new DoctorService();

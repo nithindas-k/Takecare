@@ -13,7 +13,7 @@ import { IWalletService } from "./interfaces/IWalletService";
 import { IChatService } from "./interfaces/IChatService";
 import { INotificationService } from "./notification.service";
 import { socketService } from "./socket.service";
-
+import { SESSION_STATUS, SessionStatus } from "../utils/sessionStatus.util";
 import { ILoggerService } from "./interfaces/ILogger.service";
 
 export class AppointmentService implements IAppointmentService {
@@ -23,13 +23,13 @@ export class AppointmentService implements IAppointmentService {
         private _doctorRepository: IDoctorRepository,
         private _scheduleRepository: IScheduleRepository,
         private _walletService: IWalletService,
-        private logger: ILoggerService,
+        private _logger: ILoggerService,
         private _notificationService?: INotificationService,
         private _chatService?: IChatService
     ) {
     }
 
-    private async requireDoctorIdByUserId(doctorUserId: string): Promise<string> {
+    private async _requireDoctorIdByUserId(doctorUserId: string): Promise<string> {
         const doctor = await this._doctorRepository.findByUserId(doctorUserId);
         if (!doctor) {
             throw new AppError(MESSAGES.DOCTOR_NOT_FOUND, HttpStatus.NOT_FOUND);
@@ -43,7 +43,7 @@ export class AppointmentService implements IAppointmentService {
         patientId: string,
         appointmentData: any
     ): Promise<any> {
-        this.logger.info("Service: createAppointment attempt", {
+        this._logger.info("Service: createAppointment attempt", {
             patientId,
             doctorId: appointmentData.doctorId,
             slotId: appointmentData.slotId,
@@ -85,31 +85,31 @@ export class AppointmentService implements IAppointmentService {
                         .find(s => s.customId === appointmentData.slotId);
 
                     if (slot && slot.booked) {
-                        this.logger.info("Slot marked as booked. Searching for existing PENDING appointment to reuse.", {
+                        this._logger.info("Slot marked as booked. Searching for existing PENDING appointment to reuse.", {
                             patientId,
                             doctorId: appointmentData.doctorId,
                             slotId: appointmentData.slotId,
                             date: appointmentData.appointmentDate
                         });
 
-                        
+
                         let pId, dId;
                         try {
                             pId = typeof patientId === 'string' ? new Types.ObjectId(patientId) : patientId;
                             dId = typeof appointmentData.doctorId === 'string' ? new Types.ObjectId(appointmentData.doctorId) : appointmentData.doctorId;
                         } catch (err) {
-                            this.logger.error("Error converting IDs for search", { patientId, doctorId: appointmentData.doctorId });
+                            this._logger.error("Error converting IDs for search", { patientId, doctorId: appointmentData.doctorId });
                             throw new AppError(MESSAGES.INVALID_ID_FORMAT, HttpStatus.BAD_REQUEST);
                         }
 
-                    
+
                         const searchDate = new Date(appointmentData.appointmentDate);
                         if (isNaN(searchDate.getTime())) {
-                            this.logger.error("Invalid appointment date provided", { date: appointmentData.appointmentDate });
+                            this._logger.error("Invalid appointment date provided", { date: appointmentData.appointmentDate });
                             throw new AppError("Invalid appointment date", HttpStatus.BAD_REQUEST);
                         }
 
-                        
+
                         const startDate = new Date(searchDate);
                         startDate.setHours(startDate.getHours() - 12);
                         const endDate = new Date(searchDate);
@@ -127,12 +127,12 @@ export class AppointmentService implements IAppointmentService {
                         }, session);
 
                         if (existingAppointment) {
-                            this.logger.info("Found existing PENDING appointment. Updating and reusing.", {
+                            this._logger.info("Found existing PENDING appointment. Updating and reusing.", {
                                 appointmentId: existingAppointment._id.toString(),
                                 previousStatus: existingAppointment.status
                             });
 
-                            
+
                             const adminCommission = (consultationFees * PAYMENT_COMMISSION.ADMIN_PERCENT) / 100;
                             const doctorEarnings = (consultationFees * PAYMENT_COMMISSION.DOCTOR_PERCENT) / 100;
 
@@ -143,14 +143,14 @@ export class AppointmentService implements IAppointmentService {
                                 doctorEarnings,
                                 reason: appointmentData.reason || existingAppointment.reason,
                                 appointmentTime: appointmentData.appointmentTime,
-                                appointmentDate: new Date(appointmentData.appointmentDate) 
+                                appointmentDate: new Date(appointmentData.appointmentDate)
                             }, session);
 
                             const populatedAppointment = await this._appointmentRepository.findByIdPopulated(updated!._id.toString());
                             return AppointmentMapper.toResponseDTO(populatedAppointment);
                         }
 
-                        this.logger.warn("Slot is booked but no matching PENDING appointment found for this user.", {
+                        this._logger.warn("Slot is booked but no matching PENDING appointment found for this user.", {
                             patientId,
                             slotId: appointmentData.slotId,
                             doctorId: appointmentData.doctorId
@@ -194,7 +194,7 @@ export class AppointmentService implements IAppointmentService {
                 );
 
                 if (!slotUpdated) {
-                    this.logger.warn("Failed to mark slot as booked - possibly already taken", {
+                    this._logger.warn("Failed to mark slot as booked - possibly already taken", {
                         slotId: appointmentData.slotId,
                         doctorId: appointmentData.doctorId
                     });
@@ -311,7 +311,7 @@ export class AppointmentService implements IAppointmentService {
         userRole: string,
         cancellationReason: string
     ): Promise<any> {
-        this.logger.info("cancelAppointment started", { appointmentId, userId, userRole });
+        this._logger.info("cancelAppointment started", { appointmentId, userId, userRole });
 
         return runInTransaction(async (session) => {
             const appointment = await this._appointmentRepository.findById(appointmentId, session);
@@ -355,7 +355,7 @@ export class AppointmentService implements IAppointmentService {
                 throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
             }
 
-            
+
             const updatedAppointment = await this._appointmentRepository.updateById(appointmentId, {
                 status: APPOINTMENT_STATUS.CANCELLED,
                 cancelledBy: userRole === ROLES.PATIENT ? "patient" : userRole === ROLES.ADMIN ? "admin" : "doctor",
@@ -363,7 +363,7 @@ export class AppointmentService implements IAppointmentService {
                 cancelledAt: new Date(),
             }, session);
 
-        
+
             if (appointment.paymentStatus === PAYMENT_STATUS.PAID) {
                 const totalFee = appointment.consultationFees;
                 const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
@@ -455,7 +455,7 @@ export class AppointmentService implements IAppointmentService {
             slotId?: string
         }
     ): Promise<any> {
-        this.logger.info("rescheduleAppointment started", { appointmentId, userId });
+        this._logger.info("rescheduleAppointment started", { appointmentId, userId });
 
         return runInTransaction(async (session) => {
             const appointment = await this._appointmentRepository.findById(appointmentId, session);
@@ -478,7 +478,7 @@ export class AppointmentService implements IAppointmentService {
                 throw new AppError(MESSAGES.APPOINTMENT_CANNOT_MODIFY, HttpStatus.BAD_REQUEST);
             }
 
-     
+
             if (appointment.slotId) {
                 const [oldStartTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
                 await this._scheduleRepository.updateSlotBookedStatus(
@@ -504,7 +504,7 @@ export class AppointmentService implements IAppointmentService {
                 }
             }
 
-          
+
             if (rescheduleData.slotId) {
                 const [newStartTime] = rescheduleData.appointmentTime.split("-").map((t: string) => t.trim());
                 const slotUpdated = await this._scheduleRepository.updateSlotBookedStatus(
@@ -521,7 +521,7 @@ export class AppointmentService implements IAppointmentService {
                 }
             }
 
-          
+
             const updatedAppointment = await this._appointmentRepository.updateById(appointmentId, {
                 appointmentDate: new Date(rescheduleData.appointmentDate),
                 appointmentTime: rescheduleData.appointmentTime,
@@ -540,10 +540,10 @@ export class AppointmentService implements IAppointmentService {
 
 
     async approveAppointmentRequest(appointmentId: string, doctorUserId: string): Promise<void> {
-        this.logger.info("approveAppointmentRequest started", { appointmentId, doctorUserId });
+        this._logger.info("approveAppointmentRequest started", { appointmentId, doctorUserId });
 
         return runInTransaction(async (session) => {
-            const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
+            const doctorId = await this._requireDoctorIdByUserId(doctorUserId);
             const appointment = await this._appointmentRepository.findById(appointmentId, session);
 
             if (!appointment) {
@@ -564,7 +564,7 @@ export class AppointmentService implements IAppointmentService {
                 status: APPOINTMENT_STATUS.CONFIRMED,
             }, session);
 
-          
+
             if (appointment.slotId) {
                 const [startTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
                 await this._scheduleRepository.updateSlotBookedStatus(
@@ -575,7 +575,7 @@ export class AppointmentService implements IAppointmentService {
                     startTime,
                     session
                 );
-                this.logger.info(`Released slot lock for ${appointment.slotId} after confirmation of appointment ${appointmentId}`);
+                this._logger.info(`Released slot lock for ${appointment.slotId} after confirmation of appointment ${appointmentId}`);
             }
 
             if (this._notificationService) {
@@ -594,10 +594,10 @@ export class AppointmentService implements IAppointmentService {
         doctorUserId: string,
         rejectionReason: string
     ): Promise<void> {
-        this.logger.info("rejectAppointmentRequest started", { appointmentId, doctorUserId });
+        this._logger.info("rejectAppointmentRequest started", { appointmentId, doctorUserId });
 
         return runInTransaction(async (session) => {
-            const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
+            const doctorId = await this._requireDoctorIdByUserId(doctorUserId);
             const appointment = await this._appointmentRepository.findById(appointmentId, session);
 
             if (!appointment) {
@@ -610,13 +610,13 @@ export class AppointmentService implements IAppointmentService {
                 throw new AppError(MESSAGES.APPOINTMENT_NOT_PENDING, HttpStatus.BAD_REQUEST);
             }
 
-        
+
             await this._appointmentRepository.updateById(appointmentId, {
                 status: APPOINTMENT_STATUS.REJECTED,
                 rejectionReason,
             }, session);
 
-        
+
             if (appointment.paymentStatus === PAYMENT_STATUS.PAID) {
                 const patient = await this._userRepository.findById(appointment.patientId.toString());
                 const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
@@ -634,7 +634,7 @@ export class AppointmentService implements IAppointmentService {
                 }, session);
             }
 
-   
+
             if (appointment.slotId) {
                 const [startTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
                 const getIdString = (value: any): string | null => {
@@ -659,7 +659,7 @@ export class AppointmentService implements IAppointmentService {
                 }
             }
 
-            
+
             if (this._notificationService) {
                 await this._notificationService.notify(appointment.patientId.toString(), {
                     title: "Appointment Rejected",
@@ -677,7 +677,7 @@ export class AppointmentService implements IAppointmentService {
         doctorNotes?: string,
         prescriptionUrl?: string
     ): Promise<void> {
-        const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
+        const doctorId = await this._requireDoctorIdByUserId(doctorUserId);
         const appointment = await this._appointmentRepository.findById(appointmentId);
 
         if (!appointment) {
@@ -698,7 +698,7 @@ export class AppointmentService implements IAppointmentService {
 
         await this._appointmentRepository.updateById(appointmentId, updateData);
 
-        
+
         if (appointment.slotId) {
             const [startTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
             await this._scheduleRepository.updateSlotBookedStatus(
@@ -708,7 +708,7 @@ export class AppointmentService implements IAppointmentService {
                 new Date(appointment.appointmentDate),
                 startTime
             );
-            this.logger.info(`Released slot ${appointment.slotId} after completion of appointment ${appointmentId}`);
+            this._logger.info(`Released slot ${appointment.slotId} after completion of appointment ${appointmentId}`);
         }
     }
 
@@ -752,7 +752,7 @@ export class AppointmentService implements IAppointmentService {
     async updateSessionStatus(
         appointmentId: string,
         userId: string,
-        status: "ACTIVE" | "WAITING_FOR_DOCTOR" | "CONTINUED_BY_DOCTOR" | "ENDED"
+        status: SessionStatus
     ): Promise<void> {
         const appointment = await this._appointmentRepository.findById(appointmentId);
         if (!appointment) {
@@ -760,8 +760,8 @@ export class AppointmentService implements IAppointmentService {
         }
 
 
-        if (appointment.sessionStatus === "ENDED") {
-            this.logger.warn("UpdateSessionStatus rejected: Session already ended", {
+        if (appointment.sessionStatus === SESSION_STATUS.ENDED) {
+            this._logger.warn("UpdateSessionStatus rejected: Session already ended", {
                 appointmentId,
                 currentStatus: appointment.sessionStatus,
                 requestedStatus: status
@@ -773,7 +773,7 @@ export class AppointmentService implements IAppointmentService {
         const isDoctor = doctor && doctor._id.toString() === appointment.doctorId.toString();
 
 
-        const canTriggerStatus = (s: string) => s === "time_over" || s === "WAITING_FOR_DOCTOR";
+        const canTriggerStatus = (s: string) => s === "time_over" || s === SESSION_STATUS.WAITING_FOR_DOCTOR;
 
         if (!isDoctor && !canTriggerStatus(status)) {
             throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
@@ -783,13 +783,13 @@ export class AppointmentService implements IAppointmentService {
             sessionStatus: status
         };
 
-        if (status === "ACTIVE") {
+        if (status === SESSION_STATUS.ACTIVE) {
             if (!appointment.sessionStartTime) {
                 updateData.sessionStartTime = new Date();
             }
-        } else if (status === "CONTINUED_BY_DOCTOR") {
+        } else if (status === SESSION_STATUS.CONTINUED_BY_DOCTOR) {
             updateData.extensionCount = (appointment.extensionCount || 0) + 1;
-        } else if (status === "ENDED") {
+        } else if (status === SESSION_STATUS.ENDED) {
             updateData.sessionEndTime = new Date();
             updateData.status = APPOINTMENT_STATUS.COMPLETED;
         }
@@ -811,14 +811,14 @@ export class AppointmentService implements IAppointmentService {
 
         socketService.emitToRoom(appointmentId, "session-status-updated", statusData);
 
-  
+
         if (this._chatService) {
             let messageContent = "";
-            if (status === "ACTIVE") {
+            if (status === SESSION_STATUS.ACTIVE) {
                 messageContent = "The doctor has started the session.";
-            } else if (status === "CONTINUED_BY_DOCTOR") {
+            } else if (status === SESSION_STATUS.CONTINUED_BY_DOCTOR) {
                 messageContent = `The doctor has extended the session. (Extension #${updateData.extensionCount})`;
-            } else if (status === "ENDED") {
+            } else if (status === SESSION_STATUS.ENDED) {
                 messageContent = "The consultation has been concluded.";
             }
 
@@ -840,7 +840,7 @@ export class AppointmentService implements IAppointmentService {
             }
         }
 
-        if (updateData.sessionStatus === "ENDED") {
+        if (updateData.sessionStatus === SESSION_STATUS.ENDED) {
             const endData = { appointmentId };
             if (pUserId) socketService.emitToUser(pUserId, "session-ended", endData);
             if (dUserId) socketService.emitToUser(dUserId, "session-ended", endData);
@@ -854,14 +854,14 @@ export class AppointmentService implements IAppointmentService {
             throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
         }
 
-        const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
+        const doctorId = await this._requireDoctorIdByUserId(doctorUserId);
         const apptDoctorId = (appointment.doctorId as any)?._id?.toString() || (appointment.doctorId as any)?.toString();
 
         if (apptDoctorId !== doctorId) {
             throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        
+
         if (appointment.status !== APPOINTMENT_STATUS.COMPLETED) {
             throw new AppError("Chat can only be enabled for completed appointments", HttpStatus.BAD_REQUEST);
         }
@@ -870,7 +870,7 @@ export class AppointmentService implements IAppointmentService {
         expiresAt.setHours(expiresAt.getHours() + 24);
 
         await this._appointmentRepository.updateById(appointmentId, {
-            sessionStatus: "TEST_NEEDED",
+            sessionStatus: SESSION_STATUS.TEST_NEEDED,
             TEST_NEEDED: true,
             postConsultationChatWindow: {
                 isActive: true,
@@ -917,7 +917,7 @@ export class AppointmentService implements IAppointmentService {
             const statusUpdate = {
                 appointmentId: realAptId,
                 customId: appointment.customId,
-                status: "TEST_NEEDED",
+                status: SESSION_STATUS.TEST_NEEDED,
                 TEST_NEEDED: true,
                 postConsultationChatWindow: {
                     isActive: true,
@@ -932,7 +932,7 @@ export class AppointmentService implements IAppointmentService {
             const dUserId = doctorData?.userId?._id?.toString() || doctorData?.userId?.toString() || doctorData?._id?.toString() || doctorData?.toString();
 
             socketService.emitToRoom(realAptId, "session-status-updated", statusUpdate);
-           
+
             if (persistentRoomId) socketService.emitToRoom(persistentRoomId, "session-status-updated", statusUpdate);
 
             if (pUserId) socketService.emitToUser(pUserId, "session-status-updated", statusUpdate);
@@ -946,7 +946,7 @@ export class AppointmentService implements IAppointmentService {
             throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
         }
 
-        const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
+        const doctorId = await this._requireDoctorIdByUserId(doctorUserId);
         const apptDoctorId = (appointment.doctorId as any)?._id?.toString() || (appointment.doctorId as any)?.toString();
 
         if (apptDoctorId !== doctorId) {
@@ -954,7 +954,7 @@ export class AppointmentService implements IAppointmentService {
         }
 
         await this._appointmentRepository.updateById(appointmentId, {
-            sessionStatus: "ENDED",
+            sessionStatus: SESSION_STATUS.ENDED,
             TEST_NEEDED: false,
             postConsultationChatWindow: {
                 isActive: false,
@@ -990,7 +990,7 @@ export class AppointmentService implements IAppointmentService {
 
             const statusUpdate = {
                 appointmentId: realAptId,
-                status: "ENDED",
+                status: SESSION_STATUS.ENDED,
                 TEST_NEEDED: false,
                 postConsultationChatWindow: {
                     isActive: false,
@@ -1009,7 +1009,7 @@ export class AppointmentService implements IAppointmentService {
             if (dUserId) socketService.emitToUser(dUserId, "session-status-updated", statusUpdate);
 
             await this._appointmentRepository.updateById(realAptId, {
-                sessionStatus: "ENDED"
+                sessionStatus: SESSION_STATUS.ENDED
             });
 
             socketService.emitToRoom(realAptId, "session-ended", { appointmentId: realAptId });
@@ -1019,17 +1019,17 @@ export class AppointmentService implements IAppointmentService {
     }
 
     async updateDoctorNotes(appointmentId: string, doctorUserId: string, note: any): Promise<void> {
-        this.logger.info("Updating doctor notes", { appointmentId, doctorUserId, note });
+        this._logger.info("Updating doctor notes", { appointmentId, doctorUserId, note });
 
         const appointment = await this._appointmentRepository.findById(appointmentId);
         if (!appointment) {
-            this.logger.warn("Appointment not found for note update", { appointmentId });
+            this._logger.warn("Appointment not found for note update", { appointmentId });
             throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
         }
 
-        const doctorId = await this.requireDoctorIdByUserId(doctorUserId);
+        const doctorId = await this._requireDoctorIdByUserId(doctorUserId);
         if (appointment.doctorId.toString() !== doctorId) {
-            this.logger.warn("Unauthorized attempt to update notes", { appointmentId, doctorUserId });
+            this._logger.warn("Unauthorized attempt to update notes", { appointmentId, doctorUserId });
             throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
         }
 
@@ -1038,10 +1038,10 @@ export class AppointmentService implements IAppointmentService {
         });
 
         if (!result) {
-            this.logger.error("Failed to update doctor notes in database", { appointmentId });
+            this._logger.error("Failed to update doctor notes in database", { appointmentId });
             throw new AppError("Failed to update notes", HttpStatus.INTERNAL_ERROR);
         }
 
-        this.logger.info("Doctor notes updated successfully", { appointmentId });
+        this._logger.info("Doctor notes updated successfully", { appointmentId });
     }
 }

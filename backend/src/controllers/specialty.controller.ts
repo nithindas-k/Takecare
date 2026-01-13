@@ -23,7 +23,7 @@ export class SpecialtyController {
 
       const specialty = await this._specialtyService.createSpecialty({ name: name.trim(), description });
       sendSuccess(res, specialty, "Specialty created successfully", STATUS.CREATED);
-    } catch (error: any) {
+    } catch (error: unknown) {
       next(error);
     }
   };
@@ -33,7 +33,7 @@ export class SpecialtyController {
       const { id } = req.params;
       const specialty = await this._specialtyService.getSpecialtyById(id);
       sendSuccess(res, specialty, "Specialty fetched successfully", STATUS.OK);
-    } catch (error: any) {
+    } catch (error: unknown) {
       next(error);
     }
   };
@@ -46,7 +46,7 @@ export class SpecialtyController {
 
       const result = await this._specialtyService.getAllSpecialties(page, limit, search);
       sendSuccess(res, result, "Specialties fetched successfully", STATUS.OK);
-    } catch (error: any) {
+    } catch (error: unknown) {
       next(error);
     }
   };
@@ -63,7 +63,7 @@ export class SpecialtyController {
 
       const specialty = await this._specialtyService.updateSpecialty(id, updateData);
       sendSuccess(res, specialty, "Specialty updated successfully", STATUS.OK);
-    } catch (error: any) {
+    } catch (error: unknown) {
       next(error);
     }
   };
@@ -73,7 +73,7 @@ export class SpecialtyController {
       const { id } = req.params;
       await this._specialtyService.deleteSpecialty(id);
       sendSuccess(res, null, "Specialty deleted successfully", STATUS.OK);
-    } catch (error: any) {
+    } catch (error: unknown) {
       next(error);
     }
   };
@@ -83,7 +83,7 @@ export class SpecialtyController {
       const { id } = req.params;
       const specialty = await this._specialtyService.toggleSpecialtyStatus(id);
       sendSuccess(res, specialty, "Specialty status updated successfully", STATUS.OK);
-    } catch (error: any) {
+    } catch (error: unknown) {
       next(error);
     }
   };
@@ -92,7 +92,7 @@ export class SpecialtyController {
     try {
       const specialties = await this._specialtyService.getActiveSpecialties();
       sendSuccess(res, specialties, "Active specialties fetched successfully", STATUS.OK);
-    } catch (error: any) {
+    } catch (error: unknown) {
       next(error);
     }
   };

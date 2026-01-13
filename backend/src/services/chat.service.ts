@@ -1,14 +1,15 @@
-import { IChatService } from "./interfaces/IChatService";
+import { IChatService, ConversationItem } from "./interfaces/IChatService";
 import { IMessageRepository } from "../repositories/interfaces/IMessage.repository";
 import { IAppointmentRepository } from "../repositories/interfaces/IAppointmentRepository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
+import { IAppointmentPopulated } from "../types/appointment.type";
 import { IMessage } from "../models/message.model";
 import { LoggerService } from "./logger.service";
 import { socketService } from "./socket.service";
 import { AppError } from "../errors/AppError";
 import { HttpStatus } from "../constants/constants";
 import { Types } from "mongoose";
-
+import { SESSION_STATUS } from "../utils/sessionStatus.util";
 import { ILoggerService } from "./interfaces/ILogger.service";
 
 export class ChatService implements IChatService {
@@ -16,7 +17,7 @@ export class ChatService implements IChatService {
         private _messageRepository: IMessageRepository,
         private _appointmentRepository: IAppointmentRepository,
         private _doctorRepository: IDoctorRepository,
-        private logger: ILoggerService
+        private _logger: ILoggerService
     ) {
     }
 
@@ -29,15 +30,15 @@ export class ChatService implements IChatService {
         fileName?: string
     ): Promise<IMessage> {
         return await this._messageRepository.create({
-            appointmentId: new Types.ObjectId(appointmentId) as any,
-            senderId: new Types.ObjectId(senderId) as any,
+            appointmentId: new Types.ObjectId(appointmentId),
+            senderId: new Types.ObjectId(senderId),
             senderModel,
             content,
             fileName,
             type,
             read: false,
             isDeleted: false
-        } as any);
+        });
     }
 
     async sendMessage(
@@ -56,8 +57,8 @@ export class ChatService implements IChatService {
         let targetAppointment = appointment;
         const now = new Date();
 
-        const isSessionActive = (apt: any) => {
-            if (apt.sessionStatus !== "ENDED" && apt.status !== "completed") return true;
+        const isSessionActive = (apt: IAppointmentDocument) => {
+            if (apt.sessionStatus !== SESSION_STATUS.ENDED && apt.status !== "completed") return true;
             const window = apt.postConsultationChatWindow;
             return window?.isActive && window.expiresAt && new Date(window.expiresAt) > now;
         };
@@ -75,7 +76,7 @@ export class ChatService implements IChatService {
             }
         }
 
-        const realAppointmentId = (targetAppointment as any)._id.toString();
+        const realAppointmentId = targetAppointment._id.toString();
 
         let senderModel: 'User' | 'Doctor' = 'User';
         let actualSenderId = userId;
@@ -98,15 +99,15 @@ export class ChatService implements IChatService {
             fileName
         );
 
-        const patient = await (this as any)._appointmentRepository.findByIdPopulated(realAppointmentId);
-        const patientUserId = patient?.patientId?._id?.toString() || patient?.patientId?.toString();
-        const doctorUserId = patient?.doctorId?.userId?._id?.toString() || patient?.doctorId?.userId?.toString();
+        const patient = await this._appointmentRepository.findByIdPopulated(realAppointmentId);
+        const patientUserId = patient?.patient?.id || patient?.patientId?.toString();
+        const doctorUserId = patient?.doctor?.user?.id || patient?.doctor?.userId?.toString();
 
         console.log(`[CHAT_SERVICE] Broadcasting to users: ${patientUserId}, ${doctorUserId}`);
 
-       
-        const pId = patient?.patientId?._id?.toString() || patient?.patientId?.toString();
-        const dId = (patient?.doctorId as any)?._id?.toString() || (patient?.doctorId as any)?.toString();
+
+        const pId = patient?.patient?.id || patient?.patientId?.toString();
+        const dId = patient?.doctor?.id || patient?.doctorId?.toString();
         let persistentRoomId = "";
         if (pId && dId) {
             persistentRoomId = `persistent-${pId}-${dId}`;
@@ -114,7 +115,7 @@ export class ChatService implements IChatService {
 
         const messagePayload = {
             ...message.toObject(),
-            id: (message as any)._id.toString(),
+            id: message._id.toString(),
             persistentRoomId
         };
 
@@ -125,7 +126,7 @@ export class ChatService implements IChatService {
             socketService.emitToRoom(persistentRoomId, "receive-message", messagePayload);
         }
 
-      
+
         socketService.emitMessage(realAppointmentId, messagePayload);
 
         return message;
@@ -145,7 +146,7 @@ export class ChatService implements IChatService {
             doctorId
         }, 0, 1000);
 
-        const allIds = appointments.map((a: any) => a._id.toString());
+        const allIds = appointments.map((a) => a._id.toString());
         return await this._messageRepository.findByAppointmentIds(allIds);
     }
 
@@ -157,21 +158,21 @@ export class ChatService implements IChatService {
         const doctorId = appointment.doctorId.toString();
 
         const { appointments } = await this._appointmentRepository.findAll({ patientId, doctorId }, 0, 1000);
-        const allIds = appointments.map((a: any) => a._id.toString());
+        const allIds = appointments.map((a) => a._id.toString());
 
         let excludeSenderId = userId;
         if (userModel === 'Doctor') {
             const doctor = await this._doctorRepository.findByUserId(userId);
             if (doctor) {
-                excludeSenderId = (doctor as any)._id.toString();
+                excludeSenderId = doctor._id.toString();
             }
         }
 
         await this._messageRepository.markAsReadByIds(allIds, excludeSenderId);
     }
 
-    async getConversations(userId: string, userRole: string): Promise<any[]> {
-        let appointmentsResult: { appointments: any[], total: number };
+    async getConversations(userId: string, userRole: string): Promise<ConversationItem[]> {
+        let appointmentsResult: { appointments: IAppointmentPopulated[], total: number };
 
         if (userRole === 'doctor') {
             const doctor = await this._doctorRepository.findByUserId(userId);
@@ -188,7 +189,7 @@ export class ChatService implements IChatService {
         const { appointments } = appointmentsResult;
 
 
-        const groups = new Map<string, any[]>();
+        const groups = new Map<string, IAppointmentPopulated[]>();
         appointments.forEach(apt => {
             const pId = apt.patientId?._id?.toString() || apt.patientId?.toString();
             const dId = apt.doctorId?._id?.toString() || apt.doctorId?.toString();
@@ -233,7 +234,7 @@ export class ChatService implements IChatService {
             })
         );
 
-        return (conversations.filter(c => c !== null) as any[])
+        return (conversations.filter((c): c is ConversationItem => c !== null))
             .sort((a, b) => new Date(b.lastMessage.createdAt).getTime() - new Date(a.lastMessage.createdAt).getTime());
     }
 
@@ -243,7 +244,7 @@ export class ChatService implements IChatService {
             throw new AppError('Message not found', HttpStatus.NOT_FOUND);
         }
 
-    
+
         let actualUserId = userId;
         const doctor = await this._doctorRepository.findByUserId(userId);
         if (doctor) {
@@ -254,7 +255,7 @@ export class ChatService implements IChatService {
             throw new AppError('Unauthorized to edit this message', HttpStatus.FORBIDDEN);
         }
 
-        
+
         if (message.isDeleted) {
             throw new AppError('Cannot edit a deleted message', HttpStatus.BAD_REQUEST);
         }
@@ -299,9 +300,9 @@ export class ChatService implements IChatService {
             throw new AppError('Failed to delete message', HttpStatus.INTERNAL_ERROR);
         }
 
-        const appointmentId = (updated as any).appointmentId.toString();
+        const appointmentId = updated.appointmentId.toString();
         socketService.emitToRoom(appointmentId, 'delete-message', {
-            messageId: (updated as any)._id.toString(),
+            messageId: updated._id.toString(),
             appointmentId
         });
 

@@ -17,7 +17,7 @@ export class DoctorService implements IDoctorService {
     private _doctorRepository: IDoctorRepository,
     private _userRepository: IUserRepository,
     private _appointmentRepository: IAppointmentRepository,
-    private logger: ILoggerService
+    private _logger: ILoggerService
   ) {
   }
 

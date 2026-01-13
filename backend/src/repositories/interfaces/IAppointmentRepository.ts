@@ -1,25 +1,25 @@
-import { Types } from "mongoose";
-import { IAppointmentDocument, DashboardStats, DoctorDashboardStats } from "../../types/appointment.type";
+import { Types, ClientSession } from "mongoose";
+import { IAppointmentDocument, DashboardStats, DoctorDashboardStats, IAppointmentPopulated } from "../../types/appointment.type";
 import { IBaseRepository } from "./IBase.repository";
 
 export interface IAppointmentRepository extends IBaseRepository<IAppointmentDocument> {
-    create(appointmentData: any, session?: any): Promise<IAppointmentDocument>;
-    findById(appointmentId: string, session?: any): Promise<IAppointmentDocument | null>;
-    findByIdPopulated(appointmentId: string, session?: any): Promise<any>;
+    create(appointmentData: Partial<IAppointmentDocument>, session?: ClientSession | undefined): Promise<IAppointmentDocument>;
+    findById(appointmentId: string, session?: ClientSession | undefined): Promise<IAppointmentDocument | null>;
+    findByIdPopulated(appointmentId: string, session?: ClientSession | undefined): Promise<IAppointmentPopulated | null>;
     findByPatientId(
         patientId: string,
         status?: string,
         skip?: number,
         limit?: number,
-        session?: any
-    ): Promise<{ appointments: any[]; total: number }>;
+        session?: ClientSession | undefined
+    ): Promise<{ appointments: IAppointmentPopulated[]; total: number }>;
     findByDoctorId(
         doctorId: string,
         status?: string,
         skip?: number,
         limit?: number,
-        session?: any
-    ): Promise<{ appointments: any[]; total: number }>;
+        session?: ClientSession | undefined
+    ): Promise<{ appointments: IAppointmentPopulated[]; total: number }>;
     findAll(
         filters: {
             status?: string;
@@ -31,14 +31,14 @@ export interface IAppointmentRepository extends IBaseRepository<IAppointmentDocu
         },
         skip?: number,
         limit?: number,
-        session?: any
-    ): Promise<{ appointments: any[]; total: number }>;
-    updateById(appointmentId: string, updateData: any, session?: any): Promise<IAppointmentDocument | null>;
-    deleteById(appointmentId: string, session?: any): Promise<any>;
+        session?: ClientSession | undefined
+    ): Promise<{ appointments: IAppointmentPopulated[]; total: number }>;
+    updateById(appointmentId: string, updateData: Partial<IAppointmentDocument>, session?: ClientSession | undefined): Promise<IAppointmentDocument | null>;
+    deleteById(appointmentId: string, session?: ClientSession | undefined): Promise<IAppointmentDocument | null>;
     countByStatus(status: string): Promise<number>;
     countByDoctorId(doctorId: string, status?: string): Promise<number>;
     countByPatientId(patientId: string, status?: string): Promise<number>;
-    findOne(filter: Record<string, any>, session?: any): Promise<IAppointmentDocument | null>;
+    findOne(filter: Record<string, unknown>, session?: ClientSession | undefined): Promise<IAppointmentDocument | null>;
     getAdminDashboardStats(startDate?: Date, endDate?: Date): Promise<DashboardStats>;
     getDoctorDashboardStats(doctorId: string, startDate?: Date, endDate?: Date): Promise<DoctorDashboardStats>;
 }

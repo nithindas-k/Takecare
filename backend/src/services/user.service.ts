@@ -2,6 +2,7 @@ import { IUserService } from "./interfaces/IUserService";
 import { UserResponseDTO, UnifiedUserProfileResponseDTO, UnifiedUpdateProfileDTO } from "../dtos/user.dtos/user.dto";
 import { UserMapper } from "../mappers/user.mapper";
 import { IUserDocument } from "../types/user.type";
+import { IDoctorDocument } from "../types/doctor.type";
 import { AppointmentListItem } from "../types/common";
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
@@ -10,26 +11,26 @@ import { MESSAGES, ROLES } from "../constants/constants";
 
 export class UserService implements IUserService {
   constructor(
-    private userRepository: IUserRepository,
-    private doctorRepository: IDoctorRepository
+    private _userRepository: IUserRepository,
+    private _doctorRepository: IDoctorRepository
   ) { }
 
   async getUserProfile(userId: string): Promise<UnifiedUserProfileResponseDTO> {
-    const user = await this.userRepository.findById(userId);
+    const user = await this._userRepository.findById(userId);
     if (!user) {
       throw new NotFoundError(MESSAGES.USER_NOT_FOUND);
     }
 
     let doctor = null;
     if (user.role === ROLES.DOCTOR) {
-      doctor = await this.doctorRepository.findByUserId(userId);
+      doctor = await this._doctorRepository.findByUserId(userId);
     }
 
     return UserMapper.toUnifiedProfileDTO(user, doctor);
   }
 
   async updateUserProfile(userId: string, data: UnifiedUpdateProfileDTO, imageFile?: Express.Multer.File): Promise<UnifiedUserProfileResponseDTO> {
-    const user = await this.userRepository.findById(userId);
+    const user = await this._userRepository.findById(userId);
     if (!user) {
       throw new NotFoundError(MESSAGES.USER_NOT_FOUND);
     }
@@ -58,13 +59,22 @@ export class UserService implements IUserService {
       updateData.dob = typeof info.dob === 'string' ? new Date(info.dob) : info.dob;
     }
 
-    await this.userRepository.updateById(userId, updateData);
+    await this._userRepository.updateById(userId, updateData);
 
     let doctor = null;
     if (user.role === ROLES.DOCTOR) {
-      doctor = await this.doctorRepository.findByUserId(userId);
+      doctor = await this._doctorRepository.findByUserId(userId);
       if (doctor) {
-        const doctorUpdates: any = {};
+        const doctorUpdates: Partial<IDoctorDocument> & {
+          specialty?: string;
+          qualifications?: string[];
+          experienceYears?: number;
+          VideoFees?: number;
+          ChatFees?: number;
+          languages?: string[];
+          licenseNumber?: string;
+          about?: string;
+        } = {};
         if (additionalInfo.specialty) doctorUpdates.specialty = additionalInfo.specialty;
         if (additionalInfo.qualifications) doctorUpdates.qualifications = additionalInfo.qualifications;
         if (additionalInfo.experienceYears) doctorUpdates.experienceYears = additionalInfo.experienceYears;
@@ -75,26 +85,26 @@ export class UserService implements IUserService {
         if (additionalInfo.about) doctorUpdates.about = additionalInfo.about;
 
         if (Object.keys(doctorUpdates).length > 0) {
-          await this.doctorRepository.updateById(doctor._id, doctorUpdates);
+          await this._doctorRepository.updateById(doctor._id, doctorUpdates);
         }
       }
     }
 
 
-    const updatedUser = await this.userRepository.findById(userId);
+    const updatedUser = await this._userRepository.findById(userId);
     if (user.role === ROLES.DOCTOR) {
-      doctor = await this.doctorRepository.findByUserId(userId);
+      doctor = await this._doctorRepository.findByUserId(userId);
     }
 
     return UserMapper.toUnifiedProfileDTO(updatedUser!, doctor);
   }
 
   async deleteUserAccount(userId: string): Promise<void> {
-    const user = await this.userRepository.findById(userId);
+    const user = await this._userRepository.findById(userId);
     if (!user) {
       throw new NotFoundError(MESSAGES.USER_NOT_FOUND);
     }
-    await this.userRepository.updateById(userId, { isActive: false });
+    await this._userRepository.updateById(userId, { isActive: false });
   }
 
   async getUserAppointments(userId: string): Promise<AppointmentListItem[]> {

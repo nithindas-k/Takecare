@@ -7,19 +7,19 @@ import { AppError } from "../errors/AppError";
 import { ILoggerService } from "./interfaces/ILogger.service";
 
 export class EmailService implements IEmailService {
-  private transporter: Transporter;
-  private readonly fromAddress: string;
+  private _transporter: Transporter;
+  private readonly _fromAddress: string;
 
-  constructor(private logger: ILoggerService, config?: SmtpConfig) {
-    const emailConfig = config || this.getDefaultConfig();
+  constructor(private _logger: ILoggerService, config?: SmtpConfig) {
+    const emailConfig = config || this._getDefaultConfig();
 
-    this.transporter = nodemailer.createTransport(emailConfig);
-    this.fromAddress = `"TakeCare" <${env.SMTP_USER}>`;
+    this._transporter = nodemailer.createTransport(emailConfig);
+    this._fromAddress = `"TakeCare" <${env.SMTP_USER}>`;
 
-    this.verifyConnection();
+    this._verifyConnection();
   }
 
-  private getDefaultConfig(): SmtpConfig {
+  private _getDefaultConfig(): SmtpConfig {
     const emailUser = env.SMTP_USER;
     const emailPass = env.SMTP_PASS;
     const emailHost = env.SMTP_HOST;
@@ -43,17 +43,17 @@ export class EmailService implements IEmailService {
     };
   }
 
-  private async verifyConnection(): Promise<void> {
+  private async _verifyConnection(): Promise<void> {
     try {
-      await this.transporter.verify();
-      this.logger.info("Email server is ready");
+      await this._transporter.verify();
+      this._logger.info("Email server is ready");
     } catch (error: any) {
-      this.logger.error("Email server connection failed", error);
+      this._logger.error("Email server connection failed", error);
     }
   }
 
   async sendEmail(config: EmailConfig): Promise<void> {
-    await this.transporter.sendMail({
+    await this._transporter.sendMail({
       from: config.from,
       to: config.to,
       subject: config.subject,
@@ -63,19 +63,19 @@ export class EmailService implements IEmailService {
 
   async sendOtpEmail(email: string, name: string, otp: string): Promise<void> {
     try {
-      const html = this.getOTPTemplate(otp, name);
+      const html = this._getOTPTemplate(otp, name);
 
       const mailOptions = {
-        from: this.fromAddress,
+        from: this._fromAddress,
         to: email,
         subject: "Your OTP for Registration - TakeCare",
         html,
       };
 
-      const info = await this.transporter.sendMail(mailOptions);
-      this.logger.info("OTP email sent successfully", { messageId: info.messageId });
+      const info = await this._transporter.sendMail(mailOptions);
+      this._logger.info("OTP email sent successfully", { messageId: info.messageId });
     } catch (error: any) {
-      this.logger.error("OTP email sending failed", error);
+      this._logger.error("OTP email sending failed", error);
       throw new AppError(
         MESSAGES.EMAIL_SEND_FAILED.replace("{error}", String(error?.message || error)),
         HttpStatus.INTERNAL_ERROR
@@ -89,19 +89,19 @@ export class EmailService implements IEmailService {
     otp: string
   ): Promise<void> {
     try {
-      const html = this.getPasswordResetTemplate(otp, name);
+      const html = this._getPasswordResetTemplate(otp, name);
 
       const mailOptions = {
-        from: this.fromAddress,
+        from: this._fromAddress,
         to: email,
         subject: "Password Reset OTP - TakeCare",
         html,
       };
 
-      const info = await this.transporter.sendMail(mailOptions);
-      this.logger.info("Password reset email sent successfully", { messageId: info.messageId });
+      const info = await this._transporter.sendMail(mailOptions);
+      this._logger.info("Password reset email sent successfully", { messageId: info.messageId });
     } catch (error: any) {
-      this.logger.error("Password reset email sending failed", error);
+      this._logger.error("Password reset email sending failed", error);
       throw new AppError(
         MESSAGES.EMAIL_SEND_FAILED.replace("{error}", String(error?.message || error)),
         HttpStatus.INTERNAL_ERROR
@@ -111,19 +111,19 @@ export class EmailService implements IEmailService {
 
   async sendWelcomeEmail(email: string, name: string): Promise<void> {
     try {
-      const html = this.getWelcomeTemplate(name);
+      const html = this._getWelcomeTemplate(name);
 
       const mailOptions = {
-        from: this.fromAddress,
+        from: this._fromAddress,
         to: email,
         subject: "Welcome to TakeCare!",
         html,
       };
 
-      const info = await this.transporter.sendMail(mailOptions);
-      this.logger.info("Welcome email sent successfully", { messageId: info.messageId });
+      const info = await this._transporter.sendMail(mailOptions);
+      this._logger.info("Welcome email sent successfully", { messageId: info.messageId });
     } catch (error: any) {
-      this.logger.error("Welcome email sending failed", error);
+      this._logger.error("Welcome email sending failed", error);
       throw new AppError(
         MESSAGES.EMAIL_SEND_FAILED.replace("{error}", String(error?.message || error)),
         HttpStatus.INTERNAL_ERROR
@@ -137,19 +137,19 @@ export class EmailService implements IEmailService {
     verificationLink: string
   ): Promise<void> {
     try {
-      const html = this.getVerificationTemplate(name, verificationLink);
+      const html = this._getVerificationTemplate(name, verificationLink);
 
       const mailOptions = {
-        from: this.fromAddress,
+        from: this._fromAddress,
         to: email,
         subject: "Verify Your Email - TakeCare",
         html,
       };
 
-      const info = await this.transporter.sendMail(mailOptions);
-      this.logger.info("Verification email sent successfully", { messageId: info.messageId });
+      const info = await this._transporter.sendMail(mailOptions);
+      this._logger.info("Verification email sent successfully", { messageId: info.messageId });
     } catch (error: any) {
-      this.logger.error("Verification email sending failed", error);
+      this._logger.error("Verification email sending failed", error);
       throw new AppError(
         MESSAGES.EMAIL_SEND_FAILED.replace("{error}", String(error?.message || error)),
         HttpStatus.INTERNAL_ERROR
@@ -179,15 +179,15 @@ export class EmailService implements IEmailService {
         </div>
       `;
 
-      await this.transporter.sendMail({
-        from: this.fromAddress,
+      await this._transporter.sendMail({
+        from: this._fromAddress,
         to: env.SMTP_USER, // Send to the admin (self)
         subject: `[Contact Form] ${data.subject}`,
         html
       });
-      this.logger.info("Contact notification email sent");
+      this._logger.info("Contact notification email sent");
     } catch (error: any) {
-      this.logger.error("Failed to send contact notification email", error);
+      this._logger.error("Failed to send contact notification email", error);
     }
   }
 
@@ -227,20 +227,20 @@ export class EmailService implements IEmailService {
         </div>
       `;
 
-      await this.transporter.sendMail({
-        from: this.fromAddress,
+      await this._transporter.sendMail({
+        from: this._fromAddress,
         to: userEmail,
         subject: `Re: ${originalSubject} - TakeCare Support`,
         html
       });
-      this.logger.info("Reply email sent to user", { userEmail });
+      this._logger.info("Reply email sent to user", { userEmail });
     } catch (error: any) {
-      this.logger.error("Failed to send contact reply email", error);
+      this._logger.error("Failed to send contact reply email", error);
       throw new AppError("Failed to send reply email", HttpStatus.INTERNAL_ERROR);
     }
   }
 
-  private getOTPTemplate(otp: string, name: string): string {
+  private _getOTPTemplate(otp: string, name: string): string {
     const expiryText = `${CONFIG.OTP_EXPIRY_MINUTES} minute${CONFIG.OTP_EXPIRY_MINUTES === 1 ? "" : "s"}`;
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 10px;">
@@ -282,7 +282,7 @@ export class EmailService implements IEmailService {
     `;
   }
 
-  private getPasswordResetTemplate(otp: string, name: string): string {
+  private _getPasswordResetTemplate(otp: string, name: string): string {
     const expiryText = `${CONFIG.OTP_EXPIRY_MINUTES} minute${CONFIG.OTP_EXPIRY_MINUTES === 1 ? "" : "s"}`;
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 10px;">
@@ -327,7 +327,7 @@ export class EmailService implements IEmailService {
     `;
   }
 
-  private getWelcomeTemplate(name: string): string {
+  private _getWelcomeTemplate(name: string): string {
     const dashboardUrl = `${env.CLIENT_URL}/dashboard`;
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 10px;">
@@ -362,7 +362,7 @@ export class EmailService implements IEmailService {
     `;
   }
 
-  private getVerificationTemplate(
+  private _getVerificationTemplate(
     name: string,
     verificationLink: string
   ): string {

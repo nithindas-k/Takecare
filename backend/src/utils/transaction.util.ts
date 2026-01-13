@@ -24,17 +24,17 @@ export const runInTransaction = async <T>(
 
         await session.commitTransaction();
         return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
         if (transactionStarted) {
             await session.abortTransaction();
         }
 
-       
+        const err = error as { message?: string; code?: number; codeName?: string };
         if (
-            error.message &&
-            (error.message.includes("Transaction numbers are only allowed on a replica set member") ||
-                error.code === 20 ||
-                error.codeName === "IllegalOperation")
+            err.message &&
+            (err.message.includes("Transaction numbers are only allowed on a replica set member") ||
+                err.code === 20 ||
+                err.codeName === "IllegalOperation")
         ) {
             console.warn("MongoDB Transaction failed (likely standalone instance). Retrying without transaction.");
           

@@ -19,10 +19,13 @@ import {
 import { appointmentService } from '../../services/appointmentService';
 import { paymentService } from '../../services/paymentService';
 import { toast } from 'sonner';
+import { useSelector } from 'react-redux';
+import { selectCurrentUser } from '../../redux/user/userSlice';
 
 const PaymentPage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const user = useSelector(selectCurrentUser);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [policyOpen, setPolicyOpen] = useState(false);
     const [bookingData, setBookingData] = useState<any>(null);
@@ -76,8 +79,18 @@ const PaymentPage: React.FC = () => {
             let appointmentId = existingAppointmentId;
 
             if (!appointmentId) {
+                // Get patientId from Redux store (same pattern as ChatPage and VideoCallPage)
+                const patientId = user?.id || (user as any)?._id;
+
+                if (!patientId) {
+                    toast.error('Patient ID not found. Please login again.');
+                    navigate('/patient/login');
+                    return;
+                }
+
                 const appointmentPayload = {
                     doctorId: bookingData.doctorId,
+                    patientId: patientId,
                     appointmentDate: bookingData.appointmentDate,
                     appointmentTime: bookingData.appointmentTime,
                     slotId: bookingData.slotId,

@@ -3,13 +3,17 @@ import DoctorNavbar from '../../components/Doctor/DoctorNavbar';
 import DoctorLayout from '../../components/Doctor/DoctorLayout';
 import Breadcrumbs from '../../components/common/Breadcrumbs';
 import AlertDialog from '../../components/common/AlertDialog';
-import { FaPlus, FaTrash, FaClock, FaToggleOn, FaToggleOff, FaCalendarTimes } from 'react-icons/fa';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { FaPlus, FaTrash, FaClock, FaToggleOn, FaToggleOff, FaCalendarTimes, FaRedo, FaExclamationTriangle, FaTimes } from 'react-icons/fa';
 import doctorService from '../../services/doctorService';
 import { toast } from 'sonner';
 import { Skeleton } from '../../components/ui/skeleton';
 
 interface TimeSlot {
     id: string;
+    customId?: string;
     startTime: string;
     endTime: string;
     enabled: boolean;
@@ -47,91 +51,93 @@ const DoctorSchedule: React.FC = () => {
     const [slotToDelete, setSlotToDelete] = useState<{ dayIndex: number; slotId: string; dayName: string; slotTime: string } | null>(null);
     const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
     const [newBlockDate, setNewBlockDate] = useState('');
+    const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
+    const [commonSlots, setCommonSlots] = useState<{ startTime: string; endTime: string; customId: string; count: number }[]>([]);
+    const [selectedCommonSlots, setSelectedCommonSlots] = useState<string[]>([]);
+    const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
     const [newBlockReason, setNewBlockReason] = useState('');
-    const [activeTab, setActiveTab] = useState<'available' | 'unavailable'>('available');
+    const [activeTab, setActiveTab] = useState<'available' | 'unavailable' | 'recurring'>('available');
     const [blockSubmitting, setBlockSubmitting] = useState(false);
     const [blockWholeDay, setBlockWholeDay] = useState(true);
     const [selectedBlockSlots, setSelectedBlockSlots] = useState<string[]>([]);
+    
+    
+    const [recurringStartTime, setRecurringStartTime] = useState('');
+    const [recurringEndTime, setRecurringEndTime] = useState('');
+    const [selectedDays, setSelectedDays] = useState<string[]>([]);
+    const [overlapDialogOpen, setOverlapDialogOpen] = useState(false);
+    const [overlapInfo, setOverlapInfo] = useState<{ overlappingDays: string[], nonOverlappingDays: string[] } | null>(null);
 
 
-    const fetchSchedule = useCallback(async () => {
-        setLoading(true);
-        try {
-            const response = await doctorService.getSchedule();
-            console.log('Schedule response:', JSON.stringify(response, null, 2));
+  const fetchSchedule = useCallback(async () => {
+    setLoading(true);
+    try {
+        const response = await doctorService.getSchedule();
 
-            if (response?.success && response.data) {
-                const scheduleData = response.data;
-                console.log('Schedule data:', JSON.stringify(scheduleData, null, 2));
-                setHasSchedule(true);
+        if (response?.success && response.data) {
+            const scheduleData = response.data;
+            setHasSchedule(true);
 
-                const scheduleMap = new Map();
-                if (scheduleData.weeklySchedule && Array.isArray(scheduleData.weeklySchedule)) {
-                    scheduleData.weeklySchedule.forEach((daySchedule: any) => {
-                        scheduleMap.set(daySchedule.day, daySchedule);
-                    });
-                }
-
-                if (scheduleData.blockedDates && Array.isArray(scheduleData.blockedDates)) {
-                    setBlockedDates(scheduleData.blockedDates);
-                }
-
-                console.log('Schedule map size:', scheduleMap.size);
-
-
-                const transformedSchedule = DAYS_OF_WEEK.map((day) => {
-                    const backendDay = scheduleMap.get(day);
-                    if (backendDay) {
-                        const slots = (backendDay.slots || []).map((slot: any, slotIndex: number) => {
-                            const slotData = {
-
-                                id: `slot-${day}-${slot.startTime || '09:00'}-${slot.endTime || '10:00'}-${slotIndex}`,
-                                startTime: slot.startTime || '09:00',
-                                endTime: slot.endTime || '10:00',
-                                enabled: slot.enabled !== undefined ? slot.enabled : true,
-                            };
-                            console.log(`Slot ${slotIndex} for ${day}:`, slotData);
-                            return slotData;
-                        });
-
-                        console.log(`Day ${day}: enabled=${backendDay.enabled}, slots=${slots.length}`);
-
-                        return {
-                            day: backendDay.day,
-                            enabled: backendDay.enabled !== undefined ? backendDay.enabled : false,
-                            slots: slots,
-                        };
-                    } else {
-
-                        console.log(`Day ${day} not found in backend, using default`);
-                        return {
-                            day,
-                            enabled: false,
-                            slots: [],
-                        };
-                    }
+            const scheduleMap = new Map();
+            if (scheduleData.weeklySchedule && Array.isArray(scheduleData.weeklySchedule)) {
+                scheduleData.weeklySchedule.forEach((daySchedule: any) => {
+                    scheduleMap.set(daySchedule.day, daySchedule);
                 });
-
-                console.log('Transformed schedule:', JSON.stringify(transformedSchedule, null, 2));
-                setSchedule(transformedSchedule);
-            } else {
-
-                console.log('No schedule found, using default. Response:', response);
-                setHasSchedule(false);
-                setSchedule(getDefaultSchedule());
             }
-        } catch (error) {
-            console.error('Error fetching schedule:', error);
-            toast.error('Failed to load schedule');
+
+            if (scheduleData.blockedDates && Array.isArray(scheduleData.blockedDates)) {
+                setBlockedDates(scheduleData.blockedDates);
+            }
+
+            const transformedSchedule = DAYS_OF_WEEK.map((day) => {
+                const backendDay = scheduleMap.get(day);
+                if (backendDay) {
+                    const slots = (backendDay.slots || []).map((slot: any, slotIndex: number) => {
+                        const slotData = {
+                            id: `slot-${day}-${slot.startTime || '09:00'}-${slot.endTime || '10:00'}-${slotIndex}`,
+                            customId: slot.customId, 
+                            startTime: slot.startTime || '09:00',
+                            endTime: slot.endTime || '10:00',
+                            enabled: slot.enabled !== undefined ? slot.enabled : true,
+                        };
+                        return slotData;
+                    });
+
+                    return {
+                        day: backendDay.day,
+                        enabled: backendDay.enabled !== undefined ? backendDay.enabled : false,
+                        slots: slots,
+                    };
+                } else {
+                    return {
+                        day,
+                        enabled: false,
+                        slots: [],
+                    };
+                }
+            });
+
+            setSchedule(transformedSchedule);
+        } else {
+            setHasSchedule(false);
             setSchedule(getDefaultSchedule());
-        } finally {
-            setLoading(false);
         }
-    }, []);
+    } catch (error) {
+        console.error('Error fetching schedule:', error);
+        toast.error('Failed to load schedule');
+        setSchedule(getDefaultSchedule());
+    } finally {
+        setLoading(false);
+    }
+}, []);
 
     useEffect(() => {
         fetchSchedule();
     }, [fetchSchedule]);
+
+    useEffect(() => {
+        findCommonRecurringSlots();
+    }, [schedule]);
 
     const toggleDay = async (dayIndex: number) => {
         const updatedSchedule = [...schedule];
@@ -150,7 +156,7 @@ const DoctorSchedule: React.FC = () => {
                         slots: (daySchedule.slots || []).map(slot => ({
                             startTime: slot.startTime,
                             endTime: slot.endTime,
-                            enabled: slot.enabled !== undefined ? slot.enabled : true,
+                                enabled: slot.enabled !== undefined ? slot.enabled : true,
                         })),
                     })),
                 };
@@ -577,6 +583,261 @@ const DoctorSchedule: React.FC = () => {
         }
     };
 
+    // Handle recurring slot submission
+    const handleRecurringSlots = async () => {
+        if (!recurringStartTime || !recurringEndTime) {
+            toast.error('Please select both start and end times');
+            return;
+        }
+
+        if (selectedDays.length === 0) {
+            toast.error('Please select at least one day');
+            return;
+        }
+
+        const [startHours, startMinutes] = recurringStartTime.split(':').map(Number);
+        const [endHours, endMinutes] = recurringEndTime.split(':').map(Number);
+        const startTotal = startHours * 60 + startMinutes;
+        const endTotal = endHours * 60 + endMinutes;
+
+        if (startTotal >= endTotal) {
+            toast.error('Start time must be before end time');
+            return;
+        }
+
+        if (endTotal - startTotal < 15) {
+            toast.error('Slot duration must be at least 15 minutes');
+            return;
+        }
+
+        try {
+            const response = await doctorService.addRecurringSlots({
+                startTime: recurringStartTime,
+                endTime: recurringEndTime,
+                days: selectedDays,
+                skipOverlappingDays: false
+            });
+
+            if (response?.success) {
+                if (response.data?.overlappingDays && response.data.overlappingDays.length > 0) {
+                    // Show overlap dialog
+                    setOverlapInfo({
+                        overlappingDays: response.data.overlappingDays,
+                        nonOverlappingDays: response.data.nonOverlappingDays
+                    });
+                    setOverlapDialogOpen(true);
+                } else {
+                    // No overlaps, refresh schedule
+                    toast.success('Recurring slots added successfully');
+                    console.log('Schedule before recurring slots fetch:', JSON.stringify(schedule, null, 2));
+                    // Reset form first
+                    setRecurringStartTime('');
+                    setRecurringEndTime('');
+                    setSelectedDays([]);
+                    // Then fetch schedule to refresh UI
+                    await fetchSchedule();
+                    console.log('Schedule after recurring slots fetch:', JSON.stringify(schedule, null, 2));
+                }
+            } else {
+                toast.error(response?.message || 'Failed to add recurring slots');
+            }
+        } catch (error) {
+            console.error('Error adding recurring slots:', error);
+            toast.error('Failed to add recurring slots');
+        }
+    };
+
+    // Continue with overlapping slots (skip overlapping days)
+    const handleContinueWithOverlaps = async () => {
+        if (overlapInfo) {
+            try {
+                const response = await doctorService.addRecurringSlots({
+                    startTime: recurringStartTime,
+                    endTime: recurringEndTime,
+                    days: overlapInfo.nonOverlappingDays,
+                    skipOverlappingDays: true
+                });
+
+                if (response?.success) {
+                    toast.success(`Recurring slots added to ${overlapInfo.nonOverlappingDays.length} day(s)`);
+                    console.log('Schedule before recurring slots continue:', JSON.stringify(schedule, null, 2));
+                    // Reset form first
+                    setRecurringStartTime('');
+                    setRecurringEndTime('');
+                    setSelectedDays([]);
+                    setOverlapDialogOpen(false);
+                    setOverlapInfo(null);
+                    // Then fetch schedule to refresh UI
+                    await fetchSchedule();
+                    console.log('Schedule after recurring slots continue:', JSON.stringify(schedule, null, 2));
+                } else {
+                    toast.error(response?.message || 'Failed to add recurring slots');
+                }
+            } catch (error) {
+                console.error('Error adding recurring slots:', error);
+                toast.error('Failed to add recurring slots');
+            }
+        }
+    };
+
+    // Toggle day selection for recurring slots
+    const toggleDaySelection = (day: string) => {
+        setSelectedDays(prev => 
+            prev.includes(day) 
+                ? prev.filter(d => d !== day)
+                : [...prev, day]
+        );
+    };
+
+    // Delete recurring slot
+    const handleDeleteRecurringSlot = async (day: string, slotId: string, slotTime: string) => {
+        try {
+            const response = await doctorService.deleteRecurringSlot(day, slotId);
+            if (response?.success) {
+                console.log('Schedule before fetch:', JSON.stringify(schedule, null, 2));
+                await fetchSchedule();
+                console.log('Schedule after fetch:', JSON.stringify(schedule, null, 2));
+                toast.success(`Slot ${slotTime} on ${day} deleted successfully`);
+            } else {
+                toast.error(response?.message || 'Failed to delete slot');
+            }
+        } catch (error) {
+            console.error('Error deleting recurring slot:', error);
+            toast.error('Failed to delete slot');
+        }
+    };
+
+    // Find common recurring slots across enabled days
+    const findCommonRecurringSlots = () => {
+        const slotMap = new Map<string, { startTime: string; endTime: string; count: number; customIds: string[] }>();
+        
+        // Get all enabled days with slots
+        const enabledDays = schedule.filter(day => day.enabled && day.slots.length > 0);
+        
+        // Count occurrences of each time slot across enabled days
+        enabledDays.forEach(day => {
+            day.slots.forEach(slot => {
+                const key = `${slot.startTime}-${slot.endTime}`;
+                if (slotMap.has(key)) {
+                    const existing = slotMap.get(key)!;
+                    existing.count++;
+                    if (slot.customId && !existing.customIds.includes(slot.customId)) {
+                        existing.customIds.push(slot.customId);
+                    }
+                } else {
+                    slotMap.set(key, {
+                        startTime: slot.startTime,
+                        endTime: slot.endTime,
+                        count: 1,
+                        customIds: slot.customId ? [slot.customId] : []
+                    });
+                }
+            });
+        });
+        
+        // Filter slots that appear in more than one day
+        const commonSlots = Array.from(slotMap.values())
+            .filter(slot => slot.count > 1)
+            .map(slot => ({
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+                customId: slot.customIds[0], // Use first customId as identifier
+                count: slot.count
+            }));
+        
+        setCommonSlots(commonSlots);
+    };
+
+    // Handle deletion of selected common recurring slots
+    const handleDeleteCommonRecurringSlots = () => {
+        if (selectedCommonSlots.length === 0) {
+            toast.error('Please select at least one slot to delete');
+            return;
+        }
+
+        // Show confirmation dialog instead of directly deleting
+        setShowDeleteConfirmation(true);
+    };
+
+    // Computed values for select all functionality
+    const areAllSlotsSelected = commonSlots.length > 0 && selectedCommonSlots.length === commonSlots.length;
+    const areSomeSlotsSelected = selectedCommonSlots.length > 0 && selectedCommonSlots.length < commonSlots.length;
+
+    // Handle select all checkbox
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedCommonSlots(commonSlots.map(slot => slot.customId));
+        } else {
+            setSelectedCommonSlots([]);
+        }
+    };
+
+    // Confirm and delete slots
+const confirmDeleteSlots = async () => {
+    try {
+        let totalDeleted = 0;
+        
+        // For each selected common slot, delete it from all days
+        for (const slotIdentifier of selectedCommonSlots) {
+            const slot = commonSlots.find(s => s.customId === slotIdentifier);
+            if (!slot) continue;
+
+            const result = await doctorService.deleteRecurringSlotByTime(slot.startTime, slot.endTime);
+            
+            if (result?.success) {
+                totalDeleted++;
+            }
+        }
+        
+        if (totalDeleted > 0) {
+            toast.success(`Successfully deleted ${totalDeleted} recurring slot(s) from all days`);
+        } else {
+            toast.error('No slots were deleted');
+        }
+        
+        // Reset states and refresh
+        setIsClearAllModalOpen(false);
+        setSelectedCommonSlots([]);
+        setShowDeleteConfirmation(false);
+        
+        // Refresh the schedule
+        await fetchSchedule();
+        
+    } catch (error) {
+        console.error('Error deleting common recurring slots:', error);
+        toast.error('Failed to delete common recurring slots');
+    }
+};
+
+
+    // Open Clear All Recurring Slots modal
+    const handleOpenClearAllModal = () => {
+        setIsClearAllModalOpen(true);
+        setSelectedCommonSlots([]);
+    };
+
+const handleClearSlotFromAllDays = async (startTime: string, endTime: string) => {
+    try {
+        console.log("Deleting slot from all days", { 
+            timeRange: `${startTime} - ${endTime}`
+        });
+        
+        const result = await doctorService.deleteRecurringSlotByTime(startTime, endTime);
+        
+        if (result?.success) {
+            toast.success(`Slot ${startTime} - ${endTime} deleted from all days`);
+        } else {
+            toast.error(result?.message || 'Failed to delete slot from all days');
+        }
+        
+        // Refresh the schedule to show updated data
+        await fetchSchedule();
+        
+    } catch (error) {
+        console.error('Error clearing slot from all days:', error);
+        toast.error('Failed to clear slot from all days');
+    }
+};
     const breadcrumbItems = [
         { label: 'Home', path: '/doctor/dashboard' },
         { label: 'Schedule Settings' },
@@ -632,6 +893,15 @@ const DoctorSchedule: React.FC = () => {
                                             }`}
                                     >
                                         Available Timings
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('recurring')}
+                                        className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'recurring'
+                                            ? 'bg-[#00A1B0] text-white'
+                                            : 'text-gray-600 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        Recurring Slots
                                     </button>
                                     <button
                                         onClick={() => setActiveTab('unavailable')}
@@ -693,7 +963,120 @@ const DoctorSchedule: React.FC = () => {
                                     ))}
                                 </div>
                                 <div className="mt-8 mb-12">
-                                    <button onClick={handleSaveSchedule} disabled={saving} className={`w-full py-4 rounded-xl font-bold text-white shadow-xl transition-all transform hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-3 ${saving ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-[#00A1B0] to-[#00818d] shadow-[#00A1B0]/30 hover:shadow-[#00A1B0]/40'}`}>{saving ? (<><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />Saving Changes...</>) : (<>Save Weekly Schedule</>)}</button>
+                                    <button onClick={handleSaveSchedule} disabled={saving} className={`w-full py-3 rounded-lg font-medium text-[#00A1B0] bg-[#00A1B0]/10 hover:bg-[#00A1B0]/20 transition-colors flex items-center justify-center gap-2 ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}>{saving ? (<><div className="w-4 h-4 border-2 border-[#00A1B0] border-t-transparent rounded-full animate-spin" />Saving Changes...</>) : (<>Save Weekly Schedule</>)}</button>
+                                </div>
+                            </>
+                        )}
+
+                        {activeTab === 'recurring' && (
+                            <>
+                                <div className="bg-green-50 rounded-lg p-3.5 mb-5 flex items-center gap-2.5 text-sm border border-green-100">
+                                    <FaRedo className="text-green-600 flex-shrink-0" size={18} />
+                                    <p className="text-green-700">Add recurring time slots to multiple days at once. Overlapping slots will be detected and you can choose to skip those days.</p>
+                                </div>
+
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+                                    <h3 className="font-bold text-gray-800 mb-6 flex items-center gap-2">
+                                        <FaRedo className="text-green-600" />
+                                        Add Recurring Slots
+                                    </h3>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Start Time</label>
+                                            <input 
+                                                type="time" 
+                                                value={recurringStartTime} 
+                                                onChange={(e) => setRecurringStartTime(e.target.value)} 
+                                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#00A1B0]" 
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">End Time</label>
+                                            <input 
+                                                type="time" 
+                                                value={recurringEndTime} 
+                                                onChange={(e) => setRecurringEndTime(e.target.value)} 
+                                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#00A1B0]" 
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="mb-6">
+                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">Select Days</label>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                                            {DAYS_OF_WEEK.map((day) => {
+                                                const isSelected = selectedDays.includes(day);
+                                                return (
+                                                    <button
+                                                        key={day}
+                                                        onClick={() => toggleDaySelection(day)}
+                                                        className={`px-4 py-3 rounded-lg text-sm font-medium transition-all border-2 ${
+                                                            isSelected 
+                                                                ? 'bg-[#00A1B0] text-white border-[#00A1B0] shadow-md' 
+                                                                : 'bg-white border-gray-200 text-gray-600 hover:border-[#00A1B0] hover:text-[#00A1B0]'
+                                                        }`}
+                                                    >
+                                                        {day.slice(0, 3)}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <button 
+                                        onClick={handleRecurringSlots}
+                                        className="flex-1 px-4 py-2 bg-[#00A1B0]/10 hover:bg-[#00A1B0]/20 text-[#00A1B0] text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <FaPlus size={12} />
+                                        Add Recurring Slot
+                                    </button>
+                                </div>
+
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="font-bold text-gray-800">Current Schedule Preview</h3>
+                                        <button 
+                                            onClick={handleOpenClearAllModal}
+                                            className="px-4 py-2 bg-[#00A1B0]/10 hover:bg-[#00A1B0]/20 text-[#00A1B0] text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <FaTrash size={12} />
+                                            Clear All Recurring Slots
+                                        </button>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {schedule.map((daySchedule) => (
+                                            <div key={daySchedule.day} className={`p-4 rounded-lg border ${daySchedule.enabled && daySchedule.slots.length > 0 ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <h4 className="font-semibold text-gray-800">{daySchedule.day}</h4>
+                                                    {daySchedule.enabled && daySchedule.slots.length > 0 && (
+                                                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">
+                                                            {daySchedule.slots.filter(s => s.enabled).length} slots
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {daySchedule.enabled && daySchedule.slots.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {daySchedule.slots.filter(s => s.enabled).map((slot) => (
+                                                            <div key={slot.id} className="px-3 py-1 bg-white border border-gray-200 text-gray-600 text-xs rounded flex items-center gap-2">
+                                                                <span>{slot.startTime} - {slot.endTime}</span>
+                                                                <button
+                                                                    onClick={() => handleDeleteRecurringSlot(daySchedule.day, slot.customId || slot.id, `${slot.startTime} - ${slot.endTime}`)}
+                                                                    className="text-red-500 hover:text-red-700 transition-colors"
+                                                                    title="Delete slot from this day"
+                                                                >
+                                                                    <FaTrash size={10} />
+                                                                </button>
+
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-sm text-gray-500 italic">No slots configured</p>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </>
                         )}
@@ -731,7 +1114,7 @@ const DoctorSchedule: React.FC = () => {
                                             )}
                                         </div>
                                     )}
-                                    <button onClick={handleBlockDate} disabled={blockSubmitting} className={`w-full py-3 rounded-lg font-bold text-white shadow-lg flex items-center justify-center gap-2 transition-all ${blockSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600 shadow-red-500/20'}`}>{blockSubmitting ? (<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />) : (<FaCalendarTimes />)}Add to Unavailable Dates</button>
+                                    <button onClick={handleBlockDate} disabled={blockSubmitting} className={`flex-1 px-4 py-2 bg-[#00A1B0]/10 hover:bg-[#00A1B0]/20 text-[#00A1B0] text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2 ${blockSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}>{blockSubmitting ? (<div className="w-4 h-4 border-2 border-[#00A1B0] border-t-transparent rounded-full animate-spin" />) : (<FaPlus size={12} />)}Add Unavailable Date</button>
                                 </div>
                                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                                     <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-bold text-gray-800">Your Blocked Dates</h3></div>
@@ -759,6 +1142,222 @@ const DoctorSchedule: React.FC = () => {
 
             <AlertDialog open={clearAllDialogOpen} onOpenChange={setClearAllDialogOpen} title="Clear all slots?" description={`Are you sure you want to clear all time slots for ${dayToClear?.dayName}? This will also disable the day.`} confirmText="Clear All" cancelText="Cancel" variant="destructive" onConfirm={confirmClearAllSlots} />
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} title="Delete time slot?" description={`Are you sure you want to delete the slot for ${slotToDelete?.slotTime} on ${slotToDelete?.dayName}?`} confirmText="Delete" cancelText="Cancel" variant="destructive" onConfirm={confirmDeleteSlot} />
+            
+            {/* Overlap Detection Custom Dialog */}
+            {overlapDialogOpen && overlapInfo && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+                        onClick={() => setOverlapDialogOpen(false)}
+                    />
+
+                    {/* Dialog */}
+                    <div className="relative z-50 w-full max-w-md mx-4 bg-white rounded-lg shadow-xl border border-gray-200">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-lg bg-amber-100 text-amber-600">
+                                    <FaExclamationTriangle size={20} />
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-900">Overlapping Slots Detected</h3>
+                            </div>
+                            <button
+                                onClick={() => setOverlapDialogOpen(false)}
+                                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                <FaTimes size={16} />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-4">
+                            <div className="space-y-3">
+                                <p className="text-amber-700 font-medium">
+                                    ⚠️ Found overlapping slots on {overlapInfo.overlappingDays.length} day(s):
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                    {overlapInfo.overlappingDays.map(day => (
+                                        <span key={day} className="px-3 py-1 bg-red-100 text-red-700 text-sm font-semibold rounded border border-red-200">
+                                            {day}
+                                        </span>
+                                    ))}
+                                </div>
+                                <p className="text-green-700 font-medium">
+                                    ✓ Can add slots to {overlapInfo.nonOverlappingDays.length} day(s):
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                    {overlapInfo.nonOverlappingDays.map(day => (
+                                        <span key={day} className="px-3 py-1 bg-green-100 text-green-700 text-sm font-semibold rounded border border-green-200">
+                                            {day}
+                                        </span>
+                                    ))}
+                                </div>
+                                <p className="text-sm text-gray-600">
+                                    Would you like to continue and add slots only to the non-overlapping days?
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-200 bg-gray-50">
+                            <button
+                                onClick={() => setOverlapDialogOpen(false)}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleContinueWithOverlaps}
+                                className="px-4 py-2 text-sm font-medium text-white bg-[#00A1B0] rounded-lg hover:bg-[#008f9c] transition-colors"
+                            >
+                                Continue (Skip Overlapping Days)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Clear All Recurring Slots Modal */}
+            <Dialog open={isClearAllModalOpen} onOpenChange={setIsClearAllModalOpen}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle>Clear Recurring Slots</DialogTitle>
+                        <DialogDescription>
+                            Select the common recurring slots you want to delete from all days.
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    {!showDeleteConfirmation ? (
+                        <>
+                            <div className="grid gap-4 py-4">
+                                {commonSlots.length === 0 ? (
+                                    <div className="text-center py-6">
+                                        <p className="text-sm text-gray-600">No common recurring slots found across multiple days.</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* Select All Checkbox */}
+                                        {commonSlots.length > 1 && (
+                                            <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                                <Checkbox
+                                                    id="select-all"
+                                                    checked={areAllSlotsSelected}
+                                                    onCheckedChange={handleSelectAll}
+                                                />
+                                                <label
+                                                    htmlFor="select-all"
+                                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                                >
+                                                    {areAllSlotsSelected ? 'Deselect All' : areSomeSlotsSelected ? 'Select All (Partial)' : `Select All (${commonSlots.length} slots)`}
+                                                </label>
+                                            </div>
+                                        )}
+                                        
+                                        {/* Individual Slots */}
+                                        <div className="space-y-2 p-3 bg-gray-50 rounded-lg border border-gray-200 max-h-60 overflow-y-auto">
+                                            {commonSlots.map((slot) => (
+                                                <div key={slot.customId} className="flex items-center space-x-3 p-2 hover:bg-white rounded transition-colors">
+                                                    <Checkbox
+                                                        id={slot.customId}
+                                                        checked={selectedCommonSlots.includes(slot.customId)}
+                                                        onCheckedChange={(checked) => {
+                                                            setSelectedCommonSlots((prev) =>
+                                                                checked
+                                                                    ? [...prev, slot.customId]
+                                                                    : prev.filter((id) => id !== slot.customId)
+                                                            );
+                                                        }}
+                                                    />
+                                                    <label
+                                                        htmlFor={slot.customId}
+                                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1 flex items-center justify-between"
+                                                    >
+                                                        <span className="font-semibold text-gray-900">
+                                                            {slot.startTime} - {slot.endTime}
+                                                        </span>
+                                                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
+                                                            {slot.count} days
+                                                        </span>
+                                                    </label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        
+                                        {/* Selection Summary */}
+                                        {selectedCommonSlots.length > 0 && (
+                                            <div className="text-sm text-gray-600 text-center">
+                                                {selectedCommonSlots.length} of {commonSlots.length} slots selected
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                            
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setIsClearAllModalOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button 
+                                    onClick={handleDeleteCommonRecurringSlots}
+                                    disabled={selectedCommonSlots.length === 0}
+                                    variant="destructive"
+                                    className="bg-red-600 hover:bg-red-700"
+                                >
+                                    Delete Selected Slots ({selectedCommonSlots.length})
+                                </Button>
+                            </DialogFooter>
+                        </>
+                    ) : (
+                        /* Confirmation Dialog */
+                        <div className="py-4">
+                            <div className="text-center mb-6">
+                                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                                    <FaTrash className="h-6 w-6 text-red-600" />
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                    Confirm Deletion
+                                </h3>
+                                <p className="text-sm text-gray-600 mb-4">
+                                    Are you sure you want to delete {selectedCommonSlots.length} common recurring slot{selectedCommonSlots.length > 1 ? 's' : ''}?
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                    This action will remove these slots from all days they appear on and cannot be undone.
+                                </p>
+                            </div>
+                            
+                            <div className="space-y-2 mb-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <p className="text-xs font-semibold text-gray-700 mb-2">Slots to be deleted:</p>
+                                {selectedCommonSlots.map(slotId => {
+                                    const slot = commonSlots.find(s => s.customId === slotId);
+                                    return slot ? (
+                                        <div key={slotId} className="text-xs text-gray-600 flex justify-between">
+                                            <span>{slot.startTime} - {slot.endTime}</span>
+                                            <span className="text-gray-500">({slot.count} days)</span>
+                                        </div>
+                                    ) : null;
+                                })}
+                            </div>
+                            
+                            <DialogFooter>
+                                <Button 
+                                    variant="outline" 
+                                    onClick={() => setShowDeleteConfirmation(false)}
+                                >
+                                    Back
+                                </Button>
+                                <Button 
+                                    onClick={confirmDeleteSlots}
+                                    variant="destructive"
+                                    className="bg-red-600 hover:bg-red-700"
+                                >
+                                    Yes, Delete {selectedCommonSlots.length} Slot{selectedCommonSlots.length > 1 ? 's' : ''}
+                                </Button>
+                            </DialogFooter>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

@@ -113,6 +113,7 @@ app.use(errorHandler);
 import { createServer } from "http";
 import { socketService } from "./services/socket.service";
 import { AppointmentReminderService } from "./services/appointmentReminder.service";
+import { SessionTimerService } from "./services/sessionTimer.service";
 import { AppointmentRepository } from "./repositories/appointment.repository";
 import { ScheduleRepository } from "./repositories/schedule.repository";
 import { notificationService } from "./routers/notification.router";
@@ -126,6 +127,12 @@ const appointmentReminderService = new AppointmentReminderService(
   new LoggerService("AppointmentReminderService")
 );
 appointmentReminderService.start();
+
+const sessionTimerService = new SessionTimerService(
+  appointmentRepository,
+  new LoggerService("SessionTimerService")
+);
+sessionTimerService.start();
 
 const PORT = Number(env.PORT);
 

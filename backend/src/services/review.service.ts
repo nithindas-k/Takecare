@@ -18,7 +18,7 @@ export class ReviewService implements IReviewService {
         rating: number;
         comment: string;
     }): Promise<IReview> {
-        
+
         const existing = await this._reviewRepository.findByAppointmentId(data.appointmentId);
         if (existing) {
             throw new AppError("You have already reviewed this appointment", HttpStatus.BAD_REQUEST);
@@ -74,6 +74,26 @@ export class ReviewService implements IReviewService {
 
     async getDoctorStats(doctorId: string): Promise<{ averageRating: number; reviewCount: number }> {
         return await this._reviewRepository.getAverageRating(doctorId);
+    }
+
+    async getAllReviews(page: number, limit: number): Promise<{ reviews: IReview[]; total: number; totalPages: number }> {
+        const skip = (page - 1) * limit;
+        const { reviews, total } = await this._reviewRepository.getAllReviewsWithDetails(skip, limit);
+        const totalPages = Math.ceil(total / limit);
+        return { reviews, total, totalPages };
+    }
+
+    async deleteReviewById(reviewId: string): Promise<void> {
+        const review = await this._reviewRepository.findById(reviewId);
+        if (!review) {
+            throw new AppError("Review not found", HttpStatus.NOT_FOUND);
+        }
+        await this._reviewRepository.deleteById(reviewId);
+        await this._updateDoctorStats(review.doctorId.toString());
+    }
+
+    async getReviewByPatientAndDoctorId(patientId: string, doctorId: string): Promise<IReview | null> {
+        return await this._reviewRepository.findByPatientIdAndDoctorId(patientId, doctorId);
     }
 
     private async _updateDoctorStats(doctorId: string): Promise<void> {

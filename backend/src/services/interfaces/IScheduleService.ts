@@ -5,6 +5,7 @@ import type {
     ScheduleResponseDTO,
     AvailableSlotResponseDTO,
 } from "../../dtos/schedule.dtos/schedule.dto";
+import { RecurringSlotsDTO, RecurringSlotsResponseDTO } from "../../dtos/schedule.dtos/recurringSlots.dto";
 
 export interface IScheduleService {
     createSchedule(userId: string, data: CreateScheduleDTO): Promise<ScheduleResponseDTO>;
@@ -22,5 +23,8 @@ export interface IScheduleService {
     ): Promise<AvailableSlotResponseDTO[]>;
     deleteSchedule(doctorId: string): Promise<void>;
     deleteScheduleByUserId(userId: string): Promise<void>;
+    addRecurringSlots(userId: string, data: RecurringSlotsDTO): Promise<RecurringSlotsResponseDTO>;
+    deleteRecurringSlot(userId: string, day: string, slotId: string): Promise<ScheduleResponseDTO>;
+    deleteRecurringSlotByTime(userId: string, startTime: string, endTime: string): Promise<ScheduleResponseDTO>;
 }
 

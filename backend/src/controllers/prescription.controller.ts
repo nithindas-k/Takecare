@@ -1,14 +1,15 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import { IPrescriptionService } from "../services/interfaces/IPrescriptionService";
 import { HttpStatus, MESSAGES } from "../constants/constants";
 import { AppError } from "../errors/AppError";
+import { AuthenticatedRequest } from "../types/auth.type";
 
 export class PrescriptionController {
     constructor(private _prescriptionService: IPrescriptionService) { }
 
-    createPrescription = async (req: Request, res: Response, next: NextFunction) => {
+    createPrescription = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
         try {
-            const userId = (req as any).user?.userId;
+            const userId = req.user?.userId;
 
             if (!userId) {
                 throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -25,10 +26,10 @@ export class PrescriptionController {
         }
     };
 
-    getPrescription = async (req: Request, res: Response, next: NextFunction) => {
+    getPrescription = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
         try {
-            const userId = (req as any).user?.userId;
-            const role = (req as any).user?.role;
+            const userId = req.user?.userId;
+            const role = req.user?.role;
             const { appointmentId } = req.params;
 
             if (!userId || !role) {

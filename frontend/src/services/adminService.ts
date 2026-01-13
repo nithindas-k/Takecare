@@ -136,6 +136,28 @@ class AdminService {
       return { success: false, message: err.response?.data?.message || err.message || "Error fetching dashboard stats" };
     }
   }
+
+  async getAllReviews(page: number = 1, limit: number = 10) {
+    try {
+      const res = await axiosInstance.get("/reviews", {
+        params: { page, limit }
+      });
+      return res.data;
+    } catch (error) {
+      const err = error as ApiError;
+      return { success: false, message: err.response?.data?.message || err.message || "Error fetching reviews", data: { reviews: [], total: 0, totalPages: 0 } };
+    }
+  }
+
+  async deleteReview(reviewId: string) {
+    try {
+      const res = await axiosInstance.delete(`/reviews/admin/${reviewId}`);
+      return res.data;
+    } catch (error) {
+      const err = error as ApiError;
+      return { success: false, message: err.response?.data?.message || err.message || "Error deleting review" };
+    }
+  }
 }
 
 export default new AdminService();

@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import { IWalletService } from "../services/interfaces/IWalletService";
 import { HttpStatus, MESSAGES, PAGINATION } from "../constants/constants";
 import { LoggerService } from "../services/logger.service";
@@ -6,15 +6,15 @@ import { sendSuccess } from "../utils/response.util";
 import { AppError } from "../errors/AppError";
 
 import { ILoggerService } from "../services/interfaces/ILogger.service";
+import { AuthenticatedRequest } from "../types/auth.type";
 
 export class WalletController {
     constructor(
         private _walletService: IWalletService,
         private logger: ILoggerService
-    ) {
-    }
+    ) { }
 
-    getWallet = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    getWallet = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
         try {
             const userId = req.user?.userId;
             if (!userId) {
@@ -40,21 +40,21 @@ export class WalletController {
                 earnings,
                 deductions
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             next(error);
         }
     }
 
-    getAdminEarningsOverview = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    getAdminEarningsOverview = async (_req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
         try {
             const overview = await this._walletService.getAdminEarningsOverview();
             sendSuccess(res, overview);
-        } catch (error: any) {
+        } catch (error: unknown) {
             next(error);
         }
     }
 
-    getAdminTransactions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    getAdminTransactions = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
         try {
             const page = parseInt(req.query.page as string) || PAGINATION.DEFAULT_PAGE;
             const limit = parseInt(req.query.limit as string) || PAGINATION.DEFAULT_LIMIT;
@@ -68,7 +68,7 @@ export class WalletController {
                 limit,
                 totalPages: Math.ceil(total / limit)
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             next(error);
         }
     }

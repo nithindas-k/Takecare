@@ -37,7 +37,7 @@ export class UserRepository extends BaseRepository<IUserDocument> implements IUs
   }
 
   async getAllPatients(skip: number, limit: number, filter?: { search?: string; isActive?: boolean }): Promise<{ patients: IUserDocument[]; total: number }> {
-    const query: any = { role: "patient" };
+    const query: Record<string, unknown> = { role: "patient" };
 
     if (filter) {
       if (typeof filter.isActive === 'boolean') {

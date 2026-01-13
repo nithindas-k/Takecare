@@ -2,12 +2,12 @@ import { Server, Socket } from "socket.io";
 import { Server as HttpServer } from "http";
 import { env } from "../configs/env"
 
-class SocketService {
-    private io: Server | null = null;
-    private onlineUsers = new Map<string, string>();
+export class SocketService {
+    private _io: Server | null = null;
+    private _onlineUsers = new Map<string, string>();
 
     init(httpServer: HttpServer) {
-        this.io = new Server(httpServer, {
+        this._io = new Server(httpServer, {
             cors: {
                 origin: env.CLIENT_URL,
                 methods: ["GET", "POST"],
@@ -15,29 +15,29 @@ class SocketService {
             },
         });
 
-        this.io.on("connection", (socket: Socket) => {
+        this._io.on("connection", (socket: Socket) => {
             // WebRTC  Events
             socket.on("call-user", ({ userToCall, signalData, from, name }) => {
-                this.io?.to(userToCall).emit("call-user", { signal: signalData, from, name });
+                this._io?.to(userToCall).emit("call-user", { signal: signalData, from, name });
             });
 
             socket.on("answer-call", (data) => {
-                this.io?.to(data.to).emit("call-accepted", data.signal);
+                this._io?.to(data.to).emit("call-accepted", data.signal);
             });
 
             socket.on("ice-candidate", ({ to, candidate }) => {
-                this.io?.to(to).emit("ice-candidate", candidate);
+                this._io?.to(to).emit("ice-candidate", candidate);
             });
 
             socket.on("end-call", ({ to }) => {
-                this.io?.to(to).emit("call-ended");
+                this._io?.to(to).emit("call-ended");
             });
 
 
             socket.on("join", (userId: string) => {
                 socket.join(userId);
-                this.onlineUsers.set(userId, socket.id);
-                this.io?.emit("user-status", { userId, status: 'online' });
+                this._onlineUsers.set(userId, socket.id);
+                this._io?.emit("user-status", { userId, status: 'online' });
             });
 
             socket.on("join-chat", (appointmentId: string) => {
@@ -68,7 +68,7 @@ class SocketService {
                 const roomId = String(data.appointmentId || "");
                 if (roomId) {
                     console.log(`Socket [${socket.id}] sending message to room ${roomId}`);
-                    this.io?.to(roomId).emit("receive-message", data);
+                    this._io?.to(roomId).emit("receive-message", data);
                 } else {
                     console.error("Socket error: send-message received without appointmentId");
                 }
@@ -76,15 +76,15 @@ class SocketService {
 
             socket.on("disconnect", () => {
                 let disconnectedUserId = "";
-                for (const [uid, sid] of this.onlineUsers.entries()) {
+                for (const [uid, sid] of this._onlineUsers.entries()) {
                     if (sid === socket.id) {
                         disconnectedUserId = uid;
-                        this.onlineUsers.delete(uid);
+                        this._onlineUsers.delete(uid);
                         break;
                     }
                 }
                 if (disconnectedUserId) {
-                    this.io?.emit("user-status", { userId: disconnectedUserId, status: 'offline' });
+                    this._io?.emit("user-status", { userId: disconnectedUserId, status: 'offline' });
 
                 }
             });
@@ -92,42 +92,42 @@ class SocketService {
     }
 
     isUserOnline(userId: string): boolean {
-        return this.onlineUsers.has(userId);
+        return this._onlineUsers.has(userId);
     }
 
     notify(userId: string, data: any) {
-        if (this.io) {
-            this.io.to(userId.toString()).emit("notification", data);
+        if (this._io) {
+            this._io.to(userId.toString()).emit("notification", data);
         }
     }
 
     sendReminder(userId: string, data: any) {
-        if (this.io) {
-            this.io.to(userId.toString()).emit("appointment-reminder", data);
+        if (this._io) {
+            this._io.to(userId.toString()).emit("appointment-reminder", data);
         }
     }
 
     clearNotifications(userId: string) {
-        if (this.io) {
-            this.io.to(userId.toString()).emit("clear-notifications");
+        if (this._io) {
+            this._io.to(userId.toString()).emit("clear-notifications");
         }
     }
 
     emitMessage(appointmentId: string, message: any) {
-        if (this.io) {
-            this.io.to(appointmentId).emit("receive-message", message);
+        if (this._io) {
+            this._io.to(appointmentId).emit("receive-message", message);
         }
     }
 
     emitToRoom(roomId: string, event: string, data: any) {
-        if (this.io) {
-            this.io.to(roomId).emit(event, data);
+        if (this._io) {
+            this._io.to(roomId).emit(event, data);
         }
     }
 
     emitToUser(userId: string, event: string, data: any) {
-        if (this.io) {
-            this.io.to(userId.toString()).emit(event, data);
+        if (this._io) {
+            this._io.to(userId.toString()).emit(event, data);
         }
     }
 }

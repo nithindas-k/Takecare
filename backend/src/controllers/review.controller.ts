@@ -68,4 +68,39 @@ export class ReviewController {
             next(error);
         }
     };
+
+    getAllReviews = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const page = parseInt(req.query.page as string) || 1;
+            const limit = parseInt(req.query.limit as string) || 10;
+            const result = await this._reviewService.getAllReviews(page, limit);
+            sendSuccess(res, result);
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    deleteReviewByAdmin = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { reviewId } = req.params;
+            await this._reviewService.deleteReviewById(reviewId);
+            sendSuccess(res, null, "Review deleted successfully");
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    getReviewByPatientAndDoctor = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { doctorId } = req.params;
+            const patientId = req.user?.userId;
+
+            if (!patientId) throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+
+            const review = await this._reviewService.getReviewByPatientAndDoctorId(patientId, doctorId);
+            sendSuccess(res, review);
+        } catch (error) {
+            next(error);
+        }
+    };
 }

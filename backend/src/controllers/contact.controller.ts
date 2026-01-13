@@ -32,11 +32,15 @@ export class ContactController {
                 success: true,
                 message: 'Thank you for contacting us! We will get back to you soon.'
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error submitting contact form:', error);
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : 'Failed to submit contact form';
             return res.status(500).json({
                 success: false,
-                message: error.message || 'Failed to submit contact form'
+                message
             });
         }
     };
@@ -49,11 +53,15 @@ export class ContactController {
                 success: true,
                 data: stats
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error fetching stats:', error);
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : 'Failed to fetch statistics';
             return res.status(500).json({
                 success: false,
-                message: error.message || 'Failed to fetch statistics'
+                message
             });
         }
     };
@@ -65,11 +73,15 @@ export class ContactController {
                 success: true,
                 data: submissions
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             this.logger.error('Error fetching contact submissions:', error);
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : 'Failed to fetch messages';
             return res.status(500).json({
                 success: false,
-                message: error.message || 'Failed to fetch messages'
+                message
             });
         }
     };
@@ -92,11 +104,15 @@ export class ContactController {
                 success: true,
                 message: 'Reply sent successfully'
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             this.logger.error('Error replying to contact:', error);
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : 'Failed to send reply';
             return res.status(500).json({
                 success: false,
-                message: error.message || 'Failed to send reply'
+                message
             });
         }
     };

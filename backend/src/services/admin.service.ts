@@ -26,7 +26,7 @@ export class AdminService implements IAdminService {
     private _doctorRepository: IDoctorRepository,
     private _userRepository: IUserRepository,
     private _appointmentRepository: IAppointmentRepository,
-    private logger: ILoggerService
+    private _logger: ILoggerService
   ) {
   }
 
@@ -133,11 +133,11 @@ export class AdminService implements IAdminService {
   }
 
   async blockUser(userId: string): Promise<void> {
-    await toggleEntityStatus(this._userRepository, userId, false, "User", this.logger);
+    await toggleEntityStatus(this._userRepository, userId, false, "User", this._logger);
   }
 
   async unblockUser(userId: string): Promise<void> {
-    await toggleEntityStatus(this._userRepository, userId, true, "User", this.logger);
+    await toggleEntityStatus(this._userRepository, userId, true, "User", this._logger);
   }
 
   async getAllDoctors(
@@ -184,11 +184,11 @@ export class AdminService implements IAdminService {
   }
 
   async banDoctor(doctorId: string): Promise<void> {
-    await toggleEntityStatus(this._doctorRepository, doctorId, false, "Doctor", this.logger);
+    await toggleEntityStatus(this._doctorRepository, doctorId, false, "Doctor", this._logger);
   }
 
   async unbanDoctor(doctorId: string): Promise<void> {
-    await toggleEntityStatus(this._doctorRepository, doctorId, true, "Doctor", this.logger);
+    await toggleEntityStatus(this._doctorRepository, doctorId, true, "Doctor", this._logger);
   }
 
   async getDashboardStats(startDate?: string, endDate?: string): Promise<DashboardStats> {

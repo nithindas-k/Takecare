@@ -39,8 +39,8 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
 
 
 
-  async getAllDoctors(skip: number, limit: number, filter?: { specialty?: string; search?: string; verificationStatus?: string; isActive?: boolean; sort?: any; minExperience?: number; minRating?: number }): Promise<{ doctors: IDoctorDocument[]; total: number }> {
-    const query: any = {};
+  async getAllDoctors(skip: number, limit: number, filter?: { specialty?: string; search?: string; verificationStatus?: string; isActive?: boolean; sort?: Record<string, 1 | -1>; minExperience?: number; minRating?: number }): Promise<{ doctors: IDoctorDocument[]; total: number }> {
+    const query: Record<string, unknown> = {};
 
     if (filter) {
       if (filter.verificationStatus) {
@@ -93,7 +93,7 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
   }
 
   async findRelatedDoctors(specialty: string, currentDoctorId: string, limit: number): Promise<IDoctorDocument[]> {
-    const query: any = {
+    const query: Record<string, unknown> = {
       verificationStatus: VerificationStatus.Approved,
       specialty: { $regex: new RegExp(specialty, "i") },
       _id: { $ne: new Types.ObjectId(currentDoctorId) }
@@ -177,8 +177,8 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
 
 
 
-  private mapDoctorRequestItem(doc: any): DoctorRequestItem {
-    const user = doc.userId as unknown as IUserDocument;
+  private mapDoctorRequestItem(doc: IDoctorDocument & { userId: IUserDocument }): DoctorRequestItem {
+    const user = doc.userId;
     return {
       _id: doc._id,
       userId: user._id,

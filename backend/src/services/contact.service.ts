@@ -13,7 +13,7 @@ export class ContactService implements IContactService {
         private _doctorRepository: IDoctorRepository,
         private _userRepository: IUserRepository,
         private _appointmentRepository: IAppointmentRepository,
-        private logger: ILoggerService,
+        private _logger: ILoggerService,
         private _emailService: IEmailService
     ) { }
 
@@ -35,7 +35,7 @@ export class ContactService implements IContactService {
             phone: data.phone,
             subject: data.subject,
             message: data.message
-        }).catch(err => this.logger.error("Failed to send contact email notification", err));
+        }).catch(err => this._logger.error("Failed to send contact email notification", err));
 
         return contact;
     }
@@ -69,7 +69,7 @@ export class ContactService implements IContactService {
                 avgExperience
             };
         } catch (error) {
-            this.logger.error('Error fetching stats:', error);
+            this._logger.error('Error fetching stats:', error);
             throw error;
         }
     }
@@ -78,7 +78,7 @@ export class ContactService implements IContactService {
         try {
             return await this._contactRepository.findAll();
         } catch (error) {
-            this.logger.error('Error fetching all submissions:', error);
+            this._logger.error('Error fetching all submissions:', error);
             throw error;
         }
     }
@@ -90,7 +90,7 @@ export class ContactService implements IContactService {
                 throw new Error('Contact message not found');
             }
 
-        
+
             await this._emailService.sendContactReplyEmail(
                 contact.email,
                 contact.name,
@@ -98,10 +98,10 @@ export class ContactService implements IContactService {
                 replyMessage
             );
 
-         
+
             return await this._contactRepository.updateById(contactId, { status: 'responded' as any });
         } catch (error) {
-            this.logger.error('Error replying to contact:', error);
+            this._logger.error('Error replying to contact:', error);
             throw error;
         }
     }

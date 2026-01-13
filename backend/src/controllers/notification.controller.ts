@@ -1,12 +1,16 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import { INotificationService } from "../services/notification.service";
+import { AuthenticatedRequest } from "../types/auth.type";
 
 export class NotificationController {
     constructor(private notificationService: INotificationService) { }
 
-    getNotifications = async (req: Request, res: Response) => {
+    getNotifications = async (req: AuthenticatedRequest, res: Response) => {
         try {
-            const userId = (req as any).user.userId;
+            const userId = req.user?.userId;
+            if (!userId) {
+                return res.status(401).json({ message: "Unauthorized" });
+            }
             const notifications = await this.notificationService.getNotifications(userId);
             res.status(200).json(notifications);
         } catch {
@@ -14,7 +18,7 @@ export class NotificationController {
         }
     };
 
-    markAsRead = async (req: Request, res: Response) => {
+    markAsRead = async (req: AuthenticatedRequest, res: Response) => {
         try {
             const { id } = req.params;
             await this.notificationService.markAsRead(id);
@@ -24,9 +28,12 @@ export class NotificationController {
         }
     };
 
-    markAllAsRead = async (req: Request, res: Response) => {
+    markAllAsRead = async (req: AuthenticatedRequest, res: Response) => {
         try {
-            const userId = (req as any).user.userId;
+            const userId = req.user?.userId;
+            if (!userId) {
+                return res.status(401).json({ message: "Unauthorized" });
+            }
             await this.notificationService.markAllAsRead(userId);
             res.status(200).json({ message: "All notifications marked as read" });
         } catch {
@@ -34,9 +41,12 @@ export class NotificationController {
         }
     };
 
-    clearAll = async (req: Request, res: Response) => {
+    clearAll = async (req: AuthenticatedRequest, res: Response) => {
         try {
-            const userId = (req as any).user.userId;
+            const userId = req.user?.userId;
+            if (!userId) {
+                return res.status(401).json({ message: "Unauthorized" });
+            }
             await this.notificationService.clearAll(userId);
             res.status(200).json({ message: "All notifications cleared" });
         } catch {
@@ -44,7 +54,7 @@ export class NotificationController {
         }
     };
 
-    deleteNotification = async (req: Request, res: Response) => {
+    deleteNotification = async (req: AuthenticatedRequest, res: Response) => {
         try {
             const { id } = req.params;
             await this.notificationService.deleteNotification(id);

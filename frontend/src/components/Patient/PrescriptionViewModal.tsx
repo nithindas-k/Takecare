@@ -195,7 +195,7 @@ const PrescriptionViewModal: React.FC<PrescriptionViewModalProps> = ({ isOpen, o
                                 <div className="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center mb-6">
                                     <FileText className="w-10 h-10 text-red-400" />
                                 </div>
-                                <h3 className="text-xl font-bold text-gray-800 mb-2 font-mono">RECORD_NOT_FOUND</h3>
+                                <h3 className="text-xl font-bold text-gray-800 mb-2 font-mono">wait for the doctor to issue a prescription</h3>
                                 <p className="text-gray-400 text-sm max-w-xs text-center">{error}</p>
                             </div>
                         ) : prescription ? (

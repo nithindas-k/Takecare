@@ -16,23 +16,23 @@ import { LoggerService } from "./logger.service";
 import { ILoggerService } from "./interfaces/ILogger.service";
 
 export class PaymentService implements IPaymentService {
-    private readonly razorpay: any;
+    private readonly _razorpay: InstanceType<typeof Razorpay>;
 
     constructor(
         private _appointmentRepository: IAppointmentRepository,
         private _doctorRepository: IDoctorRepository,
         private _userRepository: IUserRepository,
         private _walletService: IWalletService,
-        private logger: ILoggerService,
+        private _logger: ILoggerService,
         private _notificationService?: INotificationService
     ) {
-        this.razorpay = new (Razorpay as any)({
+        this._razorpay = new Razorpay({
             key_id: env.RAZORPAY_API_KEY,
             key_secret: env.RAZORPAY_API_SECRET,
         });
     }
 
-    private ensureKeys(): void {
+    private _ensureKeys(): void {
         const missing: string[] = [];
         if (!env.RAZORPAY_API_KEY) missing.push("RAZORPAY_API_KEY (or RAZORPAY_KEY_ID)");
         if (!env.RAZORPAY_API_SECRET) missing.push("RAZORPAY_API_SECRET (or RAZORPAY_KEY_SECRET)");
@@ -49,7 +49,7 @@ export class PaymentService implements IPaymentService {
         patientId: string,
         dto: CreateRazorpayOrderDTO
     ): Promise<{ keyId: string; orderId: string; amount: number; currency: string }> {
-        this.ensureKeys();
+        this._ensureKeys();
         const { appointmentId, amount, currency = PAYMENT_DEFAULTS.CURRENCY } = dto;
 
         if (!appointmentId) {
@@ -71,7 +71,7 @@ export class PaymentService implements IPaymentService {
 
         const amountInPaise = Math.round(Number(amount) * PAYMENT_DEFAULTS.PAISE_MULTIPLIER);
 
-        const order = await this.razorpay.orders.create({
+        const order = await this._razorpay.orders.create({
             amount: amountInPaise,
             currency,
             receipt: `apt_${appointment.customId || appointment._id.toString()}`,
@@ -80,7 +80,7 @@ export class PaymentService implements IPaymentService {
             },
         });
 
-        this.logger.info("Razorpay order created", {
+        this._logger.info("Razorpay order created", {
             appointmentId,
             orderId: order.id,
             amount: order.amount,
@@ -98,7 +98,7 @@ export class PaymentService implements IPaymentService {
         patientId: string,
         dto: VerifyRazorpayPaymentDTO
     ): Promise<{ appointmentId: string; paymentId: string }> {
-        this.ensureKeys();
+        this._ensureKeys();
         const { appointmentId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = dto;
 
         if (!appointmentId || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -121,7 +121,7 @@ export class PaymentService implements IPaymentService {
             .digest("hex");
 
         if (expectedSignature !== razorpay_signature) {
-            this.logger.warn("Razorpay signature mismatch", {
+            this._logger.warn("Razorpay signature mismatch", {
                 appointmentId,
                 razorpay_order_id,
                 razorpay_payment_id,
@@ -181,7 +181,7 @@ export class PaymentService implements IPaymentService {
 
         }
 
-        this.logger.info("Razorpay payment verified and split performed", {
+        this._logger.info("Razorpay payment verified and split performed", {
             appointmentId,
             paymentId: razorpay_payment_id,
             doctorEarnings: appointment.doctorEarnings,

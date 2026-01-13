@@ -8,7 +8,7 @@ export class MessageRepository extends BaseRepository<IMessage> implements IMess
         super(MessageModel);
     }
 
-    async create(messageData: any): Promise<IMessage> {
+    async create(messageData: Partial<IMessage>): Promise<IMessage> {
         return await this.model.create(messageData);
     }
 

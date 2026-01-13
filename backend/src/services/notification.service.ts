@@ -1,14 +1,23 @@
 import { INotificationRepository } from "../repositories/interfaces/INotification.repository";
 import { socketService } from "./socket.service";
 
+import { Document } from "mongoose";
+import { INotification } from "../types/notification.type";
+
+export interface INotificationDocument extends INotification, Document {
+    _id: string;
+}
+
+export interface NotificationData {
+    title: string;
+    message: string;
+    type: "success" | "error" | "warning" | "info";
+    appointmentId?: string;
+}
+
 export interface INotificationService {
-    notify(userId: string, data: {
-        title: string;
-        message: string;
-        type: "success" | "error" | "warning" | "info";
-        appointmentId?: string;
-    }): Promise<void>;
-    getNotifications(userId: string): Promise<any>;
+    notify(userId: string, data: NotificationData): Promise<void>;
+    getNotifications(userId: string): Promise<INotificationDocument[]>;
     markAsRead(id: string): Promise<void>;
     markAllAsRead(userId: string): Promise<void>;
     clearAll(userId: string): Promise<void>;
@@ -18,14 +27,15 @@ export interface INotificationService {
 export class NotificationService implements INotificationService {
     constructor(private _notificationRepository: INotificationRepository) { }
 
-    async notify(userId: string, data: any) {
+    async notify(userId: string, data: NotificationData) {
         const notification = await this._notificationRepository.create({
             userId,
             ...data,
             isRead: false,
         });
 
-        socketService.notify(userId, (notification as any).toObject ? (notification as any).toObject() : notification);
+        const notificationObj = notification.toObject ? notification.toObject() : notification;
+        socketService.notify(userId, notificationObj);
     }
 
     async getNotifications(userId: string) {

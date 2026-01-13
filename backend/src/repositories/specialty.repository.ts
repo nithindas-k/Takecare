@@ -19,7 +19,7 @@ export class SpecialtyRepository implements ISpecialtyRepository {
 
   async findAll(page: number, limit: number, search?: string): Promise<{ specialties: Specialty[], total: number }> {
     const skip = (page - 1) * limit;
-    const query: any = {};
+    const query: Record<string, unknown> = {};
 
     if (search) {
       query.name = { $regex: search, $options: 'i' };

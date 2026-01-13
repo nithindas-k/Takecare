@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { reviewService } from '../../services/reviewService';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../redux/user/userSlice';
+import AlertDialog from '../../components/common/AlertDialog';
 
 interface ReviewsListProps {
     doctorId: string;
@@ -34,6 +35,8 @@ const ReviewsList: React.FC<ReviewsListProps> = ({ doctorId, isCompletedAppointm
     const [isLoading, setIsLoading] = useState(true);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingReview, setEditingReview] = useState<Review | null>(null);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [reviewToDelete, setReviewToDelete] = useState<string | null>(null);
     const user = useSelector(selectCurrentUser);
     const currentUserId = user?.id || user?._id;
 
@@ -85,15 +88,22 @@ const ReviewsList: React.FC<ReviewsListProps> = ({ doctorId, isCompletedAppointm
         }
     };
 
-    const handleDeleteReview = async (id: string) => {
-        if (window.confirm("Are you sure you want to delete this review?")) {
-            try {
-                await reviewService.deleteReview(id);
-                toast.success("Review deleted successfully!");
-                fetchReviews();
-            } catch (error: any) {
-                toast.error(error.response?.data?.message || "Failed to delete review");
-            }
+    const handleDeleteClick = (id: string) => {
+        setReviewToDelete(id);
+        setDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!reviewToDelete) return;
+        try {
+            await reviewService.deleteReview(reviewToDelete);
+            toast.success("Review deleted successfully!");
+            fetchReviews();
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to delete review");
+        } finally {
+            setDeleteDialogOpen(false);
+            setReviewToDelete(null);
         }
     };
 
@@ -178,13 +188,18 @@ const ReviewsList: React.FC<ReviewsListProps> = ({ doctorId, isCompletedAppointm
                             review={{
                                 ...review,
                                 id: review.id || review._id,
-                                isOwnReview: String(review.patientId?._id || review.patientId) === String(currentUserId)
+                                isOwnReview: (() => {
+                                    const reviewPatId = typeof review.patientId === 'object'
+                                        ? (review.patientId._id || review.patientId.id)
+                                        : review.patientId;
+                                    return String(reviewPatId) === String(currentUserId);
+                                })()
                             }}
                             onEdit={() => {
                                 setEditingReview(review);
                                 setIsFormOpen(true);
                             }}
-                            onDelete={() => handleDeleteReview(review.id || review._id)}
+                            onDelete={() => handleDeleteClick(review.id || review._id)}
                         />
                     ))
                 )}
@@ -200,6 +215,18 @@ const ReviewsList: React.FC<ReviewsListProps> = ({ doctorId, isCompletedAppointm
                 onSubmit={editingReview ? handleEditReview : handleAddReview}
                 initialData={editingReview ? { rating: editingReview.rating, comment: editingReview.comment } : undefined}
                 title={editingReview ? "Edit Your Feedback" : "Add Your Feedback"}
+            />
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                title="Delete Review"
+                description="Are you sure you want to delete this review? This action cannot be undone."
+                onConfirm={confirmDelete}
+                confirmText="Delete"
+                cancelText="Cancel"
+                variant="destructive"
             />
         </div>
     );

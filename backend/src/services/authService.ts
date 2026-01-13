@@ -17,7 +17,7 @@ export class AuthService implements IAuthService {
     private _userRepository: IUserRepository,
     private _otpService: IOTPService,
     private _doctorRepository: IDoctorRepository,
-    private logger: ILoggerService
+    private _logger: ILoggerService
   ) {
   }
 
@@ -25,10 +25,10 @@ export class AuthService implements IAuthService {
     validatePasswordMatch(data.password, data.confirmPassword);
     validatePassword(data.password);
 
-    await this.checkUserDoesNotExist(data.email, data.phone);
+    await this._checkUserDoesNotExist(data.email, data.phone);
 
     const passwordHash = await hashPassword(data.password);
-    const gender = this.normalizeGender(data.gender);
+    const gender = this._normalizeGender(data.gender);
 
     await this._otpService.createAndSendOtp(
       data.email,
@@ -64,7 +64,7 @@ export class AuthService implements IAuthService {
 
     let doctorId: string | undefined;
     if (String(user.role).toLowerCase() === ROLES.DOCTOR) {
-      const existingDoctor = await this.ensureDoctorProfile(user);
+      const existingDoctor = await this._ensureDoctorProfile(user);
       doctorId = existingDoctor._id.toString();
     }
 
@@ -88,7 +88,7 @@ export class AuthService implements IAuthService {
   }
 
   async login(data: LoginDTO): Promise<AuthResponseDTO<BaseUserResponseDTO>> {
-    const user = await this.validateLogin(data.email, data.password, data.role);
+    const user = await this._validateLogin(data.email, data.password, data.role);
     let doctorId: string | undefined;
 
     if (String(user.role).toLowerCase() === ROLES.DOCTOR) {
@@ -117,7 +117,7 @@ export class AuthService implements IAuthService {
       throw new NotFoundError(MESSAGES.NO_ACCOUNT_FOUND);
     }
 
-    const gender = this.normalizeGender(user.gender ?? undefined);
+    const gender = this._normalizeGender(user.gender ?? undefined);
 
     await this._otpService.createPasswordResetOtp(data.email, user.name, {
       name: user.name,
@@ -190,7 +190,7 @@ export class AuthService implements IAuthService {
     }
   }
 
-  private normalizeGender(gender?: string | Gender): Gender | null {
+  private _normalizeGender(gender?: string | Gender): Gender | null {
     if (!gender) return null;
     const normalized = String(gender).toLowerCase().trim();
     if (normalized === GENDER.MALE) return GENDER.MALE as Gender;
@@ -199,7 +199,7 @@ export class AuthService implements IAuthService {
     return null;
   }
 
-  private async checkUserDoesNotExist(email: string, phone: string): Promise<void> {
+  private async _checkUserDoesNotExist(email: string, phone: string): Promise<void> {
     const existingUser = await this._userRepository.findByEmail(email);
     if (existingUser) {
       throw new ConflictError(MESSAGES.USER_EXISTS_EMAIL);
@@ -210,7 +210,7 @@ export class AuthService implements IAuthService {
     }
   }
 
-  private async validateLogin(email: string, password: string, role: string): Promise<IUserDocument> {
+  private async _validateLogin(email: string, password: string, role: string): Promise<IUserDocument> {
     const user = await this._userRepository.findByEmailIncludingInactive(email);
 
     if (!user || user.role !== role) {
@@ -233,7 +233,7 @@ export class AuthService implements IAuthService {
     return user;
   }
 
-  private async ensureDoctorProfile(user: IUserDocument) {
+  private async _ensureDoctorProfile(user: IUserDocument) {
     let existingDoctor = await this._doctorRepository.findByUserId(user._id.toString());
     if (!existingDoctor) {
       existingDoctor = await this._doctorRepository.create({

@@ -7,82 +7,82 @@ import { ILoggerService } from "./interfaces/ILogger.service";
 import { APPOINTMENT_STATUS } from "../constants/constants";
 
 export class AppointmentReminderService {
-    private appointmentRepository: AppointmentRepository;
-    private scheduleRepository: ScheduleRepository;
-    private notificationService: NotificationService;
-    private cronJob: any = null;
+    private _appointmentRepository: AppointmentRepository;
+    private _scheduleRepository: ScheduleRepository;
+    private _notificationService: NotificationService;
+    private _cronJob: any = null;
 
     constructor(
         appointmentRepository: AppointmentRepository,
         scheduleRepository: ScheduleRepository,
         notificationService: NotificationService,
-        private logger: ILoggerService
+        private _logger: ILoggerService
     ) {
-        this.appointmentRepository = appointmentRepository;
-        this.scheduleRepository = scheduleRepository;
-        this.notificationService = notificationService;
+        this._appointmentRepository = appointmentRepository;
+        this._scheduleRepository = scheduleRepository;
+        this._notificationService = notificationService;
     }
 
     start() {
         // checking 
-        this.cronJob = cron.schedule("* * * * *", async () => {
-            await this.checkUpcomingAppointments();
+        this._cronJob = cron.schedule("* * * * *", async () => {
+            await this._checkUpcomingAppointments();
         });
 
         // clean up in  5  minutes
         cron.schedule("*/5 * * * *", async () => {
-            await this.cleanupPendingAppointments();
+            await this._cleanupPendingAppointments();
         });
 
-        this.logger.info("Appointment reminder service started");
+        this._logger.info("Appointment reminder service started");
     }
 
     stop() {
-        if (this.cronJob) {
-            this.cronJob.stop();
-            this.logger.info("Appointment reminder service stopped");
+        if (this._cronJob) {
+            this._cronJob.stop();
+            this._logger.info("Appointment reminder service stopped");
         }
     }
 
-    private async cleanupPendingAppointments() {
+    private async _cleanupPendingAppointments() {
         try {
             const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
 
-            const pendingAppointments = await this.appointmentRepository.find({
+            const pendingAppointments = await this._appointmentRepository.find({
                 status: APPOINTMENT_STATUS.PENDING,
                 paymentStatus: "pending",
                 createdAt: { $lt: fiveMinutesAgo }
             });
 
             if (pendingAppointments.length > 0) {
-                this.logger.info(`Found ${pendingAppointments.length} abandoned pending appointments causing slot blockage. Cleaning up...`);
+                this._logger.info(`Found ${pendingAppointments.length} abandoned pending appointments causing slot blockage. Cleaning up...`);
 
                 let deletedCount = 0;
                 for (const appt of pendingAppointments) {
 
                     if (appt.slotId && appt.doctorId) {
                         const [startTime] = appt.appointmentTime.split("-").map((t: string) => t.trim());
-                        await this.scheduleRepository.updateSlotBookedStatus(
+                        await this._scheduleRepository.updateSlotBookedStatus(
                             appt.doctorId.toString(),
                             appt.slotId,
                             false,
                             new Date(appt.appointmentDate),
                             startTime
                         );
-                        this.logger.info(`Released slot ${appt.slotId} for abandoned appointment ${appt._id}`);
+                        this._logger.info(`Released slot ${appt.slotId} for abandoned appointment ${appt._id}`);
                     }
-                    await this.appointmentRepository.deleteById(appt._id.toString());
+                    await this._appointmentRepository.deleteById(appt._id.toString());
                     deletedCount++;
                 }
 
-                this.logger.info(`Successfully cleaned up ${deletedCount} abandoned appointments.`);
+                this._logger.info(`Successfully cleaned up ${deletedCount} abandoned appointments.`);
             }
         } catch (error) {
-            this.logger.error("Error cleaning up pending appointments", error);
+            this._logger.error("Error cleaning up pending appointments", error);
         }
     }
 
-    private async checkUpcomingAppointments() {
+    private async _checkUpcomingAppointments() {
         try {
             const now = new Date();
             const startOfDay = new Date(now);
@@ -91,7 +91,7 @@ export class AppointmentReminderService {
             const endOfDay = new Date(now);
             endOfDay.setHours(23, 59, 59, 999);
 
-            const appointments = await this.appointmentRepository.findWithPopulate({
+            const appointments = await this._appointmentRepository.findWithPopulate({
                 appointmentDate: {
                     $gte: startOfDay,
                     $lte: endOfDay
@@ -103,7 +103,7 @@ export class AppointmentReminderService {
                 ]
             }, "doctorId");
 
-            this.logger.debug(`Found ${appointments.length} confirmed appointments for today to check for reminders.`);
+            this._logger.debug(`Found ${appointments.length} confirmed appointments for today to check for reminders.`);
 
             for (const appointment of appointments) {
 
@@ -119,14 +119,14 @@ export class AppointmentReminderService {
                 const timeDiffMs = appointmentDateTime.getTime() - now.getTime();
                 const minutesDiff = timeDiffMs / (1000 * 60);
 
-                this.logger.debug(`Checking appointment ${appointment.customId}:`, {
+                this._logger.debug(`Checking appointment ${appointment.customId}:`, {
                     currentTime: now.toLocaleTimeString(),
                     targetTime: appointmentDateTime.toLocaleTimeString(),
                     minutesUntilStart: minutesDiff.toFixed(2)
                 });
 
                 if (minutesDiff > 4.5 && minutesDiff <= 5.5 && !appointment.reminderSent) {
-                    this.logger.info(`Sending 5-minute reminder for appointment ${appointment.customId}`);
+                    this._logger.info(`Sending 5-minute reminder for appointment ${appointment.customId}`);
 
                     const reminderData = {
                         title: "Appointment Starting Soon!",
@@ -140,12 +140,12 @@ export class AppointmentReminderService {
                     const patientId = appointment.patientId.toString();
 
                     if (doctorUserId) {
-                        await this.notificationService.notify(patientId, {
+                        await this._notificationService.notify(patientId, {
                             ...reminderData,
                             type: "warning",
                         });
 
-                        await this.notificationService.notify(doctorUserId, {
+                        await this._notificationService.notify(doctorUserId, {
                             ...reminderData,
                             type: "warning",
                         });
@@ -153,17 +153,17 @@ export class AppointmentReminderService {
                         socketService.sendReminder(patientId, reminderData);
                         socketService.sendReminder(doctorUserId, reminderData);
 
-                        await this.appointmentRepository.updateById(appointment._id.toString(), {
+                        await this._appointmentRepository.updateById(appointment._id.toString(), {
                             reminderSent: true
                         });
 
-                        this.logger.info(`5-minute reminder sent for appointment ${appointment.customId}`);
+                        this._logger.info(`5-minute reminder sent for appointment ${appointment.customId}`);
                     }
                 }
 
                 // Start Time
                 if (minutesDiff <= 0 && minutesDiff >= -2 && !appointment.startNotificationSent) {
-                    this.logger.info(`Sending start-time notification for appointment ${appointment.customId}`);
+                    this._logger.info(`Sending start-time notification for appointment ${appointment.customId}`);
 
                     const startData = {
                         title: "Consultation Ready!",
@@ -179,13 +179,13 @@ export class AppointmentReminderService {
 
                     if (doctorUserId) {
 
-                        await this.notificationService.notify(patientId, {
+                        await this._notificationService.notify(patientId, {
                             ...startData,
                             type: "success",
                         });
 
 
-                        await this.notificationService.notify(doctorUserId, {
+                        await this._notificationService.notify(doctorUserId, {
                             ...startData,
                             type: "success",
                         });
@@ -194,16 +194,16 @@ export class AppointmentReminderService {
                         socketService.sendReminder(patientId, startData);
                         socketService.sendReminder(doctorUserId, startData);
 
-                        await this.appointmentRepository.updateById(appointment._id.toString(), {
+                        await this._appointmentRepository.updateById(appointment._id.toString(), {
                             startNotificationSent: true
                         });
 
-                        this.logger.info(`Start-time notification sent for appointment ${appointment.customId}`);
+                        this._logger.info(`Start-time notification sent for appointment ${appointment.customId}`);
                     }
                 }
             }
         } catch (error) {
-            this.logger.error("Error checking upcoming appointments", error);
+            this._logger.error("Error checking upcoming appointments", error);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -27,7 +27,6 @@ import {
 import { useSocket } from '../../context/SocketContext';
 import { toast } from 'sonner';
 import { Lock, ClipboardList, Clock, StickyNote, Plus, BookOpen, X } from 'lucide-react';
-import { SESSION_STATUS } from '../../utils/constants';
 
 const VideoCallContent: React.FC = () => {
     const { id } = useParams();
@@ -269,7 +268,7 @@ const VideoCallContent: React.FC = () => {
         if (!appointment || appointment.status === 'completed' || sessionStatus === 'ENDED') return;
 
         const checkTime = () => {
-            if (sessionStatus === SESSION_STATUS.CONTINUED_BY_DOCTOR || sessionStatus === SESSION_STATUS.ENDED || extensionCount > 0) {
+            if (sessionStatus === "CONTINUED_BY_DOCTOR" || sessionStatus === "ENDED" || extensionCount > 0) {
                 if (isTimeOver) setIsTimeOver(false);
                 return;
             }
@@ -289,7 +288,7 @@ const VideoCallContent: React.FC = () => {
                 if (!isTimeOver) {
                     setIsTimeOver(true);
                     if (sessionStatus !== "WAITING_FOR_DOCTOR" && !isDoctor) {
-                        updateSessionStatus(SESSION_STATUS.WAITING_FOR_DOCTOR);
+                        updateSessionStatus("WAITING_FOR_DOCTOR");
                     }
                 }
             } else {
@@ -322,7 +321,7 @@ const VideoCallContent: React.FC = () => {
                         };
                     });
                 }
-                if (data.status === SESSION_STATUS.ACTIVE || data.status === "CONTINUED_BY_DOCTOR") {
+                if (data.status === "ACTIVE" || data.status === "CONTINUED_BY_DOCTOR") {
                     setIsTimeOver(false);
                 }
             }
@@ -470,7 +469,7 @@ const VideoCallContent: React.FC = () => {
                             </div>
 
                             <div className="flex gap-2">
-                                {isDoctor && sessionStatus === SESSION_STATUS.ENDED && (
+                                {isDoctor && sessionStatus === "ENDED" && (
                                     <div className="flex items-center gap-2">
                                         {!isPostConsultationWindowOpen ? (
                                             <Button
@@ -488,7 +487,7 @@ const VideoCallContent: React.FC = () => {
                                         )}
                                     </div>
                                 )}
-                                {isDoctor && sessionStatus !== SESSION_STATUS.ENDED && (
+                                {isDoctor && sessionStatus !== "ENDED" && (
                                     <Button
                                         onClick={() => setEndSessionDialogOpen(true)}
                                         className="h-9 px-4 bg-amber-500 hover:bg-amber-600 text-white font-black uppercase text-[10px] tracking-widest rounded-xl transition-all shadow-lg shadow-amber-500/20"
@@ -789,7 +788,7 @@ const VideoCallContent: React.FC = () => {
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => {
-                                        if (isDoctor && sessionStatus !== SESSION_STATUS.ENDED) {
+                                        if (isDoctor && sessionStatus !== "ENDED") {
                                             setEndSessionDialogOpen(true);
                                         } else {
                                             leaveCall();
@@ -827,7 +826,7 @@ const VideoCallContent: React.FC = () => {
             </AnimatePresence>
             {/* Time Over Modal for Patient */}
             <AnimatePresence>
-                {isTimeOver && !isDoctor && sessionStatus !== SESSION_STATUS.CONTINUED_BY_DOCTOR && sessionStatus !== SESSION_STATUS.ENDED && (
+                {isTimeOver && !isDoctor && sessionStatus !== "CONTINUED_BY_DOCTOR" && sessionStatus !== "ENDED" && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -870,7 +869,7 @@ const VideoCallContent: React.FC = () => {
 
             {/* Improved Doctor Session Controls (Modal Style) when time is over */}
             <AnimatePresence>
-                {isTimeOver && isDoctor && sessionStatus === SESSION_STATUS.WAITING_FOR_DOCTOR && (
+                {isTimeOver && isDoctor && sessionStatus === "WAITING_FOR_DOCTOR" && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -897,13 +896,13 @@ const VideoCallContent: React.FC = () => {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <Button
-                                    onClick={() => updateSessionStatus(SESSION_STATUS.CONTINUED_BY_DOCTOR)}
+                                    onClick={() => updateSessionStatus("CONTINUED_BY_DOCTOR")}
                                     className="bg-green-500 hover:bg-green-600 text-white rounded-2xl h-14 font-black uppercase text-xs tracking-widest shadow-lg shadow-green-500/20"
                                 >
                                     ✅ Continue
                                 </Button>
                                 <Button
-                                    onClick={() => updateSessionStatus(SESSION_STATUS.ENDED)}
+                                    onClick={() => updateSessionStatus("ENDED")}
                                     className="bg-red-500 hover:bg-red-600 text-white rounded-2xl h-14 font-black uppercase text-xs tracking-widest shadow-lg shadow-red-500/20"
                                 >
                                     ❌ Wind Up
@@ -949,7 +948,7 @@ const VideoCallContent: React.FC = () => {
                         </Button>
                         <Button
                             onClick={() => {
-                                updateSessionStatus(SESSION_STATUS.ENDED);
+                                updateSessionStatus("ENDED");
                                 setEndSessionDialogOpen(false);
                             }}
                             className="flex-1 h-12 rounded-xl text-white font-bold transition-all shadow-lg bg-red-500 hover:bg-red-600 shadow-red-500/20"

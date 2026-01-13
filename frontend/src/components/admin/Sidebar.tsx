@@ -8,12 +8,11 @@ import {
   Calendar,
   Grid,
   DollarSign,
-  Settings,
-  Lock,
   Mail,
   LogOut,
   Activity,
-  X
+  X,
+  Star
 } from "lucide-react";
 import authService from "../../services/authService";
 import { toast } from "sonner";
@@ -30,6 +29,7 @@ const sidebarItems = [
   { label: "Appointments", icon: Calendar, path: "/admin/appointments" },
   { label: "Speciality", icon: Grid, path: "/admin/speciality" },
   { label: "Earnings", icon: DollarSign, path: "/admin/earnings" },
+  { label: "Reviews", icon: Star, path: "/admin/reviews" },
   { label: "Messages", icon: Mail, path: "/admin/messages" },
   // { label: "Profile Settings", icon: Settings, path: "/admin/profile-settings" },
   // { label: "Change Password", icon: Lock, path: "/admin/change-password" },

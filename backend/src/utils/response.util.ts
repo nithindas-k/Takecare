@@ -3,7 +3,7 @@ import { ApiResponse } from "../types/response.type";
 import { PaginatedResponse } from "../types/common";
 import { HttpStatus } from "../constants/constants";
 
-export const sendSuccess = <T = any>(
+export const sendSuccess = <T = unknown>(
     res: Response,
     data?: T,
     message?: string,
@@ -37,7 +37,7 @@ export const sendError = (
 };
 
 
-export const sendPaginatedResponse = <T = any>(
+export const sendPaginatedResponse = <T = unknown>(
     res: Response,
     items: T[],
     total: number,

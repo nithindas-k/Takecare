@@ -30,6 +30,9 @@ export const DOCTOR_API_ROUTES = {
   BLOCK_DATE: (doctorId?: string): string => doctorId ? `/doctors/schedule/${doctorId}/block-date` : "/doctors/schedule/block-date",
   UNBLOCK_DATE: (doctorId?: string): string => doctorId ? `/doctors/schedule/${doctorId}/block-date` : "/doctors/schedule/block-date",
   AVAILABLE_SLOTS: (doctorId: string): string => `/doctors/schedule/${doctorId}/available-slots`,
+  RECURRING_SLOTS: "/doctors/schedule/recurring-slots",
+  DELETE_RECURRING_SLOT: (day: string, slotId: string): string => `/doctors/schedule/recurring-slots/${day}/${slotId}`,
+  DELETE_RECURRING_SLOT_BY_TIME: (startTime: string, endTime: string): string => `/doctors/schedule/recurring-slots/by-time/${startTime}/${endTime}`,
   RELATED_DOCTORS: (doctorId: string): string => `/doctors/${doctorId}/related`,
 } as const;
 
@@ -141,3 +144,31 @@ export const REVIEW_API_ROUTES = {
 
 export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
 export type HttpStatus = (typeof HTTP_STATUS)[keyof typeof HTTP_STATUS];
+
+export const SESSION_STATUS = {
+  ACTIVE: 'ACTIVE',
+  WAITING_FOR_DOCTOR: 'WAITING_FOR_DOCTOR',
+  CONTINUED_BY_DOCTOR: 'CONTINUED_BY_DOCTOR',
+  ENDED: 'ENDED',
+  TEST_NEEDED: 'TEST_NEEDED',
+} as const;
+
+export type SessionStatus = typeof SESSION_STATUS[keyof typeof SESSION_STATUS];
+
+export const isValidSessionStatus = (status: string): status is SessionStatus => {
+  return Object.values(SESSION_STATUS).includes(status as SessionStatus);
+};
+
+export const isSessionActive = (status: SessionStatus): boolean => {
+  return status === SESSION_STATUS.ACTIVE ||
+    status === SESSION_STATUS.CONTINUED_BY_DOCTOR ||
+    status === SESSION_STATUS.TEST_NEEDED;
+};
+
+export const canExtendSession = (status: SessionStatus): boolean => {
+  return status === SESSION_STATUS.WAITING_FOR_DOCTOR;
+};
+
+export const isSessionLocked = (status: SessionStatus): boolean => {
+  return status === SESSION_STATUS.ENDED;
+};

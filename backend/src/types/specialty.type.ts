@@ -1,5 +1,7 @@
+import { Types } from "mongoose";
+
 export interface Specialty {
-  _id: any;
+  _id: Types.ObjectId | string;
   name: string;
   description?: string;
   isActive: boolean;

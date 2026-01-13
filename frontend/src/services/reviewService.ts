@@ -29,6 +29,11 @@ export const reviewService = {
         return response.data.data;
     },
 
+    getMyReview: async (doctorId: string) => {
+        const response = await axiosInstance.get(`/reviews/patient-doctor/${doctorId}`);
+        return response.data;
+    },
+
     getDoctorStats: async (doctorId: string) => {
         const response = await axiosInstance.get(REVIEW_API_ROUTES.GET_DOCTOR_STATS(doctorId));
         return response.data.data;

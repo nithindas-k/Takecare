@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { ChatController } from "../controllers/chat.controller";
 import { ChatService } from "../services/chat.service";
 import { MessageRepository } from "../repositories/message.repository";
@@ -50,7 +50,7 @@ chatRouter.post(
     "/:appointmentId/upload",
     authMiddleware,
     upload.single("file"),
-    (req: any, res) => {
+    (req: Request, res: Response) => {
         if (!req.file) {
             return res.status(400).json({ success: false, message: "No file uploaded" });
         }

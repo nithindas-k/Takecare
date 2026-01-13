@@ -1,3 +1,6 @@
+import { AppointmentResponseDTO, AppointmentListResponseDTO } from "../../dtos/appointment.dtos/appointment.dto";
+import { IDoctorNote } from "../../types/appointment.type";
+
 export interface IAppointmentService {
     createAppointment(
         patientId: string,
@@ -9,25 +12,19 @@ export interface IAppointmentService {
             appointmentType: "video" | "chat",
             reason?: string
         }
-    ): Promise<any>;
+    ): Promise<AppointmentResponseDTO>;
 
     listAppointments(
         userId: string,
         userRole: string,
         filters: import("../../dtos/admin.dtos/admin.dto").AppointmentFilterDTO
-    ): Promise<{
-        appointments: any[];
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-    }>;
+    ): Promise<AppointmentListResponseDTO>;
 
     getAppointmentById(
         appointmentId: string,
         userId: string,
         userRole: string
-    ): Promise<any>;
+    ): Promise<AppointmentResponseDTO>;
 
     cancelAppointment(
         appointmentId: string,
@@ -45,7 +42,7 @@ export interface IAppointmentService {
             appointmentTime: string,
             slotId?: string
         }
-    ): Promise<any>;
+    ): Promise<AppointmentResponseDTO>;
 
     approveAppointmentRequest(
         appointmentId: string,
@@ -78,5 +75,5 @@ export interface IAppointmentService {
 
     enablePostConsultationChat(appointmentId: string, doctorUserId: string): Promise<void>;
     disablePostConsultationChat(appointmentId: string, doctorUserId: string): Promise<void>;
-    updateDoctorNotes(appointmentId: string, doctorUserId: string, notes: any): Promise<void>;
+    updateDoctorNotes(appointmentId: string, doctorUserId: string, notes: IDoctorNote[]): Promise<void>;
 }

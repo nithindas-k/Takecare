@@ -2,31 +2,31 @@ import WalletModel from "../models/wallet.model";
 import TransactionModel from "../models/transaction.model";
 import { IWalletRepository } from "./interfaces/IWalletRepository";
 import { IWalletDocument, ITransactionDocument } from "../types/wallet.type";
-import { Types } from "mongoose";
+import { Types, ClientSession } from "mongoose";
 
 export class WalletRepository implements IWalletRepository {
-    async findByUserId(userId: string, session?: any): Promise<IWalletDocument | null> {
-        return await WalletModel.findOne({ userId: new Types.ObjectId(userId) }).session(session);
+    async findByUserId(userId: string, session?: ClientSession | undefined): Promise<IWalletDocument | null> {
+        return await WalletModel.findOne({ userId: new Types.ObjectId(userId) }).session(session || null);
     }
 
-    async createWallet(userId: string, session?: any): Promise<IWalletDocument> {
-        return await WalletModel.create([{ userId: new Types.ObjectId(userId), balance: 0 }], { session }).then(docs => docs[0]);
+    async createWallet(userId: string, session?: ClientSession | undefined): Promise<IWalletDocument> {
+        return await WalletModel.create([{ userId: new Types.ObjectId(userId), balance: 0 }], { session: session || undefined }).then(docs => docs[0]);
     }
 
-    async updateBalance(userId: string, amount: number, session?: any): Promise<IWalletDocument | null> {
+    async updateBalance(userId: string, amount: number, session?: ClientSession | undefined): Promise<IWalletDocument | null> {
         return await WalletModel.findOneAndUpdate(
             { userId: new Types.ObjectId(userId) },
             { $inc: { balance: amount } },
-            { new: true, upsert: true, session }
+            { new: true, upsert: true, session: session || undefined }
         );
     }
 
-    async createTransaction(data: any, session?: any): Promise<ITransactionDocument> {
-        return await TransactionModel.create([data], { session }).then(docs => docs[0]);
+    async createTransaction(data: Partial<ITransactionDocument>, session?: ClientSession | undefined): Promise<ITransactionDocument> {
+        return await TransactionModel.create([data], { session: session || undefined }).then(docs => docs[0]);
     }
 
     async getTransactionsByUserId(userId: string, skip: number, limit: number, filters?: { search?: string, type?: string, date?: string }): Promise<{ transactions: ITransactionDocument[], total: number, earnings: number, deductions: number }> {
-        const query: any = { userId: new Types.ObjectId(userId) };
+        const query: Record<string, unknown> = { userId: new Types.ObjectId(userId) };
 
         if (filters?.search) {
             query.description = { $regex: filters.search, $options: 'i' };
@@ -84,8 +84,8 @@ export class WalletRepository implements IWalletRepository {
         };
     }
 
-    async getAdminTransactions(skip: number, limit: number, filters?: { date?: string }): Promise<{ transactions: any[], total: number }> {
-        const query: any = { description: { $regex: /Commission/i } };
+    async getAdminTransactions(skip: number, limit: number, filters?: { date?: string }): Promise<{ transactions: ITransactionDocument[], total: number }> {
+        const query: Record<string, unknown> = { description: { $regex: /Commission/i } };
 
         if (filters?.date) {
             const startOfDay = new Date(filters.date);

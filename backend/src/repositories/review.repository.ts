@@ -8,6 +8,10 @@ export class ReviewRepository extends BaseRepository<IReview> implements IReview
         super(ReviewModel);
     }
 
+    async deleteById(id: string): Promise<IReview | null> {
+        return await this.model.findByIdAndDelete(id).exec();
+    }
+
     async findByDoctorId(doctorId: string): Promise<IReview[]> {
         return await this.model
             .find({ doctorId: new Types.ObjectId(doctorId) })
@@ -27,6 +31,15 @@ export class ReviewRepository extends BaseRepository<IReview> implements IReview
     async findByAppointmentId(appointmentId: string): Promise<IReview | null> {
         return await this.model
             .findOne({ appointmentId: new Types.ObjectId(appointmentId) })
+            .exec();
+    }
+
+    async findByPatientIdAndDoctorId(patientId: string, doctorId: string): Promise<IReview | null> {
+        return await this.model
+            .findOne({
+                patientId: new Types.ObjectId(patientId),
+                doctorId: new Types.ObjectId(doctorId)
+            })
             .exec();
     }
 
@@ -50,5 +63,27 @@ export class ReviewRepository extends BaseRepository<IReview> implements IReview
             averageRating: parseFloat(stats[0].averageRating.toFixed(1)),
             reviewCount: stats[0].reviewCount,
         };
+    }
+
+    async getAllReviewsWithDetails(skip: number, limit: number): Promise<{ reviews: IReview[]; total: number }> {
+        const reviews = await this.model
+            .find()
+            .populate("patientId", "name email profileImage")
+            .populate({
+                path: "doctorId",
+                select: "specialty userId",
+                populate: {
+                    path: "userId",
+                    select: "name profileImage"
+                }
+            })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .exec();
+
+        const total = await this.model.countDocuments();
+
+        return { reviews, total };
     }
 }

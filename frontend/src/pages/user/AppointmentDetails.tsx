@@ -329,6 +329,37 @@ const AppointmentDetails: React.FC = () => {
         }
     };
 
+    const [existingReview, setExistingReview] = useState<any>(null);
+
+    const handleOpenReview = async () => {
+        if (!appointment) return;
+
+        // Extract doctorId
+        const docObj = appointment.doctor || appointment.doctorId;
+        const doctorId = docObj?._id || docObj?.id || (typeof docObj === 'string' ? docObj : null);
+
+        if (!doctorId) {
+            setReviewFormOpen(true);
+            return;
+        }
+
+        // Optimistically open
+        setReviewFormOpen(true);
+
+        try {
+            const response = await reviewService.getMyReview(doctorId);
+            if (response.success && response.data) {
+                setExistingReview(response.data);
+            } else {
+                setExistingReview(null);
+            }
+        } catch (error) {
+            console.error("Failed to fetch existing review:", error);
+            // Don't close, just let them create new if fetch fails (or maybe it means no review exists)
+            setExistingReview(null);
+        }
+    };
+
     const handleReviewSubmit = async (data: { rating: number; comment: string }) => {
         if (!appointment) return;
         try {
@@ -347,12 +378,20 @@ const AppointmentDetails: React.FC = () => {
                 return;
             }
 
-            await reviewService.addReview({
-                ...data,
-                appointmentId,
-                doctorId
-            });
-            toast.success("Review submitted successfully!");
+            if (existingReview) {
+                await reviewService.updateReview(existingReview._id || existingReview.id, data);
+                toast.success("Review updated successfully!");
+                // Update local state to reflect changes immediately
+                setExistingReview({ ...existingReview, ...data });
+            } else {
+                await reviewService.addReview({
+                    ...data,
+                    appointmentId,
+                    doctorId
+                });
+                toast.success("Review submitted successfully!");
+                // We could fetch review again to get the ID, but for now just close
+            }
             setReviewFormOpen(false);
         } catch (error: any) {
             console.error("Review submit error:", error);
@@ -715,7 +754,7 @@ const AppointmentDetails: React.FC = () => {
                                         {normalized.status === 'completed' && (
                                             <div className="flex flex-col gap-2 w-full">
                                                 <button
-                                                    onClick={() => setReviewFormOpen(true)}
+                                                    onClick={handleOpenReview}
                                                     className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
                                                 >
                                                     <FaStar /> Rate Doctor
@@ -960,7 +999,8 @@ const AppointmentDetails: React.FC = () => {
                 isOpen={reviewFormOpen}
                 onClose={() => setReviewFormOpen(false)}
                 onSubmit={handleReviewSubmit}
-                title="Rate Your Experience"
+                title={existingReview ? "Update Your Review" : "Rate Your Experience"}
+                initialData={existingReview ? { rating: existingReview.rating, comment: existingReview.comment } : undefined}
             />
 
             {/* Prescription View Modal */}

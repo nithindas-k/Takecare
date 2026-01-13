@@ -17,6 +17,7 @@ import { AppError } from "../types/error.type";
 import { sendSuccess, sendError } from "../utils/response.util";
 import { generateAccessToken, generateRefreshToken } from "../utils/jwt.util";
 import { ILoggerService } from "../services/interfaces/ILogger.service";
+import { IUserDocument } from "../types/user.type";
 
 export class AuthController implements IAuthController {
   constructor(
@@ -161,7 +162,7 @@ export class AuthController implements IAuthController {
         );
       }
 
-      const user = req.user as any;
+      const user = req.user as unknown as IUserDocument;
 
       let doctorId: string | undefined;
       let verificationStatus;
@@ -202,7 +203,7 @@ export class AuthController implements IAuthController {
         );
       }
 
-      const user = req.user as any;
+      const user = req.user as unknown as IUserDocument;
 
       const verificationStatus = await this._authService.getDoctorStatus(user._id.toString());
       const doctorId = await this._authService.getDoctorId(user._id.toString());
