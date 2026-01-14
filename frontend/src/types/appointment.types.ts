@@ -60,7 +60,13 @@ export interface PopulatedAppointment {
     appointmentDate: string;
     appointmentTime: string;
     appointmentType: 'video' | 'chat';
-    status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'rejected' | 'upcoming';
+    status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'rejected' | 'upcoming' | 'reschedule_requested';
+    rescheduleRequest?: {
+        appointmentDate: string;
+        appointmentTime: string;
+        slotId?: string;
+    } | null;
+    rescheduleRejectReason?: string | null;
     paymentStatus: 'pending' | 'paid' | 'failed';
     consultationFees?: number;
     reason?: string;

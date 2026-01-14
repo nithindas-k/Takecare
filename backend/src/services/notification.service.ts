@@ -4,9 +4,7 @@ import { socketService } from "./socket.service";
 import { Document } from "mongoose";
 import { INotification } from "../types/notification.type";
 
-export interface INotificationDocument extends INotification, Document {
-    _id: string;
-}
+import { INotificationDocument } from "../models/notification.model";
 
 export interface NotificationData {
     title: string;
@@ -17,7 +15,7 @@ export interface NotificationData {
 
 export interface INotificationService {
     notify(userId: string, data: NotificationData): Promise<void>;
-    getNotifications(userId: string): Promise<INotificationDocument[]>;
+    getNotifications(userId: string): Promise<any[]>;
     markAsRead(id: string): Promise<void>;
     markAllAsRead(userId: string): Promise<void>;
     clearAll(userId: string): Promise<void>;

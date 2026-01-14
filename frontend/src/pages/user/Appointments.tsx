@@ -3,13 +3,111 @@ import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom';
 import NavBar from '../../components/common/NavBar';
 import PatientSidebar from '../../components/Patient/PatientSidebar';
-import { FaVideo, FaComments, FaEye, FaSearch } from 'react-icons/fa';
+import { FaVideo, FaComments, FaEye, FaSearch, FaCalendarAlt, FaExclamationCircle, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import { appointmentService } from '../../services/appointmentService';
+
 import { API_BASE_URL } from '../../utils/constants';
 import { Skeleton } from '../../components/ui/skeleton';
 import type { PopulatedAppointment } from '../../types/appointment.types';
+import { Button } from '../../components/ui/button';
+
+import { Card, CardContent, CardHeader } from "../../components/ui/card"
 
 
+
+const AppointmentCard: React.FC<{ appointment: any; handleViewDetails: (id: string) => void; formatDateShort: (date: any) => string }> = ({ appointment, handleViewDetails, formatDateShort }) => {
+    const [showReason, setShowReason] = useState(false);
+    const reason = appointment.raw?.rejectionReason || appointment.raw?.cancellationReason || appointment.raw?.reason;
+    const hasReason = !!reason && (appointment.status === 'rejected' || appointment.status === 'cancelled');
+
+    return (
+        <Card key={appointment.id} className="overflow-hidden border-gray-100 hover:shadow-md transition-shadow">
+            <CardHeader className="p-4 border-b border-gray-100 space-y-0">
+                <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 flex-1">
+                        <div className="relative">
+                            <img
+                                src={appointment.doctorImage}
+                                alt={appointment.doctorName}
+                                className="w-14 h-14 rounded-full object-cover border-2 border-gray-200"
+                                onError={(e) => { e.currentTarget.src = '/doctor.png'; }}
+                            />
+                            <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] ${appointment.appointmentType === 'video' ? 'bg-[#00A1B0]' : 'bg-emerald-500'}`}>
+                                {appointment.appointmentType === 'video' ? <FaVideo /> : <FaComments />}
+                            </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[10px] text-gray-400 font-medium tracking-wider mb-0.5">{appointment.displayId}</p>
+                            <h3 className="font-bold text-gray-900 leading-tight truncate">{appointment.doctorName}</h3>
+                            <div className="flex items-center justify-between mt-1">
+                                <div className="flex items-center gap-1.5">
+                                    <span className={`w-1.5 h-1.5 rounded-full ${appointment.status === 'confirmed' ? 'bg-emerald-500' : appointment.status === 'cancelled' || appointment.status === 'rejected' ? 'bg-rose-500' : 'bg-amber-500'}`}></span>
+                                    <span className="text-[11px] font-medium text-gray-500 capitalize">{appointment.status.replace('_', ' ')}</span>
+                                </div>
+                                {appointment.fees && (
+                                    <span className="text-[11px] font-bold text-[#00A1B0] bg-[#00A1B0]/10 px-2 py-0.5 rounded-full">
+                                        ₹{appointment.fees}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent className="p-4 bg-gray-50/50 space-y-4">
+                <div className="flex items-center justify-between gap-2 p-2.5 bg-white rounded-xl border border-gray-100 shadow-sm">
+                    <div className="flex items-center gap-2 text-gray-600">
+                        <FaCalendarAlt className="w-3.5 h-3.5 text-[#00A1B0]" />
+                        <span className="text-xs font-semibold">{formatDateShort(appointment.date)}</span>
+                    </div>
+                    <div className="w-px h-3 bg-gray-200" />
+                    <div className="flex items-center gap-2 text-gray-600">
+                        <svg className="w-3.5 h-3.5 text-[#00A1B0]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span className="text-xs font-semibold">{appointment.time}</span>
+                    </div>
+                </div>
+
+                {appointment.raw?.status === 'reschedule_requested' && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-lg">
+                        <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+                        <p className="text-[10px] font-bold text-amber-700 uppercase tracking-tight">Action Required: Reschedule Proposed</p>
+                    </div>
+                )}
+
+                {hasReason && (
+                    <div className="space-y-2">
+                        <button
+                            onClick={() => setShowReason(!showReason)}
+                            className="w-full flex items-center justify-between p-2 rounded-lg bg-rose-50 border border-rose-100 text-rose-700 hover:bg-rose-100 transition-colors"
+                        >
+                            <div className="flex items-center gap-2">
+                                <FaExclamationCircle className="w-3.5 h-3.5" />
+                                <span className="text-[11px] font-bold uppercase tracking-wider">
+                                    {appointment.status === 'rejected' ? 'Rejection' : 'Cancellation'} Reason
+                                </span>
+                            </div>
+                            {showReason ? <FaChevronUp className="w-3 h-3" /> : <FaChevronDown className="w-3 h-3" />}
+                        </button>
+
+                        {showReason && (
+                            <div className="p-3 bg-white border border-rose-100 rounded-xl animate-in slide-in-from-top-1 duration-200">
+                                <p className="text-xs text-rose-800 leading-relaxed italic">"{reason}"</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                <Button
+                    onClick={() => handleViewDetails(appointment.id)}
+                    className="w-full h-10 bg-[#00A1B0]/10 hover:bg-[#00A1B0]/20 text-[#00A1B0] font-bold rounded-xl border-none shadow-none gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                >
+                    <FaEye size={14} />
+                    <span>View Full Details</span>
+                </Button>
+            </CardContent>
+        </Card>
+    );
+};
 
 const Appointments: React.FC = () => {
     const navigate = useNavigate();
@@ -22,6 +120,7 @@ const Appointments: React.FC = () => {
     const [error, setError] = useState<string>('');
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState<number | null>(null);
+
 
     const limit = 12;
 
@@ -51,6 +150,7 @@ const Appointments: React.FC = () => {
     const mapStatusToTab = (status: string): 'upcoming' | 'cancelled' | 'completed' => {
         if (status === 'completed') return 'completed';
         if (status === 'cancelled' || status === 'rejected') return 'cancelled';
+        if (status === 'reschedule_requested') return 'upcoming';
         return 'upcoming';
     };
 
@@ -81,6 +181,7 @@ const Appointments: React.FC = () => {
                 time: apt?.appointmentTime || apt?.time,
                 status: apt?.status,
                 tab: mapStatusToTab(apt?.status),
+                fees: apt?.consultationFees,
             };
         });
     }, [appointments, getDoctorInfo]);
@@ -137,6 +238,8 @@ const Appointments: React.FC = () => {
     const handleViewDetails = (id: string) => {
         navigate(`/patient/appointments/${id}`);
     };
+
+
 
     return (
         <div className="min-h-screen bg-gray-50 overflow-x-hidden">
@@ -264,56 +367,12 @@ const Appointments: React.FC = () => {
                                 </div>
                             ) : (
                                 filteredAppointments.map((appointment) => (
-                                    <div key={appointment.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100 overflow-hidden">
-                                        <div className="p-4 border-b border-gray-100">
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div className="flex items-start gap-3 flex-1">
-                                                    <img
-                                                        src={appointment.doctorImage}
-                                                        alt={appointment.doctorName}
-                                                        className="w-14 h-14 rounded-full object-cover border-2 border-gray-200"
-                                                        onError={(e) => { e.currentTarget.src = '/doctor.png'; }}
-                                                    />
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-xs text-gray-500 font-medium mb-1">{appointment.displayId}</p>
-                                                        <h3 className="font-semibold text-gray-800 mb-1 truncate">{appointment.doctorName}</h3>
-                                                        <p className="text-sm text-gray-600">{appointment.appointmentType === 'video' ? 'Video Call' : 'Chat'}</p>
-                                                    </div>
-                                                </div>
-                                                <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center bg-[#00A1B0]/10 text-[#00A1B0]`}>
-                                                    {appointment.appointmentType === 'video' ? <FaVideo size={18} /> : <FaComments size={18} />}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="p-4 bg-gray-50">
-                                            <div className="flex items-center justify-between gap-4 text-sm mb-4">
-                                                <div className="flex items-center gap-2 text-gray-600">
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                                    <span>{formatDateShort(appointment.date)}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-gray-600">
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                    <span>{appointment.time}</span>
-                                                </div>
-                                            </div>
-                                            {appointment.raw?.status === 'rejected' && appointment.raw?.rejectionReason && (
-                                                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                                                    <div className="flex items-start gap-2">
-                                                        <div className="flex-shrink-0 w-5 h-5 text-red-600 mt-0.5"><svg className="w-full h-full" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg></div>
-                                                        <div className="flex-1">
-                                                            <p className="text-sm font-medium text-red-800 mb-1">Rejection Reason</p>
-                                                            <p className="text-sm text-red-700">{appointment.raw.rejectionReason}</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                            <div className="flex gap-2">
-                                                <button onClick={() => handleViewDetails(appointment.id)} className="w-full px-4 py-2 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
-                                                    <FaEye size={14} />Details
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <AppointmentCard
+                                        key={appointment.id}
+                                        appointment={appointment}
+                                        handleViewDetails={handleViewDetails}
+                                        formatDateShort={formatDateShort}
+                                    />
                                 ))
                             )}
                         </div>
@@ -332,6 +391,8 @@ const Appointments: React.FC = () => {
                     </div>
                 </div>
             </main>
+
+
         </div>
     );
 };

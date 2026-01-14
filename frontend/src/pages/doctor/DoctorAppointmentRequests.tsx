@@ -2,10 +2,22 @@ import React, { useState, useEffect } from 'react';
 import DoctorNavbar from '../../components/Doctor/DoctorNavbar';
 import DoctorLayout from '../../components/Doctor/DoctorLayout';
 import Breadcrumbs from '../../components/common/Breadcrumbs';
-import { FaVideo, FaComments, FaCheck, FaTimes, FaSearch } from 'react-icons/fa';
+import { FaVideo, FaComments, FaCheck, FaTimes, FaSearch, FaCalendarAlt, FaExclamationCircle } from 'react-icons/fa';
 import { appointmentService } from '../../services/appointmentService';
+import RescheduleModal from '../../components/common/RescheduleModal';
 import { toast } from 'sonner';
 import { Skeleton } from '../../components/ui/skeleton';
+import { Button } from '../../components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "../../components/ui/dialog"
+import { Textarea } from "../../components/ui/textarea"
+import { Card, CardContent, CardHeader } from "../../components/ui/card"
 
 const DoctorAppointmentRequests: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -15,6 +27,7 @@ const DoctorAppointmentRequests: React.FC = () => {
     const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
     const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
     const [rejectionReason, setRejectionReason] = useState('');
+    const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
 
 
     useEffect(() => {
@@ -58,11 +71,12 @@ const DoctorAppointmentRequests: React.FC = () => {
 
 
     const filteredRequests = requests.filter((req) =>
-        req?.status === 'pending' && req?.patientId?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+        (req?.status === 'pending' || req?.status === 'reschedule_requested') &&
+        req?.patientId?.name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const handleApprove = async (id: string) => {
-        const appointment = requests.find(req => req.id === id);
+        const appointment = requests.find(req => (req.id === id || req._id === id));
         if (appointment && appointment.paymentStatus !== 'paid') {
             toast.warning('Payment is pending!');
             return;
@@ -70,7 +84,7 @@ const DoctorAppointmentRequests: React.FC = () => {
         try {
             const response = await appointmentService.approveAppointment(id);
             if (response?.success) {
-                const next = requests.filter((req) => req.id !== id);
+                const next = requests.filter((req) => (req.id !== id && req._id !== id));
                 setRequests(next);
                 sessionStorage.setItem('doctor_requests_cache', JSON.stringify(next));
                 toast.success('Appointment approved!');
@@ -84,7 +98,7 @@ const DoctorAppointmentRequests: React.FC = () => {
     };
 
     const handleReject = async (id: string) => {
-        const appointment = requests.find(req => req.id === id);
+        const appointment = requests.find(req => (req.id === id || req._id === id));
         if (appointment) {
             setSelectedAppointment(appointment);
             setRejectDialogOpen(true);
@@ -100,11 +114,11 @@ const DoctorAppointmentRequests: React.FC = () => {
 
         try {
             const response = await appointmentService.rejectAppointment(
-                selectedAppointment.id,
+                selectedAppointment.id || selectedAppointment._id,
                 rejectionReason
             );
             if (response?.success) {
-                const next = requests.filter((req) => req.id !== selectedAppointment.id);
+                const next = requests.filter((req) => (req.id !== selectedAppointment.id && req._id !== selectedAppointment._id));
                 setRequests(next);
                 sessionStorage.setItem('doctor_requests_cache', JSON.stringify(next));
                 toast.success(`Appointment rejected: ${rejectionReason}`);
@@ -117,6 +131,36 @@ const DoctorAppointmentRequests: React.FC = () => {
         } catch (err: any) {
             console.error(err);
             toast.error(err?.response?.data?.message || err?.message || 'Failed to reject');
+        }
+    };
+
+    const handleReschedule = (request: any) => {
+        setSelectedAppointment(request);
+        setRescheduleModalOpen(true);
+    };
+
+    const onRescheduleConfirm = async (slot: any, date: Date) => {
+        try {
+            const response = await appointmentService.rescheduleAppointment(selectedAppointment.id || selectedAppointment._id, {
+                appointmentDate: date,
+                appointmentTime: `${slot.startTime} - ${slot.endTime}`,
+                slotId: slot.customId || slot.slotId
+            });
+
+            if (response.success) {
+                toast.success('Reschedule request sent to patient!');
+                // Update local state
+                const updatedRequests = requests.map(req =>
+                    (req.id === selectedAppointment.id || req._id === selectedAppointment._id) ? { ...req, status: 'reschedule_requested' } : req
+                );
+                setRequests(updatedRequests);
+                sessionStorage.setItem('doctor_requests_cache', JSON.stringify(updatedRequests));
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to reschedule');
+        } finally {
+            setRescheduleModalOpen(false);
+            setSelectedAppointment(null);
         }
     };
 
@@ -184,41 +228,121 @@ const DoctorAppointmentRequests: React.FC = () => {
                                         <p className="text-gray-600 text-sm">You don't have any appointment requests at the moment.</p>
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {filteredRequests.map((request) => (
-                                            <div key={request._id} className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition overflow-hidden">
-                                                <div className="p-4 border-b flex gap-3">
-                                                    <img src={request.patientId?.profileImage || '/patient-placeholder.jpg'} alt={request.patientId?.name || 'Patient'} className="w-14 h-14 rounded-full border" onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/100x100?text=Patient'; }} />
-                                                    <div className="flex-1"><p className="text-xs text-gray-500">{request.customId || request.id}</p><h3 className="font-semibold text-gray-800">{request.patientId?.name || 'Unknown Patient'}</h3><p className="text-sm text-gray-600">{request.appointmentType === 'video' ? 'Video Call' : 'Chat'}</p>{request.reason && (<p className="text-xs italic text-gray-500">Reason: {request.reason}</p>)}</div>
-                                                    <div className="w-10 h-10 bg-[#00A1B0]/10 text-[#00A1B0] rounded-lg flex items-center justify-center">{request.appointmentType === 'video' ? (<FaVideo size={18} />) : (<FaComments size={18} />)}</div>
-                                                </div>
-                                                <div className="p-4 bg-gray-50">
-                                                    <div className="grid grid-cols-2 text-sm mb-4">
-                                                        <div><p className="text-xs text-gray-500">Date</p><p className="font-medium text-gray-800">{new Date(request.appointmentDate).toLocaleDateString()}</p></div>
-                                                        <div><p className="text-xs text-gray-500">Time</p><p className="font-medium text-gray-800">{request.appointmentTime}</p></div>
-                                                        <div><p className="text-xs text-gray-500">Fees</p><p className="font-bold text-[#00A1B0]">₹{request.consultationFees}</p></div>
-                                                        <div>
-                                                            <p className="text-xs text-gray-500">Payment</p>
-                                                            <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${request.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
-                                                                {request.paymentStatus || 'pending'}
-                                                            </span>
+                                            <Card key={request._id} className="overflow-hidden border-gray-100 hover:shadow-md transition-shadow">
+                                                <CardHeader className="p-4 border-b border-gray-100 space-y-0">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex items-start gap-4 flex-1">
+                                                            <div className="relative">
+                                                                <img
+                                                                    src={request.patientId?.profileImage || '/patient-placeholder.jpg'}
+                                                                    alt={request.patientId?.name || 'Patient'}
+                                                                    className="w-14 h-14 rounded-full object-cover border-2 border-gray-200"
+                                                                    onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/100x100?text=Patient'; }}
+                                                                />
+                                                                <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] ${request.appointmentType === 'video' ? 'bg-[#00A1B0]' : 'bg-emerald-500'}`}>
+                                                                    {request.appointmentType === 'video' ? <FaVideo /> : <FaComments />}
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-[10px] text-gray-400 font-medium tracking-wider mb-0.5">{request.customId || request.id}</p>
+                                                                <h3 className="font-bold text-gray-900 leading-tight truncate">{request.patientId?.name || 'Unknown Patient'}</h3>
+                                                                <div className="flex items-center justify-between mt-1">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className={`w-1.5 h-1.5 rounded-full ${request.paymentStatus === 'paid' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                                                                        <span className={`text-[11px] font-medium capitalize ${request.paymentStatus === 'paid' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                                            {request.paymentStatus || 'pending'}
+                                                                        </span>
+                                                                    </div>
+                                                                    <span className="text-[11px] font-bold text-[#00A1B0] bg-[#00A1B0]/10 px-2 py-0.5 rounded-full">
+                                                                        ₹{request.consultationFees}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => handleApprove(request.id)}
-                                                            className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors ${request.paymentStatus === 'paid'
-                                                                ? 'bg-green-50 hover:bg-green-100 text-green-600'
-                                                                : 'bg-amber-50 hover:bg-amber-100 text-amber-600'
-                                                                }`}
-                                                            title={request.paymentStatus !== 'paid' ? "Payment pending" : "Approve appointment"}
-                                                        >
-                                                            <FaCheck />Approve
-                                                        </button>
-                                                        <button onClick={() => handleReject(request.id)} className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 py-2 rounded-lg flex items-center justify-center gap-2"><FaTimes />Reject</button>
+                                                </CardHeader>
+                                                <CardContent className="p-4 bg-gray-50/50 space-y-4">
+                                                    <div className="flex items-center justify-between gap-2 p-2.5 bg-white rounded-xl border border-gray-100 shadow-sm">
+                                                        <div className="flex items-center gap-2 text-gray-600">
+                                                            <FaCalendarAlt className="w-3.5 h-3.5 text-[#00A1B0]" />
+                                                            <span className="text-xs font-semibold">{new Date(request.appointmentDate).toLocaleDateString()}</span>
+                                                        </div>
+                                                        <div className="w-px h-3 bg-gray-200" />
+                                                        <div className="flex items-center gap-2 text-gray-600">
+                                                            <svg className="w-3.5 h-3.5 text-[#00A1B0]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                            <span className="text-xs font-semibold">{request.appointmentTime}</span>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </div>
+
+                                                    {request.status === 'reschedule_requested' && (
+                                                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                                                                <p className="text-[11px] font-bold text-amber-900 uppercase tracking-wider">Reschedule Sent</p>
+                                                            </div>
+                                                            <p className="text-[10px] text-amber-800 mt-1">Waiting for patient to accept proposed time.</p>
+                                                        </div>
+                                                    )}
+
+                                                    {request.reason && (
+                                                        <div className="p-3 bg-white border border-gray-100 rounded-xl">
+                                                            <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">Note from Patient</p>
+                                                            <p className="text-xs text-gray-700 leading-relaxed italic">"{request.reason}"</p>
+                                                        </div>
+                                                    )}
+
+                                                    {request.rescheduleRejectReason && (
+                                                        <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-1.5">
+                                                            <div className="flex items-center gap-1.5 text-rose-700">
+                                                                <FaExclamationCircle className="w-3.5 h-3.5" />
+                                                                <p className="text-[11px] font-bold uppercase tracking-wider">Patient Rejected Reschedule</p>
+                                                            </div>
+                                                            <p className="text-xs text-rose-800 leading-relaxed italic">"{request.rescheduleRejectReason}"</p>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => handleApprove(request.id || request._id)}
+                                                            disabled={request.status === 'reschedule_requested'}
+                                                            className={`h-9 gap-1.5 border-none shadow-none font-bold rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98] ${request.status === 'reschedule_requested'
+                                                                ? 'bg-gray-100 text-gray-400 opacity-50'
+                                                                : request.paymentStatus === 'paid'
+                                                                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600'
+                                                                    : 'bg-amber-50 hover:bg-amber-100 text-amber-600'
+                                                                }`}
+                                                            title={request.status === 'reschedule_requested' ? "Waiting for patient response" : request.paymentStatus !== 'paid' ? "Payment pending" : "Approve appointment"}
+                                                        >
+                                                            <FaCheck className="w-3.5 h-3.5" />
+                                                            <span className="text-[10px] xs:text-xs">Approve</span>
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => handleReschedule(request)}
+                                                            className="h-9 gap-1.5 border-none shadow-none bg-[#00A1B0]/10 hover:bg-[#00A1B0]/20 text-[#00A1B0] font-bold rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                                            title="Propose new time"
+                                                        >
+                                                            <FaCalendarAlt className="w-3.5 h-3.5" />
+                                                            <span className="text-[10px] xs:text-xs">Reschedule</span>
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => handleReject(request.id || request._id)}
+                                                            className="col-span-2 sm:col-span-1 h-9 gap-1.5 border-none shadow-none bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                                            title="Reject appointment"
+                                                        >
+                                                            <FaTimes className="w-3.5 h-3.5" />
+                                                            <span className="text-[10px] xs:text-xs">Reject</span>
+                                                        </Button>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
                                         ))}
                                     </div>
                                 )}
@@ -228,28 +352,65 @@ const DoctorAppointmentRequests: React.FC = () => {
                 )}
             </DoctorLayout>
 
-            {rejectDialogOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Reject Appointment Request</h3>
-                        {selectedAppointment && (
-                            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-600"><span className="font-medium">Patient:</span> {selectedAppointment.patientId?.name || 'Unknown Patient'}</p>
-                                <p className="text-sm text-gray-600"><span className="font-medium">Date:</span> {new Date(selectedAppointment.appointmentDate).toLocaleDateString()}</p>
-                                <p className="text-sm text-gray-600"><span className="font-medium">Time:</span> {selectedAppointment.appointmentTime}</p>
-                            </div>
-                        )}
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Rejection Reason *</label>
-                            <textarea value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} placeholder="Please provide a reason for rejecting this appointment request..." className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#00A1B0] focus:border-transparent resize-none" rows={4} />
+            <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-rose-600">
+                            <FaExclamationCircle />
+                            Reject Appointment
+                        </DialogTitle>
+                        <DialogDescription>
+                            Please provide a reason for rejecting this appointment request.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedAppointment && (
+                        <div className="p-3 bg-gray-50 rounded-lg space-y-1 text-sm text-gray-600">
+                            <p><span className="font-semibold">Patient:</span> {selectedAppointment.patientId?.name || 'Unknown Patient'}</p>
+                            <p><span className="font-semibold">Date:</span> {new Date(selectedAppointment.appointmentDate).toLocaleDateString()}</p>
+                            <p><span className="font-semibold">Time:</span> {selectedAppointment.appointmentTime}</p>
                         </div>
-                        <div className="flex gap-3"><button onClick={confirmReject} disabled={!rejectionReason.trim()} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white font-medium rounded-lg transition-colors">Confirm Reject</button><button onClick={cancelReject} className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg transition-colors">Cancel</button></div>
+                    )}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">Rejection Reason *</label>
+                        <Textarea
+                            placeholder="Type your reason here..."
+                            value={rejectionReason}
+                            onChange={(e) => setRejectionReason(e.target.value)}
+                            className="min-h-[100px] resize-none"
+                        />
                     </div>
-                </div>
+                    <DialogFooter className="flex gap-2 sm:gap-0">
+                        <Button
+                            variant="ghost"
+                            onClick={cancelReject}
+                            className="flex-1 sm:flex-none"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmReject}
+                            disabled={!rejectionReason.trim()}
+                            className="flex-1 sm:flex-none bg-rose-600 hover:bg-rose-700 text-white"
+                        >
+                            Confirm Reject
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {rescheduleModalOpen && selectedAppointment && (
+                <RescheduleModal
+                    isOpen={rescheduleModalOpen}
+                    onClose={() => { setRescheduleModalOpen(false); setSelectedAppointment(null); }}
+                    onConfirm={onRescheduleConfirm}
+                    doctorId={selectedAppointment.doctorId?._id || selectedAppointment.doctorId}
+                    doctorName="You"
+                    currentDate={new Date(selectedAppointment.appointmentDate)}
+                />
             )}
         </div>
     );
 };
 
 export default DoctorAppointmentRequests;
-

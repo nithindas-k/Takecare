@@ -58,7 +58,7 @@ export class AppointmentController implements IAppointmentController {
                 patientId,
                 appointmentData
             );
-            this.logger.info("Appointment created successfully", { id: appointment?._id || appointment?.id });
+            this.logger.info("Appointment created successfully", { id: appointment?.id });
 
             sendSuccess(res, appointment, MESSAGES.APPOINTMENT_CREATED, HttpStatus.CREATED);
         } catch (err: unknown) {
@@ -416,6 +416,53 @@ export class AppointmentController implements IAppointmentController {
             await this._appointmentService.updateSessionStatus(appointmentId, userId, status);
 
             sendSuccess(res, undefined, `Session status updated to ${status}`);
+        } catch (err: unknown) {
+            next(err);
+        }
+    };
+
+    acceptReschedule = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = req.user?.userId;
+            const appointmentId = req.params.id;
+
+            if (!userId) {
+                throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+            }
+
+            await this._appointmentService.acceptReschedule(appointmentId, userId);
+
+            sendSuccess(res, undefined, "Reschedule request accepted successfully");
+        } catch (err: unknown) {
+            next(err);
+        }
+    };
+
+    rejectReschedule = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const userId = req.user?.userId;
+            const appointmentId = req.params.id;
+            const { reason } = req.body;
+
+            if (!userId) {
+                throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+            }
+
+            if (!reason || reason.trim() === "") {
+                throw new AppError("Rejection reason is required", HttpStatus.BAD_REQUEST);
+            }
+
+            await this._appointmentService.rejectReschedule(appointmentId, userId, reason);
+
+            sendSuccess(res, undefined, "Reschedule request rejected successfully");
         } catch (err: unknown) {
             next(err);
         }

@@ -81,6 +81,8 @@ export const APPOINTMENT_ROUTES = {
     REJECT: "/:id/reject",
     COMPLETE: "/:id/complete",
     RESCHEDULE: "/:id/reschedule",
+    ACCEPT_RESCHEDULE: "/:id/reschedule/accept",
+    REJECT_RESCHEDULE: "/:id/reschedule/reject",
     ADMIN_ALL: "/admin/all",
     START_CONSULTATION: "/:id/start-consultation",
     UPDATE_SESSION_STATUS: "/:id/session-status",

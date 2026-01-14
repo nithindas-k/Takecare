@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import DoctorNavbar from '../../components/Doctor/DoctorNavbar';
 import DoctorLayout from '../../components/Doctor/DoctorLayout';
 import Breadcrumbs from '../../components/common/Breadcrumbs';
-import { FaVideo, FaComments, FaEye, FaSearch } from 'react-icons/fa';
 import { appointmentService } from '../../services/appointmentService';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import type { PopulatedAppointment } from '../../types/appointment.types';
+import { Button } from '../../components/ui/button';
+import { Card, CardContent, CardHeader } from "../../components/ui/card"
+import { FaCalendarAlt, FaComments, FaEye, FaSearch, FaVideo } from 'react-icons/fa';
 
 
 
@@ -189,30 +191,30 @@ const DoctorAppointments: React.FC = () => {
                         {/* Tabs */}
                         <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6">
                             <div className="border-b border-gray-100">
-                                <div className="flex gap-1 p-2">
+                                <div className="flex gap-1 p-2 bg-gray-50/50">
                                     <button
                                         onClick={() => setActiveTab('upcoming')}
-                                        className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'upcoming'
-                                            ? 'bg-[#00A1B0] text-white'
-                                            : 'text-gray-600 hover:bg-gray-50'
+                                        className={`flex-1 px-4 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${activeTab === 'upcoming'
+                                            ? 'bg-white text-[#00A1B0] shadow-sm border border-gray-100'
+                                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100/50'
                                             }`}
                                     >
                                         Upcoming ({getTabCount('upcoming')})
                                     </button>
                                     <button
                                         onClick={() => setActiveTab('completed')}
-                                        className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'completed'
-                                            ? 'bg-[#00A1B0] text-white'
-                                            : 'text-gray-600 hover:bg-gray-50'
+                                        className={`flex-1 px-4 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${activeTab === 'completed'
+                                            ? 'bg-white text-[#00A1B0] shadow-sm border border-gray-100'
+                                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100/50'
                                             }`}
                                     >
                                         Completed ({getTabCount('completed')})
                                     </button>
                                     <button
                                         onClick={() => setActiveTab('cancelled')}
-                                        className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeTab === 'cancelled'
-                                            ? 'bg-[#00A1B0] text-white'
-                                            : 'text-gray-600 hover:bg-gray-50'
+                                        className={`flex-1 px-4 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${activeTab === 'cancelled'
+                                            ? 'bg-white text-[#00A1B0] shadow-sm border border-gray-100'
+                                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100/50'
                                             }`}
                                     >
                                         Cancelled ({getTabCount('cancelled')})
@@ -241,116 +243,61 @@ const DoctorAppointments: React.FC = () => {
                                         </p>
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {filteredAppointments.map((appointment) => (
-                                            <div
-                                                key={appointment.customId || appointment._id}
-                                                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100 overflow-hidden"
-                                            >
-                                                {/* Card Header */}
-                                                <div className="p-4 border-b border-gray-100">
+                                            <Card key={appointment.customId || appointment._id} className="overflow-hidden border-gray-100 hover:shadow-md transition-shadow">
+                                                <CardHeader className="p-4 border-b border-gray-100 space-y-0">
                                                     <div className="flex items-start justify-between gap-3">
                                                         <div className="flex items-start gap-3 flex-1">
-                                                            <img
-                                                                src={appointment.patientId?.profileImage || '/patient-placeholder.jpg'}
-                                                                alt={appointment.patientId?.name || 'Patient'}
-                                                                className="w-14 h-14 rounded-full object-cover border-2 border-gray-200"
-                                                                onError={(e) => {
-                                                                    e.currentTarget.src =
-                                                                        'https://via.placeholder.com/100x100?text=Patient';
-                                                                }}
-                                                            />
+                                                            <div className="relative">
+                                                                <img
+                                                                    src={appointment.patientId?.profileImage || '/patient-placeholder.jpg'}
+                                                                    alt={appointment.patientId?.name || 'Patient'}
+                                                                    className="w-14 h-14 rounded-full object-cover border-2 border-gray-200"
+                                                                    onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/100x100?text=Patient'; }}
+                                                                />
+                                                                <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] ${appointment.appointmentType === 'video' ? 'bg-[#00A1B0]' : 'bg-emerald-500'}`}>
+                                                                    {appointment.appointmentType === 'video' ? <FaVideo /> : <FaComments />}
+                                                                </div>
+                                                            </div>
                                                             <div className="flex-1 min-w-0">
-                                                                <p className="text-xs text-gray-500 font-medium mb-1">
-                                                                    {appointment.customId || appointment._id}
-                                                                </p>
-                                                                <h3 className="font-semibold text-gray-800 mb-1 truncate">
-                                                                    {appointment.patientId?.name || 'Unknown Patient'}
-                                                                </h3>
-                                                                <p className="text-sm text-gray-600">
-                                                                    {appointment.appointmentType === 'video'
-                                                                        ? 'Video Call'
-                                                                        : 'Chat'}
-                                                                </p>
+                                                                <p className="text-[10px] text-gray-400 font-medium tracking-wider mb-0.5">{appointment.customId || appointment._id}</p>
+                                                                <h3 className="font-bold text-gray-900 leading-tight truncate">{appointment.patientId?.name || 'Unknown Patient'}</h3>
+                                                                <div className="flex items-center justify-between mt-1">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className={`w-1.5 h-1.5 rounded-full ${appointment.status === 'confirmed' ? 'bg-emerald-500' : appointment.status === 'cancelled' || appointment.status === 'rejected' ? 'bg-rose-500' : 'bg-amber-500'}`}></span>
+                                                                        <span className="text-[11px] font-medium text-gray-500 capitalize">{appointment.status.replace('_', ' ')}</span>
+                                                                    </div>
+                                                                    <span className="text-[11px] font-bold text-[#00A1B0] bg-[#00A1B0]/10 px-2 py-0.5 rounded-full">
+                                                                        ₹{appointment.consultationFees}
+                                                                    </span>
+                                                                </div>
                                                             </div>
                                                         </div>
-
-                                                        {/* Type Icon */}
-                                                        <div
-                                                            className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center bg-[#00A1B0]/10 text-[#00A1B0]`}
-                                                        >
-                                                            {appointment.appointmentType === 'video' ? (
-                                                                <FaVideo size={18} />
-                                                            ) : (
-                                                                <FaComments size={18} />
-                                                            )}
-                                                        </div>
                                                     </div>
-                                                </div>
-
-                                                {/* Card Body */}
-                                                <div className="p-4 bg-gray-50">
-                                                    <div className="flex items-center justify-between gap-4 text-sm mb-4">
+                                                </CardHeader>
+                                                <CardContent className="p-4 bg-gray-50/50 space-y-4">
+                                                    <div className="flex items-center justify-between gap-2 p-2.5 bg-white rounded-xl border border-gray-100 shadow-sm">
                                                         <div className="flex items-center gap-2 text-gray-600">
-                                                            <svg
-                                                                className="w-4 h-4"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={2}
-                                                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                                                />
-                                                            </svg>
-                                                            <span>
-                                                                {new Date(appointment.appointmentDate).toLocaleDateString('en-US', {
-                                                                    month: 'short',
-                                                                    day: 'numeric',
-                                                                    year: 'numeric',
-                                                                })}
-                                                            </span>
+                                                            <FaCalendarAlt className="w-3.5 h-3.5 text-[#00A1B0]" />
+                                                            <span className="text-xs font-semibold">{new Date(appointment.appointmentDate).toLocaleDateString()}</span>
                                                         </div>
+                                                        <div className="w-px h-3 bg-gray-200" />
                                                         <div className="flex items-center gap-2 text-gray-600">
-                                                            <svg
-                                                                className="w-4 h-4"
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    strokeWidth={2}
-                                                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                                />
-                                                            </svg>
-                                                            <span>{appointment.appointmentTime}</span>
+                                                            <svg className="w-3.5 h-3.5 text-[#00A1B0]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                            <span className="text-xs font-semibold">{appointment.appointmentTime}</span>
                                                         </div>
                                                     </div>
 
-                                                    {/* Fees */}
-                                                    <div className="flex-shrink-0 mb-4">
-                                                        <p className="text-sm text-gray-500">Consultation Fees</p>
-                                                        <p className="text-lg font-bold text-[#00A1B0]">
-                                                            ₹{appointment.consultationFees}
-                                                        </p>
-                                                    </div>
-
-                                                    {/* Action Buttons */}
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => handleViewDetails(appointment._id)}
-                                                            className="w-full px-4 py-2 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                                                        >
-                                                            <FaEye size={14} />
-                                                            Details
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                                    <Button
+                                                        onClick={() => handleViewDetails(appointment._id)}
+                                                        className="w-full h-10 bg-[#00A1B0]/10 hover:bg-[#00A1B0]/20 text-[#00A1B0] font-bold rounded-xl border-none shadow-none gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                                    >
+                                                        <FaEye size={14} />
+                                                        <span>View Details</span>
+                                                    </Button>
+                                                </CardContent>
+                                            </Card>
                                         ))}
                                     </div>
                                 )}

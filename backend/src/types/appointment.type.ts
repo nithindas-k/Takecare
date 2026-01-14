@@ -7,7 +7,8 @@ export type AppointmentStatus =
     | "confirmed"
     | "completed"
     | "rejected"
-    | "cancelled";
+    | "cancelled"
+    | "reschedule_requested";
 
 export type PaymentStatus = "pending" | "paid" | "refunded" | "failed";
 
@@ -36,7 +37,7 @@ export interface IAppointment {
     appointmentType: AppointmentType;
     appointmentDate: Date;
     appointmentTime: string;
-    slotId?: string;
+    slotId?: string | null;
     status: AppointmentStatus;
     consultationFees: number;
     adminCommission: number;
@@ -49,6 +50,12 @@ export interface IAppointment {
     cancelledAt?: Date | null;
 
     rejectionReason?: string | null;
+    rescheduleRejectReason?: string | null;
+    rescheduleRequest?: {
+        appointmentDate: Date;
+        appointmentTime: string;
+        slotId?: string | null;
+    } | null;
 
     paymentStatus: PaymentStatus;
     paymentId?: string | null;
@@ -84,27 +91,34 @@ export interface IAppointmentDocument extends IAppointment, Document {
 }
 
 export interface IAppointmentPopulated extends Omit<IAppointment, "patientId" | "doctorId"> {
-    patient: {
-        id: string;
+    patientId: {
+        _id: Types.ObjectId | string;
+        id?: string;
+        customId?: string;
         name: string;
         email: string;
         phone?: string;
         profileImage?: string;
+        userId?: any;
     };
-    doctor: {
-        id: string;
-        userId: Types.ObjectId;
+    doctorId: {
+        _id: Types.ObjectId | string;
+        id?: string;
+        customId?: string;
+        userId: any;
         specialty?: string;
         experienceYears?: number;
         VideoFees?: number;
         ChatFees?: number;
-        user: {
+        user?: {
             name: string;
             email: string;
             phone?: string;
             profileImage?: string;
         };
     };
+    patient?: any;
+    doctor?: any;
 }
 
 export interface DashboardStats {

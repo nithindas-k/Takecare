@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import NavBar from '../../components/common/NavBar';
 import PatientSidebar from '../../components/Patient/PatientSidebar';
-import { FaVideo, FaComments, FaArrowLeft, FaTimes, FaChevronDown, FaChevronUp, FaStethoscope, FaCalendarAlt, FaStar, FaCreditCard, FaExclamationTriangle } from 'react-icons/fa';
+import { FaVideo, FaComments, FaArrowLeft, FaTimes, FaChevronDown, FaChevronUp, FaStethoscope, FaCalendarAlt, FaStar, FaCreditCard, FaExclamationTriangle, FaCheck, FaClock } from 'react-icons/fa';
 import ReviewForm from '../../components/reviews/ReviewForm';
 import { reviewService } from '../../services/reviewService';
 import { appointmentService } from '../../services/appointmentService';
@@ -11,6 +11,8 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { toast } from 'sonner';
 import PrescriptionViewModal from '../../components/Patient/PrescriptionViewModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
+import { Textarea } from '../../components/ui/textarea';
 import type { PopulatedAppointment, Slot } from '../../types/appointment.types';
 import RescheduleModal from '../../components/common/RescheduleModal';
 
@@ -29,11 +31,16 @@ const AppointmentDetails: React.FC = () => {
     const [cancelSubmitting, setCancelSubmitting] = useState(false);
     const [cancelError, setCancelError] = useState('');
     const [showCancelReason, setShowCancelReason] = useState(false);
+    const [showRescheduleDetail, setShowRescheduleDetail] = useState(true);
 
 
     const [rescheduleOpen, setRescheduleOpen] = useState(false);
     const [reviewFormOpen, setReviewFormOpen] = useState(false);
     const [prescriptionViewOpen, setPrescriptionViewOpen] = useState(false);
+    const [rejectRescheduleOpen, setRejectRescheduleOpen] = useState(false);
+    const [rejectionReason, setRejectionReason] = useState('');
+    const [rejectSubmitting, setRejectSubmitting] = useState(false);
+    const [selectedRescheduleId, setSelectedRescheduleId] = useState<string | null>(null);
 
 
     useEffect(() => {
@@ -75,7 +82,7 @@ const AppointmentDetails: React.FC = () => {
         return () => {
             isMounted = false;
         };
-    }, [id, appointment]); 
+    }, [id, appointment]);
 
 
 
@@ -234,7 +241,7 @@ const AppointmentDetails: React.FC = () => {
             if (response?.success) {
                 toast.success('Appointment rescheduled successfully! Awaiting doctor approval.');
                 setRescheduleOpen(false);
-                
+
                 const updated = await appointmentService.getAppointmentById(id);
                 if (updated?.success) setAppointment(updated.data);
             } else {
@@ -250,7 +257,7 @@ const AppointmentDetails: React.FC = () => {
     const handleOpenReview = async () => {
         if (!appointment) return;
 
-       
+
         const docObj = appointment.doctor || appointment.doctorId;
         const doctorId = docObj?._id || docObj?.id || (typeof docObj === 'string' ? docObj : null);
 
@@ -270,7 +277,7 @@ const AppointmentDetails: React.FC = () => {
             }
         } catch (error) {
             console.error("Failed to fetch existing review:", error);
-           
+
             setExistingReview(null);
         }
     };
@@ -296,7 +303,7 @@ const AppointmentDetails: React.FC = () => {
             if (existingReview) {
                 await reviewService.updateReview(existingReview._id || existingReview.id, data);
                 toast.success("Review updated successfully!");
-                
+
                 setExistingReview({ ...existingReview, ...data });
             } else {
                 await reviewService.addReview({
@@ -305,7 +312,7 @@ const AppointmentDetails: React.FC = () => {
                     doctorId
                 });
                 toast.success("Review submitted successfully!");
-               
+
             }
             setReviewFormOpen(false);
         } catch (error: any) {
@@ -347,6 +354,47 @@ const AppointmentDetails: React.FC = () => {
         sessionStorage.setItem('bookingData', JSON.stringify(bookingData));
         sessionStorage.setItem('tempAppointmentId', appointment._id || appointment.id || '');
         navigate('/payment', { state: { appointmentId: appointment._id || appointment.id || '' } });
+    };
+
+    const handleAcceptReschedule = async (appointmentId: string) => {
+        try {
+            const response = await appointmentService.acceptReschedule(appointmentId);
+            if (response.success) {
+                toast.success('Appointment rescheduled successfully!');
+                const updated = await appointmentService.getAppointmentById(id!);
+                if (updated?.success) setAppointment(updated.data);
+            } else {
+                toast.error(response.message || 'Failed to accept reschedule');
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to accept reschedule');
+        }
+    };
+
+    const handleRejectRescheduleClick = (appointmentId: string) => {
+        setSelectedRescheduleId(appointmentId);
+        setRejectionReason('');
+        setRejectRescheduleOpen(true);
+    };
+
+    const handleConfirmRejectReschedule = async () => {
+        if (!selectedRescheduleId || !rejectionReason.trim()) return;
+        setRejectSubmitting(true);
+        try {
+            const response = await appointmentService.rejectReschedule(selectedRescheduleId, rejectionReason.trim());
+            if (response.success) {
+                toast.success('Reschedule request rejected');
+                setRejectRescheduleOpen(false);
+                const updated = await appointmentService.getAppointmentById(id!);
+                if (updated?.success) setAppointment(updated.data);
+            } else {
+                toast.error(response.message || 'Failed to reject reschedule');
+            }
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to reject reschedule');
+        } finally {
+            setRejectSubmitting(false);
+        }
     };
 
     if (loading) {
@@ -410,19 +458,23 @@ const AppointmentDetails: React.FC = () => {
                                 {error}
                             </div>
                         )}
+
+
                         {/* Payment Pending Warning */}
-                        {normalized.status === 'pending' && (appointment?.paymentStatus === 'pending' || appointment?.paymentStatus === 'failed') && (
-                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-start gap-3">
-                                <FaExclamationTriangle className="text-amber-600 mt-0.5 flex-shrink-0" />
-                                <div>
-                                    <h4 className="font-semibold text-amber-800 text-sm">Action Required: Payment Pending</h4>
-                                    <p className="text-sm text-amber-700 mt-1">
-                                        Please complete the payment within <strong>5 minutes</strong> to confirm your booking.
-                                        If payment is not received, this appointment will be automatically cancelled.
-                                    </p>
+                        {
+                            normalized.status === 'pending' && (appointment?.paymentStatus === 'pending' || appointment?.paymentStatus === 'failed') && (
+                                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+                                    <FaExclamationTriangle className="text-amber-600 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                        <h4 className="font-semibold text-amber-800 text-sm">Action Required: Payment Pending</h4>
+                                        <p className="text-sm text-amber-700 mt-1">
+                                            Please complete the payment within <strong>5 minutes</strong> to confirm your booking.
+                                            If payment is not received, this appointment will be automatically cancelled.
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )
+                        }
                         {/* Appointment Detail Card */}
                         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
                             {/* Main Appointment Info */}
@@ -518,6 +570,96 @@ const AppointmentDetails: React.FC = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Reschedule Request Section */}
+                            {normalized.status === 'reschedule_requested' && appointment?.rescheduleRequest && (
+                                <div className="px-5 py-3 bg-amber-50/50 border-t border-amber-100">
+                                    <button
+                                        onClick={() => setShowRescheduleDetail(!showRescheduleDetail)}
+                                        className="w-full flex items-center justify-between text-left hover:bg-amber-100/50 rounded-lg p-1.5 -m-1.5 transition-colors"
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            <div className="flex-shrink-0 w-5 h-5 text-amber-600 mt-0.5">
+                                                <FaExclamationTriangle className="w-full h-full" />
+                                            </div>
+
+                                            <div>
+                                                <h6 className="text-sm font-semibold text-amber-900">
+                                                    Action Required: New Time Proposed
+                                                </h6>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-amber-700 font-medium">
+                                                {showRescheduleDetail ? 'Show Less' : 'Show More'}
+                                            </span>
+                                            {showRescheduleDetail ? (
+                                                <FaChevronUp size={14} className="text-amber-600" />
+                                            ) : (
+                                                <FaChevronDown size={14} className="text-amber-600" />
+                                            )}
+                                        </div>
+                                    </button>
+
+                                    <div
+                                        className={`overflow-hidden transition-all duration-300 ease-in-out ${showRescheduleDetail ? 'max-h-[500px] opacity-100 mt-3' : 'max-h-0 opacity-0'
+                                            }`}
+                                    >
+                                        <div className="pl-0 md:pl-8 space-y-3.5">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                <Card className="border-amber-200/50 bg-white shadow-none hover:border-amber-300 transition-colors">
+                                                    <CardHeader className="p-3 pb-1">
+                                                        <CardTitle className="text-[9px] font-black text-amber-600/80 uppercase tracking-widest flex items-center gap-2">
+                                                            <FaCalendarAlt size={10} className="opacity-60" />
+                                                            Proposed Date
+                                                        </CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="p-3 pt-0">
+                                                        <p className="text-base font-bold text-[#5c3d1e]">
+                                                            {new Date(appointment.rescheduleRequest.appointmentDate).toLocaleDateString('en-US', {
+                                                                day: 'numeric',
+                                                                month: 'long',
+                                                                year: 'numeric'
+                                                            })}
+                                                        </p>
+                                                    </CardContent>
+                                                </Card>
+
+                                                <Card className="border-amber-200/50 bg-white shadow-none hover:border-amber-300 transition-colors">
+                                                    <CardHeader className="p-3 pb-1">
+                                                        <CardTitle className="text-[9px] font-black text-amber-600/80 uppercase tracking-widest flex items-center gap-2">
+                                                            <FaClock size={10} className="opacity-60" />
+                                                            Proposed Time
+                                                        </CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="p-3 pt-0">
+                                                        <p className="text-base font-bold text-[#5c3d1e]">
+                                                            {appointment.rescheduleRequest.appointmentTime}
+                                                        </p>
+                                                    </CardContent>
+                                                </Card>
+                                            </div>
+
+                                            <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+                                                <Button
+                                                    onClick={() => handleAcceptReschedule(id!)}
+                                                    className="flex-1 h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-sm hover:shadow-emerald-100 gap-2 transition-all active:scale-[0.98] text-xs"
+                                                >
+                                                    <FaCheck size={12} /> Accept & Update
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    onClick={() => handleRejectRescheduleClick(id!)}
+                                                    className="flex-1 h-10 bg-white text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 font-bold rounded-lg shadow-none gap-2 transition-all active:scale-[0.98] text-xs"
+                                                >
+                                                    <FaTimes size={12} /> Reject Proposal
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Rejection Reason Section */}
                             {appointment?.status === 'rejected' && appointment?.rejectionReason && (
@@ -701,9 +843,9 @@ const AppointmentDetails: React.FC = () => {
                             <h5 className="text-lg font-bold text-gray-800 mb-4">Recent Appointments</h5>
                             <p className="text-gray-500 text-sm">No recent appointments to display.</p>
                         </div>
-                    </div>
-                </div>
-            </main>
+                    </div >
+                </div >
+            </main >
 
             {cancelOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -787,6 +929,41 @@ const AppointmentDetails: React.FC = () => {
                 onClose={() => setPrescriptionViewOpen(false)}
                 appointmentId={(appointment?._id || appointment?.id || id || '') as string}
             />
+
+            <Dialog open={rejectRescheduleOpen} onOpenChange={setRejectRescheduleOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold text-gray-800">Reject Reschedule Request</DialogTitle>
+                        <DialogDescription className="text-gray-500">
+                            Please provide a reason for rejecting the doctor's proposed time.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <Textarea
+                            placeholder="I'm not available at this time..."
+                            value={rejectionReason}
+                            onChange={(e) => setRejectionReason(e.target.value)}
+                            className="min-h-[120px] rounded-xl border-gray-200 focus:ring-[#00A1B0]"
+                        />
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            variant="ghost"
+                            onClick={() => setRejectRescheduleOpen(false)}
+                            className="font-bold text-gray-500"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleConfirmRejectReschedule}
+                            disabled={rejectSubmitting || !rejectionReason.trim()}
+                            className="bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl px-8"
+                        >
+                            {rejectSubmitting ? 'Rejecting...' : 'Confirm Rejection'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div >
     );
 };

@@ -50,6 +50,7 @@ export const APPOINTMENT_STATUS = {
   CANCELLED: "cancelled",
   COMPLETED: "completed",
   UPCOMING: "upcoming",
+  RESCHEDULE_REQUESTED: "reschedule_requested",
 } as const;
 
 export const PAYMENT_STATUS = {

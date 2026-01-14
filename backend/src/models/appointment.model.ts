@@ -52,7 +52,7 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
 
         status: {
             type: String,
-            enum: ["pending", "confirmed", "cancelled", "completed", "rejected"],
+            enum: ["pending", "confirmed", "cancelled", "completed", "rejected", "reschedule_requested"],
             default: "pending",
             required: true,
             index: true,
@@ -108,6 +108,16 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
             type: String,
             default: null,
             trim: true,
+        },
+        rescheduleRejectReason: {
+            type: String,
+            default: null,
+            trim: true,
+        },
+        rescheduleRequest: {
+            appointmentDate: { type: Date, default: null },
+            appointmentTime: { type: String, default: null },
+            slotId: { type: String, default: null },
         },
 
 

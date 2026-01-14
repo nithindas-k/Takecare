@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { AppointmentController } from "../controllers/appointment.controller";
-import { AppointmentService } from "services/appointment.service";
+import { AppointmentService } from "../services/appointment.service";
 import { AppointmentRepository } from "../repositories/appointment.repository";
 import { DoctorRepository } from "../repositories/doctor.repository";
 import { UserRepository } from "../repositories/user.repository";
@@ -24,7 +24,7 @@ const walletRepository = new WalletRepository();
 import { notificationService } from "./notification.router";
 import { chatService } from "./chat.router";
 
-const walletService = new WalletService(walletRepository, null, null, null, notificationService);
+const walletService = new WalletService(walletRepository, undefined, undefined, undefined, notificationService);
 
 const appointmentServiceLogger = new LoggerService("AppointmentService");
 const appointmentControllerLogger = new LoggerService("AppointmentController");
@@ -88,8 +88,22 @@ appointmentRouter.put(
 appointmentRouter.put(
     APPOINTMENT_ROUTES.RESCHEDULE,
     authMiddleware,
-    requireRole("admin", "patient"),
+    requireRole("admin", "patient", "doctor"),
     appointmentController.rescheduleAppointment
+);
+
+appointmentRouter.put(
+    APPOINTMENT_ROUTES.ACCEPT_RESCHEDULE,
+    authMiddleware,
+    requireRole("patient"),
+    appointmentController.acceptReschedule
+);
+
+appointmentRouter.put(
+    APPOINTMENT_ROUTES.REJECT_RESCHEDULE,
+    authMiddleware,
+    requireRole("patient"),
+    appointmentController.rejectReschedule
 );
 
 

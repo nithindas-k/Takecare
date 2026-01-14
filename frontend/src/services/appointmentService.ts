@@ -101,5 +101,15 @@ export const appointmentService = {
     updateDoctorNotes: async (id: string, note: unknown) => {
         const response = await axiosInstance.put(APPOINTMENT_API_ROUTES.UPDATE_NOTES(id), { notes: note });
         return response.data;
+    },
+
+    acceptReschedule: async (id: string) => {
+        const response = await axiosInstance.put(APPOINTMENT_API_ROUTES.ACCEPT_RESCHEDULE(id));
+        return response.data;
+    },
+
+    rejectReschedule: async (id: string, reason: string) => {
+        const response = await axiosInstance.put(APPOINTMENT_API_ROUTES.REJECT_RESCHEDULE(id), { reason });
+        return response.data;
     }
 };

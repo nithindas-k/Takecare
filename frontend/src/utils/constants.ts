@@ -101,6 +101,8 @@ export const APPOINTMENT_API_ROUTES = {
   REJECT: (id: string): string => `/appointments/${id}/reject`,
   COMPLETE: (id: string): string => `/appointments/${id}/complete`,
   RESCHEDULE: (id: string): string => `/appointments/${id}/reschedule`,
+  ACCEPT_RESCHEDULE: (id: string): string => `/appointments/${id}/reschedule/accept`,
+  REJECT_RESCHEDULE: (id: string): string => `/appointments/${id}/reschedule/reject`,
   ADMIN_ALL: "/appointments/admin/all",
   START_CONSULTATION: (id: string): string => `/appointments/${id}/start-consultation`,
   UPDATE_SESSION_STATUS: (id: string): string => `/appointments/${id}/session-status`,

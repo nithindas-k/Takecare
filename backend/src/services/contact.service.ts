@@ -28,7 +28,6 @@ export class ContactService implements IContactService {
             createdAt: new Date()
         });
 
-        // Send email notification to admin asynchronously
         this._emailService.sendContactNotification({
             name: data.name,
             email: data.email,
