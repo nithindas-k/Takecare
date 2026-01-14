@@ -109,7 +109,7 @@ const VideoCallContent: React.FC = () => {
                     ...prev,
                     doctorNotes: [...(prev?.doctorNotes || []), newNote]
                 }));
-                // Reset fields
+                
                 setNoteTitle("");
                 setNoteDescription("");
                 setNoteDosage("");
@@ -172,7 +172,7 @@ const VideoCallContent: React.FC = () => {
         }
     }, [id, leaveCall, navigate]);
 
-    // Call duration timer
+    
     useEffect(() => {
         let interval: ReturnType<typeof setInterval>;
         if (callAccepted && !callEnded) {
@@ -183,7 +183,7 @@ const VideoCallContent: React.FC = () => {
         return () => clearInterval(interval);
     }, [callAccepted, callEnded]);
 
-    // Auto-hide controls after inactivity
+  
     useEffect(() => {
         let timeout: ReturnType<typeof setTimeout>;
         const handleMouseMove = () => {
@@ -206,14 +206,13 @@ const VideoCallContent: React.FC = () => {
         };
     }, [callAccepted, callEnded]);
 
-    // Format call duration
+    
     const formatDuration = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    // Fetch appointment details
     useEffect(() => {
         const fetchAppointment = async () => {
             if (!id) return;
@@ -242,7 +241,7 @@ const VideoCallContent: React.FC = () => {
                         setTargetUserId(patientId);
                         console.log("I am Doctor, calling Patient:", patientId);
 
-                        // Automatically set to ACTIVE if doctor starts first time and session is not ended
+                        
                         if (!apt.sessionStartTime && apt.status !== 'completed' && apt.sessionStatus !== 'ENDED') {
                             try {
                                 await appointmentService.updateSessionStatus(id, "ACTIVE");
@@ -304,7 +303,7 @@ const VideoCallContent: React.FC = () => {
     useEffect(() => {
         if (!socket || !id) return;
 
-        // Join the appointment-specific room
+      
         socket.emit("join-chat", id);
         console.log(`Joining video call room: ${id}`);
 

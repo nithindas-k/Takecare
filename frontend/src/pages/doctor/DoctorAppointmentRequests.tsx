@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import DoctorNavbar from '../../components/Doctor/DoctorNavbar';
 import DoctorLayout from '../../components/Doctor/DoctorLayout';
@@ -209,8 +208,8 @@ const DoctorAppointmentRequests: React.FC = () => {
                                                         <button
                                                             onClick={() => handleApprove(request.id)}
                                                             className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors ${request.paymentStatus === 'paid'
-                                                                    ? 'bg-green-50 hover:bg-green-100 text-green-600'
-                                                                    : 'bg-amber-50 hover:bg-amber-100 text-amber-600'
+                                                                ? 'bg-green-50 hover:bg-green-100 text-green-600'
+                                                                : 'bg-amber-50 hover:bg-amber-100 text-amber-600'
                                                                 }`}
                                                             title={request.paymentStatus !== 'paid' ? "Payment pending" : "Approve appointment"}
                                                         >

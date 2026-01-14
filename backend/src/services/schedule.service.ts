@@ -334,7 +334,7 @@ export class ScheduleService implements IScheduleService {
         for (const apt of appointments.appointments) {
             const aptDate = new Date(apt.appointmentDate);
             const isSameDate = aptDate.toISOString().split("T")[0] === dateStr;
-            const validStatus = apt.status === 'pending' || apt.status === 'confirmed' || apt.status === 'upcoming';
+            const validStatus = apt.status === 'pending' || apt.status === 'confirmed';
 
             if (isSameDate && validStatus) {
                 appointmentsForDate.push(apt);
@@ -415,266 +415,264 @@ export class ScheduleService implements IScheduleService {
         return this.deleteSchedule(doctor._id.toString());
     }
 
-   async addRecurringSlots(
-    userId: string,
-    data: RecurringSlotsDTO
-): Promise<RecurringSlotsResponseDTO> {
-    this._logger.info("Adding recurring slots", { userId, data });
+    async addRecurringSlots(
+        userId: string,
+        data: RecurringSlotsDTO
+    ): Promise<RecurringSlotsResponseDTO> {
+        this._logger.info("Adding recurring slots", { userId, data });
 
-    const doctor = await this._doctorRepository.findByUserId(userId);
-    if (!doctor) {
-        throw new NotFoundError(MESSAGES.DOCTOR_NOT_FOUND);
-    }
+        const doctor = await this._doctorRepository.findByUserId(userId);
+        if (!doctor) {
+            throw new NotFoundError(MESSAGES.DOCTOR_NOT_FOUND);
+        }
 
-    const doctorId = doctor._id.toString();
-    const existingSchedule = await this._scheduleRepository.findByDoctorId(doctorId);
+        const doctorId = doctor._id.toString();
+        const existingSchedule = await this._scheduleRepository.findByDoctorId(doctorId);
 
-    if (!existingSchedule) {
-        this._logger.error("No existing schedule found for doctor", { doctorId });
-        throw new NotFoundError(MESSAGES.SCHEDULE_NOT_FOUND);
-    }
+        if (!existingSchedule) {
+            this._logger.error("No existing schedule found for doctor", { doctorId });
+            throw new NotFoundError(MESSAGES.SCHEDULE_NOT_FOUND);
+        }
 
-    // Validate time format
-    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(data.startTime) || !timeRegex.test(data.endTime)) {
-        throw new AppError("Invalid time format", HttpStatus.BAD_REQUEST);
-    }
+        const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        if (!timeRegex.test(data.startTime) || !timeRegex.test(data.endTime)) {
+            throw new AppError("Invalid time format", HttpStatus.BAD_REQUEST);
+        }
 
-    // Validate time logic
-    const [startHours, startMinutes] = data.startTime.split(':').map(Number);
-    const [endHours, endMinutes] = data.endTime.split(':').map(Number);
-    const startTotal = startHours * 60 + startMinutes;
-    const endTotal = endHours * 60 + endMinutes;
 
-    if (startTotal >= endTotal) {
-        throw new AppError("Start time must be before end time", HttpStatus.BAD_REQUEST);
-    }
+        const [startHours, startMinutes] = data.startTime.split(':').map(Number);
+        const [endHours, endMinutes] = data.endTime.split(':').map(Number);
+        const startTotal = startHours * 60 + startMinutes;
+        const endTotal = endHours * 60 + endMinutes;
 
-    if (endTotal - startTotal < 15) {
-        throw new AppError("Slot duration must be at least 15 minutes", HttpStatus.BAD_REQUEST);
-    }
+        if (startTotal >= endTotal) {
+            throw new AppError("Start time must be before end time", HttpStatus.BAD_REQUEST);
+        }
 
-    // Check for overlaps
-    const overlappingDays: string[] = [];
-    const nonOverlappingDays: string[] = [];
+        if (endTotal - startTotal < 15) {
+            throw new AppError("Slot duration must be at least 15 minutes", HttpStatus.BAD_REQUEST);
+        }
 
-    data.days.forEach(day => {
-        const daySchedule = existingSchedule.weeklySchedule.find(d => d.day === day);
-        if (daySchedule && daySchedule.enabled && daySchedule.slots.length > 0) {
-            let hasOverlap = false;
-            
-            for (const slot of daySchedule.slots) {
-                if (!slot.enabled) continue;
-                
-                const [slotStartHours, slotStartMinutes] = slot.startTime.split(':').map(Number);
-                const [slotEndHours, slotEndMinutes] = slot.endTime.split(':').map(Number);
-                const slotStartTotal = slotStartHours * 60 + slotStartMinutes;
-                const slotEndTotal = slotEndHours * 60 + slotEndMinutes;
 
-                // Check if slots overlap
-                if ((startTotal < slotEndTotal && endTotal > slotStartTotal) ||
-                    (slotStartTotal < endTotal && slotEndTotal > startTotal)) {
-                    hasOverlap = true;
-                    break;
+        const overlappingDays: string[] = [];
+        const nonOverlappingDays: string[] = [];
+
+        data.days.forEach(day => {
+            const daySchedule = existingSchedule.weeklySchedule.find(d => d.day === day);
+            if (daySchedule && daySchedule.enabled && daySchedule.slots.length > 0) {
+                let hasOverlap = false;
+
+                for (const slot of daySchedule.slots) {
+                    if (!slot.enabled) continue;
+
+                    const [slotStartHours, slotStartMinutes] = slot.startTime.split(':').map(Number);
+                    const [slotEndHours, slotEndMinutes] = slot.endTime.split(':').map(Number);
+                    const slotStartTotal = slotStartHours * 60 + slotStartMinutes;
+                    const slotEndTotal = slotEndHours * 60 + slotEndMinutes;
+
+                    if ((startTotal < slotEndTotal && endTotal > slotStartTotal) ||
+                        (slotStartTotal < endTotal && slotEndTotal > startTotal)) {
+                        hasOverlap = true;
+                        break;
+                    }
                 }
-            }
 
-            if (hasOverlap) {
-                overlappingDays.push(day);
+                if (hasOverlap) {
+                    overlappingDays.push(day);
+                } else {
+                    nonOverlappingDays.push(day);
+                }
             } else {
                 nonOverlappingDays.push(day);
             }
+        });
+
+
+        let daysToUpdate: string[] = [];
+
+        if (data.skipOverlappingDays) {
+            daysToUpdate = nonOverlappingDays;
         } else {
-            nonOverlappingDays.push(day);
-        }
-    });
-
-    // Determine which days to update
-    let daysToUpdate: string[] = [];
-    
-    if (data.skipOverlappingDays) {
-        daysToUpdate = nonOverlappingDays;
-    } else {
-        daysToUpdate = nonOverlappingDays;
-    }
-
-    // Add slots to the determined days
-    if (daysToUpdate.length > 0) {
-        // Create a deep copy of the weekly schedule
-        const updatedWeeklySchedule = existingSchedule.weeklySchedule.map(day => {
-            if (daysToUpdate.includes(day.day)) {
-                const newSlot = {
-                    customId: IDGenerator.generateSlotId(),
-                    startTime: data.startTime,
-                    endTime: data.endTime,
-                    enabled: true,
-                    booked: false
-                };
-
-                this._logger.info("Creating new slot", { 
-                    day: day.day,
-                    newSlot,
-                    existingSlotsCount: day.slots?.length || 0
-                });
-
-                return {
-                    ...day,
-                    enabled: true,
-                    slots: [...(day.slots || []), newSlot]
-                };
-            }
-            return { ...day };
-        });
-
-        this._logger.info("Updating schedule with new slots", { 
-            doctorId,
-            daysToUpdate,
-            totalDays: updatedWeeklySchedule.length
-        });
-
-        // Update the schedule
-        const updateResult = await this._scheduleRepository.updateByDoctorId(doctorId, {
-            weeklySchedule: updatedWeeklySchedule
-        });
-
-        if (!updateResult) {
-            this._logger.error("Failed to update schedule", { doctorId });
-            throw new AppError("Failed to update schedule", HttpStatus.INTERNAL_ERROR);
+            daysToUpdate = nonOverlappingDays;
         }
 
-        this._logger.info("Recurring slots added successfully", { 
-            doctorId, 
-            slotsAdded: daysToUpdate.length
-        });
 
-        // Verify the update
-        const verifySchedule = await this._scheduleRepository.findByDoctorId(doctorId);
-        if (verifySchedule) {
-            const updatedDaysInfo = verifySchedule.weeklySchedule
-                .filter(day => daysToUpdate.includes(day.day))
-                .map(day => ({
-                    day: day.day,
-                    slotsCount: day.slots?.length || 0
-                }));
-            
-            this._logger.info("Schedule verification successful", { 
-                doctorId,
-                updatedDays: updatedDaysInfo
+        if (daysToUpdate.length > 0) {
+
+            const updatedWeeklySchedule = existingSchedule.weeklySchedule.map(day => {
+                if (daysToUpdate.includes(day.day)) {
+                    const newSlot = {
+                        customId: IDGenerator.generateSlotId(),
+                        startTime: data.startTime,
+                        endTime: data.endTime,
+                        enabled: true,
+                        booked: false
+                    };
+
+                    this._logger.info("Creating new slot", {
+                        day: day.day,
+                        newSlot,
+                        existingSlotsCount: day.slots?.length || 0
+                    });
+
+                    return {
+                        ...day,
+                        enabled: true,
+                        slots: [...(day.slots || []), newSlot]
+                    };
+                }
+                return { ...day };
             });
+
+            this._logger.info("Updating schedule with new slots", {
+                doctorId,
+                daysToUpdate,
+                totalDays: updatedWeeklySchedule.length
+            });
+
+
+            const updateResult = await this._scheduleRepository.updateByDoctorId(doctorId, {
+                weeklySchedule: updatedWeeklySchedule
+            });
+
+            if (!updateResult) {
+                this._logger.error("Failed to update schedule", { doctorId });
+                throw new AppError("Failed to update schedule", HttpStatus.INTERNAL_ERROR);
+            }
+
+            this._logger.info("Recurring slots added successfully", {
+                doctorId,
+                slotsAdded: daysToUpdate.length
+            });
+
+
+            const verifySchedule = await this._scheduleRepository.findByDoctorId(doctorId);
+            if (verifySchedule) {
+                const updatedDaysInfo = verifySchedule.weeklySchedule
+                    .filter(day => daysToUpdate.includes(day.day))
+                    .map(day => ({
+                        day: day.day,
+                        slotsCount: day.slots?.length || 0
+                    }));
+
+                this._logger.info("Schedule verification successful", {
+                    doctorId,
+                    updatedDays: updatedDaysInfo
+                });
+            }
         }
-    }
-
-    return {
-        success: true,
-        overlappingDays,
-        nonOverlappingDays,
-        message: overlappingDays.length > 0 
-            ? `Found overlapping slots on ${overlappingDays.length} day(s). Slots added to ${nonOverlappingDays.length} day(s).`
-            : `Recurring slots added to ${nonOverlappingDays.length} day(s).`
-    };
-}
-
-async deleteRecurringSlotByTime(
-    userId: string,
-    startTime: string,
-    endTime: string
-): Promise<ScheduleResponseDTO> {
-    this._logger.info("Deleting recurring slot by time range", { userId, startTime, endTime });
-
-    const doctor = await this._doctorRepository.findByUserId(userId);
-    if (!doctor) {
-        throw new NotFoundError(MESSAGES.DOCTOR_NOT_FOUND);
-    }
-
-    const doctorId = doctor._id.toString();
-    const existingSchedule = await this._scheduleRepository.findByDoctorId(doctorId);
-
-    if (!existingSchedule) {
-        throw new NotFoundError(MESSAGES.SCHEDULE_NOT_FOUND);
-    }
-
-    // Create a deep copy and update
-    let deletedCount = 0;
-    const updatedWeeklySchedule = existingSchedule.weeklySchedule.map(daySchedule => {
-        const updatedSlots = daySchedule.slots.filter(slot => 
-            !(slot.startTime === startTime && slot.endTime === endTime)
-        );
-
-        // Count how many slots were deleted
-        deletedCount += daySchedule.slots.length - updatedSlots.length;
 
         return {
-            ...daySchedule,
-            slots: updatedSlots,
-            enabled: updatedSlots.length > 0 ? daySchedule.enabled : false
+            success: true,
+            overlappingDays,
+            nonOverlappingDays,
+            message: overlappingDays.length > 0
+                ? `Found overlapping slots on ${overlappingDays.length} day(s). Slots added to ${nonOverlappingDays.length} day(s).`
+                : `Recurring slots added to ${nonOverlappingDays.length} day(s).`
         };
-    });
-
-    const updatedSchedule = await this._scheduleRepository.updateByDoctorId(doctorId, {
-        weeklySchedule: updatedWeeklySchedule
-    });
-
-    if (!updatedSchedule) {
-        throw new NotFoundError(MESSAGES.SCHEDULE_UPDATE_FAILED);
     }
 
-    this._logger.info("Recurring slots deleted successfully by time range", { 
-        doctorId, 
-        startTime, 
-        endTime, 
-        deletedCount 
-    });
+    async deleteRecurringSlotByTime(
+        userId: string,
+        startTime: string,
+        endTime: string
+    ): Promise<ScheduleResponseDTO> {
+        this._logger.info("Deleting recurring slot by time range", { userId, startTime, endTime });
 
-    return this._mapToResponseDTO(updatedSchedule);
-}
+        const doctor = await this._doctorRepository.findByUserId(userId);
+        if (!doctor) {
+            throw new NotFoundError(MESSAGES.DOCTOR_NOT_FOUND);
+        }
 
-async deleteRecurringSlot(
-    userId: string,
-    day: string,
-    slotId: string
-): Promise<ScheduleResponseDTO> {
-    this._logger.info("Deleting recurring slot", { userId, day, slotId });
+        const doctorId = doctor._id.toString();
+        const existingSchedule = await this._scheduleRepository.findByDoctorId(doctorId);
 
-    const doctor = await this._doctorRepository.findByUserId(userId);
-    if (!doctor) {
-        throw new NotFoundError(MESSAGES.DOCTOR_NOT_FOUND);
-    }
+        if (!existingSchedule) {
+            throw new NotFoundError(MESSAGES.SCHEDULE_NOT_FOUND);
+        }
 
-    const doctorId = doctor._id.toString();
-    const existingSchedule = await this._scheduleRepository.findByDoctorId(doctorId);
 
-    if (!existingSchedule) {
-        throw new NotFoundError(MESSAGES.SCHEDULE_NOT_FOUND);
-    }
-
-    // Create a deep copy and update
-    const updatedWeeklySchedule = existingSchedule.weeklySchedule.map(daySchedule => {
-        if (daySchedule.day === day) {
-            const updatedSlots = daySchedule.slots.filter(slot => 
-                slot.customId !== slotId
+        let deletedCount = 0;
+        const updatedWeeklySchedule = existingSchedule.weeklySchedule.map(daySchedule => {
+            const updatedSlots = daySchedule.slots.filter(slot =>
+                !(slot.startTime === startTime && slot.endTime === endTime)
             );
+
+
+            deletedCount += daySchedule.slots.length - updatedSlots.length;
 
             return {
                 ...daySchedule,
                 slots: updatedSlots,
                 enabled: updatedSlots.length > 0 ? daySchedule.enabled : false
             };
+        });
+
+        const updatedSchedule = await this._scheduleRepository.updateByDoctorId(doctorId, {
+            weeklySchedule: updatedWeeklySchedule
+        });
+
+        if (!updatedSchedule) {
+            throw new NotFoundError(MESSAGES.SCHEDULE_UPDATE_FAILED);
         }
-        return { ...daySchedule };
-    });
 
-    const updatedSchedule = await this._scheduleRepository.updateByDoctorId(doctorId, {
-        weeklySchedule: updatedWeeklySchedule
-    });
+        this._logger.info("Recurring slots deleted successfully by time range", {
+            doctorId,
+            startTime,
+            endTime,
+            deletedCount
+        });
 
-    if (!updatedSchedule) {
-        throw new NotFoundError(MESSAGES.SCHEDULE_UPDATE_FAILED);
+        return this._mapToResponseDTO(updatedSchedule);
     }
 
-    this._logger.info("Recurring slot deleted successfully", { doctorId, day, slotId });
+    async deleteRecurringSlot(
+        userId: string,
+        day: string,
+        slotId: string
+    ): Promise<ScheduleResponseDTO> {
+        this._logger.info("Deleting recurring slot", { userId, day, slotId });
 
-    return this._mapToResponseDTO(updatedSchedule);
-}
+        const doctor = await this._doctorRepository.findByUserId(userId);
+        if (!doctor) {
+            throw new NotFoundError(MESSAGES.DOCTOR_NOT_FOUND);
+        }
+
+        const doctorId = doctor._id.toString();
+        const existingSchedule = await this._scheduleRepository.findByDoctorId(doctorId);
+
+        if (!existingSchedule) {
+            throw new NotFoundError(MESSAGES.SCHEDULE_NOT_FOUND);
+        }
+
+
+        const updatedWeeklySchedule = existingSchedule.weeklySchedule.map(daySchedule => {
+            if (daySchedule.day === day) {
+                const updatedSlots = daySchedule.slots.filter(slot =>
+                    slot.customId !== slotId
+                );
+
+                return {
+                    ...daySchedule,
+                    slots: updatedSlots,
+                    enabled: updatedSlots.length > 0 ? daySchedule.enabled : false
+                };
+            }
+            return { ...daySchedule };
+        });
+
+        const updatedSchedule = await this._scheduleRepository.updateByDoctorId(doctorId, {
+            weeklySchedule: updatedWeeklySchedule
+        });
+
+        if (!updatedSchedule) {
+            throw new NotFoundError(MESSAGES.SCHEDULE_UPDATE_FAILED);
+        }
+
+        this._logger.info("Recurring slot deleted successfully", { doctorId, day, slotId });
+
+        return this._mapToResponseDTO(updatedSchedule);
+    }
 
     private _mapToResponseDTO(schedule: any): ScheduleResponseDTO {
         return {

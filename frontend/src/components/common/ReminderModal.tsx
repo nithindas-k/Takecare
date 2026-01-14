@@ -76,18 +76,18 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, data, on
                                 </div>
                             </div>
 
-                            <div className="w-full flex flex-col gap-2">
-                                <button
-                                    onClick={onAction || onClose}
-                                    className={`w-full ${data.type === 'appointment_started' ? 'bg-green-600 hover:bg-green-700' : 'bg-[#00A1B0] hover:bg-[#008f9c]'} text-white py-3.5 rounded-xl font-bold transition-all duration-300 active:scale-[0.98] shadow-sm`}
-                                >
-                                    {data.type === 'appointment_started' ? 'Join Session Now' : 'Get Started'}
-                                </button>
+                            <div className="w-full flex items-center gap-3">
                                 <button
                                     onClick={onClose}
-                                    className="text-[13px] font-semibold text-gray-400 hover:text-gray-600 py-2 transition-colors"
+                                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3.5 rounded-xl font-bold transition-all duration-300 active:scale-[0.98]"
                                 >
-                                    Remind me in 1 min
+                                    Okay
+                                </button>
+                                <button
+                                    onClick={onAction || onClose}
+                                    className={`flex-1 ${data.type === 'appointment_started' ? 'bg-green-600 hover:bg-green-700' : 'bg-[#00A1B0] hover:bg-[#008f9c]'} text-white py-3.5 rounded-xl font-bold transition-all duration-300 active:scale-[0.98] shadow-sm`}
+                                >
+                                    Details
                                 </button>
                             </div>
                         </div>

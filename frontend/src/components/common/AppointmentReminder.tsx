@@ -17,7 +17,7 @@ const AppointmentReminder: React.FC = () => {
 
     const [nextAppointment, setNextAppointment] = useState<any>(null);
 
-    
+
     useEffect(() => {
         if (!user || user.role === 'admin') return;
 
@@ -34,7 +34,7 @@ const AppointmentReminder: React.FC = () => {
                 } else if (user.role === 'patient') {
                     const res = await appointmentService.getMyAppointments('scheduled', 1, 20);
                     if (res?.data?.appointments) {
-                       
+
                         const today = new Date();
                         const todayStr = today.toDateString();
 
@@ -46,7 +46,7 @@ const AppointmentReminder: React.FC = () => {
                         if (todayAppointments.length > 0) {
                             const now = new Date();
 
-                            
+
                             const parseTime = (timeStr: string) => {
                                 const d = new Date(now);
                                 const parts = timeStr.match(/(\d+):(\d+)\s?(AM|PM)?/i);
@@ -64,7 +64,7 @@ const AppointmentReminder: React.FC = () => {
                                 return d;
                             };
 
-                          
+
                             todayAppointments.sort((a: any, b: any) => {
                                 return parseTime(a.appointmentTime).getTime() - parseTime(b.appointmentTime).getTime();
                             });
@@ -93,7 +93,7 @@ const AppointmentReminder: React.FC = () => {
         };
 
         fetchNextAppointment();
-        const interval = setInterval(fetchNextAppointment, 60000 * 5); 
+        const interval = setInterval(fetchNextAppointment, 60000 * 5);
         return () => clearInterval(interval);
 
     }, [user]);
@@ -101,7 +101,7 @@ const AppointmentReminder: React.FC = () => {
 
     const [reminderStatus, setReminderStatus] = useState({ early: false, started: false });
 
-    
+
     useEffect(() => {
         if (!nextAppointment) return;
 
@@ -143,28 +143,38 @@ const AppointmentReminder: React.FC = () => {
 
                 console.log("Time Check:", { now, apptTime, diffMins, reminderStatus });
 
+
+                const earlyKey = `reminder_early_${nextAppointment.id || nextAppointment._id}`;
+                const startedKey = `reminder_started_${nextAppointment.id || nextAppointment._id}`;
+
                 if (diffMins >= -5 && diffMins < 0 && !reminderStatus.early) {
-                    console.log("Triggering Early Reminder");
-                    setReminderData({
-                        title: "Upcoming Appointment",
-                        message: `Your appointment with ${otherPartyName} starts in ${Math.ceil(Math.abs(diffMins))} minutes.`,
-                        customId,
-                        id: nextAppointment.id || nextAppointment._id
-                    });
-                    setShowReminder(true);
-                    setReminderStatus(prev => ({ ...prev, early: true }));
+                    if (!sessionStorage.getItem(earlyKey)) {
+                        console.log("Triggering Early Reminder");
+                        setReminderData({
+                            title: "Upcoming Appointment",
+                            message: `Your appointment with ${otherPartyName} starts in ${Math.ceil(Math.abs(diffMins))} minutes.`,
+                            customId,
+                            id: nextAppointment.id || nextAppointment._id
+                        });
+                        setShowReminder(true);
+                        setReminderStatus(prev => ({ ...prev, early: true }));
+                        sessionStorage.setItem(earlyKey, 'true');
+                    }
                 }
 
                 if (diffMins >= 0 && diffMins < 15 && !reminderStatus.started) {
-                    console.log("Triggering Started Reminder");
-                    setReminderData({
-                        title: "Session Started",
-                        message: `The scheduled time has been reached. Please join the consultation with ${otherPartyName} now.`,
-                        customId,
-                        id: nextAppointment.id || nextAppointment._id
-                    });
-                    setShowReminder(true);
-                    setReminderStatus(prev => ({ ...prev, started: true }));
+                    if (!sessionStorage.getItem(startedKey)) {
+                        console.log("Triggering Started Reminder");
+                        setReminderData({
+                            title: "Session Started",
+                            message: `The scheduled time has been reached. Please join the consultation with ${otherPartyName} now.`,
+                            customId,
+                            id: nextAppointment.id || nextAppointment._id
+                        });
+                        setShowReminder(true);
+                        setReminderStatus(prev => ({ ...prev, started: true }));
+                        sessionStorage.setItem(startedKey, 'true');
+                    }
                 }
             } else {
                 console.log("Time format regex failed for:", appointmentTime);
@@ -179,8 +189,8 @@ const AppointmentReminder: React.FC = () => {
 
     const handleJoin = () => {
         setShowReminder(false);
-        if (reminderData?.customId) {
-            const baseUrl = user?.role === 'doctor' ? '/doctor/call' : '/patient/call';
+        if (reminderData?.id) {
+            const baseUrl = user?.role === 'doctor' ? '/doctor/appointments' : '/patient/appointments';
             navigate(`${baseUrl}/${reminderData.id}`);
         }
     };

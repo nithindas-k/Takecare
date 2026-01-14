@@ -90,7 +90,7 @@ interface Conversation {
     };
     isOnline?: boolean;
     unreadCount: number;
-}   
+}
 
 interface ActiveChat {
     id: string;
@@ -107,7 +107,7 @@ interface Message {
     text: string;
     time: string;
     status: 'sent' | 'delivered' | 'read' | 'sending' | 'failed';
-    type: 'text' | 'file' | 'image' | 'system';
+    type: 'text' | 'file' | 'image' | 'system' | 'audio';
     fileName?: string;
     fileSize?: string;
     isDeleted?: boolean;
@@ -115,6 +115,130 @@ interface Message {
 }
 
 
+
+
+const isAudioUrl = (url: string) => {
+    return /\.(mp3|wav|ogg|webm)$/i.test(url) || url.includes('voice-note-');
+};
+
+const CustomAudioPlayer = ({ src, isUser }: { src: string, isUser: boolean }) => {
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const audioRef = useRef<HTMLAudioElement>(null);
+
+    const togglePlay = () => {
+        if (audioRef.current) {
+            if (isPlaying) {
+                audioRef.current.pause();
+            } else {
+                audioRef.current.play();
+            }
+            setIsPlaying(!isPlaying);
+        }
+    };
+
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        const updateDuration = () => {
+            if (audio.duration && !isNaN(audio.duration)) {
+                setDuration(audio.duration);
+            }
+        };
+
+        const updateTime = () => {
+            if (audio.duration) {
+                setProgress((audio.currentTime / audio.duration) * 100);
+            }
+        };
+
+        const onEnded = () => setIsPlaying(false);
+
+        audio.addEventListener('loadedmetadata', updateDuration);
+        audio.addEventListener('timeupdate', updateTime);
+        audio.addEventListener('ended', onEnded);
+
+        if (audio.readyState >= 1) {
+            updateDuration();
+        }
+
+        return () => {
+            audio.removeEventListener('loadedmetadata', updateDuration);
+            audio.removeEventListener('timeupdate', updateTime);
+            audio.removeEventListener('ended', onEnded);
+        };
+    }, []);
+
+    const formatTime = (time: number) => {
+        if (isNaN(time)) return "0:00";
+        const min = Math.floor(time / 60);
+        const sec = Math.floor(time % 60);
+        return `${min}:${sec < 10 ? '0' + sec : sec}`;
+    };
+
+
+    const bars = [4, 8, 3, 5, 9, 4, 7, 5, 2, 6, 8, 4, 6, 3, 7, 5, 9, 4, 3, 7, 4, 8, 3, 5, 9, 4, 7, 5];
+
+    return (
+        <div className={`flex items-center gap-3 min-w-[240px] p-2 rounded-2xl transition-all select-none ${isUser
+            ? ''
+            : 'bg-white border border-slate-100 shadow-sm'
+            }`}>
+            <button
+                onClick={togglePlay}
+                className={`flex items-center justify-center w-10 h-10 rounded-full shadow-sm transition-all active:scale-95 ${isUser
+                    ? 'bg-white text-[#00A1B0] hover:bg-white/90'
+                    : 'bg-[#00A1B0] text-white hover:bg-[#008f9c] hover:shadow-md hover:shadow-[#00A1B0]/20'
+                    }`}
+            >
+                {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" className="ml-1" />}
+            </button>
+
+            <div className="flex-1 flex flex-col justify-center gap-1.5 min-w-0">
+                {/* Visualizer & Progress Track */}
+                <div
+                    className="h-6 flex items-center gap-0.5 cursor-pointer relative group"
+                    onClick={(e) => {
+                        const bounds = e.currentTarget.getBoundingClientRect();
+                        const percent = Math.min(1, Math.max(0, (e.clientX - bounds.left) / bounds.width));
+                        if (audioRef.current && Number.isFinite(audioRef.current.duration)) {
+                            audioRef.current.currentTime = percent * audioRef.current.duration;
+                        }
+                    }}
+                >
+                    {bars.map((height, i) => {
+                        const barPercent = (i / bars.length) * 100;
+                        const isActive = barPercent <= progress;
+                        return (
+                            <div
+                                key={i}
+                                className={`w-1 rounded-full transition-all duration-300 ${isActive
+                                    ? (isUser ? 'bg-white' : 'bg-[#00A1B0]')
+                                    : (isUser ? 'bg-white/30' : 'bg-slate-200')
+                                    }`}
+                                style={{
+                                    height: `${isPlaying ? Math.max(3, height + Math.random() * 4) : height}px`,
+                                    opacity: isActive ? 1 : 0.6
+                                }}
+                            />
+                        );
+                    })}
+
+                    {/* Invisible slider for smoother seek interaction */}
+                    <div className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer" />
+                </div>
+
+                <div className={`flex justify-between text-[10px] font-bold tracking-wider uppercase ${isUser ? 'text-white/80' : 'text-slate-400'}`}>
+                    <span>{formatTime(audioRef.current?.currentTime || 0)}</span>
+                    <span>{formatTime(duration)}</span>
+                </div>
+            </div>
+            <audio ref={audioRef} src={src} preload="metadata" />
+        </div>
+    );
+};
 
 const ChatPage: React.FC = () => {
     const navigate = useNavigate();
@@ -278,13 +402,27 @@ const ChatPage: React.FC = () => {
         return new Date(expiresAt) > new Date();
     }, [appointment]);
 
+    const canStartSession = React.useMemo(() => {
+        if (!appointment?.appointmentDate) return false;
+
+        const now = new Date();
+        const appDate = new Date(appointment.appointmentDate);
+
+
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const appDateStart = new Date(appDate.getFullYear(), appDate.getMonth(), appDate.getDate());
+
+
+        return appDateStart <= todayStart;
+    }, [appointment]);
+
     const handleDisableChat = async () => {
         if (!id) return;
         try {
             const res = await appointmentService.disablePostConsultationChat(id);
             if (res.success) {
                 toast.success("Chat window closed manually.");
-                // Update local state to reflect change instantly
+
                 setSessionStatus(SESSION_STATUS.ENDED);
                 setAppointment((prev) => {
                     if (!prev) return null;
@@ -396,7 +534,7 @@ const ChatPage: React.FC = () => {
                         toast.success("Consultation Chat Unlocked for 24 Hours");
                         setIsTimeOver(false);
 
-                        // Force refresh appointment data to ensure consistency
+
                         if (id) {
                             chatService.getAppointment(id).then((res) => {
                                 if (res.data) setAppointment(res.data);
@@ -499,7 +637,7 @@ const ChatPage: React.FC = () => {
                 const currentAppointment = appData.data;
                 setAppointment(currentAppointment);
 
-                // Determine if I am the patient based on the route context, consistent with sidebar logic
+
                 const isPatientMe = !isDoctor;
 
                 const otherName = isPatientMe
@@ -616,12 +754,12 @@ const ChatPage: React.FC = () => {
                             setMessages((prev) => {
                                 const messageId = String(newMessage._id || newMessage.id || "");
 
-                                // Prevent duplicate permanent messages
+
                                 if (!messageId.startsWith('temp-') && prev.some(m => String(m.id) === messageId)) {
                                     return prev;
                                 }
 
-                                // Handle temp message replacement
+
                                 const duplicateTempIdx = prev.findIndex(m =>
                                     String(m.id).startsWith('temp-') &&
                                     m.text === newMessage.content &&
@@ -635,8 +773,7 @@ const ChatPage: React.FC = () => {
                                     return updated;
                                 }
 
-                                // Skip adding if it's from me and it's a temp ID but we already have it
-                                // (This handles the socket re-broadcast of the sender's own message)
+
                                 if (messageId && prev.some(m => String(m.id) === messageId)) {
                                     return prev;
                                 }
@@ -645,7 +782,7 @@ const ChatPage: React.FC = () => {
                             });
                         }
 
-                        // GLOBAL Conversation update (Sidebar)
+
                         setConversations((prev: Conversation[]) => {
                             const existingConvIdx = prev.findIndex(c => c.appointmentId === newMessage.appointmentId);
                             if (existingConvIdx !== -1) {
@@ -1141,11 +1278,11 @@ const ChatPage: React.FC = () => {
                             text: audioUrl,
                             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                             status: 'sending',
-                            type: 'file',
+                            type: 'audio',
                         };
                         setMessages(prev => [...prev, uiMsg]);
 
-                        const savedMsg = await chatService.sendMessage(id!, audioUrl, 'file');
+                        const savedMsg = await chatService.sendMessage(id!, audioUrl, 'file', audioFile.name);
 
 
                         const permId = (savedMsg as any)._id || savedMsg.id;
@@ -1567,14 +1704,21 @@ const ChatPage: React.FC = () => {
                                                 </Button>
                                             ) : (
                                                 !isPostConsultationWindowOpen && (
-                                                    <Button
-                                                        onClick={() => updateSessionStatus(SESSION_STATUS.ACTIVE)}
-                                                        size="sm"
-                                                        className="hidden md:flex items-center gap-2 rounded-xl px-4 h-9 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-[#00A1B0]/20"
-                                                    >
-                                                        <Play className="h-4 w-4" />
-                                                        Start Session
-                                                    </Button>
+                                                    canStartSession ? (
+                                                        <Button
+                                                            onClick={() => updateSessionStatus(SESSION_STATUS.ACTIVE)}
+                                                            size="sm"
+                                                            className="hidden md:flex items-center gap-2 rounded-xl px-4 h-9 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-[#00A1B0]/20"
+                                                        >
+                                                            <Play className="h-4 w-4" />
+                                                            Start Session
+                                                        </Button>
+                                                    ) : (
+                                                        <div className="hidden md:flex items-center gap-2 px-4 h-9 bg-slate-100 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 cursor-not-allowed" title="You can only start the session on the scheduled date">
+                                                            <Clock className="h-3.5 w-3.5" />
+                                                            Scheduled: {appointment?.appointmentDate ? new Date(appointment.appointmentDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Future'}
+                                                        </div>
+                                                    )
                                                 )
                                             )}
                                             {isDoctor && isPostConsultationWindowOpen && (
@@ -1742,6 +1886,8 @@ const ChatPage: React.FC = () => {
                                                                 <Search className="h-4 w-4 text-slate-700" />
                                                             </button>
                                                         </div>
+                                                    ) : (msg.type === 'audio' || (msg.type === 'file' && (isAudioUrl(msg.text) || isAudioUrl(msg.fileName || "")))) ? (
+                                                        <CustomAudioPlayer src={msg.text} isUser={msg.sender === 'user'} />
                                                     ) : (
                                                         <div className="flex flex-col gap-0.5">
                                                             <p className="whitespace-pre-wrap font-medium">{formatMessageText(msg.text, msg.sender === 'user')}</p>

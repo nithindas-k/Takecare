@@ -6,13 +6,13 @@ import { FaVideo, FaComments, FaArrowLeft, FaTimes, FaChevronDown, FaChevronUp, 
 import ReviewForm from '../../components/reviews/ReviewForm';
 import { reviewService } from '../../services/reviewService';
 import { appointmentService } from '../../services/appointmentService';
-import doctorService from '../../services/doctorService';
 import { API_BASE_URL } from '../../utils/constants';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { toast } from 'sonner';
 import PrescriptionViewModal from '../../components/Patient/PrescriptionViewModal';
 import type { PopulatedAppointment, Slot } from '../../types/appointment.types';
+import RescheduleModal from '../../components/common/RescheduleModal';
 
 
 const AppointmentDetails: React.FC = () => {
@@ -32,64 +32,8 @@ const AppointmentDetails: React.FC = () => {
 
 
     const [rescheduleOpen, setRescheduleOpen] = useState(false);
-    const [startDate, setStartDate] = useState(new Date());
-    const [selectedDay, setSelectedDay] = useState<Date>(new Date());
-    const [availableSlots, setAvailableSlots] = useState<Slot[]>([]);
-    const [loadingSlots, setLoadingSlots] = useState(false);
-    const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
-    const [rescheduleSubmitting, setRescheduleSubmitting] = useState(false);
     const [reviewFormOpen, setReviewFormOpen] = useState(false);
     const [prescriptionViewOpen, setPrescriptionViewOpen] = useState(false);
-
-    const formatDate = (date: Date) => {
-        return {
-            day: date.toLocaleDateString('en-US', { weekday: 'long' }),
-            date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            fullDate: date
-        };
-    };
-
-    const generateDays = (start: Date) => {
-        const daysArr = [];
-        for (let i = 0; i < 7; i++) {
-            const d = new Date(start);
-            d.setDate(start.getDate() + i);
-            daysArr.push(formatDate(d));
-        }
-        return daysArr;
-    };
-
-    const days = generateDays(startDate);
-
-    const groupSlotsByTime = (slots: any[]) => {
-        const grouped: { [key: string]: any[] } = {};
-        slots.forEach(slot => {
-            const hour = parseInt(slot.startTime.split(':')[0]);
-            let period = 'Evening';
-            if (hour < 12) period = 'Morning';
-            else if (hour < 17) period = 'Afternoon';
-
-            if (!grouped[period]) grouped[period] = [];
-            grouped[period].push(slot);
-        });
-        return grouped;
-    };
-
-    const groupedSlots = groupSlotsByTime(availableSlots);
-
-    const formatTimeTo12h = (timeStr: string) => {
-        if (!timeStr) return 'N/A';
-
-        return timeStr.split('-').map(part => {
-            const [hours, minutes] = part.trim().split(':');
-            let h = parseInt(hours);
-            const m = minutes || '00';
-            const ampm = h >= 12 ? 'PM' : 'AM';
-            h = h % 12;
-            h = h ? h : 12;
-            return `${h}:${m} ${ampm}`;
-        }).join(' - ');
-    };
 
 
     useEffect(() => {
@@ -131,34 +75,9 @@ const AppointmentDetails: React.FC = () => {
         return () => {
             isMounted = false;
         };
-    }, [id, appointment]); // Added appointment to dependencies as hinted by linter
+    }, [id, appointment]); 
 
-    useEffect(() => {
-        const fetchSlots = async () => {
-            if (!rescheduleOpen || !appointment?.doctorId || !selectedDay) return;
 
-            setLoadingSlots(true);
-            try {
-                const year = selectedDay.getFullYear();
-                const month = String(selectedDay.getMonth() + 1).padStart(2, '0');
-                const day = String(selectedDay.getDate()).padStart(2, '0');
-                const dateStr = `${year}-${month}-${day}`;
-                const docId = typeof appointment.doctorId === 'object' ? appointment.doctorId._id : appointment.doctorId;
-
-                const response = await doctorService.getAvailableSlots(docId!, dateStr);
-                if (response?.success) {
-                    setAvailableSlots(response.data || []);
-                }
-            } catch (err) {
-                console.error("Failed to fetch slots:", err);
-                toast.error("Failed to load available slots");
-            } finally {
-                setLoadingSlots(false);
-            }
-        };
-
-        fetchSlots();
-    }, [rescheduleOpen, selectedDay, appointment?.doctorId]);
 
     const getImageUrl = (imagePath: string | null | undefined) => {
         if (!imagePath) return '/doctor.png';
@@ -213,7 +132,7 @@ const AppointmentDetails: React.FC = () => {
             appointmentType: apt?.appointmentType,
             date: dateStr,
             hasValidDate,
-            time: formatTimeTo12h(timeStr || ''),
+            time: appointment?.appointmentTime || '',
             status: status || 'unknown',
             displayStatus,
             consultationFees: apt?.consultationFees ?? 0,
@@ -302,11 +221,10 @@ const AppointmentDetails: React.FC = () => {
         }
     };
 
-    const handleReschedule = async () => {
+    const handleRescheduleConfirm = async (selectedSlot: Slot, selectedDay: Date) => {
         if (!id || !selectedSlot || !selectedDay) return;
 
         try {
-            setRescheduleSubmitting(true);
             const response = await appointmentService.rescheduleAppointment(appointment?.id || id, {
                 appointmentDate: selectedDay.toISOString(),
                 appointmentTime: `${selectedSlot.startTime} - ${selectedSlot.endTime}`,
@@ -316,7 +234,7 @@ const AppointmentDetails: React.FC = () => {
             if (response?.success) {
                 toast.success('Appointment rescheduled successfully! Awaiting doctor approval.');
                 setRescheduleOpen(false);
-                // Refresh data
+                
                 const updated = await appointmentService.getAppointmentById(id);
                 if (updated?.success) setAppointment(updated.data);
             } else {
@@ -324,8 +242,6 @@ const AppointmentDetails: React.FC = () => {
             }
         } catch (err: any) {
             toast.error(err?.response?.data?.message || err?.message || 'An error occurred');
-        } finally {
-            setRescheduleSubmitting(false);
         }
     };
 
@@ -334,7 +250,7 @@ const AppointmentDetails: React.FC = () => {
     const handleOpenReview = async () => {
         if (!appointment) return;
 
-        // Extract doctorId
+       
         const docObj = appointment.doctor || appointment.doctorId;
         const doctorId = docObj?._id || docObj?.id || (typeof docObj === 'string' ? docObj : null);
 
@@ -343,7 +259,6 @@ const AppointmentDetails: React.FC = () => {
             return;
         }
 
-        // Optimistically open
         setReviewFormOpen(true);
 
         try {
@@ -355,7 +270,7 @@ const AppointmentDetails: React.FC = () => {
             }
         } catch (error) {
             console.error("Failed to fetch existing review:", error);
-            // Don't close, just let them create new if fetch fails (or maybe it means no review exists)
+           
             setExistingReview(null);
         }
     };
@@ -381,7 +296,7 @@ const AppointmentDetails: React.FC = () => {
             if (existingReview) {
                 await reviewService.updateReview(existingReview._id || existingReview.id, data);
                 toast.success("Review updated successfully!");
-                // Update local state to reflect changes immediately
+                
                 setExistingReview({ ...existingReview, ...data });
             } else {
                 await reviewService.addReview({
@@ -390,7 +305,7 @@ const AppointmentDetails: React.FC = () => {
                     doctorId
                 });
                 toast.success("Review submitted successfully!");
-                // We could fetch review again to get the ID, but for now just close
+               
             }
             setReviewFormOpen(false);
         } catch (error: any) {
@@ -850,150 +765,14 @@ const AppointmentDetails: React.FC = () => {
                     </div>
                 </div>
             )}
-            {rescheduleOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div
-                        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-                        onClick={() => {
-                            if (!rescheduleSubmitting) setRescheduleOpen(false);
-                        }}
-                    />
 
-                    <div className="relative z-50 w-full max-w-2xl mx-4">
-                        <Card className="max-h-[90vh] overflow-y-auto">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <FaCalendarAlt className="text-[#00A1B0]" />
-                                    Reschedule Appointment
-                                </CardTitle>
-                                <CardDescription>
-                                    Select a new date and time for your appointment with {normalized.doctorName}.
-                                </CardDescription>
-                            </CardHeader>
-
-                            <CardContent className="space-y-6">
-                                {/* Date Selection - Horizontal Strip */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-sm font-semibold text-gray-700">Select Date</label>
-                                        <input
-                                            type="date"
-                                            min={new Date().toISOString().split('T')[0]}
-                                            value={startDate.toISOString().split('T')[0]}
-                                            onChange={(e) => {
-                                                const d = new Date(e.target.value);
-                                                if (!isNaN(d.getTime())) {
-                                                    setStartDate(d);
-                                                    setSelectedDay(d);
-                                                }
-                                            }}
-                                            className="text-xs border-gray-200 rounded p-1 focus:ring-[#00A1B0]"
-                                        />
-                                    </div>
-
-                                    <div className="bg-gray-50/50 rounded-xl p-4 border border-gray-100">
-                                        <div className="grid grid-cols-7 gap-2">
-                                            {days.map((item, index) => {
-                                                const isSelected = selectedDay.toDateString() === item.fullDate.toDateString();
-                                                return (
-                                                    <div
-                                                        key={index}
-                                                        className={`cursor-pointer group text-center p-2 rounded-lg transition-all ${isSelected ? 'bg-white shadow-sm' : 'hover:bg-white/50'
-                                                            }`}
-                                                        onClick={() => {
-                                                            setSelectedDay(item.fullDate);
-                                                            setSelectedSlot(null);
-                                                        }}
-                                                    >
-                                                        <h4 className={`font-bold text-[10px] uppercase mb-1 transition-colors ${isSelected ? 'text-[#00A1B0]' : 'text-gray-400 group-hover:text-[#00A1B0]'}`}>
-                                                            {item.day.slice(0, 3)}
-                                                        </h4>
-                                                        <p className={`text-xs font-semibold transition-colors ${isSelected ? 'text-gray-800' : 'text-gray-500 group-hover:text-gray-800'}`}>
-                                                            {item.fullDate.getDate()}
-                                                        </p>
-                                                        <div className={`h-1 mx-auto mt-1 rounded-full transition-all duration-300 ${isSelected ? 'w-4 bg-[#00A1B0]' : 'w-0'}`}></div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Slot Selection */}
-                                <div className="space-y-4">
-                                    <label className="text-sm font-semibold text-gray-700">Available Slots</label>
-                                    {loadingSlots ? (
-                                        <div className="flex justify-center py-12">
-                                            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-[#00A1B0]"></div>
-                                        </div>
-                                    ) : availableSlots.length === 0 ? (
-                                        <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                                            <p className="text-gray-500 text-sm">No slots available for this date.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-6">
-                                            {Object.entries(groupedSlots).map(([period, slots]) => (
-                                                <div key={period} className="space-y-3">
-                                                    <h4 className="text-[#002f33] font-bold text-xs uppercase tracking-wider">{period}</h4>
-                                                    <div className="flex flex-wrap gap-3">
-                                                        {slots.map((slot, index) => {
-                                                            const slotKey = slot.slotId || slot.customId || `${slot.startTime}-${slot.endTime}`;
-                                                            const isSelected = selectedSlot && (selectedSlot.slotId || selectedSlot.customId || `${selectedSlot.startTime}-${selectedSlot.endTime}`) === slotKey;
-                                                            const isAvailable = slot.isAvailable !== false && slot.available !== false;
-
-                                                            return (
-                                                                <button
-                                                                    key={index}
-                                                                    type="button"
-                                                                    disabled={!isAvailable}
-                                                                    onClick={() => setSelectedSlot(slot)}
-                                                                    className={`px-4 py-2.5 rounded-md text-xs font-semibold transition-all min-w-[100px] border ${isSelected
-                                                                        ? 'bg-[#00A1B0] text-white border-[#00A1B0] shadow-md transform scale-105'
-                                                                        : !isAvailable
-                                                                            ? 'bg-red-500 bg-opacity-10 text-red-500 border-red-200 cursor-not-allowed opacity-60'
-                                                                            : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-[#00A1B0] hover:bg-white hover:text-[#00A1B0] group-hover:shadow-sm'
-                                                                        }`}
-                                                                >
-                                                                    {formatTimeTo12h(slot.startTime)} - {formatTimeTo12h(slot.endTime)}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </CardContent>
-
-                            <CardFooter className="justify-end gap-3 border-t pt-6">
-                                <Button
-                                    variant="secondary"
-                                    onClick={() => setRescheduleOpen(false)}
-                                    disabled={rescheduleSubmitting}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    onClick={handleReschedule}
-                                    disabled={rescheduleSubmitting || !selectedSlot}
-                                    className="bg-[#00A1B0] hover:bg-[#008f9c] text-white"
-                                >
-                                    {rescheduleSubmitting ? 'Rescheduling...' : 'Confirm Reschedule'}
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    </div>
-                </div>
-            )}
-
-            {/* Add "View Prescription" button here, for example, if it's part of the main appointment actions */}
-            {/* This is a placeholder. The actual placement depends on your UI/UX. */}
-            {/* For example, if an appointment has a prescription, you might show this button next to other appointment details. */}
-            {/* If the button is meant to be inside one of the modals, you'd place it there. */}
-            {/* For demonstration, let's assume it's a general action button for the appointment details page */}
-            {/* <Button onClick={() => setPrescriptionViewOpen(true)} className="mt-4">View Prescription</Button> */}
-
+            <RescheduleModal
+                isOpen={rescheduleOpen}
+                onClose={() => setRescheduleOpen(false)}
+                onConfirm={handleRescheduleConfirm}
+                doctorId={typeof appointment?.doctorId === 'object' ? appointment.doctorId._id! : (appointment?.doctorId || '')}
+                doctorName={normalized.doctorName}
+            />
 
             <ReviewForm
                 isOpen={reviewFormOpen}
@@ -1003,14 +782,12 @@ const AppointmentDetails: React.FC = () => {
                 initialData={existingReview ? { rating: existingReview.rating, comment: existingReview.comment } : undefined}
             />
 
-            {/* Prescription View Modal */}
             <PrescriptionViewModal
                 isOpen={prescriptionViewOpen}
                 onClose={() => setPrescriptionViewOpen(false)}
                 appointmentId={(appointment?._id || appointment?.id || id || '') as string}
             />
-
-        </div>
+        </div >
     );
 };
 

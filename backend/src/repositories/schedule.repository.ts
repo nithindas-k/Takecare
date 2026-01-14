@@ -26,14 +26,14 @@ export class ScheduleRepository
     ): Promise<IDoctorScheduleDocument | null> {
         const id = typeof doctorId === "string" ? new Types.ObjectId(doctorId) : doctorId;
 
-        // Find the document first
+        
         const schedule = await this.model.findOne({ doctorId: id }).session(session || null);
         if (!schedule) return null;
 
-        // Update the schedule
+    
         Object.assign(schedule, update);
 
-        // Mark nested arrays as modified (critical for Mongoose to detect changes)
+        
         if (update.weeklySchedule) {
             schedule.markModified('weeklySchedule');
         }
@@ -41,7 +41,7 @@ export class ScheduleRepository
             schedule.markModified('blockedDates');
         }
 
-        // Save and return
+        
         const result = await schedule.save({ session: session || undefined });
         return result;
     }

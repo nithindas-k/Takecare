@@ -17,7 +17,7 @@ const About: React.FC = () => {
     ]);
 
     useEffect(() => {
-        // Fetch dynamic stats from backend
+        
         const fetchStats = async () => {
             try {
                 const response = await contactService.getStats();
@@ -49,19 +49,19 @@ const About: React.FC = () => {
                 }
             } catch (error) {
                 console.error('Error fetching stats:', error);
-                // Keep fallback values - they're already set in useState
+                
             }
         };
 
         fetchStats();
 
-        // Hero Animation
+    
         gsap.fromTo('.about-hero',
             { y: 40, opacity: 0 },
             { y: 0, opacity: 1, duration: 1.2, ease: 'power3.out' }
         );
 
-        // Stats Animation
+        
         gsap.fromTo('.stat-card',
             { scale: 0.9, opacity: 0 },
             {
@@ -73,7 +73,7 @@ const About: React.FC = () => {
             }
         );
 
-        // Mission/Vision Cards
+        
         gsap.fromTo('.mission-card',
             { y: 50, opacity: 0 },
             {
@@ -85,7 +85,7 @@ const About: React.FC = () => {
             }
         );
 
-        // Values Animation
+        
         gsap.fromTo('.value-item',
             { y: 30, opacity: 0 },
             {

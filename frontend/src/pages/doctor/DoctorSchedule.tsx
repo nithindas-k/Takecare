@@ -60,8 +60,8 @@ const DoctorSchedule: React.FC = () => {
     const [blockSubmitting, setBlockSubmitting] = useState(false);
     const [blockWholeDay, setBlockWholeDay] = useState(true);
     const [selectedBlockSlots, setSelectedBlockSlots] = useState<string[]>([]);
-    
-    
+
+
     const [recurringStartTime, setRecurringStartTime] = useState('');
     const [recurringEndTime, setRecurringEndTime] = useState('');
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
@@ -69,67 +69,67 @@ const DoctorSchedule: React.FC = () => {
     const [overlapInfo, setOverlapInfo] = useState<{ overlappingDays: string[], nonOverlappingDays: string[] } | null>(null);
 
 
-  const fetchSchedule = useCallback(async () => {
-    setLoading(true);
-    try {
-        const response = await doctorService.getSchedule();
+    const fetchSchedule = useCallback(async () => {
+        setLoading(true);
+        try {
+            const response = await doctorService.getSchedule();
 
-        if (response?.success && response.data) {
-            const scheduleData = response.data;
-            setHasSchedule(true);
+            if (response?.success && response.data) {
+                const scheduleData = response.data;
+                setHasSchedule(true);
 
-            const scheduleMap = new Map();
-            if (scheduleData.weeklySchedule && Array.isArray(scheduleData.weeklySchedule)) {
-                scheduleData.weeklySchedule.forEach((daySchedule: any) => {
-                    scheduleMap.set(daySchedule.day, daySchedule);
-                });
-            }
-
-            if (scheduleData.blockedDates && Array.isArray(scheduleData.blockedDates)) {
-                setBlockedDates(scheduleData.blockedDates);
-            }
-
-            const transformedSchedule = DAYS_OF_WEEK.map((day) => {
-                const backendDay = scheduleMap.get(day);
-                if (backendDay) {
-                    const slots = (backendDay.slots || []).map((slot: any, slotIndex: number) => {
-                        const slotData = {
-                            id: `slot-${day}-${slot.startTime || '09:00'}-${slot.endTime || '10:00'}-${slotIndex}`,
-                            customId: slot.customId, 
-                            startTime: slot.startTime || '09:00',
-                            endTime: slot.endTime || '10:00',
-                            enabled: slot.enabled !== undefined ? slot.enabled : true,
-                        };
-                        return slotData;
+                const scheduleMap = new Map();
+                if (scheduleData.weeklySchedule && Array.isArray(scheduleData.weeklySchedule)) {
+                    scheduleData.weeklySchedule.forEach((daySchedule: any) => {
+                        scheduleMap.set(daySchedule.day, daySchedule);
                     });
-
-                    return {
-                        day: backendDay.day,
-                        enabled: backendDay.enabled !== undefined ? backendDay.enabled : false,
-                        slots: slots,
-                    };
-                } else {
-                    return {
-                        day,
-                        enabled: false,
-                        slots: [],
-                    };
                 }
-            });
 
-            setSchedule(transformedSchedule);
-        } else {
-            setHasSchedule(false);
+                if (scheduleData.blockedDates && Array.isArray(scheduleData.blockedDates)) {
+                    setBlockedDates(scheduleData.blockedDates);
+                }
+
+                const transformedSchedule = DAYS_OF_WEEK.map((day) => {
+                    const backendDay = scheduleMap.get(day);
+                    if (backendDay) {
+                        const slots = (backendDay.slots || []).map((slot: any, slotIndex: number) => {
+                            const slotData = {
+                                id: `slot-${day}-${slot.startTime || '09:00'}-${slot.endTime || '10:00'}-${slotIndex}`,
+                                customId: slot.customId,
+                                startTime: slot.startTime || '09:00',
+                                endTime: slot.endTime || '10:00',
+                                enabled: slot.enabled !== undefined ? slot.enabled : true,
+                            };
+                            return slotData;
+                        });
+
+                        return {
+                            day: backendDay.day,
+                            enabled: backendDay.enabled !== undefined ? backendDay.enabled : false,
+                            slots: slots,
+                        };
+                    } else {
+                        return {
+                            day,
+                            enabled: false,
+                            slots: [],
+                        };
+                    }
+                });
+
+                setSchedule(transformedSchedule);
+            } else {
+                setHasSchedule(false);
+                setSchedule(getDefaultSchedule());
+            }
+        } catch (error) {
+            console.error('Error fetching schedule:', error);
+            toast.error('Failed to load schedule');
             setSchedule(getDefaultSchedule());
+        } finally {
+            setLoading(false);
         }
-    } catch (error) {
-        console.error('Error fetching schedule:', error);
-        toast.error('Failed to load schedule');
-        setSchedule(getDefaultSchedule());
-    } finally {
-        setLoading(false);
-    }
-}, []);
+    }, []);
 
     useEffect(() => {
         fetchSchedule();
@@ -156,7 +156,7 @@ const DoctorSchedule: React.FC = () => {
                         slots: (daySchedule.slots || []).map(slot => ({
                             startTime: slot.startTime,
                             endTime: slot.endTime,
-                                enabled: slot.enabled !== undefined ? slot.enabled : true,
+                            enabled: slot.enabled !== undefined ? slot.enabled : true,
                         })),
                     })),
                 };
@@ -196,12 +196,12 @@ const DoctorSchedule: React.FC = () => {
 
         if (slots.length > 0) {
             const lastSlot = slots[slots.length - 1];
-            // Helper to parse time string "HH:MM" to minutes
+
             const toMinutes = (time: string) => {
                 const [h, m] = time.split(':').map(Number);
                 return h * 60 + m;
             };
-            // Helper to format minutes to "HH:MM"
+
             const toTimeStr = (mins: number) => {
                 const h = Math.floor(mins / 60) % 24;
                 const m = mins % 60;
@@ -211,9 +211,9 @@ const DoctorSchedule: React.FC = () => {
             const lastStartMins = toMinutes(lastSlot.startTime);
             const lastEndMins = toMinutes(lastSlot.endTime);
 
-            // Calculate duration of previous slot (handle crossing midnight if necessary, though simple subtraction usually works for schedule within a day)
+
             let duration = lastEndMins - lastStartMins;
-            if (duration <= 0) duration = 30; // Default to 30 minutes if calculation fails or is weird
+            if (duration <= 0) duration = 30;
 
             const newStartMins = lastEndMins;
             const newEndMins = lastEndMins + duration;
@@ -583,7 +583,7 @@ const DoctorSchedule: React.FC = () => {
         }
     };
 
-    // Handle recurring slot submission
+
     const handleRecurringSlots = async () => {
         if (!recurringStartTime || !recurringEndTime) {
             toast.error('Please select both start and end times');
@@ -620,21 +620,21 @@ const DoctorSchedule: React.FC = () => {
 
             if (response?.success) {
                 if (response.data?.overlappingDays && response.data.overlappingDays.length > 0) {
-                    // Show overlap dialog
+
                     setOverlapInfo({
                         overlappingDays: response.data.overlappingDays,
                         nonOverlappingDays: response.data.nonOverlappingDays
                     });
                     setOverlapDialogOpen(true);
                 } else {
-                    // No overlaps, refresh schedule
+
                     toast.success('Recurring slots added successfully');
                     console.log('Schedule before recurring slots fetch:', JSON.stringify(schedule, null, 2));
-                    // Reset form first
+
                     setRecurringStartTime('');
                     setRecurringEndTime('');
                     setSelectedDays([]);
-                    // Then fetch schedule to refresh UI
+
                     await fetchSchedule();
                     console.log('Schedule after recurring slots fetch:', JSON.stringify(schedule, null, 2));
                 }
@@ -647,7 +647,7 @@ const DoctorSchedule: React.FC = () => {
         }
     };
 
-    // Continue with overlapping slots (skip overlapping days)
+
     const handleContinueWithOverlaps = async () => {
         if (overlapInfo) {
             try {
@@ -661,13 +661,13 @@ const DoctorSchedule: React.FC = () => {
                 if (response?.success) {
                     toast.success(`Recurring slots added to ${overlapInfo.nonOverlappingDays.length} day(s)`);
                     console.log('Schedule before recurring slots continue:', JSON.stringify(schedule, null, 2));
-                    // Reset form first
+
                     setRecurringStartTime('');
                     setRecurringEndTime('');
                     setSelectedDays([]);
                     setOverlapDialogOpen(false);
                     setOverlapInfo(null);
-                    // Then fetch schedule to refresh UI
+
                     await fetchSchedule();
                     console.log('Schedule after recurring slots continue:', JSON.stringify(schedule, null, 2));
                 } else {
@@ -680,16 +680,16 @@ const DoctorSchedule: React.FC = () => {
         }
     };
 
-    // Toggle day selection for recurring slots
+
     const toggleDaySelection = (day: string) => {
-        setSelectedDays(prev => 
-            prev.includes(day) 
+        setSelectedDays(prev =>
+            prev.includes(day)
                 ? prev.filter(d => d !== day)
                 : [...prev, day]
         );
     };
 
-    // Delete recurring slot
+
     const handleDeleteRecurringSlot = async (day: string, slotId: string, slotTime: string) => {
         try {
             const response = await doctorService.deleteRecurringSlot(day, slotId);
@@ -707,14 +707,14 @@ const DoctorSchedule: React.FC = () => {
         }
     };
 
-    // Find common recurring slots across enabled days
+
     const findCommonRecurringSlots = () => {
         const slotMap = new Map<string, { startTime: string; endTime: string; count: number; customIds: string[] }>();
-        
-        // Get all enabled days with slots
+
+
         const enabledDays = schedule.filter(day => day.enabled && day.slots.length > 0);
-        
-        // Count occurrences of each time slot across enabled days
+
+
         enabledDays.forEach(day => {
             day.slots.forEach(slot => {
                 const key = `${slot.startTime}-${slot.endTime}`;
@@ -734,36 +734,36 @@ const DoctorSchedule: React.FC = () => {
                 }
             });
         });
-        
-        // Filter slots that appear in more than one day
+
+
         const commonSlots = Array.from(slotMap.values())
             .filter(slot => slot.count > 1)
             .map(slot => ({
                 startTime: slot.startTime,
                 endTime: slot.endTime,
-                customId: slot.customIds[0], // Use first customId as identifier
+                customId: slot.customIds[0],
                 count: slot.count
             }));
-        
+
         setCommonSlots(commonSlots);
     };
 
-    // Handle deletion of selected common recurring slots
+
     const handleDeleteCommonRecurringSlots = () => {
         if (selectedCommonSlots.length === 0) {
             toast.error('Please select at least one slot to delete');
             return;
         }
 
-        // Show confirmation dialog instead of directly deleting
+
         setShowDeleteConfirmation(true);
     };
 
-    // Computed values for select all functionality
+
     const areAllSlotsSelected = commonSlots.length > 0 && selectedCommonSlots.length === commonSlots.length;
     const areSomeSlotsSelected = selectedCommonSlots.length > 0 && selectedCommonSlots.length < commonSlots.length;
 
-    // Handle select all checkbox
+
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
             setSelectedCommonSlots(commonSlots.map(slot => slot.customId));
@@ -772,72 +772,51 @@ const DoctorSchedule: React.FC = () => {
         }
     };
 
-    // Confirm and delete slots
-const confirmDeleteSlots = async () => {
-    try {
-        let totalDeleted = 0;
-        
-        // For each selected common slot, delete it from all days
-        for (const slotIdentifier of selectedCommonSlots) {
-            const slot = commonSlots.find(s => s.customId === slotIdentifier);
-            if (!slot) continue;
 
-            const result = await doctorService.deleteRecurringSlotByTime(slot.startTime, slot.endTime);
-            
-            if (result?.success) {
-                totalDeleted++;
+    const confirmDeleteSlots = async () => {
+        try {
+            let totalDeleted = 0;
+
+
+            for (const slotIdentifier of selectedCommonSlots) {
+                const slot = commonSlots.find(s => s.customId === slotIdentifier);
+                if (!slot) continue;
+
+                const result = await doctorService.deleteRecurringSlotByTime(slot.startTime, slot.endTime);
+
+                if (result?.success) {
+                    totalDeleted++;
+                }
             }
-        }
-        
-        if (totalDeleted > 0) {
-            toast.success(`Successfully deleted ${totalDeleted} recurring slot(s) from all days`);
-        } else {
-            toast.error('No slots were deleted');
-        }
-        
-        // Reset states and refresh
-        setIsClearAllModalOpen(false);
-        setSelectedCommonSlots([]);
-        setShowDeleteConfirmation(false);
-        
-        // Refresh the schedule
-        await fetchSchedule();
-        
-    } catch (error) {
-        console.error('Error deleting common recurring slots:', error);
-        toast.error('Failed to delete common recurring slots');
-    }
-};
+
+            if (totalDeleted > 0) {
+                toast.success(`Successfully deleted ${totalDeleted} recurring slot(s) from all days`);
+            } else {
+                toast.error('No slots were deleted');
+            }
 
 
-    // Open Clear All Recurring Slots modal
+            setIsClearAllModalOpen(false);
+            setSelectedCommonSlots([]);
+            setShowDeleteConfirmation(false);
+
+
+            await fetchSchedule();
+
+        } catch (error) {
+            console.error('Error deleting common recurring slots:', error);
+            toast.error('Failed to delete common recurring slots');
+        }
+    };
+
+
+
     const handleOpenClearAllModal = () => {
         setIsClearAllModalOpen(true);
         setSelectedCommonSlots([]);
     };
 
-const handleClearSlotFromAllDays = async (startTime: string, endTime: string) => {
-    try {
-        console.log("Deleting slot from all days", { 
-            timeRange: `${startTime} - ${endTime}`
-        });
-        
-        const result = await doctorService.deleteRecurringSlotByTime(startTime, endTime);
-        
-        if (result?.success) {
-            toast.success(`Slot ${startTime} - ${endTime} deleted from all days`);
-        } else {
-            toast.error(result?.message || 'Failed to delete slot from all days');
-        }
-        
-        // Refresh the schedule to show updated data
-        await fetchSchedule();
-        
-    } catch (error) {
-        console.error('Error clearing slot from all days:', error);
-        toast.error('Failed to clear slot from all days');
-    }
-};
+
     const breadcrumbItems = [
         { label: 'Home', path: '/doctor/dashboard' },
         { label: 'Schedule Settings' },
@@ -980,24 +959,24 @@ const handleClearSlotFromAllDays = async (startTime: string, endTime: string) =>
                                         <FaRedo className="text-green-600" />
                                         Add Recurring Slots
                                     </h3>
-                                    
+
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                         <div className="space-y-1.5">
                                             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Start Time</label>
-                                            <input 
-                                                type="time" 
-                                                value={recurringStartTime} 
-                                                onChange={(e) => setRecurringStartTime(e.target.value)} 
-                                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#00A1B0]" 
+                                            <input
+                                                type="time"
+                                                value={recurringStartTime}
+                                                onChange={(e) => setRecurringStartTime(e.target.value)}
+                                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#00A1B0]"
                                             />
                                         </div>
                                         <div className="space-y-1.5">
                                             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">End Time</label>
-                                            <input 
-                                                type="time" 
-                                                value={recurringEndTime} 
-                                                onChange={(e) => setRecurringEndTime(e.target.value)} 
-                                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#00A1B0]" 
+                                            <input
+                                                type="time"
+                                                value={recurringEndTime}
+                                                onChange={(e) => setRecurringEndTime(e.target.value)}
+                                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#00A1B0]"
                                             />
                                         </div>
                                     </div>
@@ -1011,11 +990,10 @@ const handleClearSlotFromAllDays = async (startTime: string, endTime: string) =>
                                                     <button
                                                         key={day}
                                                         onClick={() => toggleDaySelection(day)}
-                                                        className={`px-4 py-3 rounded-lg text-sm font-medium transition-all border-2 ${
-                                                            isSelected 
-                                                                ? 'bg-[#00A1B0] text-white border-[#00A1B0] shadow-md' 
+                                                        className={`px-4 py-3 rounded-lg text-sm font-medium transition-all border-2 ${isSelected
+                                                                ? 'bg-[#00A1B0] text-white border-[#00A1B0] shadow-md'
                                                                 : 'bg-white border-gray-200 text-gray-600 hover:border-[#00A1B0] hover:text-[#00A1B0]'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {day.slice(0, 3)}
                                                     </button>
@@ -1024,7 +1002,7 @@ const handleClearSlotFromAllDays = async (startTime: string, endTime: string) =>
                                         </div>
                                     </div>
 
-                                    <button 
+                                    <button
                                         onClick={handleRecurringSlots}
                                         className="flex-1 px-4 py-2 bg-[#00A1B0]/10 hover:bg-[#00A1B0]/20 text-[#00A1B0] text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                                     >
@@ -1036,7 +1014,7 @@ const handleClearSlotFromAllDays = async (startTime: string, endTime: string) =>
                                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                                     <div className="flex justify-between items-center mb-4">
                                         <h3 className="font-bold text-gray-800">Current Schedule Preview</h3>
-                                        <button 
+                                        <button
                                             onClick={handleOpenClearAllModal}
                                             className="px-4 py-2 bg-[#00A1B0]/10 hover:bg-[#00A1B0]/20 text-[#00A1B0] text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                                         >
@@ -1142,7 +1120,7 @@ const handleClearSlotFromAllDays = async (startTime: string, endTime: string) =>
 
             <AlertDialog open={clearAllDialogOpen} onOpenChange={setClearAllDialogOpen} title="Clear all slots?" description={`Are you sure you want to clear all time slots for ${dayToClear?.dayName}? This will also disable the day.`} confirmText="Clear All" cancelText="Cancel" variant="destructive" onConfirm={confirmClearAllSlots} />
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} title="Delete time slot?" description={`Are you sure you want to delete the slot for ${slotToDelete?.slotTime} on ${slotToDelete?.dayName}?`} confirmText="Delete" cancelText="Cancel" variant="destructive" onConfirm={confirmDeleteSlot} />
-            
+
             {/* Overlap Detection Custom Dialog */}
             {overlapDialogOpen && overlapInfo && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -1227,7 +1205,7 @@ const handleClearSlotFromAllDays = async (startTime: string, endTime: string) =>
                             Select the common recurring slots you want to delete from all days.
                         </DialogDescription>
                     </DialogHeader>
-                    
+
                     {!showDeleteConfirmation ? (
                         <>
                             <div className="grid gap-4 py-4">
@@ -1253,7 +1231,7 @@ const handleClearSlotFromAllDays = async (startTime: string, endTime: string) =>
                                                 </label>
                                             </div>
                                         )}
-                                        
+
                                         {/* Individual Slots */}
                                         <div className="space-y-2 p-3 bg-gray-50 rounded-lg border border-gray-200 max-h-60 overflow-y-auto">
                                             {commonSlots.map((slot) => (
@@ -1283,7 +1261,7 @@ const handleClearSlotFromAllDays = async (startTime: string, endTime: string) =>
                                                 </div>
                                             ))}
                                         </div>
-                                        
+
                                         {/* Selection Summary */}
                                         {selectedCommonSlots.length > 0 && (
                                             <div className="text-sm text-gray-600 text-center">
@@ -1293,12 +1271,12 @@ const handleClearSlotFromAllDays = async (startTime: string, endTime: string) =>
                                     </>
                                 )}
                             </div>
-                            
+
                             <DialogFooter>
                                 <Button variant="outline" onClick={() => setIsClearAllModalOpen(false)}>
                                     Cancel
                                 </Button>
-                                <Button 
+                                <Button
                                     onClick={handleDeleteCommonRecurringSlots}
                                     disabled={selectedCommonSlots.length === 0}
                                     variant="destructive"
@@ -1325,7 +1303,7 @@ const handleClearSlotFromAllDays = async (startTime: string, endTime: string) =>
                                     This action will remove these slots from all days they appear on and cannot be undone.
                                 </p>
                             </div>
-                            
+
                             <div className="space-y-2 mb-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
                                 <p className="text-xs font-semibold text-gray-700 mb-2">Slots to be deleted:</p>
                                 {selectedCommonSlots.map(slotId => {
@@ -1338,15 +1316,15 @@ const handleClearSlotFromAllDays = async (startTime: string, endTime: string) =>
                                     ) : null;
                                 })}
                             </div>
-                            
+
                             <DialogFooter>
-                                <Button 
-                                    variant="outline" 
+                                <Button
+                                    variant="outline"
                                     onClick={() => setShowDeleteConfirmation(false)}
                                 >
                                     Back
                                 </Button>
-                                <Button 
+                                <Button
                                     onClick={confirmDeleteSlots}
                                     variant="destructive"
                                     className="bg-red-600 hover:bg-red-700"
