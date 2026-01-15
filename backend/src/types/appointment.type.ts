@@ -81,6 +81,12 @@ export interface IAppointment {
         expiresAt: Date | null;
     };
 
+    activeCall?: {
+        sessionId: Types.ObjectId | null;
+        status: 'ACTIVE' | 'PAUSED' | 'ENDED' | null;
+        canRejoinUntil: Date | null;
+    };
+
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -91,6 +97,8 @@ export interface IAppointmentDocument extends IAppointment, Document {
 }
 
 export interface IAppointmentPopulated extends Omit<IAppointment, "patientId" | "doctorId"> {
+    _id: Types.ObjectId | string;
+    id?: string;
     patientId: {
         _id: Types.ObjectId | string;
         id?: string;

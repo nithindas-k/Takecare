@@ -12,15 +12,19 @@ import { LoggerService } from "../services/logger.service";
 const chatRouter = Router();
 
 
+import { ConversationRepository } from "../repositories/conversation.repository";
+
 const messageRepository = new MessageRepository();
 const appointmentRepository = new AppointmentRepository();
 const doctorRepository = new DoctorRepository();
+const conversationRepository = new ConversationRepository();
 const chatServiceLogger = new LoggerService("ChatService");
 
 const chatService = new ChatService(
     messageRepository,
     appointmentRepository,
     doctorRepository,
+    conversationRepository,
     chatServiceLogger
 );
 
@@ -35,19 +39,25 @@ chatRouter.get(
 );
 
 chatRouter.get(
-    "/:appointmentId",
+    "/conversation/:id",
+    authMiddleware,
+    chatController.getConversation
+);
+
+chatRouter.get(
+    "/:id",
     authMiddleware,
     chatController.getMessages
 );
 
 chatRouter.post(
-    "/:appointmentId",
+    "/:id",
     authMiddleware,
     chatController.sendMessage
 );
 
 chatRouter.post(
-    "/:appointmentId/upload",
+    "/:id/upload",
     authMiddleware,
     upload.single("file"),
     (req: Request, res: Response) => {
@@ -67,6 +77,12 @@ chatRouter.delete(
     "/message/:messageId",
     authMiddleware,
     chatController.deleteMessage
+);
+
+chatRouter.get(
+    "/doctor/:doctorId",
+    authMiddleware,
+    chatController.getConversationByDoctorId
 );
 
 export default chatRouter;

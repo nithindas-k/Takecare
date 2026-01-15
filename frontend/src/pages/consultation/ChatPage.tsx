@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Send, Smile, MoreVertical,
     ChevronLeft, Check, CheckCheck,
-    Info, Search, Globe, Plus, Camera, Paperclip, Mic, Trash2, Pause, Play,
-    Menu, ArrowLeft, ShieldCheck, Lock, MessagesSquare, X, Download, ExternalLink, XCircle, Clock, ClipboardList,
+    Info, Search, Plus, Camera, Paperclip, Mic, Trash2, Pause, Play,
+    Menu, ArrowLeft, Lock, MessagesSquare, X, Download, ExternalLink, XCircle, Clock, ClipboardList,
     StickyNote, BookOpen
 } from 'lucide-react';
 import type { EmojiClickData } from 'emoji-picker-react';
@@ -77,10 +77,13 @@ interface Appointment {
     patient?: any;
     customId?: string;
     sessionStatus?: SessionStatus;
+    conversationId?: string;
 }
 
 interface Conversation {
     appointmentId: string;
+    conversationId: string;
+    realAppointmentId?: string;
     patient?: any;
     doctor?: any;
     lastMessage?: {
@@ -179,7 +182,7 @@ const CustomAudioPlayer = ({ src, isUser }: { src: string, isUser: boolean }) =>
     };
 
 
-    const bars = [4, 8, 3, 5, 9, 4, 7, 5, 2, 6, 8, 4, 6, 3, 7, 5, 9, 4, 3, 7, 4, 8, 3, 5, 9, 4, 7, 5];
+    const bars = React.useMemo(() => Array.from({ length: 28 }, () => Math.floor(Math.random() * 8) + 2), []);
 
     return (
         <div className={`flex items-center gap-3 min-w-[240px] p-2 rounded-2xl transition-all select-none ${isUser
@@ -240,7 +243,7 @@ const CustomAudioPlayer = ({ src, isUser }: { src: string, isUser: boolean }) =>
     );
 };
 
-const ChatPage: React.FC = () => {
+const ChatPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { id } = useParams();
@@ -266,6 +269,7 @@ const ChatPage: React.FC = () => {
     const [editingMessageId, setEditingMessageId] = useState<string | number | null>(null);
     const [editingContent, setEditingContent] = useState("");
     const [deleteConfirmMessageId, setDeleteConfirmMessageId] = useState<string | number | null>(null);
+    const [showWindUpConfirm, setShowWindUpConfirm] = useState(false);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
 
     const attachmentOptions = [
@@ -306,6 +310,8 @@ const ChatPage: React.FC = () => {
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState("");
+    const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+    const [currentAppointmentId, setCurrentAppointmentId] = useState<string | null>(null);
 
     const [noteTitle, setNoteTitle] = useState("");
     const [noteDescription, setNoteDescription] = useState("");
@@ -316,7 +322,8 @@ const ChatPage: React.FC = () => {
     const [isSavingNote, setIsSavingNote] = useState(false);
 
     const handleSaveNote = async () => {
-        if (!id || !noteTitle.trim()) {
+        const appointmentId = currentAppointmentId || id;
+        if (!appointmentId || !noteTitle.trim()) {
             toast.error("Please provide at least a title");
             return;
         }
@@ -346,7 +353,7 @@ const ChatPage: React.FC = () => {
                 createdAt: new Date().toISOString()
             };
 
-            const res = await appointmentService.updateDoctorNotes(id, newNote);
+            const res = await appointmentService.updateDoctorNotes(appointmentId, newNote);
             if (res.success) {
                 toast.success(`${noteCategory.replace('_', ' ')} saved successfully`);
                 setAppointment((prev: any) => ({
@@ -385,10 +392,6 @@ const ChatPage: React.FC = () => {
 
 
     const currentRoomRef = useRef<string>("");
-    const currentCustomIdRef = useRef<string>("");
-    const currentPatientIdRef = useRef<string>("");
-    const currentDoctorIdRef = useRef<string>("");
-    const currentPersistentRoomRef = useRef<string>("");
 
     // Session Control 
     const [sessionStatus, setSessionStatus] = useState<SessionStatus | "idle">("idle");
@@ -417,9 +420,10 @@ const ChatPage: React.FC = () => {
     }, [appointment]);
 
     const handleDisableChat = async () => {
-        if (!id) return;
+        const appointmentId = currentAppointmentId || id;
+        if (!appointmentId) return;
         try {
-            const res = await appointmentService.disablePostConsultationChat(id);
+            const res = await appointmentService.disablePostConsultationChat(appointmentId);
             if (res.success) {
                 toast.success("Chat window closed manually.");
 
@@ -442,14 +446,15 @@ const ChatPage: React.FC = () => {
     };
 
     const updateSessionStatus = React.useCallback(async (status: SessionStatus) => {
-        if (!id) return;
+        const appointmentId = currentAppointmentId || id;
+        if (!appointmentId) return;
         try {
-            await appointmentService.updateSessionStatus(id, status);
+            await appointmentService.updateSessionStatus(appointmentId, status);
         } catch (error) {
             console.error("Failed to update session status", error);
             toast.error("Failed to update session status");
         }
-    }, [id]);
+    }, [currentAppointmentId, id]);
 
 
 
@@ -535,8 +540,9 @@ const ChatPage: React.FC = () => {
                         setIsTimeOver(false);
 
 
-                        if (id) {
-                            chatService.getAppointment(id).then((res) => {
+                        const appointmentId = currentAppointmentId || id;
+                        if (appointmentId) {
+                            chatService.getAppointment(appointmentId).then((res) => {
                                 if (res.data) setAppointment(res.data);
                             }).catch(err => console.error("Failed to refresh appointment:", err));
                         }
@@ -585,19 +591,10 @@ const ChatPage: React.FC = () => {
     const getAvatarUrl = (profileImage: string | null | undefined, name: string) => {
         if (profileImage) {
             if (profileImage.startsWith('http')) return profileImage;
-            return `${API_BASE_URL} /${profileImage.replace(/\\/g, '/')}`;
+            return `${API_BASE_URL}/${profileImage.replace(/\\/g, '/')}`;
         }
         return `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`;
     };
-
-    const isPatientMe = React.useMemo(() => {
-        const myId = String(user?.id || (user as any)?._id || "");
-        if (!myId || !appointment) return false;
-        const patientId = (appointment.patientId as any)?.id || appointment.patientId?._id || appointment.patientId;
-        const patientData = appointment.patient || appointment.patientId;
-        const patientUserId = (patientData as any)?.userId || (patientData as any)?.id || (patientData as any)?._id;
-        return String(patientId) === myId || String(patientUserId) === myId;
-    }, [appointment, user]);
 
     useEffect(() => {
         const fetchConversations = async () => {
@@ -615,8 +612,117 @@ const ChatPage: React.FC = () => {
         fetchConversations();
     }, [user]);
 
+
+    // 4. Socket Synchronization - Dedicated Effect
     useEffect(() => {
-        const initChat = async () => {
+        if (!socket || !currentConversationId || !user) return;
+
+        console.log("[SOCKET] Setting up listeners for:", currentConversationId);
+        const convId = currentConversationId;
+        const myUserId = String(user.id || (user as any)._id || "");
+
+        const performJoin = () => {
+            socket.emit('join-chat', convId);
+            socket.emit('mark-read', { id: convId, userId: myUserId });
+        };
+
+        const handleNewMessage = (newMessage: IMessage) => {
+            // Strict check: only accept messages for THIS conversation
+            const msgConvId = String(newMessage.conversationId || "");
+            const msgAppId = String(newMessage.appointmentId || "");
+
+            // Allow if conversationId matches, OR if it matches the current route ID (legacy fallback)
+            const isRelevant = msgConvId === convId || msgAppId === id;
+
+            if (!isRelevant) return;
+
+            const isFromMe = (newMessage.senderModel === 'User' && !isDoctor) || (newMessage.senderModel === 'Doctor' && isDoctor);
+            const senderType = isFromMe ? 'user' : 'other';
+
+            const uiMsg: Message = {
+                id: newMessage._id || newMessage.id || Date.now(),
+                sender: senderType,
+                text: newMessage.content,
+                time: new Date(newMessage.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                status: newMessage.read ? 'read' : 'delivered',
+                type: newMessage.type as any,
+                isDeleted: newMessage.isDeleted,
+                isEdited: newMessage.isEdited,
+            };
+
+            setMessages(prev => {
+                const mId = String(uiMsg.id);
+                // 1. Check if this exact ID already exists (Deduplication)
+                if (prev.some(m => String(m.id) === mId)) return prev;
+
+                // 2. Check if we have a temporary message that matches this content/sender (Optimistic replacement)
+                // Only replace if the new message is from 'user' (me)
+                if (senderType === 'user') {
+                    const tempIdx = prev.findIndex(m =>
+                        String(m.id).startsWith('temp-') &&
+                        m.text === newMessage.content &&
+                        m.sender === 'user'
+                    );
+
+                    if (tempIdx !== -1) {
+                        const updated = [...prev];
+                        updated[tempIdx] = uiMsg; // Swap temp for real
+                        return updated;
+                    }
+                }
+
+                // 3. Append new message
+                return [...prev, uiMsg];
+            });
+        };
+
+        const handleSocketEdit = (updated: IMessage) => {
+            if (String(updated.conversationId) === convId) {
+                setMessages(prev => prev.map(m => String(m.id) === String(updated._id || updated.id) ? { ...m, text: updated.content, isEdited: true } : m));
+            }
+        };
+
+        const handleSocketDelete = ({ messageId, conversationId }: { messageId: string, conversationId: string }) => {
+            if (conversationId === convId) {
+                setMessages(prev => prev.map(m => String(m.id) === String(messageId) ? { ...m, isDeleted: true } : m));
+            }
+        };
+
+        const onTyping = ({ id: typingId, userId: typingUserId, isTyping }: { id: string, userId: string, isTyping: boolean }) => {
+            if (typingId === convId && String(typingUserId) !== myUserId) {
+                setIsOtherTyping(isTyping);
+            }
+        };
+
+        const onRead = ({ id: readId }: { id: string }) => {
+            if (readId === convId) {
+                setMessages(prev => prev.map(msg => ({ ...msg, status: 'read' as const })));
+            }
+        };
+
+        socket.on('receive-message', handleNewMessage);
+        socket.on('edit-message', handleSocketEdit);
+        socket.on('delete-message', handleSocketDelete);
+        socket.on('user-typing', onTyping);
+        socket.on('messages-read', onRead);
+
+        performJoin();
+        socket.on('connect', performJoin);
+
+        return () => {
+            console.log("[SOCKET] Cleaning up listeners for:", currentConversationId);
+            socket.off('connect', performJoin);
+            socket.off('receive-message', handleNewMessage);
+            socket.off('edit-message', handleSocketEdit);
+            socket.off('delete-message', handleSocketDelete);
+            socket.off('user-typing', onTyping);
+            socket.off('messages-read', onRead);
+            socket.emit('leave-chat', convId);
+        };
+    }, [socket, currentConversationId, user, isDoctor]); // Removed 'id' from dependency to prevent unnecessary re-runs
+
+    useEffect(() => {
+        const initChatContext = async () => {
             if (!id || id === 'default' || !user) {
                 setIsLoading(false);
                 if (id === 'default') {
@@ -631,46 +737,48 @@ const ChatPage: React.FC = () => {
                 }
                 return;
             }
+
             setIsLoading(true);
             try {
-                const appData = await chatService.getAppointment(id);
-                const currentAppointment = appData.data;
-                setAppointment(currentAppointment);
+                // 1. Resolve Conversation and Context
+                const convData = await chatService.getConversation(id);
+                if (!convData) throw new Error("Conversation not found");
 
+                const convId = convData._id || convData.id;
+                setCurrentConversationId(convId);
 
-                const isPatientMe = !isDoctor;
+                // Set lock status and session info
+                setSessionStatus(convData.sessionStatus || (convData.isLocked ? SESSION_STATUS.ENDED : SESSION_STATUS.ACTIVE));
+                if (convData.activeAppointmentId) {
+                    setCurrentAppointmentId(convData.activeAppointmentId);
+                    const appResponse = await chatService.getAppointment(convData.activeAppointmentId);
+                    setAppointment(appResponse.data);
+                }
 
-                const otherName = isPatientMe
-                    ? (currentAppointment.doctor?.userId?.name || 'Doctor')
-                    : (currentAppointment.patient?.name || 'Patient');
-                const otherSpecialty = isPatientMe
-                    ? (currentAppointment.doctor?.specialty || 'General')
-                    : 'Patient';
-                const otherAvatarRaw = isPatientMe
-                    ? currentAppointment.doctor?.userId?.profileImage
-                    : currentAppointment.patient?.profileImage;
+                // 2. Identify Other Participant
+                const myUserId = String(user.id || (user as any)._id || "");
+                const isPMe = !isDoctor;
+
+                const otherParty = isPMe ? convData.doctor : convData.patient;
+                const otherName = isPMe
+                    ? (otherParty?.userId?.name || otherParty?.name || 'Doctor')
+                    : (otherParty?.name || 'Patient');
+                const otherAvatarRaw = isPMe
+                    ? otherParty?.userId?.profileImage || otherParty?.profileImage
+                    : otherParty?.profileImage;
 
                 setActiveChat({
-                    id: isPatientMe ? (currentAppointment.doctor?.id || currentAppointment.doctorId) : (currentAppointment.patient?.id || currentAppointment.patientId),
+                    id: otherParty?._id || otherParty?.id || "",
                     name: otherName,
-                    specialty: otherSpecialty,
+                    specialty: otherParty?.specialty || 'General',
                     avatar: getAvatarUrl(otherAvatarRaw, otherName),
                     online: true,
                     unread: 0
                 });
 
-                if (currentAppointment.sessionStatus) {
-                    setSessionStatus(currentAppointment.sessionStatus);
-                    setExtensionCount(currentAppointment.extensionCount || 0);
-                }
-
-
-                if (isDoctor && !currentAppointment.sessionStartTime && currentAppointment.status !== 'completed' && currentAppointment.status !== 'cancelled' && currentAppointment.status !== 'rejected') {
-                    await updateSessionStatus(SESSION_STATUS.ACTIVE);
-                }
-
-                const history = await chatService.getMessages(id);
-                const uiMessages: Message[] = history.map((m: IMessage) => ({
+                // 3. Load History
+                const history = await chatService.getMessages(convId);
+                const uiMessages: Message[] = history.map((m: any) => ({
                     id: m._id || m.id,
                     sender: (m.senderModel === 'User' && !isDoctor) || (m.senderModel === 'Doctor' && isDoctor) ? 'user' : 'other',
                     text: m.content,
@@ -683,264 +791,15 @@ const ChatPage: React.FC = () => {
                 }));
                 setMessages(uiMessages);
 
-
-                if (socket) {
-                    const mongoId = String(currentAppointment?._id || "");
-                    const customId = String(currentAppointment?.customId || currentAppointment?.id || "");
-                    const getSafeId = (item: any) => {
-                        if (!item) return "";
-                        if (typeof item === 'string') return item;
-                        return item._id || item.id || "";
-                    };
-
-                    const rawPId = currentAppointment.patientId || currentAppointment.patient;
-                    const rawDId = currentAppointment.doctorId || currentAppointment.doctor;
-
-                    const pId = getSafeId(rawPId);
-                    const dId = getSafeId(rawDId);
-
-                    const persistentRoomId = pId && dId ? `persistent-${pId}-${dId}` : "";
-
-                    console.log("[INIT] Setting up socket for appointment:", { mongoId, customId, persistentRoomId, pId, dId });
-
-
-                    currentRoomRef.current = mongoId;
-                    currentCustomIdRef.current = customId;
-                    currentPatientIdRef.current = pId;
-                    currentDoctorIdRef.current = dId;
-                    currentPersistentRoomRef.current = persistentRoomId;
-
-                    const performJoin = () => {
-                        console.log(`[SOCKET] Joining rooms - MongoID: ${mongoId}, Persistent: ${persistentRoomId}`);
-                        if (mongoId) {
-                            socket.emit('join-chat', mongoId);
-                            console.log(`[SOCKET] Emitted join-chat for: ${mongoId}`);
-                        }
-                        if (persistentRoomId) {
-                            socket.emit('join-chat', persistentRoomId);
-                            console.log(`[SOCKET] Emitted join-chat for: ${persistentRoomId}`);
-                        }
-                        socket.emit('mark-read', { appointmentId: mongoId, userId: user.id || (user as any)._id });
-                    };
-
-
-                    const handleNewMessage = (newMessage: IMessage) => {
-                        console.log("[SOCKET] New message received:", newMessage);
-                        const appointmentIdFromMsg = String(newMessage.appointmentId || "");
-                        const currentMongoId = currentRoomRef.current;
-                        const currentCustomId = currentCustomIdRef.current;
-                        const currentUrlId = String(id || "");
-
-                        const isMatch = appointmentIdFromMsg === currentMongoId ||
-                            appointmentIdFromMsg === currentCustomId ||
-                            appointmentIdFromMsg === currentUrlId ||
-                            ((newMessage as any).persistentRoomId && (newMessage as any).persistentRoomId === currentPersistentRoomRef.current);
-
-                        const isFromMe = (newMessage.senderModel === 'User' && !isDoctor) || (newMessage.senderModel === 'Doctor' && isDoctor);
-                        const senderType = isFromMe ? 'user' : 'other';
-
-                        if (isMatch) {
-                            const uiMsg: Message = {
-                                id: newMessage._id || newMessage.id || Date.now(),
-                                sender: senderType,
-                                text: newMessage.content,
-                                time: new Date(newMessage.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                                status: newMessage.read ? 'read' : 'delivered',
-                                type: newMessage.type as 'text' | 'image' | 'file' | 'system',
-                                isDeleted: newMessage.isDeleted,
-                                isEdited: newMessage.isEdited,
-                            };
-
-                            setMessages((prev) => {
-                                const messageId = String(newMessage._id || newMessage.id || "");
-
-
-                                if (!messageId.startsWith('temp-') && prev.some(m => String(m.id) === messageId)) {
-                                    return prev;
-                                }
-
-
-                                const duplicateTempIdx = prev.findIndex(m =>
-                                    String(m.id).startsWith('temp-') &&
-                                    m.text === newMessage.content &&
-                                    m.type === newMessage.type &&
-                                    m.sender === senderType
-                                );
-
-                                if (duplicateTempIdx !== -1 && !messageId.startsWith('temp-')) {
-                                    const updated = [...prev];
-                                    updated[duplicateTempIdx] = uiMsg;
-                                    return updated;
-                                }
-
-
-                                if (messageId && prev.some(m => String(m.id) === messageId)) {
-                                    return prev;
-                                }
-
-                                return [...prev, uiMsg];
-                            });
-                        }
-
-
-                        setConversations((prev: Conversation[]) => {
-                            const existingConvIdx = prev.findIndex(c => c.appointmentId === newMessage.appointmentId);
-                            if (existingConvIdx !== -1) {
-                                const updatedConversations = [...prev];
-                                const conv = updatedConversations[existingConvIdx];
-                                const updatedConv = {
-                                    ...conv,
-                                    lastMessage: {
-                                        content: newMessage.type === 'system' ? newMessage.content : (newMessage.isDeleted ? 'Message deleted' : newMessage.content),
-                                        createdAt: newMessage.createdAt || new Date().toISOString(),
-                                        senderModel: newMessage.senderModel
-                                    },
-                                    unreadCount: (!isMatch && !isFromMe) ? ((conv.unreadCount || 0) + 1) : (conv.unreadCount || 0)
-                                };
-                                updatedConversations.splice(existingConvIdx, 1);
-                                updatedConversations.unshift(updatedConv);
-                                return updatedConversations;
-                            } else {
-                                // If it's a completely new conversation appearing (rare in this flow)
-                                chatService.getConversations().then(response => {
-                                    setConversations(response.data || []);
-                                });
-                                return prev;
-                            }
-                        });
-                    };
-
-                    const handleSocketEdit = (updatedMessage: IMessage) => {
-                        console.log("[SOCKET] Edit message received:", updatedMessage);
-                        const updatedMsgId = String(updatedMessage._id || updatedMessage.id);
-
-                        setMessages(prev => prev.map(m =>
-                            String(m.id) === updatedMsgId
-                                ? { ...m, text: updatedMessage.content, isEdited: true }
-                                : m
-                        ));
-
-                        setConversations((prev: Conversation[]) => prev.map(conv => {
-                            if (conv.appointmentId === updatedMessage.appointmentId) {
-                                return {
-                                    ...conv,
-                                    lastMessage: {
-                                        content: updatedMessage.content,
-                                        createdAt: conv.lastMessage?.createdAt || new Date().toISOString(),
-                                        senderModel: conv.lastMessage?.senderModel || updatedMessage.senderModel
-                                    }
-                                };
-                            }
-                            return conv;
-                        }));
-                    };
-
-                    const handleSocketDelete = ({ messageId, appointmentId }: { messageId: string, appointmentId?: string }) => {
-                        console.log("[SOCKET] Delete message received:", messageId);
-                        setMessages(prev => prev.map(m =>
-                            String(m.id) === String(messageId)
-                                ? { ...m, isDeleted: true }
-                                : m
-                        ));
-
-                        setConversations((prev: Conversation[]) => prev.map(conv => {
-                            if (appointmentId && conv.appointmentId === appointmentId) {
-                                return {
-                                    ...conv,
-                                    lastMessage: {
-                                        content: "Message deleted",
-                                        createdAt: conv.lastMessage?.createdAt || new Date().toISOString(),
-                                        senderModel: conv.lastMessage?.senderModel
-                                    }
-                                };
-                            }
-                            return conv;
-                        }));
-                    };
-
-                    const onTyping = ({ userId: typingUserId, isTyping, appointmentId: typingAppId }: { userId: string, isTyping: boolean, appointmentId?: string }) => {
-                        const myId = String(user?.id || (user as any)?._id || "");
-                        if (String(typingUserId) !== myId) {
-
-                            if (typingAppId === (currentAppointment?._id || id)) {
-                                console.log(`[SOCKET] Typing indicator:`, { userId: typingUserId, isTyping });
-                                setIsOtherTyping(isTyping);
-                            }
-                        }
-                    };
-
-                    const onStatusUpdate = ({ userId: statusUserId, status }: { userId: string, status: 'online' | 'offline' }) => {
-                        console.log(`[SOCKET] Status update:`, { userId: statusUserId, status });
-                        const otherParty = isPatientMe ? currentAppointment?.doctor : currentAppointment?.patient;
-                        const otherPartyId = otherParty?.userId?.id || otherParty?.userId?._id || otherParty?.id || otherParty?._id || (isPatientMe ? currentAppointment?.doctorId : currentAppointment?.patientId);
-                        if (statusUserId && otherPartyId && String(statusUserId) === String(otherPartyId)) {
-                            setActiveChat((prev) => ({ ...prev, online: status === 'online' }));
-                        }
-                        setConversations((prev) => prev.map(conv => {
-                            const myCurrentId = String(user?.id || (user as any)?._id || "");
-                            const convIsPMe = String(conv.patient?._id || conv.patient?.id || conv.patient) === myCurrentId ||
-                                String((conv.patient as any)?.userId?._id || (conv.patient as any)?.userId?.id) === myCurrentId;
-                            const convOther = convIsPMe ? conv.doctor : conv.patient;
-                            const convOtherId = convOther?.userId?._id || convOther?.userId?.id || convOther?._id || convOther?.id;
-                            if (statusUserId && convOtherId && String(convOtherId) === String(statusUserId)) {
-                                return { ...conv, isOnline: status === 'online' };
-                            }
-                            return conv;
-                        }));
-                    };
-
-                    const onRead = ({ appointmentId: readAppId }: { appointmentId: string }) => {
-                        if (readAppId === id || readAppId === currentAppointment?._id || readAppId === currentAppointment?.id) {
-                            console.log(`[SOCKET] Messages marked as read`);
-                            setMessages(prev => prev.map(msg => ({ ...msg, status: 'read' as const })));
-                        }
-                    };
-
-
-                    console.log("[SOCKET] Attaching event listeners");
-                    socket.on('receive-message', handleNewMessage);
-                    socket.on('edit-message', handleSocketEdit);
-                    socket.on('delete-message', handleSocketDelete);
-                    socket.on('user-typing', onTyping);
-                    socket.on('user-status', onStatusUpdate);
-                    socket.on('messages-read', onRead);
-
-
-                    performJoin();
-                    socket.on('connect', performJoin);
-
-
-                    return () => {
-                        console.log("[SOCKET] Cleaning up listeners and leaving rooms");
-                        socket.off('connect', performJoin);
-                        socket.off('receive-message', handleNewMessage);
-                        socket.off('edit-message', handleSocketEdit);
-                        socket.off('delete-message', handleSocketDelete);
-                        socket.off('user-typing', onTyping);
-                        socket.off('user-status', onStatusUpdate);
-                        socket.off('messages-read', onRead);
-                        if (mongoId) socket.emit('leave-chat', mongoId);
-                        if (customId) socket.emit('leave-chat', customId);
-                        if (persistentRoomId) socket.emit('leave-chat', persistentRoomId);
-                    };
-                } else {
-                    console.warn("[SOCKET] Socket not connected when trying to join room");
-                }
             } catch (error) {
                 console.error("Failed to load chat", error);
-                toast.error("Failed to load conversation");
             } finally {
                 setIsLoading(false);
             }
         };
-        if (id && user) {
-            const cleanup = initChat();
-            return () => {
-                cleanup.then(fn => fn && fn());
-            };
-        }
-        else setIsLoading(false);
-    }, [id, user, isDoctor, socket, isPatientMe, updateSessionStatus]);
+
+        if (user) initChatContext();
+    }, [id, user, isDoctor]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -956,20 +815,21 @@ const ChatPage: React.FC = () => {
     };
 
     const handleTyping = () => {
-
-        const roomId = currentRoomRef.current;
+        const roomId = currentConversationId || id;
         if (!socket || !roomId || !user) return;
-        socket.emit('typing', { appointmentId: roomId, userId: user.id || (user as any)._id });
+        socket.emit('typing', { id: roomId, userId: user.id || (user as any)._id });
         if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = window.setTimeout(() => {
             if (socket && roomId && user) {
-                socket.emit('stop-typing', { appointmentId: roomId, userId: user.id || (user as any)._id });
+                socket.emit('stop-typing', { id: roomId, userId: user.id || (user as any)._id });
             }
         }, 2000);
     };
 
     const handleSendMessage = async () => {
-        if (!inputValue.trim() || !id || !socket) return;
+        const targetId = currentConversationId || id;
+        if (!inputValue.trim() || !targetId || !socket) return;
+
         const currentVal = inputValue;
         setInputValue("");
         setShowEmojiPicker(false);
@@ -984,16 +844,12 @@ const ChatPage: React.FC = () => {
             type: 'text',
         };
 
-
         setMessages(prev => [...prev, newMessage]);
-
-
-        const roomId = String(appointment?._id || id);
-        console.log(`Sending message to room: ${roomId}`);
 
         const socketData = {
             id: tempId,
-            appointmentId: roomId,
+            conversationId: currentConversationId,
+            appointmentId: appointment?._id || (currentConversationId ? null : id),
             content: currentVal,
             senderId: user?.id || (user as any)?._id,
             senderModel: isDoctor ? 'Doctor' : 'User',
@@ -1005,9 +861,8 @@ const ChatPage: React.FC = () => {
         socket.emit('send-message', socketData);
 
         try {
-            const savedMessage = await chatService.sendMessage(id, currentVal, 'text');
+            const savedMessage = await chatService.sendMessage(targetId, currentVal, 'text');
             const permanentId = (savedMessage as any)._id || savedMessage.id;
-            console.log(`[CHAT_PAGE] Message persisted. Replacing ${tempId} with ${permanentId}`);
 
             setMessages(prev => prev.map(m =>
                 String(m.id) === tempId ? { ...m, id: permanentId } : m
@@ -1034,8 +889,8 @@ const ChatPage: React.FC = () => {
             ));
 
             if (socket) {
-                const roomId = currentRoomRef.current;
-                socket.emit('delete-message', { messageId: idStr, appointmentId: roomId });
+                const targetId = currentConversationId || id;
+                socket.emit('delete-message', { messageId: idStr, conversationId: targetId });
             }
 
             toast.success("Message deleted");
@@ -1076,10 +931,10 @@ const ChatPage: React.FC = () => {
         try {
             await chatService.editMessage(idStr, editingContent);
             if (socket) {
-                const roomId = currentRoomRef.current;
+                const targetId = currentConversationId || id;
                 socket.emit('edit-message', {
                     _id: idStr,
-                    appointmentId: roomId,
+                    conversationId: targetId,
                     content: editingContent,
                     senderModel: isDoctor ? 'Doctor' : 'User'
                 });
@@ -1143,18 +998,14 @@ const ChatPage: React.FC = () => {
             if (!croppedImageBlob) throw new Error("Cropping failed");
 
 
-            const file = new File([croppedImageBlob], `cropped-image-${Date.now()}.jpg`, { type: 'image/jpeg' });
-
-            imageUrl = await chatService.uploadAttachment(id, file);
-
-
-            const roomId = String(appointment?._id || id);
-            console.log(`Image sending to room: ${roomId}`);
-
+            const targetId = currentConversationId || id;
+            const croppedFile = new File([croppedImageBlob], `cropped-image-${Date.now()}.jpg`, { type: 'image/jpeg' });
+            imageUrl = await chatService.uploadAttachment(targetId, croppedFile);
 
             const socketData = {
                 id: `temp-${Date.now()}`,
-                appointmentId: roomId,
+                conversationId: currentConversationId,
+                appointmentId: appointment?._id || (currentConversationId ? null : id),
                 content: imageUrl,
                 senderId: user?.id || (user as any)?._id,
                 senderModel: isDoctor ? 'Doctor' : 'User',
@@ -1164,24 +1015,20 @@ const ChatPage: React.FC = () => {
             };
             if (socket) socket.emit('send-message', socketData);
 
-
             const uiMsg: Message = {
                 id: socketData.id,
-                sender: (socketData.senderModel === 'User' && !isDoctor) || (socketData.senderModel === 'Doctor' && isDoctor) ? 'user' : 'other',
+                sender: 'user',
                 text: socketData.content,
                 time: new Date(socketData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 status: 'sending' as const,
-                type: socketData.type as 'image',
+                type: 'image',
             };
             setMessages((prev) => [...prev, uiMsg]);
 
-
-            const savedMessage = await chatService.sendMessage(id, imageUrl, 'image');
-
+            const savedMessage = await chatService.sendMessage(targetId, imageUrl, 'image');
 
             const permanentId = (savedMessage as any)._id || savedMessage.id;
             const tempId = socketData.id;
-            console.log(`[CHAT_PAGE] Image persisted. Replacing ${tempId} with ${permanentId}`);
 
             setMessages(prev => prev.map(m =>
                 String(m.id) === tempId ? { ...m, id: permanentId, status: 'sent' } : m
@@ -1547,7 +1394,7 @@ const ChatPage: React.FC = () => {
                                 onClick={handleBackToWebsite}
                                 className="flex items-center gap-1.5 text-[10px] font-bold text-[#00A1B0] hover:text-[#008f9c] transition-colors mt-1 uppercase tracking-wider"
                             >
-                                <Globe className="h-3 w-3" />
+                                <ArrowLeft className="h-3 w-3" />
                                 Back
                             </button>
                         </div>
@@ -1595,13 +1442,14 @@ const ChatPage: React.FC = () => {
                                     : (otherPartyInList?.profileImage || otherPartyInList?.userId?.profileImage),
                                 nameInList
                             );
-                            const isActiveInList = id === conv.appointmentId;
+                            const isActiveInList = id === conv.conversationId || id === conv.appointmentId;
 
                             return (
                                 <div
-                                    key={conv.appointmentId}
+                                    key={conv.conversationId || conv.appointmentId}
                                     onClick={() => {
-                                        navigate(isDoctor ? `/doctor/chat/${conv.appointmentId}` : `/patient/chat/${conv.appointmentId}`);
+                                        const navId = conv.conversationId || conv.appointmentId;
+                                        navigate(isDoctor ? `/doctor/chat/${navId}` : `/patient/chat/${navId}`);
                                         if (window.innerWidth < 768) setIsSidebarOpen(false);
                                     }}
                                     className={`flex items-center gap-4 p-3 rounded-2xl cursor-pointer transition-all border 
@@ -1742,49 +1590,12 @@ const ChatPage: React.FC = () => {
                 )}
 
                 {id === 'default' ? (
-                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center relative overflow-hidden">
-                        <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px]"></div>
-                        <div className="relative z-10 flex flex-col items-center">
-                            <div className="relative mb-8">
-                                <div className="absolute inset-0 bg-[#00A1B0]/10 blur-3xl rounded-full scale-150 animate-pulse"></div>
-                                <div className="relative h-28 w-28 bg-white rounded-[2rem] shadow-2xl flex items-center justify-center border border-[#00A1B0]/10">
-                                    <img src="/logo.png" alt="Takecare" className="h-14 w-14 object-contain" onError={(e) => {
-                                        (e.target as any).src = "https://api.dicebear.com/7.x/initials/svg?seed=TC&backgroundColor=00A1B0";
-                                    }} />
-                                </div>
-                                <div className="absolute -bottom-2 -right-2 h-10 w-10 bg-[#00A1B0] rounded-2xl shadow-lg flex items-center justify-center text-white">
-                                    <Globe className="h-5 w-5" />
-                                </div>
-                            </div>
-
-                            <h1 className="text-3xl font-black text-slate-900 mb-4 tracking-tight uppercase">
-                                Welcome to <span className="text-[#00A1B0]">TakeCare</span>
-                            </h1>
-                            <p className="text-slate-500 max-w-md mx-auto leading-relaxed mb-10 font-bold text-sm uppercase tracking-wide">
-                                Your trusted partner in healthcare communication.
-                            </p>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl w-full px-4">
-                                {[
-                                    { icon: <ShieldCheck className="h-5 w-5" />, title: "Secure", desc: "Encrypted chats" },
-                                    { icon: <Lock className="h-5 w-5" />, title: "Private", desc: "Data protection" },
-                                    { icon: <MessagesSquare className="h-5 w-5" />, title: "Support", desc: "Real-time care" }
-                                ].map((feature, i) => (
-                                    <div key={i} className="bg-white/80 backdrop-blur-sm p-6 rounded-3xl border border-white shadow-xl shadow-slate-200/50 flex flex-col items-center text-center hover:scale-105 transition-all duration-300 group">
-                                        <div className="h-12 w-12 bg-[#00A1B0] rounded-2xl flex items-center justify-center text-white mb-4 shadow-lg shadow-[#00A1B0]/20 group-hover:rotate-12 transition-transform">
-                                            {feature.icon}
-                                        </div>
-                                        <h3 className="text-xs font-black text-slate-900 mb-1 uppercase tracking-widest">{feature.title}</h3>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{feature.desc}</p>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="mt-12 flex items-center gap-3 px-8 py-4 bg-white shadow-xl shadow-slate-200/50 rounded-full border border-slate-100">
-                                <div className="h-2 w-2 bg-[#00A1B0] rounded-full animate-ping"></div>
-                                <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Select a message to start conversation</span>
-                            </div>
+                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50">
+                        <div className="h-24 w-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm border border-slate-100">
+                            <MessagesSquare className="h-10 w-10 text-slate-300" />
                         </div>
+                        <h3 className="text-xl font-bold text-slate-700">Select a conversation</h3>
+                        <p className="text-slate-400 font-medium mt-2 max-w-xs mx-auto">Choose a chat from the sidebar to start messaging with your doctor or patient.</p>
                     </div>
                 ) : (
                     <>
@@ -2420,7 +2231,7 @@ const ChatPage: React.FC = () => {
                                         ✅ Continue
                                     </Button>
                                     <Button
-                                        onClick={() => updateSessionStatus(SESSION_STATUS.ENDED)}
+                                        onClick={() => setShowWindUpConfirm(true)}
                                         className="bg-red-500 hover:bg-red-600 text-white rounded-2xl h-14 font-black uppercase text-xs tracking-widest shadow-lg shadow-red-500/20"
                                     >
                                         ❌ Wind Up
@@ -2456,9 +2267,51 @@ const ChatPage: React.FC = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Wind Up Confirmation Dialog */}
+            <Dialog open={showWindUpConfirm} onOpenChange={setShowWindUpConfirm}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                            <XCircle className="h-5 w-5" />
+                            Confirm Wind Up Session
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <p className="text-sm text-slate-600 mb-3">
+                            Are you sure you want to <strong className="text-red-600">wind up</strong> this consultation session?
+                        </p>
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-1">
+                            <p className="text-xs text-red-800 font-semibold">⚠️ This action will:</p>
+                            <ul className="text-xs text-red-700 space-y-1 ml-4 list-disc">
+                                <li>End the current consultation session</li>
+                                <li>Disable the chat for both you and the patient</li>
+                                <li>Mark the appointment as completed</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowWindUpConfirm(false)}
+                            className="rounded-xl"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                setShowWindUpConfirm(false);
+                                updateSessionStatus(SESSION_STATUS.ENDED);
+                            }}
+                            className="bg-red-500 hover:bg-red-600 text-white rounded-xl"
+                        >
+                            Yes, Wind Up
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div >
     );
 };
 
 export default ChatPage;
-

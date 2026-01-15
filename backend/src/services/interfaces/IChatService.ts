@@ -1,29 +1,33 @@
 import { IMessage } from "../../models/message.model";
-import { Types } from "mongoose";
+
 
 export interface ConversationItem {
-    appointmentId: Types.ObjectId | string;
+    appointmentId: string;
+    conversationId: string;
+    realAppointmentId: string | null;
     customId: string;
-    appointmentType: "video" | "chat";
+    appointmentType: string;
     status: string;
-    patient: Types.ObjectId | string;
-    doctor: Types.ObjectId | string;
+    patient: any;
+    doctor: any;
     lastMessage: {
         content: string;
         createdAt: Date;
-        senderModel: 'User' | 'Doctor';
-    };
+        type: string;
+    } | null;
     unreadCount: number;
+    isOnline: boolean;
 }
 
 export interface IChatService {
     saveMessage(
-        appointmentId: string,
+        conversationId: string,
         senderId: string,
         senderModel: 'User' | 'Doctor',
         content: string,
         type?: 'text' | 'image' | 'file' | 'system',
-        fileName?: string
+        fileName?: string,
+        appointmentId?: string
     ): Promise<IMessage>;
 
     sendMessage(
@@ -35,11 +39,15 @@ export interface IChatService {
         fileName?: string
     ): Promise<IMessage>;
 
-    getMessages(appointmentId: string): Promise<IMessage[]>;
+    getMessages(id: string): Promise<IMessage[]>; 
 
-    markMessagesAsRead(appointmentId: string, userId: string, userModel: 'User' | 'Doctor'): Promise<void>;
+    markMessagesAsRead(id: string, userId: string, userModel: 'User' | 'Doctor'): Promise<void>;
 
     getConversations(userId: string, userRole: string): Promise<ConversationItem[]>;
+
+    getConversation(id: string): Promise<any>;
+
+    getConversationByDoctorId(patientId: string, doctorId: string): Promise<any>;
 
     editMessage(messageId: string, content: string, userId: string): Promise<IMessage>;
 

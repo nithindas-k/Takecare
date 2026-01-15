@@ -124,11 +124,13 @@ export const WALLET_API_ROUTES = {
 
 export const CHAT_API_ROUTES = {
   GET_CONVERSATIONS: "/chat/conversations",
-  GET_MESSAGES: (appointmentId: string): string => `/chat/${appointmentId}`,
-  SEND_MESSAGE: (appointmentId: string): string => `/chat/${appointmentId}`,
-  UPLOAD_ATTACHMENT: (appointmentId: string): string => `/chat/${appointmentId}/upload`,
+  GET_CONVERSATION: (id: string): string => `/chat/conversation/${id}`,
+  GET_MESSAGES: (id: string): string => `/chat/${id}`,
+  SEND_MESSAGE: (id: string): string => `/chat/${id}`,
+  UPLOAD_ATTACHMENT: (id: string): string => `/chat/${id}/upload`,
   EDIT_MESSAGE: (messageId: string): string => `/chat/message/${messageId}`,
   DELETE_MESSAGE: (messageId: string): string => `/chat/message/${messageId}`,
+  GET_CONVERSATION_BY_DOCTOR: (doctorId: string): string => `/chat/doctor/${doctorId}`,
 } as const;
 
 export const PRESCRIPTION_API_ROUTES = {

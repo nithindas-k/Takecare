@@ -13,18 +13,19 @@ export interface IMessage {
     isDeleted: boolean;
     isEdited?: boolean;
     _id?: string;
+    conversationId?: string;
     createdAt: string;
     updatedAt: string;
 }
 
 export const chatService = {
-    getMessages: async (appointmentId: string): Promise<IMessage[]> => {
-        const response = await axiosInstance.get(CHAT_API_ROUTES.GET_MESSAGES(appointmentId));
+    getMessages: async (id: string): Promise<IMessage[]> => {
+        const response = await axiosInstance.get(CHAT_API_ROUTES.GET_MESSAGES(id));
         return response.data.data;
     },
 
-    sendMessage: async (appointmentId: string, content: string, type: 'text' | 'image' | 'file' = 'text', fileName?: string): Promise<IMessage> => {
-        const response = await axiosInstance.post(CHAT_API_ROUTES.SEND_MESSAGE(appointmentId), { content, type, fileName });
+    sendMessage: async (id: string, content: string, type: 'text' | 'image' | 'file' = 'text', fileName?: string): Promise<IMessage> => {
+        const response = await axiosInstance.post(CHAT_API_ROUTES.SEND_MESSAGE(id), { content, type, fileName });
         return response.data.data;
     },
 
@@ -38,10 +39,10 @@ export const chatService = {
         return response.data.data;
     },
 
-    uploadAttachment: async (appointmentId: string, file: File): Promise<string> => {
+    uploadAttachment: async (id: string, file: File): Promise<string> => {
         const formData = new FormData();
         formData.append('file', file);
-        const response = await axiosInstance.post(CHAT_API_ROUTES.UPLOAD_ATTACHMENT(appointmentId), formData, {
+        const response = await axiosInstance.post(CHAT_API_ROUTES.UPLOAD_ATTACHMENT(id), formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
@@ -62,5 +63,15 @@ export const chatService = {
     getConversations: async () => {
         const response = await axiosInstance.get(CHAT_API_ROUTES.GET_CONVERSATIONS);
         return response.data;
+    },
+
+    getConversation: async (id: string) => {
+        const response = await axiosInstance.get(CHAT_API_ROUTES.GET_CONVERSATION(id));
+        return response.data.data;
+    },
+
+    getConversationByDoctorId: async (doctorId: string) => {
+        const response = await axiosInstance.get(CHAT_API_ROUTES.GET_CONVERSATION_BY_DOCTOR(doctorId));
+        return response.data.data;
     }
 };

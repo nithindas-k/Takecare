@@ -1,7 +1,8 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IMessage extends Document {
-    appointmentId: mongoose.Types.ObjectId;
+    conversationId: mongoose.Types.ObjectId;
+    appointmentId?: mongoose.Types.ObjectId;
     senderId: mongoose.Types.ObjectId;
     senderModel: 'User' | 'Doctor';
     content: string;
@@ -16,10 +17,16 @@ export interface IMessage extends Document {
 
 const MessageSchema = new Schema<IMessage>(
     {
+        conversationId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Conversation',
+            required: true,
+            index: true
+        },
         appointmentId: {
             type: Schema.Types.ObjectId,
             ref: 'Appointment',
-            required: true,
+            required: false,
             index: true
         },
         senderId: {
@@ -75,6 +82,7 @@ const MessageSchema = new Schema<IMessage>(
 );
 
 
+MessageSchema.index({ conversationId: 1, createdAt: 1 });
 MessageSchema.index({ appointmentId: 1, createdAt: 1 });
 
 const MessageModel: Model<IMessage> = mongoose.models.Message || mongoose.model<IMessage>('Message', MessageSchema);

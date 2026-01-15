@@ -13,6 +13,7 @@ export const BASE_ROUTES = {
     PRESCRIPTIONS: "/prescriptions",
     SPECIALTIES: "/specialties",
     CONTACT: "/contact",
+    CALL: "/call",
 } as const;
 
 

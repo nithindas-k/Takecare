@@ -25,6 +25,7 @@ import reviewRouter from "./routers/review.route";
 import prescriptionRouter from "./routers/prescription.router";
 import specialtyRouter from "./routers/specialty.router";
 import contactRouter from "./routes/contact.routes";
+import callRouter from "./routers/call.router";
 
 import { errorHandler } from "./middlewares/error-handler.middleware";
 import { LoggerService } from "./services/logger.service";
@@ -95,6 +96,7 @@ app.use(BASE_ROUTES.REVIEWS, reviewRouter);
 app.use(BASE_ROUTES.PRESCRIPTIONS, prescriptionRouter);
 app.use(BASE_ROUTES.SPECIALTIES, specialtyRouter);
 app.use(BASE_ROUTES.CONTACT, contactRouter);
+app.use(BASE_ROUTES.CALL, callRouter);
 
 
 

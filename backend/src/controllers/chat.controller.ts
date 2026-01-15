@@ -34,14 +34,14 @@ export class ChatController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const appointmentId = req.params.appointmentId;
+            const id = req.params.id || req.params.appointmentId || req.params.conversationId;
             const userId = req.user?.userId;
 
             if (!userId) {
                 throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
             }
 
-            const messages = await this._chatService.getMessages(appointmentId);
+            const messages = await this._chatService.getMessages(id);
 
             sendSuccess(res, messages);
         } catch (err: unknown) {
@@ -55,7 +55,7 @@ export class ChatController {
         next: NextFunction
     ): Promise<void> => {
         try {
-            const appointmentId = req.params.appointmentId;
+            const id = req.params.appointmentId || req.params.conversationId || req.params.id;
             const { content, type, fileName } = req.body;
             const userId = req.user?.userId;
             const userRole = req.user?.role;
@@ -65,7 +65,7 @@ export class ChatController {
             }
 
             const message = await this._chatService.sendMessage(
-                appointmentId,
+                id,
                 userId,
                 userRole,
                 content,
@@ -115,6 +115,40 @@ export class ChatController {
 
             const deletedMessage = await this._chatService.deleteMessage(messageId, userId);
             sendSuccess(res, deletedMessage);
+        } catch (err: unknown) {
+            next(err);
+        }
+    };
+
+    getConversationByDoctorId = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const { doctorId } = req.params;
+            const userId = req.user?.userId;
+
+            if (!userId) {
+                throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+            }
+
+            const conversation = await this._chatService.getConversationByDoctorId(userId, doctorId);
+            sendSuccess(res, conversation);
+        } catch (err: unknown) {
+            next(err);
+        }
+    };
+
+    getConversation = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ): Promise<void> => {
+        try {
+            const id = req.params.id || req.params.conversationId || req.params.appointmentId;
+            const conversation = await this._chatService.getConversation(id);
+            sendSuccess(res, conversation);
         } catch (err: unknown) {
             next(err);
         }

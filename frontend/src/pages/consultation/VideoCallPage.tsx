@@ -14,8 +14,9 @@ import { VideoCallProvider, useVideoCall } from '../../context/VideoCallContext'
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../redux/user/userSlice';
 import { appointmentService } from '../../services/appointmentService';
+import callService from '../../services/callService';
 import { Button } from '../../components/ui/button';
-import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
+
 import {
     Dialog,
     DialogContent,
@@ -28,6 +29,12 @@ import { useSocket } from '../../context/SocketContext';
 import { toast } from 'sonner';
 import { Lock, ClipboardList, Clock, StickyNote, Plus, BookOpen, X } from 'lucide-react';
 import { SESSION_STATUS } from '../../utils/constants';
+import { useCallRejoin } from '../../hooks/useCallRejoin';
+import { useAutoSaveNotes } from '../../hooks/useAutoSaveNotes';
+import { RejoinCallBanner } from '../../components/video-call/RejoinCallBanner';
+import { AutoSaveIndicator } from '../../components/video-call/AutoSaveIndicator';
+import { ReconnectingAlert } from '../../components/video-call/ReconnectingAlert';
+
 
 const VideoCallContent: React.FC = () => {
     const { id } = useParams();
@@ -44,7 +51,8 @@ const VideoCallContent: React.FC = () => {
         isCamOff,
         toggleMute,
         toggleCam,
-        incomingCall
+        incomingCall,
+        connectionState
     } = useVideoCall();
     const user = useSelector(selectCurrentUser) as any;
     const { socket } = useSocket();
@@ -55,11 +63,34 @@ const VideoCallContent: React.FC = () => {
     const [showControls, setShowControls] = React.useState(true);
     const [callDuration, setCallDuration] = React.useState(0);
     const [appointment, setAppointment] = React.useState<any>(null);
+    const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const [sessionStatus, setSessionStatus] = React.useState<string>("idle");
     const [isTimeOver, setIsTimeOver] = React.useState(false);
     const [extensionCount, setExtensionCount] = React.useState(0);
     const [endSessionDialogOpen, setEndSessionDialogOpen] = React.useState(false);
+
+    // Call Rejoin Hook
+    const {
+        canRejoin,
+        isRejoining,
+        expiresInMinutes,
+        rejoinCall: handleRejoinCall
+    } = useCallRejoin(id);
+
+    // Auto-Save Notes Hook
+    const {
+        isSaving: isAutoSaving,
+        formatLastSaved,
+        hasUnsavedChanges,
+        addNote: addAutoSavedNote
+    } = useAutoSaveNotes(id);
 
     // Notes Panel State
     const [isNotesOpen, setIsNotesOpen] = React.useState(false);
@@ -102,20 +133,21 @@ const VideoCallContent: React.FC = () => {
                 createdAt: new Date().toISOString()
             };
 
-            const res = await appointmentService.updateDoctorNotes(id, newNote);
-            if (res.success) {
-                toast.success(`${noteCategory.replace('_', ' ')} saved successfully`);
-                setAppointment((prev: any) => ({
-                    ...prev,
-                    doctorNotes: [...(prev?.doctorNotes || []), newNote]
-                }));
-                
-                setNoteTitle("");
-                setNoteDescription("");
-                setNoteDosage("");
-                setNoteFrequency("");
-                setNoteDuration("");
-            }
+            addAutoSavedNote(newNote);
+
+            setAppointment((prev: any) => ({
+                ...prev,
+                doctorNotes: [...(prev?.doctorNotes || []), newNote]
+            }));
+
+
+            setNoteTitle("");
+            setNoteDescription("");
+            setNoteDosage("");
+            setNoteFrequency("");
+            setNoteDuration("");
+
+            toast.success(`${noteCategory.replace('_', ' ')} added successfully`);
         } catch (error: any) {
             toast.error(error.message || "Failed to save note");
         } finally {
@@ -172,7 +204,7 @@ const VideoCallContent: React.FC = () => {
         }
     }, [id, leaveCall, navigate]);
 
-    
+
     useEffect(() => {
         let interval: ReturnType<typeof setInterval>;
         if (callAccepted && !callEnded) {
@@ -183,7 +215,7 @@ const VideoCallContent: React.FC = () => {
         return () => clearInterval(interval);
     }, [callAccepted, callEnded]);
 
-  
+
     useEffect(() => {
         let timeout: ReturnType<typeof setTimeout>;
         const handleMouseMove = () => {
@@ -206,7 +238,7 @@ const VideoCallContent: React.FC = () => {
         };
     }, [callAccepted, callEnded]);
 
-    
+
     const formatDuration = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
@@ -241,15 +273,25 @@ const VideoCallContent: React.FC = () => {
                         setTargetUserId(patientId);
                         console.log("I am Doctor, calling Patient:", patientId);
 
-                        
+
                         if (!apt.sessionStartTime && apt.status !== 'completed' && apt.sessionStatus !== 'ENDED') {
                             try {
                                 await appointmentService.updateSessionStatus(id, "ACTIVE");
+
+                                // Start the persistent call session
+                                const doctorIdStr = getSafeId(apt.doctor) || getSafeId(apt.doctorId);
+                                const patientIdStr = getSafeId(apt.patient) || getSafeId(apt.patientId);
+
+                                if (doctorIdStr && patientIdStr) {
+                                    await callService.startCall(id, doctorIdStr, patientIdStr);
+                                    toast.success("Call session verified");
+                                }
                             } catch (e) {
                                 console.warn("Failed to auto-start session (might already be active)", e);
                             }
                         }
                     } else {
+                        // Patient logic
                         setTargetUserId(doctorUserId);
                         console.log("I am Patient, calling Doctor (User ID):", doctorUserId);
                     }
@@ -303,7 +345,7 @@ const VideoCallContent: React.FC = () => {
     useEffect(() => {
         if (!socket || !id) return;
 
-      
+
         socket.emit("join-chat", id);
         console.log(`Joining video call room: ${id}`);
 
@@ -353,7 +395,33 @@ const VideoCallContent: React.FC = () => {
     };
 
     return (
-        <div className="h-screen w-screen bg-[#0B1014] overflow-hidden font-sans flex flex-col relative">
+        <div className="h-[100dvh] w-screen bg-[#0B1014] overflow-hidden font-sans flex flex-col relative selection:bg-[#00A1B0]/30">
+
+
+            {/* Reconnecting Alert */}
+            {(connectionState === 'disconnected' || connectionState === 'failed' || connectionState === 'checking') && callAccepted && !callEnded && (
+                <ReconnectingAlert
+                    attempts={1} // We can enhance this later with real tracking
+                    maxAttempts={5}
+                />
+            )}
+
+            {/* Rejoin Call Banner - Positioned safely below header */}
+            {canRejoin && !callAccepted && (
+                <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[60] w-full max-w-[90%] md:max-w-2xl px-4 transition-all duration-300">
+                    <RejoinCallBanner
+                        onRejoin={async () => {
+                            const session = await handleRejoinCall();
+                            if (session) {
+                                toast.success('Rejoining call...');
+                                if (targetUserId) callUser(targetUserId);
+                            }
+                        }}
+                        expiresIn={expiresInMinutes}
+                        isLoading={isRejoining}
+                    />
+                </div>
+            )}
 
             {/* Remote Video - Full Screen Background */}
             <div className="absolute inset-0 bg-[#0B1014]">
@@ -365,67 +433,44 @@ const VideoCallContent: React.FC = () => {
                         className="w-full h-full object-cover"
                     />
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center p-4">
-                        {!incomingCall?.isReceivingCall && (
-                            <Card className="w-full max-w-md bg-[#1C1F24] border-[#2A2F32] text-white backdrop-blur-sm">
-                                <CardHeader className="text-center">
-                                    <div className="mx-auto w-20 h-20 rounded-full bg-[#2A2F32] flex items-center justify-center mb-4">
-                                        <FaUser className="text-[#8696A0]" size={32} />
-                                    </div>
-                                    <CardTitle className="text-xl md:text-2xl">
-                                        {user?.role === 'doctor' ? 'Patient Consultation' : 'Doctor Consultation'}
-                                    </CardTitle>
-                                    <CardDescription className="text-[#8696A0]">
-                                        Ready to start the video session?
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardFooter className="flex justify-center pb-8">
-                                    <Button
-                                        onClick={() => targetUserId && callUser(targetUserId)}
-                                        disabled={!targetUserId}
-                                        className="w-full max-w-xs bg-[#00A1B0] hover:bg-[#008f9d] text-white font-semibold py-6 rounded-xl text-lg transition-all"
-                                    >
-                                        {targetUserId ? 'Start Consultation' : 'Loading...'}
-                                    </Button>
-                                </CardFooter>
-                            </Card>
-                        )}
+                    /* Lobby Background - Simple blurred or dark */
+                    <div className="w-full h-full flex items-center justify-center p-4 bg-[#0B1014]">
+                        {/* Empty background, waiting for Lobby Overlay */}
                     </div>
                 )}
             </div>
 
             {/* Incoming Call Dialog */}
-            <Dialog open={!!(incomingCall?.isReceivingCall && !callAccepted)} onOpenChange={() => { }}>
-                <DialogContent className="sm:max-w-md bg-[#1C1F24] border-[#2A2F32] text-white">
-                    <DialogHeader>
-                        <DialogTitle className="text-center text-xl">Incoming Call</DialogTitle>
-                        <DialogDescription className="text-center text-[#8696A0]">
-                            {incomingCall?.name || 'Someone'} is requesting a video consultation.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex items-center justify-center py-6">
-                        <div className="w-24 h-24 rounded-full bg-[#2A2F32] flex items-center justify-center animate-pulse">
-                            <FaVideo size={32} className="text-[#00A1B0]" />
+            <Dialog open={!!(incomingCall?.isReceivingCall)} onOpenChange={() => { }}>
+                <DialogContent className="sm:max-w-[400px] bg-[#1C1F24] border-gray-800 p-0 overflow-hidden gap-0">
+                    <div className="flex flex-col items-center justify-center p-8 bg-[#1C1F24]">
+                        <div className="h-24 w-24 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6">
+                            <FaVideo size={32} className="text-emerald-500" />
                         </div>
+                        <DialogHeader className="mb-2 space-y-2">
+                            <DialogTitle className="text-center text-xl text-white font-semibold">Incoming Call</DialogTitle>
+                            <DialogDescription className="text-center text-gray-400 text-base">
+                                <span className="font-medium text-white">{incomingCall?.name || 'Someone'}</span> is requesting a video consultation.
+                            </DialogDescription>
+                        </DialogHeader>
                     </div>
-                    <DialogFooter className="flex-row justify-center gap-4 sm:justify-center">
-                        <Button
-                            variant="destructive"
+                    <div className="grid grid-cols-2 gap-px bg-gray-800 border-t border-gray-800">
+                        <button
                             onClick={() => {
                                 leaveCall();
                                 navigate(-1);
                             }}
-                            className="px-8 py-6 rounded-xl"
+                            className="flex items-center justify-center p-4 hover:bg-gray-800/50 transition-colors text-red-500 font-medium bg-[#1C1F24]"
                         >
                             Decline
-                        </Button>
-                        <Button
+                        </button>
+                        <button
                             onClick={answerCall}
-                            className="px-8 py-6 rounded-xl bg-[#25D366] hover:bg-[#1fae53] text-white border-none"
+                            className="flex items-center justify-center p-4 hover:bg-gray-800/50 transition-colors text-emerald-500 font-bold bg-[#1C1F24]"
                         >
-                            Accept Video
-                        </Button>
-                    </DialogFooter>
+                            Accept
+                        </button>
+                    </div>
                 </DialogContent>
             </Dialog>
 
@@ -475,13 +520,13 @@ const VideoCallContent: React.FC = () => {
                                             <Button
                                                 onClick={handleEnablePostChat}
                                                 size="sm"
-                                                className="hidden md:flex items-center gap-2 rounded-xl px-4 h-9 bg-amber-500 hover:bg-amber-600 text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-amber-500/20"
+                                                className="hidden md:flex items-center gap-2 rounded-xl px-4 h-9 bg-amber-600 hover:bg-amber-700 text-white font-bold uppercase text-[10px] tracking-widest"
                                             >
                                                 <ClipboardList className="h-4 w-4" />
                                                 Request Test Result
                                             </Button>
                                         ) : (
-                                            <div className="hidden md:flex items-center gap-2 px-4 h-9 bg-amber-50/10 text-amber-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-500/20">
+                                            <div className="hidden md:flex items-center gap-2 px-4 h-9 bg-amber-500/10 text-amber-500 rounded-xl text-[10px] font-bold uppercase tracking-widest border border-amber-500/20">
                                                 <Clock className="h-3.5 w-3.5" /> Follow-up Open
                                             </div>
                                         )}
@@ -490,7 +535,7 @@ const VideoCallContent: React.FC = () => {
                                 {isDoctor && sessionStatus !== SESSION_STATUS.ENDED && (
                                     <Button
                                         onClick={() => setEndSessionDialogOpen(true)}
-                                        className="h-9 px-4 bg-amber-500 hover:bg-amber-600 text-white font-black uppercase text-[10px] tracking-widest rounded-xl transition-all shadow-lg shadow-amber-500/20"
+                                        className="h-9 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl transition-all"
                                     >
                                         Wind Up
                                     </Button>
@@ -547,12 +592,20 @@ const VideoCallContent: React.FC = () => {
                                         <p className="text-[10px] text-[#8696A0] font-bold uppercase">Structured Notes</p>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => setIsNotesOpen(false)}
-                                    className="p-2 hover:bg-white/10 rounded-lg text-[#8696A0] hover:text-white transition-colors"
-                                >
-                                    <X size={20} />
-                                </button>
+                                <div className="flex items-center gap-3">
+                                    {/* Auto-Save Indicator */}
+                                    <AutoSaveIndicator
+                                        isSaving={isAutoSaving}
+                                        lastSavedText={formatLastSaved()}
+                                        hasUnsavedChanges={hasUnsavedChanges}
+                                    />
+                                    <button
+                                        onClick={() => setIsNotesOpen(false)}
+                                        className="p-2 hover:bg-white/10 rounded-lg text-[#8696A0] hover:text-white transition-colors"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -616,8 +669,8 @@ const VideoCallContent: React.FC = () => {
                                     <button
                                         key={cat}
                                         onClick={() => setNoteCategory(cat)}
-                                        className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${noteCategory === cat
-                                            ? 'bg-[#00A1B0] text-white shadow-lg shadow-[#00A1B0]/20'
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${noteCategory === cat
+                                            ? 'bg-[#00A1B0] text-white'
                                             : 'bg-white/5 text-[#8696A0] hover:bg-white/10'
                                             }`}
                                     >
@@ -685,7 +738,7 @@ const VideoCallContent: React.FC = () => {
                                         ? (!noteDosage.trim() || !noteFrequency.trim() || !noteDuration.trim())
                                         : !noteDescription.trim())
                                 }
-                                className="w-full h-12 bg-[#00A1B0] hover:bg-[#008f9c] text-white rounded-xl font-black uppercase tracking-[0.2em] text-[10px] shadow-lg shadow-[#00A1B0]/20 disabled:opacity-50 transition-all active:scale-95"
+                                className="w-full h-12 bg-[#00A1B0] hover:bg-[#008f9c] text-white rounded-xl font-bold uppercase tracking-wider text-xs disabled:opacity-50 transition-all active:scale-95"
                             >
                                 {isSavingNote ? (
                                     <div className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
@@ -700,30 +753,120 @@ const VideoCallContent: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* Local Video - Floating Picture in Picture */}
+            {/* Local Video - Floating Picture in Picture OR Lobby View */}
             <motion.div
-                drag
+                drag={!!(callAccepted && !callEnded)}
                 dragConstraints={{ left: -100, right: 100, top: -100, bottom: 100 }}
                 dragElastic={0.1}
                 initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="absolute top-20 right-4 md:top-24 md:right-6 w-24 h-32 md:w-32 md:h-44 lg:w-36 lg:h-48 bg-[#1C1F24] rounded-2xl overflow-hidden z-40 cursor-move border-2 border-[#2A2F32] shadow-2xl"
+                animate={{
+                    opacity: 1,
+                    scale: 1,
+                    top: callAccepted && !callEnded ? (isMobile ? 80 : 32) : "50%",
+                    right: callAccepted && !callEnded ? (isMobile ? 16 : 32) : "50%",
+                    x: callAccepted && !callEnded ? 0 : "50%",
+                    y: callAccepted && !callEnded ? 0 : "-50%",
+                    width: callAccepted && !callEnded ? (isMobile ? "110px" : "220px") : (isMobile ? "100%" : "100%"), // Larger PIP on desktop
+                    height: callAccepted && !callEnded ? (isMobile ? "160px" : "320px") : (isMobile ? "100%" : "100%"),
+                    maxWidth: callAccepted && !callEnded ? "300px" : "800px",
+                    maxHeight: callAccepted && !callEnded ? "400px" : "600px",
+                    borderRadius: callAccepted && !callEnded ? "1.5rem" : "2rem",
+                    boxShadow: callAccepted && !callEnded ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none",
+                }}
+                transition={{ type: "spring", stiffness: 180, damping: 24 }}
+                className={`absolute z-40 overflow-hidden bg-[#1C1F24] transition-all
+                   ${callAccepted && !callEnded
+                        ? 'cursor-move border border-white/10 shadow-xl rounded-xl'
+                        : 'flex flex-col items-center justify-center p-0 md:p-0 aspect-video md:aspect-auto border-none shadow-none'
+                    }`}
+                style={{ position: 'absolute' }}
             >
-                <video
-                    playsInline
-                    ref={myVideo}
-                    autoPlay
-                    muted
-                    className={`w-full h-full object-cover ${isCamOff ? 'hidden' : 'block'}`}
-                />
-                {isCamOff && (
-                    <div className="w-full h-full flex items-center justify-center bg-[#1C1F24]">
-                        <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-[#2A2F32] flex items-center justify-center">
-                            <FaUser className="text-[#8696A0]" size={20} />
+                {/* Video Element */}
+                <div className={`relative w-full h-full ${!callAccepted ? 'rounded-xl overflow-hidden' : ''}`}>
+                    <video
+                        playsInline
+                        ref={myVideo}
+                        autoPlay
+                        muted
+                        className={`w-full h-full object-cover ${isCamOff ? 'hidden' : 'block'}`}
+                    />
+
+                    {/* Fallback Avatar */}
+                    {isCamOff && (
+                        <div className="w-full h-full flex items-center justify-center bg-[#1C1F24]">
+                            <div className={`rounded-full bg-[#2A2F32] flex items-center justify-center ${!callAccepted ? 'w-32 h-32' : 'w-12 h-12'}`}>
+                                <FaUser className="text-[#8696A0]" size={!callAccepted ? 48 : 20} />
+                            </div>
                         </div>
-                    </div>
-                )}
-                {isMuted && (
+                    )}
+
+                    {/* Lobby Controls Overlay */}
+                    {!callAccepted && !callEnded && (
+                        <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/80 to-transparent flex flex-col items-center gap-6">
+
+                            {/* Title */}
+                            <div className="text-center">
+                                <h3 className="text-white text-2xl font-bold mb-1">
+                                    {user?.role === 'doctor' ? 'Patient Consultation' : 'Doctor Consultation'}
+                                </h3>
+                                <p className="text-[#8696A0] text-sm">Check your audio and video before joining</p>
+                            </div>
+
+                            {/* Mic/Cam Toggles */}
+                            <div className="flex items-center gap-4">
+                                <button
+                                    onClick={toggleMute}
+                                    className={`p-4 rounded-full transition-colors ${isMuted ? 'bg-[#DC3545] text-white' : 'bg-[#2A2F32] text-white hover:bg-[#32383c]'}`}
+                                >
+                                    {isMuted ? <FaMicrophoneSlash size={20} /> : <FaMicrophone size={20} />}
+                                </button>
+                                <button
+                                    onClick={toggleCam}
+                                    className={`p-4 rounded-full transition-colors ${isCamOff ? 'bg-[#DC3545] text-white' : 'bg-[#2A2F32] text-white hover:bg-[#32383c]'}`}
+                                >
+                                    {isCamOff ? <FaVideoSlash size={20} /> : <FaVideo size={20} />}
+                                </button>
+                            </div>
+
+                            {/* Start/Rejoin Button */}
+                            <div className="w-full max-w-xs">
+                                {canRejoin ? (
+                                    <Button
+                                        onClick={async () => {
+                                            const session = await handleRejoinCall();
+                                            if (session) {
+                                                toast.success('Rejoining call...');
+                                                if (targetUserId) callUser(targetUserId);
+                                            }
+                                        }}
+                                        disabled={isRejoining}
+                                        className="w-full h-12 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold text-lg"
+                                    >
+                                        {isRejoining ? (
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                Rejoining...
+                                            </div>
+                                        ) : (
+                                            "Rejoin Session"
+                                        )}
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        onClick={() => targetUserId && callUser(targetUserId)}
+                                        disabled={!targetUserId}
+                                        className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-lg"
+                                    >
+                                        {targetUserId ? 'Start Consultation' : 'Loading...'}
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* PIP Muted Indicator (Only in Call) */}
+                {isMuted && callAccepted && !callEnded && (
                     <div className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-[#DC3545] flex items-center justify-center">
                         <FaMicrophoneSlash className="text-white" size={11} />
                     </div>
@@ -739,28 +882,28 @@ const VideoCallContent: React.FC = () => {
                         exit={{ y: 200, opacity: 0 }}
                         className="absolute bottom-0 left-0 right-0 z-50"
                     >
-                        {/* Main Controls */}
-                        <div className="bg-gradient-to-t from-[#0B1014] to-transparent pt-12 pb-8 px-4">
-                            <div className="flex items-center justify-center gap-6 md:gap-8">
+                        {/* Main Controls - Responsive */}
+                        <div className="bg-gradient-to-t from-[#0B1014] via-[#0B1014]/90 to-transparent pt-16 pb-8 px-6">
+                            <div className="flex items-center justify-center gap-4 md:gap-8 max-w-screen-md mx-auto">
 
                                 {/* Camera Toggle */}
                                 <motion.button
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                     onClick={toggleCam}
-                                    className="flex flex-col items-center gap-2"
+                                    className="flex flex-col items-center gap-2 group"
                                 >
-                                    <div className={`w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center transition-colors ${isCamOff
-                                        ? 'bg-[#DC3545]'
-                                        : 'bg-[#2A2F32]'
+                                    <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center transition-all duration-200 border border-white/5 ${isCamOff
+                                        ? 'bg-[#DC3545] text-white'
+                                        : 'bg-[#2A2F32] group-hover:bg-[#3A3F42] text-white'
                                         }`}>
                                         {isCamOff ? (
-                                            <FaVideoSlash size={22} className="text-white" />
+                                            <FaVideoSlash size={isMobile ? 20 : 24} />
                                         ) : (
-                                            <FaVideo size={22} className="text-white" />
+                                            <FaVideo size={isMobile ? 20 : 24} />
                                         )}
                                     </div>
-                                    <span className="text-white text-xs">Camera</span>
+                                    <span className="text-[#8696A0] text-[10px] md:text-xs font-medium">Camera</span>
                                 </motion.button>
 
                                 {/* Microphone Toggle */}
@@ -768,22 +911,22 @@ const VideoCallContent: React.FC = () => {
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                     onClick={toggleMute}
-                                    className="flex flex-col items-center gap-2"
+                                    className="flex flex-col items-center gap-2 group"
                                 >
-                                    <div className={`w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center transition-colors ${isMuted
-                                        ? 'bg-[#DC3545]'
-                                        : 'bg-[#2A2F32]'
+                                    <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center transition-all duration-200 border border-white/5 ${isMuted
+                                        ? 'bg-[#DC3545] text-white'
+                                        : 'bg-[#2A2F32] group-hover:bg-[#3A3F42] text-white'
                                         }`}>
                                         {isMuted ? (
-                                            <FaMicrophoneSlash size={22} className="text-white" />
+                                            <FaMicrophoneSlash size={isMobile ? 20 : 24} />
                                         ) : (
-                                            <FaMicrophone size={22} className="text-white" />
+                                            <FaMicrophone size={isMobile ? 20 : 24} />
                                         )}
                                     </div>
-                                    <span className="text-white text-xs">Mic</span>
+                                    <span className="text-[#8696A0] text-[10px] md:text-xs font-medium">Mic</span>
                                 </motion.button>
 
-                                {/* End Call */}
+                                {/* End Call - Larger */}
                                 <motion.button
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
@@ -795,12 +938,12 @@ const VideoCallContent: React.FC = () => {
                                             navigate(-1);
                                         }
                                     }}
-                                    className="flex flex-col items-center gap-2"
+                                    className="flex flex-col items-center gap-2 mx-2 md:mx-4"
                                 >
-                                    <div className="w-16 h-16 md:w-18 md:h-18 rounded-full bg-[#DC3545] flex items-center justify-center shadow-lg">
-                                        <FaPhoneSlash size={26} className="text-white transform rotate-135" />
+                                    <div className="w-16 h-16 md:w-20 md:h-20 rounded-3xl bg-[#DC3545] hover:bg-[#C82333] flex items-center justify-center shadow-lg transition-all">
+                                        <FaPhoneSlash size={isMobile ? 28 : 32} className="text-white transform rotate-0" />
                                     </div>
-                                    <span className="text-white text-xs">End</span>
+                                    <span className="text-[#DC3545] text-[10px] md:text-xs font-bold uppercase mt-1">End Call</span>
                                 </motion.button>
 
                                 {/* Fullscreen Toggle */}
@@ -808,16 +951,16 @@ const VideoCallContent: React.FC = () => {
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                     onClick={toggleFullscreen}
-                                    className="hidden md:flex flex-col items-center gap-2"
+                                    className="hidden md:flex flex-col items-center gap-2 group"
                                 >
-                                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-[#2A2F32] flex items-center justify-center">
+                                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-[#2A2F32] flex items-center justify-center border border-white/5 group-hover:bg-[#3A3F42] transition-all">
                                         {isFullscreen ? (
                                             <FaCompress size={20} className="text-white" />
                                         ) : (
                                             <FaExpand size={20} className="text-white" />
                                         )}
                                     </div>
-                                    <span className="text-white text-xs">Fullscreen</span>
+                                    <span className="text-[#8696A0] text-xs font-medium">Screen</span>
                                 </motion.button>
                             </div>
                         </div>
@@ -831,38 +974,35 @@ const VideoCallContent: React.FC = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+                        className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
                     >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="bg-[#1C1F24] border border-[#2A2F32] rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
-                        >
-                            <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Lock className="h-10 w-10 text-amber-500" />
-                            </div>
-                            <h2 className="text-2xl font-black text-white mb-4 tracking-tight uppercase">Session Time Over</h2>
-                            <p className="text-[#8696A0] font-bold leading-relaxed mb-8 text-xs uppercase tracking-tight">
-                                Your appointment time is over. Please wait for the doctor's response.
-                            </p>
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-center gap-2 py-2 px-4 bg-[#2A2F32] rounded-xl">
-                                    <div className="w-2 h-2 bg-[#00A1B0] rounded-full animate-ping"></div>
-                                    <p className="text-[10px] font-black text-[#8696A0] uppercase tracking-widest">
-                                        Waiting for Doctor...
-                                    </p>
+                        <div className="w-full max-w-sm bg-[#1C1F24] border border-gray-800 rounded-lg shadow-xl overflow-hidden">
+                            <div className="p-6 flex flex-col items-center text-center">
+                                <div className="h-12 w-12 bg-amber-500/10 rounded-full flex items-center justify-center mb-4">
+                                    <Lock className="h-6 w-6 text-amber-500" />
                                 </div>
+                                <h2 className="text-lg font-semibold text-white mb-2">Session Time Over</h2>
+                                <p className="text-sm text-gray-400 mb-6">
+                                    Your appointment time is over. Please wait for the doctor's response.
+                                </p>
+
+                                <div className="flex items-center gap-2 mb-6 px-3 py-1.5 bg-gray-800/50 rounded-full">
+                                    <span className="block h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <span className="text-xs font-medium text-gray-300">Waiting for Doctor...</span>
+                                </div>
+
                                 <Button
                                     onClick={() => {
                                         leaveCall();
                                         navigate(-1);
                                     }}
-                                    className="w-full bg-[#00A1B0] hover:bg-[#008f9c] text-white rounded-2xl h-14 font-black uppercase tracking-widest transition-all active:scale-95"
+                                    variant="secondary"
+                                    className="w-full"
                                 >
                                     Back to Dashboard
                                 </Button>
                             </div>
-                        </motion.div>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -875,74 +1015,59 @@ const VideoCallContent: React.FC = () => {
                         animate={{ opacity: 1 }}
                         className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
                     >
-                        <motion.div
-                            initial={{ y: 20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            className="bg-[#1C1F24] rounded-3xl p-8 max-w-md w-full shadow-2xl border border-[#2A2F32]"
-                        >
-                            <div className="flex items-center gap-4 mb-6 text-white">
-                                <div className="h-14 w-14 bg-amber-500/10 rounded-2xl flex items-center justify-center shrink-0">
-                                    <FaEllipsisV className="h-7 w-7 text-amber-500" />
+                        <div className="w-full max-w-md bg-[#1C1F24] border border-gray-800 rounded-lg shadow-xl overflow-hidden">
+                            <div className="p-6">
+                                <div className="flex items-start gap-4 mb-6">
+                                    <div className="h-10 w-10 bg-amber-500/10 rounded-full flex items-center justify-center shrink-0">
+                                        <Clock className="h-5 w-5 text-amber-500" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-white">Session Completed</h2>
+                                        <p className="text-sm text-gray-400">The appointment time has ended. The patient is waiting for you to extend or end the session.</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h2 className="text-xl font-black tracking-tight uppercase">Session Completed</h2>
-                                    <p className="text-xs text-[#8696A0] font-bold uppercase tracking-tight">Manage appointment status</p>
+
+                                <div className="flex gap-3">
+                                    <Button
+                                        onClick={() => updateSessionStatus(SESSION_STATUS.CONTINUED_BY_DOCTOR)}
+                                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                    >
+                                        Extend Session
+                                    </Button>
+                                    <Button
+                                        onClick={() => updateSessionStatus(SESSION_STATUS.ENDED)}
+                                        variant="destructive"
+                                        className="flex-1"
+                                    >
+                                        End Session
+                                    </Button>
                                 </div>
+
+                                {extensionCount > 0 && (
+                                    <p className="mt-4 text-center text-xs text-gray-500">
+                                        Previously extended {extensionCount} times
+                                    </p>
+                                )}
                             </div>
-
-                            <p className="text-[#8696A0] font-medium leading-relaxed mb-8 text-sm bg-[#0B1014] p-4 rounded-2xl border border-[#2A2F32]">
-                                The appointment time has ended. You can choose to continue the session or wind it up. Patient is currently locked out.
-                            </p>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <Button
-                                    onClick={() => updateSessionStatus(SESSION_STATUS.CONTINUED_BY_DOCTOR)}
-                                    className="bg-green-500 hover:bg-green-600 text-white rounded-2xl h-14 font-black uppercase text-xs tracking-widest shadow-lg shadow-green-500/20"
-                                >
-                                    ✅ Continue
-                                </Button>
-                                <Button
-                                    onClick={() => updateSessionStatus(SESSION_STATUS.ENDED)}
-                                    className="bg-red-500 hover:bg-red-600 text-white rounded-2xl h-14 font-black uppercase text-xs tracking-widest shadow-lg shadow-red-500/20"
-                                >
-                                    ❌ Wind Up
-                                </Button>
-                            </div>
-
-                            {extensionCount > 0 && (
-                                <p className="mt-6 text-center text-[10px] text-[#00A1B0] font-black uppercase tracking-tighter">
-                                    Previously Extended {extensionCount} Times
-                                </p>
-                            )}
-                        </motion.div>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
             {/* End Session Confirmation Dialog for Doctor */}
             <Dialog open={endSessionDialogOpen} onOpenChange={setEndSessionDialogOpen}>
-                <DialogContent className="sm:max-w-md bg-[#1C1F24] border-[#2A2F32] text-white p-6">
+                <DialogContent className="sm:max-w-[400px] bg-[#1C1F24] border-gray-800 p-6">
                     <DialogHeader>
-                        <DialogTitle className="text-xl flex items-center gap-2">
-                            🎥 End Video Consultation
-                        </DialogTitle>
-                        <DialogDescription className="text-[#8696A0] mt-1">
-                            Are you sure you want to end this session?
+                        <DialogTitle className="text-lg font-semibold text-white">End Consultation?</DialogTitle>
+                        <DialogDescription className="text-gray-400">
+                            This will end the video call for everyone. You can still access notes and prescriptions later.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="py-4">
-                        <div className="bg-[#2A2F32]/50 p-4 rounded-xl border border-[#2A2F32]">
-                            <p className="text-sm text-gray-300 leading-relaxed">
-                                Ending the session will close the video call for both you and the patient. You can still manage prescriptions and tests from the appointment details page.
-                            </p>
-                        </div>
-                    </div>
-
-                    <DialogFooter className="flex flex-row gap-3">
+                    <DialogFooter className="flex gap-3 sm:justify-end mt-4">
                         <Button
                             variant="ghost"
                             onClick={() => setEndSessionDialogOpen(false)}
-                            className="flex-1 h-12 rounded-xl text-[#8696A0] hover:text-white hover:bg-[#2A2F32]"
+                            className="text-gray-400 hover:text-white hover:bg-white/10"
                         >
                             Cancel
                         </Button>
@@ -951,7 +1076,7 @@ const VideoCallContent: React.FC = () => {
                                 updateSessionStatus(SESSION_STATUS.ENDED);
                                 setEndSessionDialogOpen(false);
                             }}
-                            className="flex-1 h-12 rounded-xl text-white font-bold transition-all shadow-lg bg-red-500 hover:bg-red-600 shadow-red-500/20"
+                            variant="destructive"
                         >
                             End Consultation
                         </Button>

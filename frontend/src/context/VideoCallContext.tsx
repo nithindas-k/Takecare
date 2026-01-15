@@ -23,6 +23,7 @@ interface VideoCallContextType {
     toggleMute: () => void;
     toggleCam: () => void;
     incomingCall: any;
+    connectionState: RTCIceConnectionState;
 }
 
 const VideoCallContext = createContext<VideoCallContextType | undefined>(undefined);
@@ -53,6 +54,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const [name, setName] = useState('');
     const [isMuted, setIsMuted] = useState(false);
     const [isCamOff, setIsCamOff] = useState(false);
+    const [connectionState, setConnectionState] = useState<RTCIceConnectionState>('new');
 
     const myVideo = useRef<HTMLVideoElement>(null);
     const userVideo = useRef<HTMLVideoElement>(null);
@@ -147,6 +149,11 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             }
         };
 
+        peer.oniceconnectionstatechange = () => {
+            console.log("ICE Connection State Change:", peer.iceConnectionState);
+            setConnectionState(peer.iceConnectionState);
+        };
+
 
         peer.onicecandidate = (event) => {
             if (event.candidate) {
@@ -186,15 +193,18 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     const answerCall = async () => {
         setCallAccepted(true);
-        const peer = createPeerConnection(incomingCall.from);
+        const callToAnswer = incomingCall;
+        setIncomingCall(null);
 
-        await peer.setRemoteDescription(new RTCSessionDescription(incomingCall.signal));
+        const peer = createPeerConnection(callToAnswer.from);
+
+        await peer.setRemoteDescription(new RTCSessionDescription(callToAnswer.signal));
         const answer = await peer.createAnswer();
         await peer.setLocalDescription(answer);
 
         socket?.emit("answer-call", {
             signal: answer,
-            to: incomingCall.from
+            to: callToAnswer.from
         });
     };
 
@@ -242,7 +252,8 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             isCamOff,
             toggleMute,
             toggleCam,
-            incomingCall
+            incomingCall,
+            connectionState
         }}>
             {children}
         </VideoCallContext.Provider>

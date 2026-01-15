@@ -198,6 +198,15 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
             isActive: { type: Boolean, default: false },
             expiresAt: { type: Date, default: null }
         },
+        activeCall: {
+            sessionId: { type: Schema.Types.ObjectId, ref: 'CallSession', default: null },
+            status: {
+                type: String,
+                enum: ['ACTIVE', 'PAUSED', 'ENDED', null],
+                default: null
+            },
+            canRejoinUntil: { type: Date, default: null }
+        },
     },
     {
         timestamps: true,

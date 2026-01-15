@@ -40,37 +40,37 @@ export class SocketService {
                 this._io?.emit("user-status", { userId, status: 'online' });
             });
 
-            socket.on("join-chat", (appointmentId: string) => {
-                const roomId = String(appointmentId);
-                socket.join(roomId);
-                console.log(`Socket [${socket.id}] joined room: ${roomId}`);
+            socket.on("join-chat", (roomId: string) => {
+                const room = String(roomId);
+                socket.join(room);
+                console.log(`Socket [${socket.id}] joined room: ${room}`);
             });
 
-            socket.on("leave-chat", (appointmentId: string) => {
-                const roomId = String(appointmentId);
-                socket.leave(roomId);
-                console.log(`Socket [${socket.id}] left room: ${roomId}`);
+            socket.on("leave-chat", (roomId: string) => {
+                const room = String(roomId);
+                socket.leave(room);
+                console.log(`Socket [${socket.id}] left room: ${room}`);
             });
 
-            socket.on("typing", ({ appointmentId, userId }: { appointmentId: string, userId: string }) => {
-                socket.to(appointmentId).emit("user-typing", { userId, isTyping: true });
+            socket.on("typing", ({ id, userId }: { id: string, userId: string }) => {
+                socket.to(id).emit("user-typing", { userId, isTyping: true });
             });
 
-            socket.on("stop-typing", ({ appointmentId, userId }: { appointmentId: string, userId: string }) => {
-                socket.to(appointmentId).emit("user-typing", { userId, isTyping: false });
+            socket.on("stop-typing", ({ id, userId }: { id: string, userId: string }) => {
+                socket.to(id).emit("user-typing", { userId, isTyping: false });
             });
 
-            socket.on("mark-read", ({ appointmentId, userId }: { appointmentId: string, userId: string }) => {
-                socket.to(appointmentId).emit("messages-read", { appointmentId, userId });
+            socket.on("mark-read", ({ id, userId }: { id: string, userId: string }) => {
+                socket.to(id).emit("messages-read", { id, userId });
             });
 
             socket.on("send-message", (data: any) => {
-                const roomId = String(data.appointmentId || "");
+                const roomId = String(data.conversationId || data.appointmentId || "");
                 if (roomId) {
                     console.log(`Socket [${socket.id}] sending message to room ${roomId}`);
                     this._io?.to(roomId).emit("receive-message", data);
                 } else {
-                    console.error("Socket error: send-message received without appointmentId");
+                    console.error("Socket error: send-message received without roomId");
                 }
             });
 

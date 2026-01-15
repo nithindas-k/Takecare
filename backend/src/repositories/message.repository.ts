@@ -12,25 +12,31 @@ export class MessageRepository extends BaseRepository<IMessage> implements IMess
         return await this.model.create(messageData);
     }
 
-    async findByAppointmentId(appointmentId: string): Promise<IMessage[]> {
+    async findByConversationId(conversationId: string, legacyAppointmentIds?: string[]): Promise<IMessage[]> {
+        const conversationObjectId = new Types.ObjectId(conversationId);
+        let query: any = { conversationId: conversationObjectId };
+
+        if (legacyAppointmentIds && legacyAppointmentIds.length > 0) {
+            const legacyObjectIds = legacyAppointmentIds.map(id => new Types.ObjectId(id));
+            query = {
+                $or: [
+                    { conversationId: conversationObjectId },
+                    { appointmentId: { $in: legacyObjectIds } }
+                ]
+            };
+        }
+
         return await this.model
-            .find({ appointmentId })
+            .find(query)
             .sort({ createdAt: 1 })
             .lean() as unknown as IMessage[];
     }
 
-    async findByAppointmentIds(appointmentIds: string[]): Promise<IMessage[]> {
-        return await this.model
-            .find({ appointmentId: { $in: appointmentIds } })
-            .sort({ createdAt: 1 })
-            .lean() as unknown as IMessage[];
-    }
-
-    async markAsRead(appointmentId: string, excludeSenderId: string): Promise<void> {
+    async markAsReadByConversation(conversationId: string, excludeSenderId: string): Promise<void> {
         await this.model.updateMany(
             {
-                appointmentId,
-                senderId: { $ne: excludeSenderId },
+                conversationId: new Types.ObjectId(conversationId),
+                senderId: { $ne: new Types.ObjectId(excludeSenderId) },
                 read: false
             },
             {
@@ -39,41 +45,16 @@ export class MessageRepository extends BaseRepository<IMessage> implements IMess
         );
     }
 
-    async markAsReadByIds(appointmentIds: string[], excludeSenderId: string): Promise<void> {
-        await this.model.updateMany(
-            {
-                appointmentId: { $in: appointmentIds },
-                senderId: { $ne: excludeSenderId },
-                read: false
-            },
-            {
-                $set: { read: true }
-            }
-        );
-    }
-
-    async findLastMessageByAppointmentIds(appointmentIds: string[]): Promise<IMessage | null> {
-        const ids = appointmentIds.map(id => new Types.ObjectId(id));
+    async findLastMessageByConversationId(conversationId: string): Promise<IMessage | null> {
         return await this.model
-            .findOne({ appointmentId: { $in: ids } })
+            .findOne({ conversationId: new Types.ObjectId(conversationId) })
             .sort({ createdAt: -1 })
             .lean() as unknown as IMessage;
     }
 
-    async countUnread(appointmentId: string, excludeSenderId: string): Promise<number> {
-        const id = new Types.ObjectId(appointmentId);
+    async countUnreadByConversation(conversationId: string, excludeSenderId: string): Promise<number> {
         return await this.model.countDocuments({
-            appointmentId: id,
-            senderId: { $ne: new Types.ObjectId(excludeSenderId) },
-            read: false,
-            isDeleted: false
-        });
-    }
-
-    async countUnreadInAppointments(appointmentIds: string[], excludeSenderId: string): Promise<number> {
-        const ids = appointmentIds.map(id => new Types.ObjectId(id));
-        return await this.model.countDocuments({
-            appointmentId: { $in: ids },
+            conversationId: new Types.ObjectId(conversationId),
             senderId: { $ne: new Types.ObjectId(excludeSenderId) },
             read: false,
             isDeleted: false
