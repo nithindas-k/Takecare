@@ -144,8 +144,9 @@ export class DoctorController implements IDoctorController {
       };
 
       const profileImage = req.file;
+      const removeProfileImage = req.body.removeProfileImage === 'true';
 
-      const result = await this._doctorService.updateProfile(userId, dto, profileImage);
+      const result = await this._doctorService.updateProfile(userId, dto, profileImage, removeProfileImage);
 
       sendSuccess(res, result, MESSAGES.PROFILE_UPDATED, STATUS.OK);
     } catch (error: unknown) {

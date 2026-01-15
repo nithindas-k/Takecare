@@ -109,7 +109,8 @@ export class DoctorService implements IDoctorService {
   async updateProfile(
     userId: string,
     data: UpdateDoctorProfileDTO,
-    profileImage?: Express.Multer.File
+    profileImage?: Express.Multer.File,
+    removeProfileImage?: boolean
   ): Promise<any> {
     DoctorValidator.validateProfileUpdate(data);
 
@@ -128,7 +129,12 @@ export class DoctorService implements IDoctorService {
     if (data.phone) userUpdates.phone = data.phone;
     if (data.gender) userUpdates.gender = data.gender;
     if (data.dob) userUpdates.dob = data.dob;
-    if (profileImage) userUpdates.profileImage = profileImage.path;
+
+    if (profileImage) {
+      userUpdates.profileImage = profileImage.path;
+    } else if (removeProfileImage) {
+      userUpdates.profileImage = null;
+    }
 
     if (Object.keys(userUpdates).length > 0) {
       await this._userRepository.updateById(userId, userUpdates);

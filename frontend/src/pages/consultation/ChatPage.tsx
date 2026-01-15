@@ -292,7 +292,7 @@ const ChatPage = () => {
 
     };
 
-    const { socket } = useSocket();
+    const { socket, onlineUsers } = useSocket();
     const user = useSelector(selectCurrentUser);
     const [appointment, setAppointment] = useState<Appointment | null>(null);
     const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -375,6 +375,7 @@ const ChatPage = () => {
     };
 
     const [isOtherTyping, setIsOtherTyping] = useState(false);
+    const [typingRooms, setTypingRooms] = useState<Record<string, boolean>>({});
     const typingTimeoutRef = useRef<number | undefined>(undefined);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -391,7 +392,6 @@ const ChatPage = () => {
     const timerIntervalRef = useRef<number | undefined>(undefined);
 
 
-    const currentRoomRef = useRef<string>("");
 
     // Session Control 
     const [sessionStatus, setSessionStatus] = useState<SessionStatus | "idle">("idle");
@@ -655,8 +655,7 @@ const ChatPage = () => {
                 // 1. Check if this exact ID already exists (Deduplication)
                 if (prev.some(m => String(m.id) === mId)) return prev;
 
-                // 2. Check if we have a temporary message that matches this content/sender (Optimistic replacement)
-                // Only replace if the new message is from 'user' (me)
+            
                 if (senderType === 'user') {
                     const tempIdx = prev.findIndex(m =>
                         String(m.id).startsWith('temp-') &&
@@ -692,6 +691,8 @@ const ChatPage = () => {
             if (typingId === convId && String(typingUserId) !== myUserId) {
                 setIsOtherTyping(isTyping);
             }
+            // Update listing level typing status
+            setTypingRooms(prev => ({ ...prev, [typingId]: isTyping }));
         };
 
         const onRead = ({ id: readId }: { id: string }) => {
@@ -740,14 +741,13 @@ const ChatPage = () => {
 
             setIsLoading(true);
             try {
-                // 1. Resolve Conversation and Context
+
                 const convData = await chatService.getConversation(id);
                 if (!convData) throw new Error("Conversation not found");
 
                 const convId = convData._id || convData.id;
                 setCurrentConversationId(convId);
 
-                // Set lock status and session info
                 setSessionStatus(convData.sessionStatus || (convData.isLocked ? SESSION_STATUS.ENDED : SESSION_STATUS.ACTIVE));
                 if (convData.activeAppointmentId) {
                     setCurrentAppointmentId(convData.activeAppointmentId);
@@ -755,8 +755,6 @@ const ChatPage = () => {
                     setAppointment(appResponse.data);
                 }
 
-                // 2. Identify Other Participant
-                const myUserId = String(user.id || (user as any)._id || "");
                 const isPMe = !isDoctor;
 
                 const otherParty = isPMe ? convData.doctor : convData.patient;
@@ -772,11 +770,10 @@ const ChatPage = () => {
                     name: otherName,
                     specialty: otherParty?.specialty || 'General',
                     avatar: getAvatarUrl(otherAvatarRaw, otherName),
-                    online: true,
+                    online: onlineUsers.includes(otherParty?._id || otherParty?.id || ""),
                     unread: 0
                 });
-
-                // 3. Load History
+            
                 const history = await chatService.getMessages(convId);
                 const uiMessages: Message[] = history.map((m: any) => ({
                     id: m._id || m.id,
@@ -799,7 +796,18 @@ const ChatPage = () => {
         };
 
         if (user) initChatContext();
-    }, [id, user, isDoctor]);
+    }, [id, user, isDoctor, onlineUsers]);
+    
+    useEffect(() => {
+        if (!socket) return;
+        const handleTypingEvent = (data: { id: string, isTyping: boolean }) => {
+            setTypingRooms(prev => ({ ...prev, [data.id]: data.isTyping }));
+        };
+        socket.on('user-typing', handleTypingEvent);
+        return () => {
+            socket.off('user-typing', handleTypingEvent);
+        };
+    }, [socket]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1457,14 +1465,20 @@ const ChatPage = () => {
                                 >
                                     <div className="relative">
                                         <img src={avatarInList} alt="" className="h-12 w-12 rounded-full object-cover bg-slate-100" />
-                                        {conv.isOnline && <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></span>}
+                                        {onlineUsers.includes(otherPartyInList?._id || otherPartyInList?.id || "") && <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></span>}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-start">
                                             <h3 className="text-sm font-bold truncate">{nameInList}</h3>
                                             {conv.lastMessage?.createdAt && <span className="text-[10px] text-slate-400">{new Date(conv.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
                                         </div>
-                                        <p className="text-xs text-slate-500 truncate italic">{conv.lastMessage?.content || 'No messages'}</p>
+                                        <p className="text-xs text-slate-500 truncate italic">
+                                            {typingRooms[conv.conversationId || conv.appointmentId] ? (
+                                                <span className="text-[#00A1B0] font-bold animate-pulse">Typing...</span>
+                                            ) : (
+                                                conv.lastMessage?.content || 'No messages'
+                                            )}
+                                        </p>
                                     </div>
                                 </div>
                             );
@@ -1521,7 +1535,15 @@ const ChatPage = () => {
                                         </div>
                                         <div>
                                             <h2 className="text-sm font-bold text-slate-900 leading-none">{activeChat.name}</h2>
-                                            <p className="text-[11px] text-slate-500 mt-1 uppercase tracking-wider font-bold">{activeChat.online ? 'Online' : 'Offline'} • {activeChat.specialty}</p>
+                                            <div className="flex items-center gap-1.5 mt-1">
+                                                {isOtherTyping ? (
+                                                    <p className="text-[10px] text-[#00A1B0] font-bold uppercase tracking-widest animate-pulse">Typing...</p>
+                                                ) : (
+                                                    <p className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">
+                                                        {activeChat.online ? 'Online' : 'Offline'} • {activeChat.specialty}
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

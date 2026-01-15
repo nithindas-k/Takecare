@@ -25,7 +25,7 @@ export const useSocket = () => {
 
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [socket, setSocket] = useState<Socket | null>(null);
-    const [onlineUsers] = useState<string[]>([]);
+    const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
     const [reminderData, setReminderData] = useState<any>(null);
     const [isReminderOpen, setIsReminderOpen] = useState(false);
     const user = useSelector(selectCurrentUser);
@@ -48,12 +48,28 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 newSocket.emit('join', userId);
             });
 
+            newSocket.on('online-users', (users: string[]) => {
+                setOnlineUsers(users);
+            });
+
+            newSocket.on('user-status', ({ userId: statusUserId, status }: { userId: string, status: 'online' | 'offline' }) => {
+                setOnlineUsers(prev => {
+                    if (status === 'online') {
+                        if (prev.includes(statusUserId)) return prev;
+                        return [...prev, statusUserId];
+                    } else {
+                        return prev.filter(id => id !== statusUserId);
+                    }
+                });
+            });
+
             newSocket.on('connect_error', (err) => {
                 console.error("Socket Connection Error:", err.message);
             });
 
             newSocket.on('disconnect', (reason) => {
                 console.warn("Socket Disconnected:", reason);
+                setOnlineUsers([]);
             });
 
             newSocket.on('appointment-reminder', (data: any) => {

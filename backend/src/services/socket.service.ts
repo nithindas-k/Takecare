@@ -38,6 +38,10 @@ export class SocketService {
                 socket.join(userId);
                 this._onlineUsers.set(userId, socket.id);
                 this._io?.emit("user-status", { userId, status: 'online' });
+
+                // Send current online users list to the user who just joined
+                const onlineUserIds = Array.from(this._onlineUsers.keys());
+                socket.emit("online-users", onlineUserIds);
             });
 
             socket.on("join-chat", (roomId: string) => {

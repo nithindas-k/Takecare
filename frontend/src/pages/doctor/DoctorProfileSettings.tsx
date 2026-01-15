@@ -59,6 +59,7 @@ const DoctorProfileSettings: React.FC = () => {
 
   const [about, setAbout] = useState<string>("");
   const [generating, setGenerating] = useState(false);
+  const [removeImage, setRemoveImage] = useState(false);
 
 
   useEffect(() => {
@@ -144,6 +145,16 @@ const DoctorProfileSettings: React.FC = () => {
       }
       setProfileImage(file);
       setPreviewImage(URL.createObjectURL(file));
+      setRemoveImage(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setProfileImage(null);
+    setPreviewImage(null);
+    setRemoveImage(true);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -185,7 +196,11 @@ const DoctorProfileSettings: React.FC = () => {
       const formData = new FormData();
       formData.append("information", JSON.stringify(information));
       formData.append("additionalInformation", JSON.stringify(additionalInformation));
-      if (profileImage) formData.append("profileImage", profileImage);
+      if (profileImage) {
+        formData.append("profileImage", profileImage);
+      } else if (removeImage) {
+        formData.append("removeProfileImage", "true");
+      }
       const response = await doctorService.updateProfile(formData);
       if (response?.success && response.data) {
         toast.success("Profile updated successfully");
@@ -257,7 +272,9 @@ const DoctorProfileSettings: React.FC = () => {
                   <h3 className="font-semibold mb-2">Profile Image</h3>
                   <div className="flex gap-3 mb-2">
                     <button type="button" onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-primary text-white rounded-lg flex items-center gap-2 text-sm"><FaUpload size={12} /> Upload</button>
-                    {previewImage && (<button type="button" onClick={() => { setProfileImage(null); setPreviewImage(profile?.profileImage || null); }} className="px-4 py-2 text-red-600 border border-red-200 rounded-lg text-sm">Reset</button>)}
+                    {previewImage && (
+                      <button type="button" onClick={handleRemoveImage} className="px-4 py-2 text-red-600 border border-red-200 rounded-lg text-sm hover:bg-red-50">Remove</button>
+                    )}
                   </div>
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
                 </div>
