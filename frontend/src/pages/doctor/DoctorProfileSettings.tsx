@@ -350,7 +350,7 @@ const DoctorProfileSettings: React.FC = () => {
             setImageToCrop(null);
             if (fileInputRef.current) fileInputRef.current.value = "";
           }}
-          aspect={4 / 3}
+          aspect={3 / 4}
         />
       )}
     </div>

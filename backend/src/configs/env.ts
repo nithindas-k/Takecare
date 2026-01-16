@@ -12,7 +12,7 @@ export const env = {
   },
 
   get CLIENT_URL() {
-    return process.env.CLIENT_URL  // "http://localhost:5173"
+    return "http://localhost:5173"  //process.env.CLIENT_URL  
   },
 
   get NODE_ENV() {

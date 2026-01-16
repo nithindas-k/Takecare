@@ -6,6 +6,7 @@ import Footer from '../../components/common/Footer';
 import doctorService from '../../services/doctorService';
 import { toast } from 'sonner';
 import type { DoctorResponseDTO } from '../../types/doctor.types';
+import { SpinnerCustom } from '../../components/ui/spinner';
 
 interface AvailableSlot {
     startTime: string;
@@ -273,9 +274,8 @@ const BookingPage: React.FC = () => {
                             {/* Time Slots Grid */}
                             <div className="px-4">
                                 {loading ? (
-                                    <div className="text-center py-8">
-                                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#00A1B0] mx-auto"></div>
-                                        <p className="text-gray-500 text-sm mt-2">Loading slots...</p>
+                                    <div className="flex flex-col items-center justify-center py-16">
+                                        <SpinnerCustom text="Finding best slots for you..." />
                                     </div>
                                 ) : availableSlots.length === 0 ? (
                                     <div className="text-center py-8">

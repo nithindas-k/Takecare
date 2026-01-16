@@ -8,6 +8,8 @@ import userService from "../../services/userService";
 import { FaUpload, FaCamera } from "react-icons/fa";
 import { toast } from "sonner";
 import { Skeleton } from "../../components/ui/skeleton";
+import ImageCropper from "../../components/common/ImageCropper";
+import { Spinner } from "../../components/ui/spinner";
 
 interface UserProfile {
     name: string;
@@ -34,6 +36,9 @@ const PatientProfileSettings: React.FC = () => {
     const [profileImage, setProfileImage] = useState<File | null>(null);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+    const [showCropper, setShowCropper] = useState(false);
 
     useEffect(() => {
         fetchProfile();
@@ -72,9 +77,22 @@ const PatientProfileSettings: React.FC = () => {
                 toast.error("Image size should be less than 4MB");
                 return;
             }
-            setProfileImage(file);
-            setPreviewImage(URL.createObjectURL(file));
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                setImageToCrop(reader.result as string);
+                setShowCropper(true);
+            };
+            reader.readAsDataURL(file);
         }
+    };
+
+    const onCropComplete = (croppedImageBlob: Blob) => {
+        const file = new File([croppedImageBlob], "profile_patient.jpg", { type: "image/jpeg" });
+        setProfileImage(file);
+        setPreviewImage(URL.createObjectURL(file));
+        setShowCropper(false);
+        setImageToCrop(null);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -219,7 +237,18 @@ const PatientProfileSettings: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        <div className="flex justify-end pt-6 border-t border-gray-100"><button type="submit" disabled={submitting} className="w-auto px-8 bg-[#00A1B0] hover:bg-[#008f9c] text-white rounded-lg py-2.5 font-medium shadow-sm transition-all">{submitting ? "Saving..." : "Save Changes"}</button></div>
+                                        <div className="flex justify-end pt-6 border-t border-gray-100">
+                                            <button type="submit" disabled={submitting} className="w-auto px-8 bg-[#00A1B0] hover:bg-[#008f9c] text-white rounded-lg py-2.5 font-medium shadow-sm transition-all flex items-center justify-center gap-2">
+                                                {submitting ? (
+                                                    <>
+                                                        <Spinner size="sm" className="text-white" />
+                                                        <span>Saving...</span>
+                                                    </>
+                                                ) : (
+                                                    "Save Changes"
+                                                )}
+                                            </button>
+                                        </div>
                                     </form>
                                 </div>
                             </>
@@ -227,6 +256,18 @@ const PatientProfileSettings: React.FC = () => {
                     </div>
                 </section>
             </PatientLayout>
+            {showCropper && imageToCrop && (
+                <ImageCropper
+                    image={imageToCrop}
+                    onCropComplete={onCropComplete}
+                    onCancel={() => {
+                        setShowCropper(false);
+                        setImageToCrop(null);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    aspect={3 / 4}
+                />
+            )}
         </div>
     );
 };
