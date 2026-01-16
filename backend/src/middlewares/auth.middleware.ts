@@ -1,4 +1,4 @@
-import { env } from "configs/env";
+import { env } from "../configs/env";
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { JWTPayload } from "../types/auth.type";
