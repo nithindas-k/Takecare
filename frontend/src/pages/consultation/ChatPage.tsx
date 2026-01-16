@@ -1499,7 +1499,7 @@ const ChatPage = () => {
                                     <Skeleton className="h-3 w-20 bg-slate-100/50" />
                                 </div>
                             </div>
-                        ) : (
+                        ) : (   
                             <>
                                 <div className="flex items-center gap-2 md:gap-4 flex-1">
                                     {/* Back to Appointments (Mobile Only) */}

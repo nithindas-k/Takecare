@@ -260,22 +260,23 @@ const DoctorProfileSettings: React.FC = () => {
           <h2 className="text-2xl font-bold mb-6">Profile Settings</h2>
           <form onSubmit={handleSubmit}>
             <div className="mb-8 p-6 bg-gray-50 rounded-xl border">
-              <div className="flex items-start gap-6">
-                <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left">
+                <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex-shrink-0 border-2 border-white shadow-sm">
                   {previewImage ? (
-                    <img src={previewImage} className="w-full h-full object-cover" />
+                    <img src={previewImage} className="w-full h-full object-cover" alt="Profile preview" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400 text-3xl">Dr</div>
+                    <div className="w-full h-full flex items-center justify-center text-gray-400 text-3xl font-bold">Dr</div>
                   )}
                 </div>
                 <div>
                   <h3 className="font-semibold mb-2">Profile Image</h3>
-                  <div className="flex gap-3 mb-2">
-                    <button type="button" onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-primary text-white rounded-lg flex items-center gap-2 text-sm"><FaUpload size={12} /> Upload</button>
+                  <div className="flex flex-wrap justify-center sm:justify-start gap-3 mb-2">
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-primary text-white rounded-lg flex items-center gap-2 text-sm hover:bg-primary/90 transition-colors"><FaUpload size={12} /> Upload</button>
                     {previewImage && (
-                      <button type="button" onClick={handleRemoveImage} className="px-4 py-2 text-red-600 border border-red-200 rounded-lg text-sm hover:bg-red-50">Remove</button>
+                      <button type="button" onClick={handleRemoveImage} className="px-4 py-2 text-red-600 border border-red-200 rounded-lg text-sm hover:bg-red-50 transition-colors">Remove</button>
                     )}
                   </div>
+                  <p className="text-xs text-gray-500">JPG, PNG or GIF. Max size 4MB.</p>
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
                 </div>
               </div>

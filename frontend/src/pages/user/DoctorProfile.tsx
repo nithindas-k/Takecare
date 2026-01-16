@@ -212,29 +212,32 @@ const DoctorProfile: React.FC = () => {
         ) : doctor ? (
           <>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="w-full md:w-48 h-48 flex-shrink-0">
-                  <img src={getImageUrl(doctor.image)} alt={doctor.name} className="w-full h-full object-cover rounded-lg border border-gray-100 shadow-sm" onError={(e) => { (e.target as HTMLImageElement).src = "/doctor.png"; }} />
+              <div className="flex flex-col md:flex-row gap-8">
+                <div className="w-full md:w-56 h-64 md:h-56 flex-shrink-0 overflow-hidden rounded-xl border border-gray-100 shadow-sm">
+                  <img src={getImageUrl(doctor.image)} alt={doctor.name} className="w-full h-full object-cover transition-transform duration-500 hover:scale-105" onError={(e) => { (e.target as HTMLImageElement).src = "/doctor.png"; }} />
                 </div>
                 <div className="flex-1 flex flex-col justify-center">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-1">{doctor.name}</h2>
-                  <p className="text-gray-500 text-sm mb-2">{Array.isArray(doctor.qualifications) ? doctor.qualifications.join(", ") : doctor.qualifications ?? ""}</p>
-                  <div className="flex items-center gap-2 mb-3"><span className="bg-[#bffff8] text-[#00A1B0] p-1 rounded-full"><FaStar className="w-3 h-3" /></span><span className="text-gray-600 text-sm font-medium">{doctor.speciality}</span></div>
-                  <div className="flex items-center gap-1 mb-4"><div className="flex text-yellow-400 text-xs">{Array.from({ length: 5 }).map((_, i) => (<FaStar key={i} className={i < Math.round(doctor.rating ?? 0) ? "" : "text-gray-300"} />))}</div><span className="text-gray-500 text-sm font-semibold">({doctor.reviews})</span></div>
-                  <div className="flex items-center text-gray-500 text-sm mb-4"><FaMapMarkerAlt className="mr-1 text-gray-400" /><span>{doctor.location}</span></div>
-                  <div className="flex gap-2">{doctor.qualifications && (Array.isArray(doctor.qualifications) ? doctor.qualifications.slice(0, 2) : [doctor.qualifications]).map((q, idx) => (<span key={idx} className="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-md border border-gray-200">{q}</span>))}</div>
+                  <h2 className="text-3xl font-bold text-gray-800 mb-2">{doctor.name}</h2>
+                  <p className="text-[#00A1B0] font-semibold text-sm mb-3">{Array.isArray(doctor.qualifications) ? doctor.qualifications.join(", ") : doctor.qualifications ?? ""}</p>
+                  <div className="flex items-center gap-2 mb-4"><span className="bg-[#bffff8] text-[#00A1B0] px-2 py-1 rounded-full flex items-center gap-1 text-xs font-bold"><FaStar className="w-3 h-3" /> {doctor.speciality}</span></div>
+                  <div className="flex items-center gap-1 mb-4"><div className="flex text-yellow-400 text-xs">{Array.from({ length: 5 }).map((_, i) => (<FaStar key={i} className={i < Math.round(doctor.rating ?? 0) ? "" : "text-gray-300"} />))}</div><span className="text-gray-500 text-sm font-semibold">({doctor.reviews} Reviews)</span></div>
+                  <div className="flex items-center text-gray-500 text-sm mb-4"><FaMapMarkerAlt className="mr-1 text-[#00A1B0]" /><span>{doctor.location}</span></div>
+                  <div className="flex flex-wrap gap-2">{doctor.qualifications && (Array.isArray(doctor.qualifications) ? doctor.qualifications.slice(0, 3) : [doctor.qualifications]).map((q, idx) => (<span key={idx} className="px-3 py-1 bg-gray-50 text-gray-600 text-[10px] uppercase tracking-wider font-bold rounded-md border border-gray-200">{q}</span>))}</div>
                 </div>
-                <div className="w-full md:w-64 flex flex-col justify-between border-l border-gray-100 md:pl-6 pt-4 md:pt-0">
-                  <div className="space-y-3">
-                    <div className="flex items-center text-gray-600 text-sm"><FaRegComment className="mr-2 text-gray-400" /><span>{doctor.reviews ?? 0} Feedback</span></div>
-                    <div className="flex items-center text-gray-600 text-sm"><FaMapMarkerAlt className="mr-2 text-gray-400" /><span>{doctor.location}</span></div>
-                    <div className="flex items-center text-gray-800 font-bold text-sm"><FaMoneyBillWave className="mr-2 text-gray-400" /><span>{doctor.fees ?? doctor.videoFees ?? doctor.chatFees ? `₹${doctor.fees ?? doctor.videoFees ?? doctor.chatFees}` : "Contact"}</span></div>
+                <div className="w-full md:w-64 flex flex-col justify-between border-t md:border-t-0 md:border-l border-gray-100 pt-6 md:pt-0 md:pl-8 mt-6 md:mt-0">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between md:justify-start text-gray-600 text-sm"><span className="flex items-center"><FaRegComment className="mr-2 text-[#00A1B0]" /> Feedback</span><span className="font-bold text-gray-800 md:ml-2">{doctor.reviews ?? 0}</span></div>
+                    <div className="flex items-center justify-between md:justify-start text-gray-600 text-sm"><span className="flex items-center"><FaMapMarkerAlt className="mr-2 text-[#00A1B0]" /> Location</span><span className="font-bold text-gray-800 md:ml-2">{doctor.location}</span></div>
+                    <div className="pt-2 border-t border-gray-50">
+                      <p className="text-xs text-gray-400 mb-1">Consultation Fee</p>
+                      <div className="flex items-center text-[#00A1B0] font-black text-2xl"><FaMoneyBillWave className="mr-2 text-sm" /><span>{doctor.fees ?? doctor.videoFees ?? doctor.chatFees ? `₹${doctor.fees ?? doctor.videoFees ?? doctor.chatFees}` : "Contact"}</span></div>
+                    </div>
                   </div>
-                  <div className="flex gap-2 mt-4 md:mt-0">
-                    <button className="p-2 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50 hover:text-[#00A1B0] transition-colors" title="Send Message"><FaRegComment /></button>
-                    <button className="p-2 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50 hover:text-[#00A1B0] transition-colors"><FaVideo /></button>
+                  <div className="flex gap-3 mt-6">
+                    <button className="flex-1 md:flex-none p-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-[#00A1B0] transition-all flex justify-center" title="Send Message"><FaRegComment /></button>
+                    <button className="flex-1 md:flex-none p-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-[#00A1B0] transition-all flex justify-center"><FaVideo /></button>
                   </div>
-                  <button onClick={handleBooking} className="w-full mt-3 bg-[#00A1B0] hover:bg-[#008f9c] text-white py-2.5 rounded-full font-bold shadow-md transition-all text-sm" disabled={!doctor.available}>{doctor.available ? "Book Appointment" : "Currently Unavailable"}</button>
+                  <button onClick={handleBooking} className="w-full mt-4 bg-[#00A1B0] hover:bg-[#008f9c] text-white py-3.5 rounded-xl font-bold shadow-lg shadow-[#00A1B0]/20 transition-all active:scale-[0.98] text-sm" disabled={!doctor.available}>{doctor.available ? "Book Appointment Now" : "Currently Unavailable"}</button>
                 </div>
               </div>
             </div>
