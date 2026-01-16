@@ -1,4 +1,4 @@
-import type { SubmitVerificationDTO, VerificationStatus, UpdateDoctorProfileDTO, VerificationResponseDTO, VerificationFormDataDTO } from "dtos/doctor.dtos/doctor.dto";
+import type { SubmitVerificationDTO, VerificationStatus, UpdateDoctorProfileDTO, VerificationResponseDTO, VerificationFormDataDTO } from "../../dtos/doctor.dtos/doctor.dto";
 import type { DoctorDashboardStats } from "../../types/appointment.type";
 
 export interface DoctorProfileDTO {

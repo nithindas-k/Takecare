@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { IUserDocument } from "../types/user.type";
 import { JWTPayload } from "../types/auth.type";
-import { env } from "configs/env";
+import { env } from "../configs/env";
 import { JWT_CONFIG } from "../configs/jwt";
 import { AppError, UnauthorizedError } from "../errors/AppError";
 import { HttpStatus, MESSAGES } from "../constants/constants";

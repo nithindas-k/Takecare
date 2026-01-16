@@ -2,15 +2,15 @@ import { Router } from "express";
 import { env } from "../configs/env";
 import passport from "passport";
 import AuthController from "../controllers/auth.controller";
-import { UserRepository } from "repositories/user.repository";
-import { DoctorRepository } from "repositories/doctor.repository";
-import { AuthService } from "services/authService";
-import { OTPService } from "services/otp.service";
+import { UserRepository } from "../repositories/user.repository";
+import { DoctorRepository } from "../repositories/doctor.repository";
+import { AuthService } from "../services/authService";
+import { OTPService } from "../services/otp.service";
 import { AUTH_ROUTES } from "../constants/routes.constants";
 import { AuthValidator } from "../validators/auth.validator";
 import { validate } from "../middlewares/validation.middleware";
 
-import { LoggerService } from "services/logger.service";
+import { LoggerService } from "../services/logger.service";
 
 const userRepository = new UserRepository();
 const doctorRepository = new DoctorRepository();

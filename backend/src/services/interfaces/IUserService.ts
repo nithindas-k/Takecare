@@ -1,4 +1,4 @@
-import { UserResponseDTO, UnifiedUpdateProfileDTO, UnifiedUserProfileResponseDTO } from "dtos/user.dtos/user.dto";
+import { UserResponseDTO, UnifiedUpdateProfileDTO, UnifiedUserProfileResponseDTO } from "../../dtos/user.dtos/user.dto";
 import type { AppointmentListItem } from "../../types/common";
 
 export interface IUserService {

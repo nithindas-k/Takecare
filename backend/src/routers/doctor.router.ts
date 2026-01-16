@@ -4,14 +4,14 @@ import { ScheduleController } from "../controllers/schedule.controller";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireDoctor } from "../middlewares/role.middleware";
 import { upload } from "../middlewares/upload.middleware";
-import { UserRepository } from "repositories/user.repository";
-import { DoctorRepository } from "repositories/doctor.repository";
-import { DoctorService } from "services/doctor.service";
+import { UserRepository } from "../repositories/user.repository";
+import { DoctorRepository } from "../repositories/doctor.repository";
+import { DoctorService } from "../services/doctor.service";
 import { ScheduleRepository } from "../repositories/schedule.repository";
 import { AppointmentRepository } from "../repositories/appointment.repository";
 import { ScheduleService } from "../services/schedule.service";
 
-import { LoggerService } from "services/logger.service";
+import { LoggerService } from "../services/logger.service";
 
 const router = Router();
 
