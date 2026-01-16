@@ -1,4 +1,4 @@
-import { ClientSession } from "mongoose";
+import { ClientSession, Types } from "mongoose";
 import { IWalletService } from "./interfaces/IWalletService";
 import { IWalletRepository } from "../repositories/interfaces/IWalletRepository";
 import { ITransactionDocument } from "../types/wallet.type";
@@ -29,13 +29,13 @@ export class WalletService implements IWalletService {
         return await this._walletRepository.getTransactionsByUserId(userId, skip, limit, filters);
     }
 
-    async addMoney(userId: string, amount: number, description: string, appointmentId?: string, type: string = "Refund", session?: ClientSession | undefined): Promise<void> {
+    async addMoney(userId: string, amount: number, description: string, appointmentId?: string, type: "Consultation Fee" | "Refund" | "Wallet Top-up" = "Refund", session?: ClientSession | undefined): Promise<void> {
         await this._walletRepository.updateBalance(userId, amount, session);
         await this._walletRepository.createTransaction({
-            userId,
-            appointmentId,
+            userId: new Types.ObjectId(userId),
+            appointmentId: appointmentId ? new Types.ObjectId(appointmentId) : undefined,
             amount,
-            type,
+            type: type,
             description,
             status: "completed"
         }, session);
@@ -54,13 +54,13 @@ export class WalletService implements IWalletService {
         }
     }
 
-    async deductMoney(userId: string, amount: number, description: string, appointmentId?: string, type: string = "Consultation Fee", session?: ClientSession | undefined): Promise<void> {
+    async deductMoney(userId: string, amount: number, description: string, appointmentId?: string, type: "Consultation Fee" | "Refund" | "Wallet Top-up" = "Consultation Fee", session?: ClientSession | undefined): Promise<void> {
         await this._walletRepository.updateBalance(userId, -amount, session);
         await this._walletRepository.createTransaction({
-            userId,
-            appointmentId,
+            userId: new Types.ObjectId(userId),
+            appointmentId: appointmentId ? new Types.ObjectId(appointmentId) : undefined,
             amount: -amount,
-            type,
+            type: type,
             description,
             status: "completed"
         }, session);
@@ -82,9 +82,9 @@ export class WalletService implements IWalletService {
     async getAdminEarningsOverview(): Promise<{ revenue: number; commission: number; users: number; bookings: number; trends: { revenue: string; commission: string; users: string; bookings: string } }> {
         const [commission, totalAppointments, patients, doctors] = await Promise.all([
             this._walletRepository.getTotalCommission(),
-            this._appointmentRepository?.countByStatus("completed") || Promise.resolve(0),
-            this._userRepository?.countDocuments?.({ role: "patient" }) || Promise.resolve(0),
-            this._doctorRepository?.findAllActive?.().then((docs) => docs.length) || Promise.resolve(0)
+            this._appointmentRepository ? this._appointmentRepository.countByStatus("completed") : Promise.resolve(0),
+            this._userRepository ? this._userRepository.countDocuments({ role: "patient" }) : Promise.resolve(0),
+            this._doctorRepository ? this._doctorRepository.findAllActive().then((docs) => docs.length) : Promise.resolve(0)
         ]);
 
 

@@ -1,5 +1,5 @@
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
-import { Loader2, WifiOff } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface ReconnectingAlertProps {
     attempts: number;

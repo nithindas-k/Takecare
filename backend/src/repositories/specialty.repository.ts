@@ -6,15 +6,18 @@ export class SpecialtyRepository implements ISpecialtyRepository {
   private model = SpecialtyModel;
 
   async create(data: CreateSpecialtyDTO): Promise<Specialty> {
-    return await this.model.create(data);
+    const doc = await this.model.create(data);
+    return doc.toObject() as Specialty;
   }
 
   async findById(id: string): Promise<Specialty | null> {
-    return await this.model.findById(id);
+    const doc = await this.model.findById(id);
+    return doc ? (doc.toObject() as Specialty) : null;
   }
 
   async findByName(name: string): Promise<Specialty | null> {
-    return await this.model.findOne({ name: new RegExp(`^${name}$`, 'i') });
+    const doc = await this.model.findOne({ name: new RegExp(`^${name}$`, 'i') });
+    return doc ? (doc.toObject() as Specialty) : null;
   }
 
   async findAll(page: number, limit: number, search?: string): Promise<{ specialties: Specialty[], total: number }> {
@@ -30,15 +33,20 @@ export class SpecialtyRepository implements ISpecialtyRepository {
         .find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit),
+        .limit(limit)
+        .exec(),
       this.model.countDocuments(query)
     ]);
 
-    return { specialties, total };
+    return {
+      specialties: specialties.map(s => s.toObject() as Specialty),
+      total
+    };
   }
 
   async updateById(id: string, data: UpdateSpecialtyDTO): Promise<Specialty | null> {
-    return await this.model.findByIdAndUpdate(id, data, { new: true });
+    const doc = await this.model.findByIdAndUpdate(id, data, { new: true });
+    return doc ? (doc.toObject() as Specialty) : null;
   }
 
   async deleteById(id: string): Promise<boolean> {
@@ -51,10 +59,12 @@ export class SpecialtyRepository implements ISpecialtyRepository {
     if (!specialty) return null;
 
     specialty.isActive = !specialty.isActive;
-    return await specialty.save();
+    const saved = await specialty.save();
+    return saved.toObject() as Specialty;
   }
 
   async getActiveSpecialties(): Promise<Specialty[]> {
-    return await this.model.find({ isActive: true }).sort({ name: 1 });
+    const docs = await this.model.find({ isActive: true }).sort({ name: 1 });
+    return docs.map(d => d.toObject() as Specialty);
   }
 }

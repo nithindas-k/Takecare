@@ -19,7 +19,7 @@ const userRepository = new UserRepository();
 const walletRepository = new WalletRepository();
 import { notificationService } from "./notification.router";
 
-const walletService = new WalletService(walletRepository, null, null, null, notificationService);
+const walletService = new WalletService(walletRepository, undefined, undefined, undefined, notificationService);
 
 import { LoggerService } from "../services/logger.service";
 

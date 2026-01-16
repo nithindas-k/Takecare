@@ -12,7 +12,7 @@ export const env = {
   },
 
   get CLIENT_URL() {
-    return  process.env.CLIENT_URL   //"http://localhost:5173" 
+    return "http://localhost:5173" //   process.env.CLIENT_URL  
   },
 
   get NODE_ENV() {
@@ -78,23 +78,23 @@ export const env = {
   },
 
   get CLOUDINARY_CLOUD_NAME() {
-    return process.env.CLOUDINARY_CLOUD_NAME || "dtgsyivqi";
+    return process.env.CLOUDINARY_CLOUD_NAME || "";
   },
 
   get CLOUDINARY_API_KEY() {
-    return process.env.CLOUDINARY_API_KEY || "571465936119372";
+    return process.env.CLOUDINARY_API_KEY || "";
   },
 
   get CLOUDINARY_API_SECRET() {
-    return process.env.CLOUDINARY_API_SECRET || "Sgl7yYchZIpYIl83gni3H86SSwo";
+    return process.env.CLOUDINARY_API_SECRET || "";
   },
 
   get RAZORPAY_API_KEY() {
-    return process.env.RAZORPAY_API_KEY || process.env.RAZORPAY_KEY_ID || "rzp_test_RrS9ZYGEKdBbng";
+    return process.env.RAZORPAY_API_KEY || "";
   },
 
   get RAZORPAY_API_SECRET() {
-    return process.env.RAZORPAY_API_SECRET || process.env.RAZORPAY_KEY_SECRET || "bV5EhCsws3DaYkMDo7t1Fe6q";
+    return process.env.RAZORPAY_SECRET_KEY || "";
   },
 
   get REFRESH_TOKEN_MAX_AGE() {

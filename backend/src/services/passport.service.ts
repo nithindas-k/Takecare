@@ -19,7 +19,7 @@ passport.use(
       ...googleOAuthConfig,
       passReqToCallback: true,
     },
-    async (req: Request, accessToken: string, refreshToken: string, profile: import("passport-google-oauth20").Profile, done: (error: Error | null, user?: IUserDocument) => void) => {
+    async (req: Request, accessToken: string, refreshToken: string, profile: import("passport-google-oauth20").Profile, done: (error: any, user?: any, info?: any) => void) => {
       try {
         const email = profile.emails?.[0]?.value;
         if (!email) {
@@ -72,8 +72,8 @@ passport.use(
   )
 );
 
-passport.serializeUser((user: IUserDocument, done) => done(null, user._id.toString()));
-passport.deserializeUser(async (id: string, done: (error: Error | null, user?: IUserDocument | null) => void) => {
+passport.serializeUser((user: any, done: (err: any, id?: string) => void) => done(null, (user as IUserDocument)._id.toString()));
+passport.deserializeUser(async (id: string, done: (err: any, user?: any) => void) => {
   const user = await userRepository.findById(id);
   done(null, user);
 });

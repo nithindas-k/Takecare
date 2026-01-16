@@ -1,5 +1,4 @@
 
-import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -8,7 +7,6 @@ import {
   FaComments,
   FaCog,
   FaSignOutAlt,
-  FaUserMd,
   FaClock,
   FaCheckCircle,
   FaTimes,

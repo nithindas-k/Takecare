@@ -1,7 +1,9 @@
+import { Types } from "mongoose";
 import { IPrescriptionService, CreatePrescriptionData, PrescriptionResponseDTO } from "./interfaces/IPrescriptionService";
 import { IPrescriptionRepository } from "../repositories/interfaces/IPrescription.repository";
 import { IAppointmentRepository } from "../repositories/interfaces/IAppointmentRepository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
+import { IPrescription } from "../types/prescription.type";
 import { PrescriptionMapper } from "../mappers/prescription.mapper";
 import { AppError } from "../errors/AppError";
 import { HttpStatus, MESSAGES, ROLES, APPOINTMENT_STATUS } from "../constants/constants";
@@ -14,13 +16,13 @@ export class PrescriptionService implements IPrescriptionService {
     ) { }
 
     async createPrescription(userId: string, data: CreatePrescriptionData): Promise<PrescriptionResponseDTO> {
-        
+
         const doctor = await this._doctorRepository.findByUserId(userId);
         if (!doctor) {
             throw new AppError(MESSAGES.DOCTOR_NOT_FOUND, HttpStatus.NOT_FOUND);
         }
 
-        
+
         const appointment = await this._appointmentRepository.findById(data.appointmentId);
         if (!appointment) {
             throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
@@ -51,7 +53,7 @@ export class PrescriptionService implements IPrescriptionService {
             instructions: data.instructions,
             followUpDate: data.followUpDate ? new Date(data.followUpDate) : undefined,
             prescriptionPdfUrl: data.prescriptionPdfUrl,
-            doctorSignature: data.doctorSignature  
+            doctorSignature: data.doctorSignature
         };
 
         const created = await this._prescriptionRepository.create(prescriptionData);
@@ -62,7 +64,12 @@ export class PrescriptionService implements IPrescriptionService {
             });
         }
 
-        return PrescriptionMapper.toResponseDTO(await this._prescriptionRepository.findByAppointmentId(appointment._id.toString()));
+        const savedPrescription = await this._prescriptionRepository.findByAppointmentId(appointment._id.toString());
+        if (!savedPrescription) {
+            throw new AppError("Failed to retrieve created prescription", HttpStatus.INTERNAL_ERROR);
+        }
+
+        return PrescriptionMapper.toResponseDTO(savedPrescription) as PrescriptionResponseDTO;
     }
 
     async getPrescriptionByAppointment(userId: string, role: string, appointmentId: string): Promise<PrescriptionResponseDTO> {
@@ -71,19 +78,26 @@ export class PrescriptionService implements IPrescriptionService {
             throw new AppError("Prescription not found", HttpStatus.NOT_FOUND);
         }
 
-        
+
         if (role === ROLES.PATIENT) {
-        
-            if (prescription.patientId._id.toString() !== userId && prescription.patientId.toString() !== userId) {
+
+            const patientIdStr = (prescription as unknown as PopulatedPrescription).patientId._id.toString();
+            if (patientIdStr !== userId) {
                 throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
             }
         } else if (role === ROLES.DOCTOR) {
             const doctor = await this._doctorRepository.findByUserId(userId);
-            if (!doctor || (prescription.doctorId._id.toString() !== doctor._id.toString() && prescription.doctorId.toString() !== doctor._id.toString())) {
+            const doctorIdStr = (prescription as unknown as PopulatedPrescription).doctorId._id.toString();
+            if (!doctor || doctorIdStr !== doctor._id.toString()) {
                 throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
             }
         }
 
-        return PrescriptionMapper.toResponseDTO(prescription);
+        return PrescriptionMapper.toResponseDTO(prescription) as PrescriptionResponseDTO;
     }
+}
+
+interface PopulatedPrescription extends Omit<IPrescription, 'patientId' | 'doctorId'> {
+    patientId: { _id: Types.ObjectId; name: string; email: string;[key: string]: any };
+    doctorId: { _id: Types.ObjectId; userId: { _id: Types.ObjectId; name: string };[key: string]: any };
 }

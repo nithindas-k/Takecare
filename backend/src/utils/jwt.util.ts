@@ -23,9 +23,9 @@ export const generateAccessToken = (user: IUserDocument, doctorId?: string): str
     ...(doctorId && { doctorId }),
   };
 
-  return jwt.sign(payload, ACCESS_TOKEN_SECRET, {
+  return jwt.sign(payload, ACCESS_TOKEN_SECRET as jwt.Secret, {
     expiresIn: JWT_CONFIG.expiresIn,
-  });
+  } as jwt.SignOptions);
 };
 
 
@@ -42,9 +42,9 @@ export const generateRefreshToken = (user: IUserDocument, doctorId?: string): st
     ...(doctorId && { doctorId }),
   };
 
-  return jwt.sign(payload, REFRESH_TOKEN_SECRET, {
+  return jwt.sign(payload, REFRESH_TOKEN_SECRET as jwt.Secret, {
     expiresIn: JWT_CONFIG.refreshExpiresIn,
-  });
+  } as jwt.SignOptions);
 };
 
 

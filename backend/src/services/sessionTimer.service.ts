@@ -44,7 +44,7 @@ export class SessionTimerService {
             const activeAppointments = await this._appointmentRepository.findAll({
                 status: 'confirmed',
                 sessionStatus: { $in: [SESSION_STATUS.ACTIVE, SESSION_STATUS.CONTINUED_BY_DOCTOR] }
-            }, 0, 1000);
+            } as any, 0, 1000);
 
             const now = new Date();
             const results: SessionTimerCheckResult[] = [];

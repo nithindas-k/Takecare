@@ -167,8 +167,8 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
                 medicines: validMedicines,
                 labTests: validLabTests,
                 instructions: notes,
-                followUpDate: followUpDate || null,
-                doctorSignature: signatureData
+                followUpDate: followUpDate || undefined,
+                doctorSignature: signatureData || ''
             };
 
             const response = await prescriptionService.createPrescription(prescriptionData);

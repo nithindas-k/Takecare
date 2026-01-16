@@ -1,5 +1,5 @@
 import DoctorModel from "../models/doctor.model";
-import { IDoctorDocument, DoctorRequestItem, DoctorRequestDetail } from "../types/doctor.type";
+import { IDoctor, IDoctorDocument, DoctorRequestItem, DoctorRequestDetail } from "../types/doctor.type";
 import { BaseRepository } from "./base.repository";
 import { Types } from "mongoose";
 import { IDoctorRepository } from "./interfaces/IDoctor.repository";
@@ -114,7 +114,7 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
     const docs = await this.model
       .find({ verificationStatus: VerificationStatus.Pending })
       .populate("userId")
-      .lean();
+      .lean() as unknown as PopulatedDoctorRequest[];
 
     const result: DoctorRequestItem[] = [];
     for (let i = 0; i < docs.length; i++) {
@@ -128,7 +128,7 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
       .find({ verificationStatus: VerificationStatus.Pending })
       .populate("userId")
       .sort({ createdAt: -1 })
-      .lean();
+      .lean() as unknown as PopulatedDoctorRequest[];
 
     const result: DoctorRequestItem[] = [];
     for (let i = 0; i < docs.length; i++) {
@@ -177,20 +177,27 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
 
 
 
-  private mapDoctorRequestItem(doc: IDoctorDocument & { userId: IUserDocument }): DoctorRequestItem {
+  private mapDoctorRequestItem(doc: PopulatedDoctorRequest): DoctorRequestItem {
     const user = doc.userId;
     return {
       _id: doc._id,
       userId: user._id,
       name: user.name,
       email: user.email,
-      phone: user.phone,
-      specialty: doc.specialty,
-      experienceYears: doc.experienceYears,
-      verificationStatus: doc.verificationStatus,
-      rejectionReason: doc.rejectionReason,
+      phone: user.phone || "",
+      specialty: doc.specialty || null,
+      experienceYears: doc.experienceYears || null,
+      verificationStatus: doc.verificationStatus || VerificationStatus.Pending,
+      rejectionReason: doc.rejectionReason || null,
       createdAt: doc.createdAt,
-      profileImage: user.profileImage,
+      profileImage: user.profileImage || null,
     };
   }
 }
+
+type PopulatedDoctorRequest = IDoctor & {
+  _id: Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: IUserDocument;
+};

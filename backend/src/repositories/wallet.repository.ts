@@ -106,8 +106,7 @@ export class WalletRepository implements IWalletRepository {
                 .populate('appointmentId', 'customId')
                 .sort({ createdAt: -1 })
                 .skip(skip)
-                .limit(limit)
-                .lean(),
+                .limit(limit),
             TransactionModel.countDocuments(query)
         ]);
         return { transactions, total };
