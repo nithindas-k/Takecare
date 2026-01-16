@@ -19,11 +19,7 @@ const Spinner = React.forwardRef<HTMLDivElement, SpinnerProps>(
                 ref={ref as any}
                 role="status"
                 aria-label="Loading"
-                className={cn(
-                    "animate-spin rounded-full border-2 border-[#00A1B0] border-t-transparent",
-                    sizeClasses[size],
-                    className
-                )}
+                className={cn("size-4 animate-spin", sizeClasses)}
                 {...props}
             />
         );
