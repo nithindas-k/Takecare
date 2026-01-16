@@ -9,6 +9,7 @@ import Button from "../../components/Button";
 import { FaUpload, FaTimes } from "react-icons/fa";
 import { toast } from "sonner";
 import { Skeleton } from "../../components/ui/skeleton";
+import ImageCropper from "../../components/common/ImageCropper";
 
 interface DoctorProfile {
   name: string;
@@ -60,6 +61,8 @@ const DoctorProfileSettings: React.FC = () => {
   const [about, setAbout] = useState<string>("");
   const [generating, setGenerating] = useState(false);
   const [removeImage, setRemoveImage] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+  const [showCropper, setShowCropper] = useState(false);
 
 
   useEffect(() => {
@@ -143,10 +146,23 @@ const DoctorProfileSettings: React.FC = () => {
         toast.error("Image must be under 4MB");
         return;
       }
-      setProfileImage(file);
-      setPreviewImage(URL.createObjectURL(file));
-      setRemoveImage(false);
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImageToCrop(reader.result as string);
+        setShowCropper(true);
+      };
+      reader.readAsDataURL(file);
     }
+  };
+
+  const onCropComplete = (croppedImageBlob: Blob) => {
+    const file = new File([croppedImageBlob], "profile.jpg", { type: "image/jpeg" });
+    setProfileImage(file);
+    setPreviewImage(URL.createObjectURL(file));
+    setRemoveImage(false);
+    setShowCropper(false);
+    setImageToCrop(null);
   };
 
   const handleRemoveImage = () => {
@@ -325,6 +341,18 @@ const DoctorProfileSettings: React.FC = () => {
           </form>
         </div>
       </DoctorLayout>
+      {showCropper && imageToCrop && (
+        <ImageCropper
+          image={imageToCrop}
+          onCropComplete={onCropComplete}
+          onCancel={() => {
+            setShowCropper(false);
+            setImageToCrop(null);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+          }}
+          aspect={4 / 3}
+        />
+      )}
     </div>
   );
 };

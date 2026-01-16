@@ -14,7 +14,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardHeader } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import Cropper from 'react-easy-crop';
-import getCroppedImg from '../../utils/cropImage';
+import { getCroppedImg } from '../../utils/cropImage';
 import {
     Dialog,
     DialogContent,
@@ -655,7 +655,7 @@ const ChatPage = () => {
                 // 1. Check if this exact ID already exists (Deduplication)
                 if (prev.some(m => String(m.id) === mId)) return prev;
 
-            
+
                 if (senderType === 'user') {
                     const tempIdx = prev.findIndex(m =>
                         String(m.id).startsWith('temp-') &&
@@ -773,7 +773,7 @@ const ChatPage = () => {
                     online: onlineUsers.includes(otherParty?._id || otherParty?.id || ""),
                     unread: 0
                 });
-            
+
                 const history = await chatService.getMessages(convId);
                 const uiMessages: Message[] = history.map((m: any) => ({
                     id: m._id || m.id,
@@ -797,7 +797,7 @@ const ChatPage = () => {
 
         if (user) initChatContext();
     }, [id, user, isDoctor, onlineUsers]);
-    
+
     useEffect(() => {
         if (!socket) return;
         const handleTypingEvent = (data: { id: string, isTyping: boolean }) => {
@@ -1499,7 +1499,7 @@ const ChatPage = () => {
                                     <Skeleton className="h-3 w-20 bg-slate-100/50" />
                                 </div>
                             </div>
-                        ) : (   
+                        ) : (
                             <>
                                 <div className="flex items-center gap-2 md:gap-4 flex-1">
                                     {/* Back to Appointments (Mobile Only) */}

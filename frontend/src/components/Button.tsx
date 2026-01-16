@@ -1,4 +1,5 @@
 import React from "react";
+import { Spinner } from "./ui/spinner";
 
 export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "ghost";
@@ -11,13 +12,6 @@ const variants: Record<string, string> = {
   secondary: "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50",
   ghost: "bg-transparent text-[#00A1B0] hover:underline",
 };
-
-const Spinner = () => (
-  <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" aria-hidden>
-    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
-    <path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="4" className="opacity-75" />
-  </svg>
-);
 
 const Button: React.FC<ButtonProps> = ({
   children,
@@ -34,7 +28,7 @@ const Button: React.FC<ButtonProps> = ({
       disabled={isDisabled}
       {...rest}
     >
-      {loading && <Spinner />}
+      {loading && <Spinner size="sm" className="mr-2 text-current" />}
       <span>{children}</span>
     </button>
   );

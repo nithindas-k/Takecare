@@ -17,6 +17,7 @@ import ReviewsList from "../../components/reviews/ReviewsList";
 
 import { API_BASE_URL } from "../../utils/constants";
 import { Skeleton } from "../../components/ui/skeleton";
+import { SpinnerCustom } from "../../components/ui/spinner";
 
 type DoctorDTO = {
   id: string;
@@ -181,7 +182,9 @@ const DoctorProfile: React.FC = () => {
         {loading ? (
           <div className="space-y-8">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col md:flex-row gap-6">
-              <Skeleton className="w-full md:w-48 h-48 rounded-lg" />
+              <div className="w-full md:w-48 h-48 rounded-lg bg-[#00A1B0]/5 flex items-center justify-center">
+                <SpinnerCustom />
+              </div>
               <div className="flex-1 space-y-4 pt-2">
                 <Skeleton className="h-8 w-64" />
                 <Skeleton className="h-4 w-48" />
