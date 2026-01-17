@@ -200,7 +200,7 @@ const PatientDashboard: React.FC = () => {
                                         <div className="relative flex-shrink-0">
                                             <img
                                                 src={getDoctorInfo(upcomingAppointments[0]).image}
-                                                className="w-24 h-24 rounded-2xl object-cover border-4 border-slate-50 shadow-sm"
+                                                className="w-24 h-24 rounded-full aspect-square object-cover border-4 border-slate-50 shadow-sm flex-shrink-0"
                                                 alt="Doctor"
                                                 onError={(e) => { e.currentTarget.src = '/doctor.png'; }}
                                             />
@@ -273,7 +273,7 @@ const PatientDashboard: React.FC = () => {
                                                     <div className="w-11 h-11 rounded-xl bg-slate-50 overflow-hidden border border-slate-100 flex-shrink-0">
                                                         <img
                                                             src={getDoctorInfo(app).image}
-                                                            className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all"
+                                                            className="w-full h-full aspect-square object-cover grayscale-[20%] group-hover:grayscale-0 transition-all"
                                                             alt="Doctor"
                                                             onError={(e) => { e.currentTarget.src = '/doctor.png'; }}
                                                         />

@@ -325,7 +325,7 @@ const DoctorAppointmentDetails: React.FC = () => {
                         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
                             <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
                                 <div className="lg:col-span-5 flex gap-4">
-                                    <img src={normalized.patientImage} alt="Patient" className="w-20 h-20 rounded-full object-cover border-2 border-gray-200" onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/100x100?text=Patient'; }} />
+                                    <img src={normalized.patientImage} alt="Patient" className="w-20 h-20 rounded-full aspect-square object-cover border-2 border-gray-200 flex-shrink-0" onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/100x100?text=Patient'; }} />
                                     <div>
                                         <p className="text-sm text-gray-500 mb-1 font-mono uppercase tracking-wider">#{normalized.customId}</p>
                                         <h3 className="text-xl font-bold text-gray-800">{normalized.patientName}</h3>

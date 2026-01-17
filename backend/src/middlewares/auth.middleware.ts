@@ -30,7 +30,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction):
       token,
       env.ACCESS_TOKEN_SECRET
     ) as JWTPayload;
-  console.log("==========="+decoded.role)
+
     req.user = decoded;
     next();
 

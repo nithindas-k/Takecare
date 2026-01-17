@@ -486,7 +486,7 @@ const AppointmentDetails: React.FC = () => {
                                             <img
                                                 src={normalized.doctorImage}
                                                 alt={normalized.doctorName}
-                                                className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+                                                className="w-20 h-20 rounded-full aspect-square object-cover border-2 border-gray-200 flex-shrink-0"
                                                 onError={(e) => {
                                                     e.currentTarget.src = '/doctor.png';
                                                 }}

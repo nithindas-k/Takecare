@@ -88,6 +88,7 @@ const NotFound: React.FC = () => (
 import { Toaster } from "./components/ui/sonner";
 import userService from "./services/userService";
 import AppointmentReminder from "./components/common/AppointmentReminder";
+import ScrollToTop from "./components/common/ScrollToTop";
 
 
 const App: React.FC = () => {
@@ -130,6 +131,7 @@ const App: React.FC = () => {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Toaster />
 
       <AppointmentReminder />

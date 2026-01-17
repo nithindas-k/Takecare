@@ -329,7 +329,7 @@ const AdminAppointmentDetailsPage: React.FC = () => {
                                 <img
                                   src={doctorUser.profileImage}
                                   alt={doctorUser?.name || "Doctor"}
-                                  className="w-14 h-14 rounded-2xl object-cover border border-gray-200"
+                                  className="w-14 h-14 rounded-full aspect-square object-cover border border-gray-200 flex-shrink-0"
                                 />
                               ) : (
                                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-teal-500 text-white flex items-center justify-center font-bold">
@@ -452,7 +452,7 @@ const AdminAppointmentDetailsPage: React.FC = () => {
                                 <img
                                   src={patientUser.profileImage}
                                   alt={patientUser?.name || "Patient"}
-                                  className="w-14 h-14 rounded-2xl object-cover border border-gray-200"
+                                  className="w-14 h-14 rounded-full aspect-square object-cover border border-gray-200 flex-shrink-0"
                                 />
                               ) : (
                                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 text-white flex items-center justify-center font-bold">

@@ -1,6 +1,7 @@
 
 export class AppointmentMapper {
     static toResponseDTO(apt: any): any {
+        if (!apt) return null;
         let patient = null;
         if (apt.patient) {
             patient = apt.patient;

@@ -146,7 +146,7 @@ export class AppointmentService implements IAppointmentService {
                                 appointmentDate: new Date(appointmentData.appointmentDate)
                             }, session);
 
-                            const populatedAppointment = await this._appointmentRepository.findByIdPopulated(updated!._id.toString());
+                            const populatedAppointment = await this._appointmentRepository.findByIdPopulated(updated!._id.toString(), session);
                             return AppointmentMapper.toResponseDTO(populatedAppointment);
                         }
 
@@ -213,7 +213,7 @@ export class AppointmentService implements IAppointmentService {
                 });
             }
 
-            const populatedAppointment = await this._appointmentRepository.findByIdPopulated(appointment._id.toString());
+            const populatedAppointment = await this._appointmentRepository.findByIdPopulated(appointment._id.toString(), session);
             return AppointmentMapper.toResponseDTO(populatedAppointment);
         });
     }
@@ -544,7 +544,7 @@ export class AppointmentService implements IAppointmentService {
                     });
                 }
 
-                const populated = await this._appointmentRepository.findByIdPopulated(appointmentId);
+                const populated = await this._appointmentRepository.findByIdPopulated(appointmentId, session);
                 return AppointmentMapper.toResponseDTO(populated);
 
             } else {
@@ -585,7 +585,7 @@ export class AppointmentService implements IAppointmentService {
                     rescheduleRequest: null,
                 }, session);
 
-                const populated = await this._appointmentRepository.findByIdPopulated(appointmentId);
+                const populated = await this._appointmentRepository.findByIdPopulated(appointmentId, session);
                 return AppointmentMapper.toResponseDTO(populated);
             }
         });
