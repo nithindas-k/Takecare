@@ -1488,9 +1488,9 @@ const ChatPage = () => {
             </aside>
 
             {/* Main Chat Area */}
-            <div className={`flex-1 flex flex-col min-w-0 bg-[#fafafa] h-full relative ${id === 'default' ? 'chat-doodle-bg' : ''}`}>
+            <div className={`flex-1 flex flex-col min-w-0 bg-[#fafafa] h-full overflow-hidden relative ${id === 'default' ? 'chat-doodle-bg' : ''}`}>
                 {id !== 'default' && (
-                    <header className="sticky top-0 z-30 flex items-center justify-between px-4 md:px-6 py-3 md:py-4 bg-white border-b border-slate-100 min-h-[64px] md:min-h-[73px]">
+                    <header className="flex-none z-30 flex items-center justify-between px-4 md:px-6 py-3 md:py-4 bg-white border-b border-slate-100 min-h-[64px] md:min-h-[73px]">
                         {isLoading ? (
                             <div className="flex items-center gap-4">
                                 <Skeleton className="h-10 w-10 rounded-full bg-slate-200/50" />
@@ -1753,7 +1753,7 @@ const ChatPage = () => {
                             </div>
                         </main>
 
-                        <footer className="sticky bottom-0 z-30 p-4 bg-white border-t border-slate-100">
+                        <footer className="flex-none z-30 p-4 bg-white border-t border-slate-100">
                             {((sessionStatus === SESSION_STATUS.ENDED || (sessionStatus !== "ACTIVE" && sessionStatus !== SESSION_STATUS.CONTINUED_BY_DOCTOR && sessionStatus !== "TEST_NEEDED" && !appointment?.TEST_NEEDED)) && !isPostConsultationWindowOpen) ? (
                                 <div className="max-w-3xl mx-auto py-2">
                                     <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-center justify-center gap-3 text-slate-500">
