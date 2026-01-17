@@ -51,6 +51,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const [incomingCall, setIncomingCall] = useState<any>(null);
     const [callAccepted, setCallAccepted] = useState(false);
     const [callEnded, setCallEnded] = useState(false);
+    const [targetUserId, setTargetUserId] = useState<string | null>(null);
     const [name, setName] = useState('');
     const [isMuted, setIsMuted] = useState(false);
     const [isCamOff, setIsCamOff] = useState(false);
@@ -73,17 +74,25 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }, [socket, me]);
 
     useEffect(() => {
+        let currentStream: MediaStream | null = null;
         navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-            .then((currentStream) => {
-                setStream(currentStream);
+            .then((s) => {
+                currentStream = s;
+                setStream(s);
                 if (myVideo.current) {
-                    myVideo.current.srcObject = currentStream;
+                    myVideo.current.srcObject = s;
                 }
             })
             .catch((err) => {
                 console.error("Failed to get media stream:", err);
                 toast.error("Could not access camera/microphone");
             });
+
+        return () => {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+        };
     }, []);
 
     useEffect(() => {
@@ -178,6 +187,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
 
         const peer = createPeerConnection(id);
+        setTargetUserId(id);
 
         const offer = await peer.createOffer();
         await peer.setLocalDescription(offer);
@@ -212,10 +222,11 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setCallEnded(true);
         if (connectionRef.current) {
             connectionRef.current.close();
+            connectionRef.current = null;
         }
-        const targetId = incomingCall?.from || call?.userToCall;
-        if (targetId) {
-            socket?.emit("end-call", { to: targetId });
+        const tId = incomingCall?.from || targetUserId;
+        if (tId) {
+            socket?.emit("end-call", { to: tId });
         }
 
     };
@@ -259,4 +270,3 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         </VideoCallContext.Provider>
     );
 };
-
