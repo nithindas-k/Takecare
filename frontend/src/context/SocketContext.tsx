@@ -72,13 +72,35 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 setOnlineUsers([]);
             });
 
+            const playNotificationSound = () => {
+                const audio = new Audio('/notificationSound.mp3');
+                audio.play().catch(err => console.debug("Autoplay prevented or error playing sound:", err));
+            };
+
             newSocket.on('appointment-reminder', (data: any) => {
+                playNotificationSound();
                 setReminderData(data);
                 setIsReminderOpen(true);
             });
 
 
             newSocket.on('notification', (notification: any) => {
+                const relevantKeywords = [
+                    'appointment', 'reschedule', 'consultation', 'payment',
+                    'wallet', 'refund', 'earnings', 'confirmed', 'rejected', 'cancelled', 'request'
+                ];
+
+                const titleLower = notification.title?.toLowerCase() || '';
+                const messageLower = notification.message?.toLowerCase() || '';
+
+                const isRelevant = relevantKeywords.some(keyword =>
+                    titleLower.includes(keyword) || messageLower.includes(keyword)
+                );
+
+                if (isRelevant) {
+                    playNotificationSound();
+                }
+
                 const toastOptions = {
                     description: notification.message,
                 };
