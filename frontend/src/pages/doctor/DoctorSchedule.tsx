@@ -216,10 +216,9 @@ const DoctorSchedule: React.FC = () => {
             if (duration <= 0) duration = 30;
 
             const newStartMins = lastEndMins;
-            const newEndMins = lastEndMins + duration;
 
             startTime = toTimeStr(newStartMins);
-            endTime = toTimeStr(newEndMins);
+            endTime = toTimeStr(newStartMins + 15);
         }
 
         const newSlot: TimeSlot = {
@@ -394,6 +393,15 @@ const DoctorSchedule: React.FC = () => {
         if (slotIndex !== -1) {
             const slot = updatedSchedule[dayIndex].slots[slotIndex];
             slot[field] = value;
+
+            // Automatically pre-select end time to be 15 minutes after start time
+            if (field === 'startTime' && value) {
+                const [h, m] = value.split(':').map(Number);
+                const totalMinutes = h * 60 + m + 15;
+                const endH = Math.floor(totalMinutes / 60) % 24;
+                const endM = totalMinutes % 60;
+                slot.endTime = `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
+            }
 
             const daySchedule = updatedSchedule[dayIndex];
             slot.id = `slot-${daySchedule.day}-${slot.startTime}-${slot.endTime}-${slotIndex}`;
@@ -1013,7 +1021,17 @@ const DoctorSchedule: React.FC = () => {
                                             <input
                                                 type="time"
                                                 value={recurringStartTime}
-                                                onChange={(e) => setRecurringStartTime(e.target.value)}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setRecurringStartTime(val);
+                                                    if (val) {
+                                                        const [h, m] = val.split(':').map(Number);
+                                                        const totalMinutes = h * 60 + m + 15;
+                                                        const endH = Math.floor(totalMinutes / 60) % 24;
+                                                        const endM = totalMinutes % 60;
+                                                        setRecurringEndTime(`${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`);
+                                                    }
+                                                }}
                                                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#00A1B0]"
                                             />
                                         </div>
