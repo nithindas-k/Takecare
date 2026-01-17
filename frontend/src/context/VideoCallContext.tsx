@@ -95,6 +95,136 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         };
     }, []);
 
+    const createPeerConnection = useCallback((targetId: string) => {
+        // CLEANUP: Close existing connection if it exists
+        if (connectionRef.current) {
+            console.log("Closing existing peer connection before creating new one");
+            connectionRef.current.close();
+            connectionRef.current = null;
+        }
+
+        const peer = new RTCPeerConnection(ICE_SERVERS);
+
+        if (stream) {
+            console.log("Adding tracks to peer connection from stream:", stream.id);
+            stream.getTracks().forEach(track => peer.addTrack(track, stream));
+        } else {
+            console.warn("createPeerConnection: stream is not available yet!");
+        }
+
+
+        peer.ontrack = (event) => {
+            console.log("Received remote track:", event.streams[0].id);
+            if (userVideo.current) {
+                userVideo.current.srcObject = event.streams[0];
+            }
+        };
+
+        peer.oniceconnectionstatechange = () => {
+            console.log("ICE Connection State Change:", peer.iceConnectionState);
+            setConnectionState(peer.iceConnectionState);
+        };
+
+
+        peer.onicecandidate = (event) => {
+            if (event.candidate) {
+                socket?.emit("ice-candidate", {
+                    to: targetId,
+                    candidate: event.candidate
+                });
+            }
+        };
+
+        connectionRef.current = peer;
+        return peer;
+    }, [stream, socket]);
+
+    const callUser = async (id: string, isRejoin: boolean = false) => {
+        console.log(`Attempting to call user: ${id}${isRejoin ? ' (REJOIN)' : ''}`);
+        setCallEnded(false);
+        setCallAccepted(false);
+
+        if (!socket) {
+            console.error("Cannot call: Socket is not initialized");
+            toast.error("Connection lost. Please refresh.");
+            return;
+        }
+
+        const peer = createPeerConnection(id);
+        setTargetUserId(id);
+
+        const offer = await peer.createOffer();
+        await peer.setLocalDescription(offer);
+
+        console.log("Emitting call-user signal to:", id);
+        socket.emit("call-user", {
+            userToCall: id,
+            signalData: offer,
+            from: me,
+            name: user?.name,
+            isRejoin
+        });
+    };
+
+    const answerCall = useCallback(async (incomingData?: any) => {
+        setCallEnded(false);
+        setCallAccepted(true);
+        // Ensure we don't use React events as call data
+        const isEvent = incomingData && (incomingData.nativeEvent || incomingData.target);
+        const callToAnswer = (incomingData && !isEvent) ? incomingData : incomingCall;
+
+        if (!callToAnswer) {
+            console.error("answerCall: No call data available");
+            return;
+        }
+
+        setIncomingCall(null);
+        setTargetUserId(callToAnswer.from);
+
+        const peer = createPeerConnection(callToAnswer.from);
+
+        await peer.setRemoteDescription(new RTCSessionDescription(callToAnswer.signal));
+        const answer = await peer.createAnswer();
+        await peer.setLocalDescription(answer);
+
+        socket?.emit("answer-call", {
+            signal: answer,
+            to: callToAnswer.from
+        });
+    }, [incomingCall, createPeerConnection, socket]);
+
+    const leaveCall = () => {
+        setCallEnded(true);
+        console.log("leaveCall: Call ended triggered");
+
+        if (connectionRef.current) {
+            console.log("leaveCall: Closing peer connection");
+            connectionRef.current.close();
+            connectionRef.current = null;
+        }
+
+        const tId = incomingCall?.from || targetUserId;
+        console.log("leaveCall: Emitting end-call to:", tId);
+
+        if (tId) {
+            socket?.emit("end-call", { to: tId });
+        }
+    };
+
+    const toggleMute = () => {
+        if (stream) {
+            stream.getAudioTracks().forEach(track => track.enabled = !track.enabled);
+            setIsMuted(!isMuted);
+        }
+    };
+
+    const toggleCam = () => {
+        if (stream) {
+            stream.getVideoTracks().forEach(track => track.enabled = !track.enabled);
+            setIsCamOff(!isCamOff);
+        }
+    };
+
     useEffect(() => {
         if (!socket) return;
 
@@ -102,12 +232,6 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             console.log("Incoming call from:", callerName, "isRejoin:", isRejoin);
             const callData = { isReceivingCall: true, from, name: callerName, signal, isRejoin };
             setIncomingCall(callData);
-
-            // AUTO-ACCEPT Logic for Rejoins
-            if (isRejoin) {
-                console.log("Auto-accepting rejoin call...");
-                answerCall(callData);
-            }
         });
 
         socket.on('call-accepted', async (signal) => {
@@ -148,112 +272,15 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             socket.off('ice-candidate');
             socket.off('call-ended');
         };
-    }, [socket]);
+    }, [socket, answerCall]);
 
-    const createPeerConnection = useCallback((targetId: string) => {
-        const peer = new RTCPeerConnection(ICE_SERVERS);
-
-
-        if (stream) {
-            stream.getTracks().forEach(track => peer.addTrack(track, stream));
+    // Better Rejoin Auto-Answer Logic: Wait for BOTH call data AND stream to be ready
+    useEffect(() => {
+        if (incomingCall?.isRejoin && stream && socket) {
+            console.log("Auto-answering rejoin call (Stream & Socket ready)...");
+            answerCall(incomingCall);
         }
-
-
-        peer.ontrack = (event) => {
-            if (userVideo.current) {
-                userVideo.current.srcObject = event.streams[0];
-            }
-        };
-
-        peer.oniceconnectionstatechange = () => {
-            console.log("ICE Connection State Change:", peer.iceConnectionState);
-            setConnectionState(peer.iceConnectionState);
-        };
-
-
-        peer.onicecandidate = (event) => {
-            if (event.candidate) {
-                socket?.emit("ice-candidate", {
-                    to: targetId,
-                    candidate: event.candidate
-                });
-            }
-        };
-
-        connectionRef.current = peer;
-        return peer;
-    }, [stream, socket]);
-
-    const callUser = async (id: string, isRejoin: boolean = false) => {
-        console.log(`Attempting to call user: ${id}${isRejoin ? ' (REJOIN)' : ''}`);
-
-        if (!socket) {
-            console.error("Cannot call: Socket is not initialized");
-            toast.error("Connection lost. Please refresh.");
-            return;
-        }
-
-        const peer = createPeerConnection(id);
-        setTargetUserId(id);
-
-        const offer = await peer.createOffer();
-        await peer.setLocalDescription(offer);
-
-        console.log("Emitting call-user signal to:", id);
-        socket.emit("call-user", {
-            userToCall: id,
-            signalData: offer,
-            from: me,
-            name: user?.name,
-            isRejoin
-        });
-    };
-
-    const answerCall = async (incomingData?: any) => {
-        setCallAccepted(true);
-        const callToAnswer = incomingData || incomingCall;
-        if (!callToAnswer) return;
-
-        setIncomingCall(null);
-
-        const peer = createPeerConnection(callToAnswer.from);
-
-        await peer.setRemoteDescription(new RTCSessionDescription(callToAnswer.signal));
-        const answer = await peer.createAnswer();
-        await peer.setLocalDescription(answer);
-
-        socket?.emit("answer-call", {
-            signal: answer,
-            to: callToAnswer.from
-        });
-    };
-
-    const leaveCall = () => {
-        setCallEnded(true);
-        if (connectionRef.current) {
-            connectionRef.current.close();
-            connectionRef.current = null;
-        }
-        const tId = incomingCall?.from || targetUserId;
-        if (tId) {
-            socket?.emit("end-call", { to: tId });
-        }
-
-    };
-
-    const toggleMute = () => {
-        if (stream) {
-            stream.getAudioTracks().forEach(track => track.enabled = !track.enabled);
-            setIsMuted(!isMuted);
-        }
-    };
-
-    const toggleCam = () => {
-        if (stream) {
-            stream.getVideoTracks().forEach(track => track.enabled = !track.enabled);
-            setIsCamOff(!isCamOff);
-        }
-    };
+    }, [incomingCall, stream, socket, answerCall]);
 
     return (
         <VideoCallContext.Provider value={{

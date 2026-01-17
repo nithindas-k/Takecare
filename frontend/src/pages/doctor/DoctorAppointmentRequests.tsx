@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import DoctorNavbar from '../../components/Doctor/DoctorNavbar';
 import DoctorLayout from '../../components/Doctor/DoctorLayout';
 import Breadcrumbs from '../../components/common/Breadcrumbs';
-import { FaVideo, FaComments, FaCheck, FaTimes, FaSearch, FaCalendarAlt, FaExclamationCircle } from 'react-icons/fa';
+import { FaVideo, FaComments, FaCheck, FaTimes, FaSearch, FaCalendarAlt, FaExclamationCircle, FaChevronDown } from 'react-icons/fa';
 import { appointmentService } from '../../services/appointmentService';
 import RescheduleModal from '../../components/common/RescheduleModal';
 import { toast } from 'sonner';
@@ -28,11 +28,13 @@ const DoctorAppointmentRequests: React.FC = () => {
     const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
     const [rejectionReason, setRejectionReason] = useState('');
     const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const limit = 10;
 
-
-    useEffect(() => {
-        const fetchRequests = async () => {
-            try {
+    const fetchRequests = useCallback(async (isAppending: boolean = false) => {
+        try {
+            if (!isAppending) {
                 setLoading(true);
                 const cached = sessionStorage.getItem('doctor_requests_cache');
                 if (cached) {
@@ -40,35 +42,42 @@ const DoctorAppointmentRequests: React.FC = () => {
                         const parsed = JSON.parse(cached);
                         if (Array.isArray(parsed)) {
                             setRequests(parsed);
-                            setError('');
-                        } else {
-                            sessionStorage.removeItem('doctor_requests_cache');
                         }
-                    } catch {
+                    } catch (e) {
                         sessionStorage.removeItem('doctor_requests_cache');
                     }
                 }
+            }
 
-                const response = await appointmentService.getDoctorRequests(1, 100);
+            const response = await appointmentService.getDoctorRequests(isAppending ? page : 1, limit);
 
-                if (response?.success) {
-                    const nextRequests = response.data.appointments || [];
+            if (response?.success) {
+                const nextRequests = response.data.appointments || [];
+                if (isAppending) {
+                    setRequests(prev => [...prev, ...nextRequests]);
+                } else {
                     setRequests(nextRequests);
                     sessionStorage.setItem('doctor_requests_cache', JSON.stringify(nextRequests));
-                } else {
-                    throw new Error(response?.message || 'Failed to fetch appointment requests');
                 }
-            } catch (err: any) {
-                console.error('Failed to fetch appointment requests:', err);
-                setError(err?.response?.data?.message || err?.message || 'Failed to fetch appointment requests');
-                toast.error('Failed to load appointment requests');
-            } finally {
-                setLoading(false);
+                if (typeof response?.data?.total === 'number') {
+                    setTotal(response.data.total);
+                }
+                setError('');
+            } else {
+                throw new Error(response?.message || 'Failed to fetch appointment requests');
             }
-        };
-        fetchRequests();
-    }, []);
+        } catch (err: any) {
+            console.error('Failed to fetch appointment requests:', err);
+            setError(err?.response?.data?.message || err?.message || 'Failed to fetch appointment requests');
+            toast.error('Failed to load appointment requests');
+        } finally {
+            setLoading(false);
+        }
+    }, [page, limit]);
 
+    useEffect(() => {
+        fetchRequests(page > 1);
+    }, [fetchRequests, page]);
 
     const filteredRequests = requests.filter((req) =>
         (req?.status === 'pending' || req?.status === 'reschedule_requested') &&
@@ -149,7 +158,6 @@ const DoctorAppointmentRequests: React.FC = () => {
 
             if (response.success) {
                 toast.success('Reschedule request sent to patient!');
-                // Update local state
                 const updatedRequests = requests.map(req =>
                     (req.id === selectedAppointment.id || req._id === selectedAppointment._id) ? { ...req, status: 'reschedule_requested' } : req
                 );
@@ -186,7 +194,7 @@ const DoctorAppointmentRequests: React.FC = () => {
             />
 
             <DoctorLayout>
-                {loading ? (
+                {loading && requests.length === 0 ? (
                     <div className="space-y-6">
                         <Skeleton className="h-28 w-full rounded-xl" />
                         <Skeleton className="h-16 w-full rounded-xl" />
@@ -207,7 +215,7 @@ const DoctorAppointmentRequests: React.FC = () => {
                     <>
                         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
                             <div className="flex items-center justify-between">
-                                <div><p className="text-sm text-gray-600 mb-1">Pending Requests</p><h3 className="text-3xl font-bold text-[#00A1B0]">{filteredRequests.length}</h3></div>
+                                <div><p className="text-sm text-gray-600 mb-1">Total Pending</p><h3 className="text-3xl font-bold text-[#00A1B0]">{total}</h3></div>
                                 <div className="w-16 h-16 bg-blue-50 rounded-xl flex items-center justify-center"><FaVideo className="text-blue-600" size={32} /></div>
                             </div>
                         </div>
@@ -344,6 +352,29 @@ const DoctorAppointmentRequests: React.FC = () => {
                                                 </CardContent>
                                             </Card>
                                         ))}
+                                    </div>
+                                )}
+
+                                {filteredRequests.length > 0 && requests.length < total && (
+                                    <div className="text-center mt-10 mb-4">
+                                        <button
+                                            onClick={() => setPage(p => p + 1)}
+                                            disabled={loading}
+                                            className="group relative inline-flex items-center justify-center px-10 py-3 font-bold text-[#00A1B0] transition-all duration-300 bg-[#D2F1F4] hover:bg-[#b8e9ed] rounded-xl shadow-sm hover:shadow-md focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed overflow-hidden"
+                                        >
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
+                                            {loading ? (
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                                    <span className="tracking-wide text-sm">Fetching More...</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2.5">
+                                                    <span className="tracking-wide text-sm">Load More Requests</span>
+                                                    <FaChevronDown className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-y-1" />
+                                                </div>
+                                            )}
+                                        </button>
                                     </div>
                                 )}
                             </div>

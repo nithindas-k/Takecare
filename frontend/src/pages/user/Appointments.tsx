@@ -99,10 +99,10 @@ const AppointmentCard: React.FC<{ appointment: any; handleViewDetails: (id: stri
 
                 <Button
                     onClick={() => handleViewDetails(appointment.id)}
-                    className="w-full h-10 bg-[#00A1B0]/10 hover:bg-[#00A1B0]/20 text-[#00A1B0] font-bold rounded-xl border-none shadow-none gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    className="w-full h-10 bg-[#D2F1F4] hover:bg-[#b8e9ed] text-[#00A1B0] font-bold rounded-xl border-none shadow-none gap-2.5 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center"
                 >
-                    <FaEye size={14} />
-                    <span>View Full Details</span>
+                    <FaEye className="w-4 h-4" />
+                    <span className="text-sm">View Full Details</span>
                 </Button>
             </CardContent>
         </Card>
@@ -382,9 +382,20 @@ const Appointments: React.FC = () => {
                                 <button
                                     onClick={() => setPage((p) => p + 1)}
                                     disabled={loading}
-                                    className="px-8 py-3 border-2 border-[#00A1B0] text-[#00A1B0] font-semibold rounded-full hover:bg-[#00A1B0] hover:text-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                                    className="group relative inline-flex items-center justify-center px-10 py-3 font-bold text-[#00A1B0] transition-all duration-300 bg-[#D2F1F4] hover:bg-[#b8e9ed] rounded-xl shadow-sm hover:shadow-md focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed overflow-hidden"
                                 >
-                                    {loading ? 'Loading...' : 'Load More'}
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
+                                    {loading ? (
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                            <span className="tracking-wide text-sm">Fetching More...</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2.5">
+                                            <span className="tracking-wide text-sm">Load More Appointments</span>
+                                            <FaChevronDown className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-y-1" />
+                                        </div>
+                                    )}
                                 </button>
                             </div>
                         )}

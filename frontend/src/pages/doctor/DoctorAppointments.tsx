@@ -9,7 +9,7 @@ import { Loader2 } from 'lucide-react';
 import type { PopulatedAppointment } from '../../types/appointment.types';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader } from "../../components/ui/card"
-import { FaCalendarAlt, FaComments, FaEye, FaSearch, FaVideo } from 'react-icons/fa';
+import { FaCalendarAlt, FaComments, FaEye, FaSearch, FaVideo, FaChevronDown } from 'react-icons/fa';
 
 
 
@@ -27,6 +27,9 @@ const DoctorAppointments: React.FC = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
     const [error, setError] = useState('');
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const limit = 10;
 
     const fetchCounts = useCallback(async () => {
         try {
@@ -46,22 +49,27 @@ const DoctorAppointments: React.FC = () => {
         }
     }, []);
 
-    const fetchAppointments = useCallback(async () => {
+    const fetchAppointments = useCallback(async (isAppending: boolean = false) => {
         try {
-            if (!hasLoadedOnce) {
-                setLoading(true);
-            } else {
-                setRefreshing(true);
+            if (!isAppending) {
+                if (!hasLoadedOnce) setLoading(true);
+                else setRefreshing(true);
             }
+
             setError('');
             const status = activeTab === 'upcoming' ? 'confirmed' : activeTab;
-            const response = await appointmentService.getDoctorAppointments(status, 1, 100);
+            const response = await appointmentService.getDoctorAppointments(status, isAppending ? page : 1, limit);
 
             if (response?.success) {
                 const nextAppointments = response.data.appointments || [];
-                setAppointments(nextAppointments);
+                if (isAppending) {
+                    setAppointments(prev => [...prev, ...nextAppointments]);
+                } else {
+                    setAppointments(nextAppointments);
+                }
 
                 if (typeof response?.data?.total === 'number') {
+                    setTotal(response.data.total);
                     setTabCounts((prev) => {
                         if (activeTab === 'upcoming') return { ...prev, upcoming: response.data.total };
                         if (activeTab === 'cancelled') return { ...prev, cancelled: response.data.total };
@@ -80,12 +88,16 @@ const DoctorAppointments: React.FC = () => {
             setRefreshing(false);
             setHasLoadedOnce(true);
         }
-    }, [activeTab, hasLoadedOnce]);
+    }, [activeTab, hasLoadedOnce, page, limit]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [activeTab]);
 
     useEffect(() => {
         fetchCounts();
-        fetchAppointments();
-    }, [fetchCounts, fetchAppointments]);
+        fetchAppointments(page > 1);
+    }, [fetchCounts, fetchAppointments, page]);
 
     const filteredAppointments = appointments.filter(
         (apt) => apt.patientId?.name && apt.patientId.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -291,14 +303,37 @@ const DoctorAppointments: React.FC = () => {
 
                                                     <Button
                                                         onClick={() => handleViewDetails(appointment._id)}
-                                                        className="w-full h-10 bg-[#00A1B0]/10 hover:bg-[#00A1B0]/20 text-[#00A1B0] font-bold rounded-xl border-none shadow-none gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                                        className="w-full h-10 bg-[#D2F1F4] hover:bg-[#b8e9ed] text-[#00A1B0] font-bold rounded-xl border-none shadow-none gap-2.5 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center"
                                                     >
-                                                        <FaEye size={14} />
-                                                        <span>View Details</span>
+                                                        <FaEye className="w-4 h-4" />
+                                                        <span className="text-sm">View Full Details</span>
                                                     </Button>
                                                 </CardContent>
                                             </Card>
                                         ))}
+                                    </div>
+                                )}
+
+                                {filteredAppointments.length > 0 && appointments.length < total && (
+                                    <div className="text-center mt-10 mb-4">
+                                        <button
+                                            onClick={() => setPage(p => p + 1)}
+                                            disabled={loading || refreshing}
+                                            className="group relative inline-flex items-center justify-center px-10 py-3 font-bold text-[#00A1B0] transition-all duration-300 bg-[#D2F1F4] hover:bg-[#b8e9ed] rounded-xl shadow-sm hover:shadow-md focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed overflow-hidden"
+                                        >
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
+                                            {loading || refreshing ? (
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                                    <span className="tracking-wide text-sm">Fetching More...</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2.5">
+                                                    <span className="tracking-wide text-sm">Load More Appointments</span>
+                                                    <FaChevronDown className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-y-1" />
+                                                </div>
+                                            )}
+                                        </button>
                                     </div>
                                 )}
                             </div>

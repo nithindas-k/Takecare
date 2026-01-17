@@ -36,8 +36,8 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items, title, subtitle }) => 
                     {/* Title Section */}
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-4xl font-bold text-white mb-2">{title}</h1>
-                            <p className="text-white/90 text-base">{subtitle}</p>
+                            <h1 className="text-2xl md:text-4xl font-bold text-white mb-2">{title}</h1>
+                            <p className="text-white/90 text-sm md:text-base">{subtitle}</p>
                         </div>
                     </div>
                 </div>

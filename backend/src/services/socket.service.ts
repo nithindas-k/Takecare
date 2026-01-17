@@ -17,8 +17,8 @@ export class SocketService {
 
         this._io.on("connection", (socket: Socket) => {
             // WebRTC  Events
-            socket.on("call-user", ({ userToCall, signalData, from, name }) => {
-                this._io?.to(userToCall).emit("call-user", { signal: signalData, from, name });
+            socket.on("call-user", ({ userToCall, signalData, from, name, isRejoin }) => {
+                this._io?.to(userToCall).emit("call-user", { signal: signalData, from, name, isRejoin });
             });
 
             socket.on("answer-call", (data) => {

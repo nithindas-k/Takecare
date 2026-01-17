@@ -31,7 +31,6 @@ import { Lock, ClipboardList, Clock, StickyNote, Plus, BookOpen, X } from 'lucid
 import { SESSION_STATUS } from '../../utils/constants';
 import { useCallRejoin } from '../../hooks/useCallRejoin';
 import { useAutoSaveNotes } from '../../hooks/useAutoSaveNotes';
-import { RejoinCallBanner } from '../../components/video-call/RejoinCallBanner';
 import { AutoSaveIndicator } from '../../components/video-call/AutoSaveIndicator';
 import { ReconnectingAlert } from '../../components/video-call/ReconnectingAlert';
 
@@ -80,7 +79,6 @@ const VideoCallContent: React.FC = () => {
     const {
         canRejoin,
         isRejoining,
-        expiresInMinutes,
         rejoinCall: handleRejoinCall
     } = useCallRejoin(id);
 
@@ -406,22 +404,7 @@ const VideoCallContent: React.FC = () => {
                 />
             )}
 
-            {/* Rejoin Call Banner - Positioned safely below header */}
-            {canRejoin && !callAccepted && (
-                <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[60] w-full max-w-[90%] md:max-w-2xl px-4 transition-all duration-300">
-                    <RejoinCallBanner
-                        onRejoin={async () => {
-                            const session = await handleRejoinCall();
-                            if (session) {
-                                toast.success('Rejoining call...');
-                                if (targetUserId) callUser(targetUserId, true);
-                            }
-                        }}
-                        expiresIn={expiresInMinutes}
-                        isLoading={isRejoining}
-                    />
-                </div>
-            )}
+            {/* Rejoin Call Banner removed to avoid redundancy with the central lobby button */}
 
             {/* Remote Video - Full Screen Background */}
             <div className="absolute inset-0 bg-[#0B1014]">
@@ -465,7 +448,7 @@ const VideoCallContent: React.FC = () => {
                             Decline
                         </button>
                         <button
-                            onClick={answerCall}
+                            onClick={() => answerCall()}
                             className="flex items-center justify-center p-4 hover:bg-gray-800/50 transition-colors text-emerald-500 font-bold bg-[#1C1F24]"
                         >
                             Accept
