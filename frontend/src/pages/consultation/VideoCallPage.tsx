@@ -414,7 +414,7 @@ const VideoCallContent: React.FC = () => {
                             const session = await handleRejoinCall();
                             if (session) {
                                 toast.success('Rejoining call...');
-                                if (targetUserId) callUser(targetUserId);
+                                if (targetUserId) callUser(targetUserId, true);
                             }
                         }}
                         expiresIn={expiresInMinutes}
@@ -836,7 +836,7 @@ const VideoCallContent: React.FC = () => {
                                             const session = await handleRejoinCall();
                                             if (session) {
                                                 toast.success('Rejoining call...');
-                                                if (targetUserId) callUser(targetUserId);
+                                                if (targetUserId) callUser(targetUserId, true);
                                             }
                                         }}
                                         disabled={isRejoining}

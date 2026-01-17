@@ -13,8 +13,8 @@ interface VideoCallContextType {
     setName: React.Dispatch<React.SetStateAction<string>>;
     call: any;
     me: string;
-    callUser: (id: string) => void;
-    answerCall: () => void;
+    callUser: (id: string, isRejoin?: boolean) => void;
+    answerCall: (incomingData?: any) => void;
     leaveCall: () => void;
     myVideo: React.RefObject<HTMLVideoElement | null>;
     userVideo: React.RefObject<HTMLVideoElement | null>;
@@ -98,9 +98,16 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     useEffect(() => {
         if (!socket) return;
 
-        socket.on('call-user', ({ from, name: callerName, signal }) => {
-            console.log("Incoming call from:", callerName);
-            setIncomingCall({ isReceivingCall: true, from, name: callerName, signal });
+        socket.on('call-user', ({ from, name: callerName, signal, isRejoin }) => {
+            console.log("Incoming call from:", callerName, "isRejoin:", isRejoin);
+            const callData = { isReceivingCall: true, from, name: callerName, signal, isRejoin };
+            setIncomingCall(callData);
+
+            // AUTO-ACCEPT Logic for Rejoins
+            if (isRejoin) {
+                console.log("Auto-accepting rejoin call...");
+                answerCall(callData);
+            }
         });
 
         socket.on('call-accepted', async (signal) => {
@@ -177,8 +184,8 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         return peer;
     }, [stream, socket]);
 
-    const callUser = async (id: string) => {
-        console.log("Attempting to call user:", id);
+    const callUser = async (id: string, isRejoin: boolean = false) => {
+        console.log(`Attempting to call user: ${id}${isRejoin ? ' (REJOIN)' : ''}`);
 
         if (!socket) {
             console.error("Cannot call: Socket is not initialized");
@@ -197,13 +204,16 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             userToCall: id,
             signalData: offer,
             from: me,
-            name: user?.name
+            name: user?.name,
+            isRejoin
         });
     };
 
-    const answerCall = async () => {
+    const answerCall = async (incomingData?: any) => {
         setCallAccepted(true);
-        const callToAnswer = incomingCall;
+        const callToAnswer = incomingData || incomingCall;
+        if (!callToAnswer) return;
+
         setIncomingCall(null);
 
         const peer = createPeerConnection(callToAnswer.from);
