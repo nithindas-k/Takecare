@@ -60,6 +60,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const myVideo = useRef<HTMLVideoElement>(null);
     const userVideo = useRef<HTMLVideoElement>(null);
     const connectionRef = useRef<RTCPeerConnection | null>(null);
+    const iceCandidatesQueue = useRef<RTCIceCandidateInit[]>([]);
 
     const { socket } = useSocket();
     const user = useSelector(selectCurrentUser);
@@ -139,6 +140,22 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         return peer;
     }, [stream, socket]);
 
+    const processIceQueue = useCallback(async () => {
+        if (!connectionRef.current || !connectionRef.current.remoteDescription) return;
+
+        console.log(`Processing ${iceCandidatesQueue.current.length} queued ICE candidates`);
+        while (iceCandidatesQueue.current.length > 0) {
+            const candidate = iceCandidatesQueue.current.shift();
+            if (candidate) {
+                try {
+                    await connectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (e) {
+                    console.error("Error adding queued ice candidate:", e);
+                }
+            }
+        }
+    }, []);
+
     const callUser = async (id: string, isRejoin: boolean = false) => {
         console.log(`Attempting to call user: ${id}${isRejoin ? ' (REJOIN)' : ''}`);
         setCallEnded(false);
@@ -191,7 +208,10 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             signal: answer,
             to: callToAnswer.from
         });
-    }, [incomingCall, createPeerConnection, socket]);
+
+        // Now that remote description is set, process any queued candidates
+        processIceQueue();
+    }, [incomingCall, createPeerConnection, socket, processIceQueue]);
 
     const leaveCall = () => {
         setCallEnded(true);
@@ -235,10 +255,13 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         });
 
         socket.on('call-accepted', async (signal) => {
+            console.log("Call accepted, setting remote description");
             setCallAccepted(true);
             try {
                 if (connectionRef.current) {
                     await connectionRef.current.setRemoteDescription(new RTCSessionDescription(signal));
+                    // Process any candidates that arrived while we were waiting for the answer
+                    processIceQueue();
                 }
             } catch (error) {
                 console.error("Error setting remote description:", error);
@@ -246,12 +269,17 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         });
 
         socket.on('ice-candidate', async (candidate) => {
-            try {
-                if (connectionRef.current && candidate) {
+            if (!candidate) return;
+
+            if (connectionRef.current && connectionRef.current.remoteDescription) {
+                try {
                     await connectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (error) {
+                    console.error("Error adding ice candidate:", error);
                 }
-            } catch (error) {
-                console.error("Error adding ice candidate:", error);
+            } else {
+                console.log("Queuing ICE candidate (PC or RemoteDesc not ready)");
+                iceCandidatesQueue.current.push(candidate);
             }
         });
 

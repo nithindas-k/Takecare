@@ -394,7 +394,7 @@ const DoctorSchedule: React.FC = () => {
             const slot = updatedSchedule[dayIndex].slots[slotIndex];
             slot[field] = value;
 
-            // Automatically pre-select end time to be 15 minutes after start time
+    
             if (field === 'startTime' && value) {
                 const [h, m] = value.split(':').map(Number);
                 const totalMinutes = h * 60 + m + 15;

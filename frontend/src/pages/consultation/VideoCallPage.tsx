@@ -51,7 +51,8 @@ const VideoCallContent: React.FC = () => {
         toggleMute,
         toggleCam,
         incomingCall,
-        connectionState
+        connectionState,
+        stream
     } = useVideoCall();
     const user = useSelector(selectCurrentUser) as any;
     const { socket } = useSocket();
@@ -822,7 +823,7 @@ const VideoCallContent: React.FC = () => {
                                                 if (targetUserId) callUser(targetUserId, true);
                                             }
                                         }}
-                                        disabled={isRejoining}
+                                        disabled={isRejoining || !stream}
                                         className="w-full h-12 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold text-lg"
                                     >
                                         {isRejoining ? (
@@ -830,6 +831,8 @@ const VideoCallContent: React.FC = () => {
                                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                                 Rejoining...
                                             </div>
+                                        ) : !stream ? (
+                                            "Awaiting Camera..."
                                         ) : (
                                             "Rejoin Session"
                                         )}
@@ -837,10 +840,10 @@ const VideoCallContent: React.FC = () => {
                                 ) : (
                                     <Button
                                         onClick={() => targetUserId && callUser(targetUserId)}
-                                        disabled={!targetUserId}
+                                        disabled={!targetUserId || !stream}
                                         className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-lg"
                                     >
-                                        {targetUserId ? 'Start Consultation' : 'Loading...'}
+                                        {!targetUserId ? 'Loading...' : !stream ? 'Awaiting Camera...' : 'Start Consultation'}
                                     </Button>
                                 )}
                             </div>
