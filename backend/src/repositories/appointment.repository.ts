@@ -36,7 +36,10 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
             ? { _id: new Types.ObjectId(appointmentId) }
             : { customId: appointmentId };
 
-        return await this.model.findOne(query).session(session || null).exec();
+        console.log(`[AppointmentRepository] Searching for appointment with query:`, query);
+        const result = await this.model.findOne(query).session(session || null).exec();
+        console.log(`[AppointmentRepository] Search result: ${result ? 'Found' : 'NOT FOUND'}`);
+        return result;
     }
 
 

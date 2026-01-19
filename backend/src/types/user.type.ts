@@ -16,7 +16,7 @@ export interface IUser {
   isActive: boolean;
   createdAt?: Date;
   updatedAt?: Date;
- 
+
 }
 
 export type IUserDocument = IUser & Document<Types.ObjectId>;

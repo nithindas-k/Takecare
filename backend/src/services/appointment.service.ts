@@ -266,6 +266,14 @@ export class AppointmentService implements IAppointmentService {
         };
     }
 
+    async getPatientHistory(patientId: string, ...args: any[]): Promise<any[]> {
+        const result = await this.listAppointments(patientId, ROLES.PATIENT, {
+            page: 1,
+            limit: 1000,
+        });
+        return result.appointments;
+    }
+
     async getAppointmentById(
         appointmentId: string,
         userId: string,

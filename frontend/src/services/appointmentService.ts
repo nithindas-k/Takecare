@@ -42,9 +42,9 @@ export const appointmentService = {
     },
 
 
-    getDoctorAppointments: async (status?: string, page: number = 1, limit: number = 10) => {
+    getDoctorAppointments: async (status?: string, page: number = 1, limit: number = 10, patientId?: string) => {
         const response = await axiosInstance.get(APPOINTMENT_API_ROUTES.DOCTOR_LIST, {
-            params: { status, page, limit },
+            params: { status, page, limit, patientId },
         });
         return response.data;
     },

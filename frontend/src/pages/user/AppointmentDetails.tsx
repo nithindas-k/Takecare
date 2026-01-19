@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import NavBar from '../../components/common/NavBar';
@@ -11,10 +12,12 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { toast } from 'sonner';
 import PrescriptionViewModal from '../../components/Patient/PrescriptionViewModal';
+import RecentAppointmentModal from '../../components/Doctor/RecentAppointmentModal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
 import { Textarea } from '../../components/ui/textarea';
 import type { PopulatedAppointment, Slot } from '../../types/appointment.types';
 import RescheduleModal from '../../components/common/RescheduleModal';
+import { ClipboardList } from 'lucide-react';
 
 
 const AppointmentDetails: React.FC = () => {
@@ -41,6 +44,10 @@ const AppointmentDetails: React.FC = () => {
     const [rejectionReason, setRejectionReason] = useState('');
     const [rejectSubmitting, setRejectSubmitting] = useState(false);
     const [selectedRescheduleId, setSelectedRescheduleId] = useState<string | null>(null);
+
+    const [recentAppointments, setRecentAppointments] = useState<any[]>([]);
+    const [recentAptModalOpen, setRecentAptModalOpen] = useState(false);
+    const [selectedRecentAptId, setSelectedRecentAptId] = useState<string | null>(null);
 
 
     useEffect(() => {
@@ -78,11 +85,26 @@ const AppointmentDetails: React.FC = () => {
             }
         };
 
+        const fetchRecentAppointments = async () => {
+            try {
+                const response = await appointmentService.getMyAppointments(undefined, 1, 5);
+                if (response.success && response.data?.appointments && isMounted) {
+                    // Filter out current appointment
+                    const filtered = response.data.appointments.filter((apt: any) => apt._id !== id);
+                    setRecentAppointments(filtered);
+                }
+            } catch (error) {
+                console.error("Failed to fetch recent appointments", error);
+            }
+        };
+
         fetchAppointment();
+        fetchRecentAppointments();
+
         return () => {
             isMounted = false;
         };
-    }, [id, appointment]);
+    }, [id, appointment]); // appointment dependency might cause loops if not careful, but looks ok as we check lastFetchedId. Ideally remove appointment from dep if possible.
 
 
 
@@ -395,6 +417,11 @@ const AppointmentDetails: React.FC = () => {
         } finally {
             setRejectSubmitting(false);
         }
+    };
+
+    const handleViewRecentDetails = (id: string) => {
+        setSelectedRecentAptId(id);
+        setRecentAptModalOpen(true);
     };
 
     if (loading) {
@@ -839,9 +866,101 @@ const AppointmentDetails: React.FC = () => {
                         </div>
 
                         {/* Recent Appointments Section */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                            <h5 className="text-lg font-bold text-gray-800 mb-4">Recent Appointments</h5>
-                            <p className="text-gray-500 text-sm">No recent appointments to display.</p>
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                                <h5 className="text-lg font-bold text-gray-800">Recent Appointments</h5>
+                            </div>
+                            {recentAppointments.length > 0 ? (
+                                <>
+                                    {/* Desktop Table View */}
+                                    <div className="hidden md:block overflow-x-auto">
+                                        <table className="w-full text-sm text-left">
+                                            <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
+                                                <tr>
+                                                    <th className="px-6 py-3">Date & Time</th>
+                                                    <th className="px-6 py-3">Type</th>
+                                                    <th className="px-6 py-3">Status</th>
+                                                    <th className="px-6 py-3 text-right">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100">
+                                                {recentAppointments.map((apt) => (
+                                                    <tr key={apt._id} className="hover:bg-gray-50/50 transition-colors">
+                                                        <td className="px-6 py-4 font-medium text-gray-900">
+                                                            {new Date(apt.appointmentDate).toLocaleDateString()}
+                                                            <span className="text-gray-400 mx-2">•</span>
+                                                            {apt.appointmentTime}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-gray-600 capitalize">
+                                                            <div className="flex items-center gap-2">
+                                                                {apt.appointmentType === 'video' ? <FaVideo className="text-blue-500" /> : <FaComments className="text-[#00A1B0]" />}
+                                                                {apt.appointmentType}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${getStatusColor(apt.status)}`}>
+                                                                {apt.status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => handleViewRecentDetails(apt._id)}
+                                                                className="h-8 text-xs border-gray-200 hover:bg-gray-100 hover:text-gray-900"
+                                                            >
+                                                                View Details
+                                                            </Button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Mobile Card View */}
+                                    <div className="md:hidden flex flex-col divide-y divide-gray-100">
+                                        {recentAppointments.map((apt) => (
+                                            <div key={apt._id} className="p-4 flex flex-col gap-3">
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <p className="font-semibold text-gray-900 text-sm">
+                                                            {new Date(apt.appointmentDate).toLocaleDateString()}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500 mt-0.5">{apt.appointmentTime}</p>
+                                                    </div>
+                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${getStatusColor(apt.status)}`}>
+                                                        {apt.status}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2 text-xs text-gray-600 capitalize">
+                                                        {apt.appointmentType === 'video' ? <FaVideo className="text-blue-500" /> : <FaComments className="text-[#00A1B0]" />}
+                                                        {apt.appointmentType} Consultation
+                                                    </div>
+
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleViewRecentDetails(apt._id)}
+                                                        className="h-7 text-xs text-[#00A1B0] hover:text-[#008f9c] hover:bg-[#00A1B0]/10 px-2"
+                                                    >
+                                                        Details & Prescription &rarr;
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="p-8 text-center text-gray-500">
+                                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                        <ClipboardList className="w-6 h-6 text-gray-400" />
+                                    </div>
+                                    <p className="font-medium">No recent appointments found</p>
+                                </div>
+                            )}
                         </div>
                     </div >
                 </div >
@@ -928,6 +1047,13 @@ const AppointmentDetails: React.FC = () => {
                 isOpen={prescriptionViewOpen}
                 onClose={() => setPrescriptionViewOpen(false)}
                 appointmentId={(appointment?._id || appointment?.id || id || '') as string}
+            />
+
+            <RecentAppointmentModal
+                isOpen={recentAptModalOpen}
+                onClose={() => setRecentAptModalOpen(false)}
+                appointmentId={selectedRecentAptId}
+                role="patient"
             />
 
             <Dialog open={rejectRescheduleOpen} onOpenChange={setRejectRescheduleOpen}>

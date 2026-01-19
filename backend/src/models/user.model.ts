@@ -21,7 +21,7 @@ const UserSchema = new Schema<IUserDocument>(
     email: {
       type: String,
       required: true,
-      unique: true, 
+      unique: true,
       lowercase: true,
       trim: true,
     },
@@ -29,7 +29,7 @@ const UserSchema = new Schema<IUserDocument>(
       type: String,
       trim: true,
       index: true,
-      sparse: true, 
+      sparse: true,
     },
     passwordHash: {
       type: String,
@@ -56,7 +56,7 @@ const UserSchema = new Schema<IUserDocument>(
     googleId: {
       type: String,
       index: true,
-      sparse: true, 
+      sparse: true,
     },
     isActive: {
       type: Boolean,

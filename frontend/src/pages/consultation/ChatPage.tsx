@@ -1621,7 +1621,7 @@ const ChatPage = () => {
                     </div>
                 ) : (
                     <>
-                        <main className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar chat-doodle-bg scroll-smooth touch-auto relative no-scrollbar" style={{ touchAction: 'auto' }} data-lenis-prevent>
+                        <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 md:p-6 space-y-6 custom-scrollbar chat-doodle-bg scroll-smooth touch-auto relative no-scrollbar" style={{ touchAction: 'auto' }} data-lenis-prevent>
                             <div className="max-w-3xl mx-auto flex flex-col gap-4">
                                 {isLoading ? (
                                     <div className="space-y-6">
@@ -1643,12 +1643,12 @@ const ChatPage = () => {
                                             className={`flex ${msg.type === 'system' ? 'justify-center' : msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                                         >
                                             {msg.type === 'system' ? (
-                                                <div className="my-4 px-6 py-2 bg-slate-100/50 backdrop-blur-sm rounded-full border border-slate-200/40 shadow-sm flex items-center gap-2.5 animate-in fade-in zoom-in duration-300">
-                                                    <div className="h-1.5 w-1.5 bg-[#00A1B0] rounded-full animate-pulse" />
-                                                    <p className="text-[10px] md:text-[11px] font-black text-slate-500 uppercase tracking-[0.15em] shrink-0">
+                                                <div className="my-4 mx-4 px-4 py-2 bg-slate-100/50 backdrop-blur-sm rounded-2xl md:rounded-full border border-slate-200/40 shadow-sm flex items-center justify-center gap-2.5 animate-in fade-in zoom-in duration-300 max-w-[calc(100%-2rem)]">
+                                                    <div className="h-1.5 w-1.5 bg-[#00A1B0] rounded-full animate-pulse shrink-0" />
+                                                    <p className="text-[10px] md:text-[11px] font-black text-slate-500 uppercase tracking-[0.1em] text-center break-words whitespace-normal leading-relaxed">
                                                         {msg.text}
                                                     </p>
-                                                    <div className="h-1.5 w-1.5 bg-[#00A1B0] rounded-full animate-pulse" />
+                                                    <div className="h-1.5 w-1.5 bg-[#00A1B0] rounded-full animate-pulse shrink-0" />
                                                 </div>
                                             ) : (
                                                 <div className={`flex flex-col gap-1 max-w-[80%] ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
