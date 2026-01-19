@@ -197,7 +197,6 @@ export class DoctorController implements IDoctorController {
       const result = await this._doctorService.getRelatedDoctors(doctorId);
 
       sendSuccess(res, result, MESSAGES.DOCTOR_FETCHED, STATUS.OK);
-      sendSuccess(res, result, MESSAGES.DOCTOR_FETCHED, STATUS.OK);
     } catch (error: unknown) {
       return next(error);
     }
