@@ -21,4 +21,7 @@ export interface IAppointmentController {
 
 
     getAllAppointments(req: Request, res: Response, next: NextFunction): Promise<void>;
+    enablePostConsultationChat(req: Request, res: Response, next: NextFunction): Promise<void>;
+    disablePostConsultationChat(req: Request, res: Response, next: NextFunction): Promise<void>;
+    updateDoctorNotes(req: Request, res: Response, next: NextFunction): Promise<void>;
 }

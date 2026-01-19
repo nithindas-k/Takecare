@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { IAppointmentController } from "./interfaces/IAppointment.controller";
-import { IAppointmentService } from "../services/interfaces/IAppointmentService";
+import { IAppointmentService } from "services/interfaces/IAppointmentService";
 import { sendSuccess } from "../utils/response.util";
 import { AppError } from "../errors/AppError";
 import { MESSAGES, HttpStatus, PAGINATION, ROLES, APPOINTMENT_STATUS } from "../constants/constants";
