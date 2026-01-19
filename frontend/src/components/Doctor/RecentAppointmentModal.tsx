@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import { Dialog, DialogContent } from '../ui/dialog';
 import { Button } from '../ui/button';
-import { Loader2, Calendar, Clock, FileText, Pill, Video, MessageSquare, X, User, DollarSign } from 'lucide-react';
+import { Loader2, Calendar, Clock, FileText, Pill, Video, MessageSquare, X, User } from 'lucide-react';
 import { appointmentService } from '../../services/appointmentService';
 import { prescriptionService } from '../../services/prescriptionService';
 import { toast } from 'sonner';
