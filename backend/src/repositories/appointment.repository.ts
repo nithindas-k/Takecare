@@ -32,10 +32,11 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
     }
 
     async findById(appointmentId: string, session?: ClientSession | undefined): Promise<IAppointmentDocument | null> {
-        if (!Types.ObjectId.isValid(appointmentId)) {
-            return null;
-        }
-        return await super.findById(appointmentId, session);
+        const query = Types.ObjectId.isValid(appointmentId)
+            ? { _id: new Types.ObjectId(appointmentId) }
+            : { customId: appointmentId };
+
+        return await this.model.findOne(query).session(session || null).exec();
     }
 
 

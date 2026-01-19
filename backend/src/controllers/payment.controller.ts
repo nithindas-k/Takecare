@@ -14,7 +14,7 @@ export class PaymentController implements IPaymentController {
             if (!patientId) {
                 throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
             }
-
+            console.log(`[PaymentController] Creating Razorpay order for patient: ${patientId}`, req.body);
             const result = await this._paymentService.createRazorpayOrder(patientId, req.body);
             sendSuccess(res, result, undefined, HttpStatus.CREATED);
         } catch (err: unknown) {
