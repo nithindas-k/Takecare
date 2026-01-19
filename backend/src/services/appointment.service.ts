@@ -889,21 +889,12 @@ export class AppointmentService implements IAppointmentService {
                 sessionStartTime: new Date()
             });
 
-            if (appointment.appointmentType === 'chat' && this._chatService) {
-                const patient = await this._userRepository.findById(appointment.patientId.toString());
-                const patientName = patient?.name || 'Patient';
+            if (this._chatService) {
+                const messageContent = appointment.appointmentType === 'chat'
+                    ? `Doctor has started the chat consultation.`
+                    : `Doctor has started the video consultation.`;
 
-                const messageContent = `Hello ${patientName}, shall we start?`;
-
-                const message = await this._chatService.saveMessage(
-                    appointmentId,
-                    doctor._id.toString(),
-                    'Doctor',
-                    messageContent,
-                    'text'
-                );
-
-                socketService.emitMessage(appointment._id.toString(), message);
+                await this._chatService.sendSystemMessage(appointmentId, messageContent);
             }
         }
     }
@@ -974,7 +965,7 @@ export class AppointmentService implements IAppointmentService {
         if (this._chatService) {
             let messageContent = "";
             if (status === SESSION_STATUS.ACTIVE) {
-                messageContent = "The doctor has started the session.";
+                messageContent = "Doctor has started the consultation.";
             } else if (status === SESSION_STATUS.CONTINUED_BY_DOCTOR) {
                 messageContent = `The doctor has extended the session. (Extension #${updateData.extensionCount})`;
             } else if (status === SESSION_STATUS.ENDED) {
@@ -982,20 +973,7 @@ export class AppointmentService implements IAppointmentService {
             }
 
             if (messageContent) {
-                const docId = appointment.doctorId.toString();
-                const patientId = appointment.patientId.toString();
-
-                const message = await this._chatService.saveMessage(
-                    appointmentId,
-                    docId,
-                    'Doctor',
-                    messageContent,
-                    'system'
-                );
-
-                if (pUserId) socketService.emitToUser(pUserId, "receive-message", message);
-                if (dUserId) socketService.emitToUser(dUserId, "receive-message", message);
-                socketService.emitMessage(appointmentId, message);
+                await this._chatService.sendSystemMessage(appointmentId, messageContent);
             }
         }
 
@@ -1020,7 +998,6 @@ export class AppointmentService implements IAppointmentService {
             throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-
         if (appointment.status !== APPOINTMENT_STATUS.COMPLETED) {
             throw new AppError("Chat can only be enabled for completed appointments", HttpStatus.BAD_REQUEST);
         }
@@ -1038,65 +1015,33 @@ export class AppointmentService implements IAppointmentService {
         });
 
         if (this._chatService) {
-            const doctor = await this._doctorRepository.findById(doctorId);
-            const ptId = (appointment.patientId as any)?._id?.toString() || (appointment.patientId as any)?.toString();
-            const patient = await this._userRepository.findById(ptId);
+            const patient = await this._userRepository.findById((appointment.patientId as any)?._id?.toString() || (appointment.patientId as any)?.toString());
             const patientName = patient?.name || 'Patient';
-
             const messageContent = `Hello ${patientName}, you have 24 hours to proceed with your test results. The chat is now open for you.`;
 
-            const realAptId = (appointment as any)._id?.toString() || (appointment as any).id;
-            const patientId = (appointment.patientId as any)?._id?.toString() || (appointment.patientId as any)?.toString();
-            const docId = (appointment.doctorId as any)?._id?.toString() || (appointment.doctorId as any)?.toString();
-            const persistentRoomId = `persistent-${patientId}-${docId}`;
-
-            const message = await this._chatService.saveMessage(
-                realAptId,
-                doctorId,
-                'Doctor',
-                messageContent,
-                'text'
-            );
-
-            const patientUserId = patient?._id?.toString() || ptId;
-            const populatedDoctor = await this._doctorRepository.findById(doctorId);
-            const doctorUserId = populatedDoctor?.userId?.toString();
-
-            const messagePayload = {
-                ...message.toObject(),
-                id: (message as any)._id.toString(),
-                persistentRoomId
-            };
-
-            if (patientUserId) socketService.emitToUser(patientUserId, "receive-message", messagePayload);
-            if (doctorUserId) socketService.emitToUser(doctorUserId, "receive-message", messagePayload);
-            socketService.emitMessage(realAptId, messagePayload);
-            if (persistentRoomId) socketService.emitToRoom(persistentRoomId, "receive-message", messagePayload);
-
-            const statusUpdate = {
-                appointmentId: realAptId,
-                customId: appointment.customId,
-                status: SESSION_STATUS.TEST_NEEDED,
-                TEST_NEEDED: true,
-                postConsultationChatWindow: {
-                    isActive: true,
-                    expiresAt
-                }
-            };
-
-            const patientData = appointment.patientId as any;
-            const doctorData = appointment.doctorId as any;
-
-            const pUserId = patientData?.userId?._id?.toString() || patientData?.userId?.toString() || patientData?._id?.toString() || patientData?.toString();
-            const dUserId = doctorData?.userId?._id?.toString() || doctorData?.userId?.toString() || doctorData?._id?.toString() || doctorData?.toString();
-
-            socketService.emitToRoom(realAptId, "session-status-updated", statusUpdate);
-
-            if (persistentRoomId) socketService.emitToRoom(persistentRoomId, "session-status-updated", statusUpdate);
-
-            if (pUserId) socketService.emitToUser(pUserId, "session-status-updated", statusUpdate);
-            if (dUserId) socketService.emitToUser(dUserId, "session-status-updated", statusUpdate);
+            await this._chatService.sendSystemMessage(appointmentId, messageContent);
         }
+
+        // Emit status update
+        const statusUpdate = {
+            appointmentId,
+            customId: appointment.customId,
+            status: SESSION_STATUS.TEST_NEEDED,
+            TEST_NEEDED: true,
+            postConsultationChatWindow: {
+                isActive: true,
+                expiresAt
+            }
+        };
+
+        const patientData = appointment.patientId as any;
+        const doctorData = appointment.doctorId as any;
+        const pUserId = patientData?.userId?._id?.toString() || patientData?.userId?.toString() || patientData?._id?.toString() || patientData?.toString();
+        const dUserId = doctorData?.userId?._id?.toString() || doctorData?.userId?.toString() || doctorData?._id?.toString() || doctorData?.toString();
+
+        socketService.emitToRoom(appointmentId, "session-status-updated", statusUpdate);
+        if (pUserId) socketService.emitToUser(pUserId, "session-status-updated", statusUpdate);
+        if (dUserId) socketService.emitToUser(dUserId, "session-status-updated", statusUpdate);
     }
 
     async disablePostConsultationChat(appointmentId: string, doctorUserId: string): Promise<void> {
@@ -1122,59 +1067,30 @@ export class AppointmentService implements IAppointmentService {
         });
 
         if (this._chatService) {
-            const ptId = (appointment.patientId as any)?._id?.toString() || (appointment.patientId as any)?.toString();
-            const patient = await this._userRepository.findById(ptId);
-            const patientName = patient?.name || 'Patient';
-
-            const messageContent = `Hello ${patientName}, the doctor has closed this chat session.`;
-
-            const realAptId = (appointment as any)._id?.toString() || (appointment as any).id;
-            const persistentRoomId = `persistent-${(appointment.patientId as any)?._id?.toString() || appointment.patientId.toString()}-${doctorId}`;
-
-            const message = await this._chatService.saveMessage(
-                realAptId,
-                doctorId,
-                'Doctor',
-                messageContent,
-                'text'
-            );
-
-            const patientUserId = patient?._id?.toString() || appointment.patientId.toString();
-            const populatedDoctor = await this._doctorRepository.findById(doctorId);
-            const doctorUserId = populatedDoctor?.userId?.toString();
-
-            if (patientUserId) socketService.emitToUser(patientUserId, "receive-message", message);
-            if (doctorUserId) socketService.emitToUser(doctorUserId, "receive-message", message);
-            socketService.emitMessage(realAptId, message);
-
-            const statusUpdate = {
-                appointmentId: realAptId,
-                status: SESSION_STATUS.ENDED,
-                TEST_NEEDED: false,
-                postConsultationChatWindow: {
-                    isActive: false,
-                    expiresAt: appointment.postConsultationChatWindow?.expiresAt
-                }
-            };
-
-            const patientData = appointment.patientId as any;
-            const doctorData = appointment.doctorId as any;
-
-            const pUserId = patientData?.userId?._id?.toString() || patientData?.userId?.toString() || patientData?._id?.toString() || patientData?.toString();
-            const dUserId = doctorData?.userId?._id?.toString() || doctorData?.userId?.toString() || doctorData?._id?.toString() || doctorData?.toString();
-
-            socketService.emitToRoom(realAptId, "session-status-updated", statusUpdate);
-            if (pUserId) socketService.emitToUser(pUserId, "session-status-updated", statusUpdate);
-            if (dUserId) socketService.emitToUser(dUserId, "session-status-updated", statusUpdate);
-
-            await this._appointmentRepository.updateById(realAptId, {
-                sessionStatus: SESSION_STATUS.ENDED
-            });
-
-            socketService.emitToRoom(realAptId, "session-ended", { appointmentId: realAptId });
-            if (pUserId) socketService.emitToUser(pUserId, "session-ended", { appointmentId: realAptId });
-            if (dUserId) socketService.emitToUser(dUserId, "session-ended", { appointmentId: realAptId });
+            const messageContent = `The doctor has concluded the follow-up chat session.`;
+            await this._chatService.sendSystemMessage(appointmentId, messageContent);
         }
+
+        const statusUpdate = {
+            appointmentId,
+            status: SESSION_STATUS.ENDED,
+            TEST_NEEDED: false,
+            postConsultationChatWindow: {
+                isActive: false,
+                expiresAt: new Date()
+            }
+        };
+
+        const patientData = appointment.patientId as any;
+        const doctorData = appointment.doctorId as any;
+        const pUserId = patientData?.userId?._id?.toString() || patientData?.userId?.toString() || patientData?._id?.toString() || patientData?.toString();
+        const dUserId = doctorData?.userId?._id?.toString() || doctorData?.userId?.toString() || doctorData?._id?.toString() || doctorData?.toString();
+
+        socketService.emitToRoom(appointmentId, "session-status-updated", statusUpdate);
+        if (pUserId) socketService.emitToUser(pUserId, "session-status-updated", statusUpdate);
+        if (dUserId) socketService.emitToUser(dUserId, "session-status-updated", statusUpdate);
+
+        socketService.emitToRoom(appointmentId, "session-ended", { appointmentId });
     }
 
     async updateDoctorNotes(appointmentId: string, doctorUserId: string, note: any): Promise<void> {
@@ -1182,25 +1098,16 @@ export class AppointmentService implements IAppointmentService {
 
         const appointment = await this._appointmentRepository.findById(appointmentId);
         if (!appointment) {
-            this._logger.warn("Appointment not found for note update", { appointmentId });
             throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
         }
 
         const doctorId = await this._requireDoctorIdByUserId(doctorUserId);
         if (appointment.doctorId.toString() !== doctorId) {
-            this._logger.warn("Unauthorized attempt to update notes", { appointmentId, doctorUserId });
             throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        const result = await this._appointmentRepository.updateById(appointmentId, {
+        await this._appointmentRepository.updateById(appointmentId, {
             $push: { doctorNotes: note }
         } as any);
-
-        if (!result) {
-            this._logger.error("Failed to update doctor notes in database", { appointmentId });
-            throw new AppError("Failed to update notes", HttpStatus.INTERNAL_ERROR);
-        }
-
-        this._logger.info("Doctor notes updated successfully", { appointmentId });
     }
 }

@@ -37,6 +37,12 @@ export class ChatService implements IChatService {
         const dId = appointment.doctorId.toString();
 
         const conv = await this._conversationRepository.findOrCreate([pId, dId], ['User', 'Doctor']);
+
+        // Ensure the conversation is tied to this appointment
+        if (conv._id) {
+            await this._conversationRepository.updateActiveAppointment(conv._id.toString(), appointmentId);
+        }
+
         return conv;
     }
 
@@ -205,16 +211,16 @@ export class ChatService implements IChatService {
 
         if (!conversation) throw new AppError('Conversation not found', HttpStatus.NOT_FOUND);
 
-        
+
         const pId = conversation.participants.find((p: any, i: any) => conversation.participantModels[i] === 'User')?.toString();
         const dId = conversation.participants.find((p: any, i: any) => conversation.participantModels[i] === 'Doctor')?.toString();
 
         const { appointments } = await this._appointmentRepository.findAll({ patientId: pId, doctorId: dId }, 0, 100);
 
-   
+
         const activeApt = appointments.find(apt => this._isSessionActive(apt)) || appointments[0];
 
-     
+
         let patientDetails: any = null;
         let doctorDetails: any = null;
 
@@ -222,7 +228,7 @@ export class ChatService implements IChatService {
             patientDetails = activeApt.patientId;
             doctorDetails = activeApt.doctorId;
         } else {
-           
+
             if (dId) doctorDetails = await this._doctorRepository.getDoctorRequestDetailById(dId);
             if (pId) {
                 const pApts = await this._appointmentRepository.findAll({ patientId: pId }, 0, 1);
@@ -363,5 +369,48 @@ export class ChatService implements IChatService {
             conversationId: updated.conversationId.toString()
         });
         return updated;
+    }
+
+    async sendSystemMessage(appointmentId: string, content: string): Promise<IMessage> {
+        const appointment = await this._appointmentRepository.findById(appointmentId);
+        if (!appointment) throw new AppError('Appointment not found', HttpStatus.NOT_FOUND);
+
+        const conversation = await this._getConversationForAppointment(appointmentId);
+        if (!conversation) throw new AppError('Conversation could not be created', HttpStatus.INTERNAL_ERROR);
+
+        const conversationId = (conversation._id as any).toString();
+
+        const drId = appointment.doctorId.toString();
+        const ptId = (appointment.patientId as any)?._id?.toString() || (appointment.patientId as any)?.toString();
+
+        const doctor = await this._doctorRepository.findById(drId);
+        const drUserId = doctor?.userId?.toString();
+
+        const message = await this.saveMessage(
+            conversationId,
+            drId,
+            'Doctor',
+            content,
+            'system',
+            undefined,
+            appointmentId
+        );
+
+        const messagePayload = {
+            ...message.toObject(),
+            id: (message._id as any).toString(),
+            conversationId,
+            appointmentId
+        };
+
+        // Real-time Broadcasting
+        socketService.emitMessage(appointmentId, messagePayload);
+        socketService.emitToRoom(conversationId, "receive-message", messagePayload);
+
+        // Also direct emit to user IDs if they are known (redundant but safe)
+        if (ptId) socketService.emitToUser(ptId, "receive-message", messagePayload);
+        if (drUserId) socketService.emitToUser(drUserId, "receive-message", messagePayload);
+
+        return message;
     }
 }

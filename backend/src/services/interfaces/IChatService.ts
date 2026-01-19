@@ -39,7 +39,7 @@ export interface IChatService {
         fileName?: string
     ): Promise<IMessage>;
 
-    getMessages(id: string): Promise<IMessage[]>; 
+    getMessages(id: string): Promise<IMessage[]>;
 
     markMessagesAsRead(id: string, userId: string, userModel: 'User' | 'Doctor'): Promise<void>;
 
@@ -52,4 +52,6 @@ export interface IChatService {
     editMessage(messageId: string, content: string, userId: string): Promise<IMessage>;
 
     deleteMessage(messageId: string, userId: string): Promise<IMessage>;
+
+    sendSystemMessage(appointmentId: string, content: string): Promise<IMessage>;
 }

@@ -16,12 +16,16 @@ export class SocketService {
         });
 
         this._io.on("connection", (socket: Socket) => {
-            // WebRTC  Events
+            console.log(`New socket connection: ${socket.id}`);
+
+            // WebRTC Events
             socket.on("call-user", ({ userToCall, signalData, from, name, isRejoin }) => {
+                console.log(`Call from ${from} (${name}) to ${userToCall}`);
                 this._io?.to(userToCall).emit("call-user", { signal: signalData, from, name, isRejoin });
             });
 
             socket.on("answer-call", (data) => {
+                console.log(`Call answered by ${socket.id} for ${data.to}`);
                 this._io?.to(data.to).emit("call-accepted", data.signal);
             });
 

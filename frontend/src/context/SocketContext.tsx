@@ -35,10 +35,17 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     useEffect(() => {
         if (userId) {
-            const newSocket = io(API_BASE_URL, {
+            // If API_BASE_URL contains /api, we remove it for the socket connection 
+            // because socket.io typically mounts at the root /socket.io
+            const socketUrl = API_BASE_URL.replace(/\/api$/, '');
+
+            const newSocket = io(socketUrl, {
                 withCredentials: true,
-                transports: ['websocket', 'polling'],
-                reconnectionAttempts: 5,
+                transports: ['websocket'], // Prefer websocket for stability in hosted environments
+                reconnection: true,
+                reconnectionAttempts: 10,
+                reconnectionDelay: 1000,
+                timeout: 20000,
             });
 
             setSocket(newSocket);
