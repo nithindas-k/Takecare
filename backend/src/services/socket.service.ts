@@ -76,7 +76,7 @@ export class SocketService {
                 const roomId = String(data.conversationId || data.appointmentId || "");
                 if (roomId) {
                     console.log(`Socket [${socket.id}] sending message to room ${roomId}`);
-                    this._io?.to(roomId).emit("receive-message", data);
+                   
                 } else {
                     console.error("Socket error: send-message received without roomId");
                 }
