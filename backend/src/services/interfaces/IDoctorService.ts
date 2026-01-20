@@ -102,4 +102,5 @@ export interface IDoctorService {
   getDoctorById(doctorId: string): Promise<DoctorPublicDTO>;
   getRelatedDoctors(doctorId: string): Promise<DoctorListDTO[]>;
   getDashboardStats(userId: string, startDate?: string, endDate?: string): Promise<DoctorDashboardStats>;
+  getLandingPageStats(): Promise<{ doctors: number, patients: number, rating: number }>;
 }

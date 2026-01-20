@@ -70,6 +70,9 @@ import Specialties from "./pages/admin/Specialties";
 import VideoCallPage from "./pages/consultation/VideoCallPage";
 import ChatPage from "./pages/consultation/ChatPage";
 
+// Landing Page
+import LandingPage from "./pages/LandingPage";
+
 const NotFound: React.FC = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-100">
     <div className="text-center">
@@ -136,6 +139,13 @@ const App: React.FC = () => {
 
       <AppointmentReminder />
       <Routes>
+
+        {/* Public Landing Page */}
+        <Route path="/landing" element={
+          <PublicRoute>
+            <LandingPage />
+          </PublicRoute>
+        } />
 
         <Route path="/" element={<ProtectedRoute role="patient" >
           <Home />

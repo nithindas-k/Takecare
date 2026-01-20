@@ -34,6 +34,7 @@ import { API_BASE_URL, SESSION_STATUS } from '../../utils/constants';
 import type { SessionStatus } from '../../utils/constants';
 import type { Area } from 'react-easy-crop';
 
+
 interface Patient {
     _id: string;
     name: string;
@@ -189,6 +190,7 @@ const CustomAudioPlayer = ({ src, isUser }: { src: string, isUser: boolean }) =>
             ? ''
             : 'bg-white border border-slate-100 shadow-sm'
             }`}>
+
             <button
                 onClick={togglePlay}
                 className={`flex items-center justify-center w-10 h-10 rounded-full shadow-sm transition-all active:scale-95 ${isUser
@@ -639,11 +641,11 @@ const ChatPage = () => {
         };
 
         const handleNewMessage = (newMessage: IMessage) => {
-            // Strict check: only accept messages for THIS conversation
+
             const msgConvId = String(newMessage.conversationId || "");
             const msgAppId = String(newMessage.appointmentId || "");
 
-            // Allow if conversationId matches, OR if it matches the current route ID (legacy fallback)
+
             const isRelevant = msgConvId === convId || msgAppId === id;
 
             if (!isRelevant) return;
@@ -664,7 +666,7 @@ const ChatPage = () => {
 
             setMessages(prev => {
                 const mId = String(uiMsg.id);
-                // 1. Check if this exact ID already exists (Deduplication)
+
                 if (prev.some(m => String(m.id) === mId)) return prev;
 
 
@@ -677,12 +679,12 @@ const ChatPage = () => {
 
                     if (tempIdx !== -1) {
                         const updated = [...prev];
-                        updated[tempIdx] = uiMsg; // Swap temp for real
+                        updated[tempIdx] = uiMsg;
                         return updated;
                     }
                 }
 
-                // 3. Append new message
+
                 return [...prev, uiMsg];
             });
         };
@@ -703,7 +705,7 @@ const ChatPage = () => {
             if (typingId === convId && String(typingUserId) !== myUserId) {
                 setIsOtherTyping(isTyping);
             }
-            // Update listing level typing status
+
             setTypingRooms(prev => ({ ...prev, [typingId]: isTyping }));
         };
 

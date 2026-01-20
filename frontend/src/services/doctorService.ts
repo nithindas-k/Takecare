@@ -68,7 +68,7 @@ class DoctorService {
     }
   }
 
- 
+
   async createSchedule(scheduleData: unknown) {
     try {
       const response = await axiosInstance.post(DOCTOR_API_ROUTES.SCHEDULE, scheduleData);
@@ -253,6 +253,19 @@ class DoctorService {
       return {
         success: false,
         message: err.response?.data?.message || err.message || "Failed to delete recurring slots from all days",
+      };
+    }
+  }
+
+  async getLandingStats() {
+    try {
+      const response = await axiosInstance.get('/doctors/landing-stats');
+      return response.data;
+    } catch (error) {
+      const err = error as ApiError;
+      return {
+        success: false,
+        message: err.response?.data?.message || err.message || "Failed to fetch landing stats",
       };
     }
   }

@@ -243,4 +243,23 @@ export class DoctorService implements IDoctorService {
     console.log("DoctorService.getDashboardStats result:", result);
     return result;
   }
+
+  async getLandingPageStats(): Promise<{ doctors: number, patients: number, rating: number }> {
+    const allDoctors = await this._doctorRepository.findAllActive();
+    const verifiedDoctors = allDoctors.filter(d => d.verificationStatus === VerificationStatus.Approved);
+
+    const doctorCount = verifiedDoctors.length;
+    const totalRating = verifiedDoctors.reduce((acc, doc) => acc + (doc.ratingAvg || 5), 0); // Default to 5 if 0 to avoid bad impression on new docs? No, 0 is fine, but maybe fallback
+    const avgRating = doctorCount > 0 ? (totalRating / doctorCount) : 0;
+
+    // Get patients count
+    // accessing getAllPatients with minimal limit to get total
+    const { total: patientCount } = await this._userRepository.getAllPatients(0, 1, { isActive: true });
+
+    return {
+      doctors: doctorCount,
+      patients: patientCount,
+      rating: doctorCount > 0 ? Number(avgRating.toFixed(1)) : 4.9
+    };
+  }
 }

@@ -219,6 +219,15 @@ export class DoctorController implements IDoctorController {
       return next(error);
     }
   };
+
+  getLandingPageStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const stats = await this._doctorService.getLandingPageStats();
+      sendSuccess(res, stats);
+    } catch (error: unknown) {
+      return next(error);
+    }
+  };
 }
 
 export default DoctorController;

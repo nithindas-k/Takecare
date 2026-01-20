@@ -65,6 +65,11 @@ router.get(
   doctorController.getVerifiedDoctors
 );
 
+router.get(
+  "/landing-stats",
+  doctorController.getLandingPageStats
+);
+
 
 router.get(
   "/profile",
