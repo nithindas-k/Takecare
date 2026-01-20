@@ -1,5 +1,5 @@
-import { OTPRepository } from "../repositories/otp.repository";
-import { EmailService } from "./email.service";
+import { IOTPRepository } from "../repositories/interfaces/IOtp.repository";
+import { IEmailService } from "./interfaces/IEmailService";
 import { generateOtp, getOtpExpiry, isOtpExpired } from "../utils/otp.util";
 import type { IOTPService } from "./interfaces/IOtpService";
 import type { OTPData, OTPUserData } from "../types/otp.type";
@@ -8,17 +8,11 @@ import { AppError, ValidationError } from "../errors/AppError";
 import { HttpStatus, MESSAGES } from "../constants/constants";
 
 export class OTPService implements IOTPService {
-  private _otpRepository: OTPRepository;
-  private _emailService: EmailService;
-
   constructor(
-    private _logger: ILoggerService,
-    otpRepository?: OTPRepository,
-    emailService?: EmailService
-  ) {
-    this._otpRepository = otpRepository || new OTPRepository();
-    this._emailService = emailService || new EmailService(_logger);
-  }
+    private _otpRepository: IOTPRepository,
+    private _emailService: IEmailService,
+    private _logger: ILoggerService
+  ) { }
 
   async createAndSendOtp(
     email: string,

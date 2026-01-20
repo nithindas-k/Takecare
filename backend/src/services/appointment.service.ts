@@ -614,7 +614,7 @@ export class AppointmentService implements IAppointmentService {
 
             const { appointmentDate, appointmentTime, slotId } = appointment.rescheduleRequest;
 
-            // Release the old slot as the new one is now accepted
+           
             if (appointment.slotId) {
                 const [oldStartTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
                 await this._scheduleRepository.updateSlotBookedStatus(

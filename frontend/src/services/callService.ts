@@ -23,9 +23,7 @@ export interface RejoinStatus {
 }
 
 const callService = {
-    /**
-     * Start a new call session
-     */
+  
     startCall: async (appointmentId: string, doctorId: string, patientId: string) => {
         const response = await axiosInstance.post(`/call/${appointmentId}/start`, {
             doctorId,
@@ -34,33 +32,25 @@ const callService = {
         return response.data;
     },
 
-    /**
-     * End an active call session
-     */
+    
     endCall: async (sessionId: string) => {
         const response = await axiosInstance.post(`/call/session/${sessionId}/end`);
         return response.data;
     },
 
-    /**
-     * Check if user can rejoin a call
-     */
+    
     getCallStatus: async (appointmentId: string): Promise<{ data: RejoinStatus }> => {
         const response = await axiosInstance.get(`/call/${appointmentId}/status`);
         return response.data;
     },
 
-    /**
-     * Rejoin a disconnected call
-     */
+    
     rejoinCall: async (appointmentId: string) => {
         const response = await axiosInstance.post(`/call/${appointmentId}/rejoin`);
         return response.data;
     },
 
-    /**
-     * Get active call for an appointment
-     */
+  
     getActiveCall: async (appointmentId: string): Promise<{ data: CallSession | null }> => {
         const response = await axiosInstance.get(`/call/${appointmentId}/active`);
         return response.data;

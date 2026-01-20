@@ -19,14 +19,13 @@ export class CallSessionService implements ICallSessionService {
         this._logger.info("Starting call session", { appointmentId, doctorId, patientId });
 
         return await runInTransaction(async (session) => {
-            // Check if there's already an active call
+           
             const existingCall = await this._callSessionRepository.findActiveByAppointmentId(appointmentId, session);
             if (existingCall) {
                 this._logger.info("Active call already exists", { sessionId: existingCall._id });
                 return existingCall;
             }
 
-            // Create new call session
             const callSession = await this._callSessionRepository.create({
                 appointmentId: new Types.ObjectId(appointmentId),
                 callStatus: 'INITIATING',
@@ -39,9 +38,8 @@ export class CallSessionService implements ICallSessionService {
                 reconnectionAttempts: 0,
             } as any, session);
 
-            // Update appointment with active call info
             const rejoinExpiry = new Date();
-            rejoinExpiry.setMinutes(rejoinExpiry.getMinutes() + 5); // 5 minutes to rejoin
+            rejoinExpiry.setMinutes(rejoinExpiry.getMinutes() + 5); 
 
             await this._appointmentRepository.updateById(appointmentId, {
                 activeCall: {
@@ -65,10 +63,8 @@ export class CallSessionService implements ICallSessionService {
                 throw new AppError("Call session not found", HttpStatus.NOT_FOUND);
             }
 
-            // Update call session status
             await this._callSessionRepository.updateCallStatus(sessionId, 'ENDED', session);
 
-            // Update appointment
             await this._appointmentRepository.updateById(callSession.appointmentId.toString(), {
                 activeCall: {
                     sessionId: callSession._id,
@@ -102,20 +98,16 @@ export class CallSessionService implements ICallSessionService {
                 throw new AppError("Call session not found", HttpStatus.NOT_FOUND);
             }
 
-            // Increment reconnection attempts
             const updated = await this._callSessionRepository.incrementReconnectionAttempts(sessionId, session);
 
             if (!updated) {
                 throw new AppError("Failed to update reconnection attempts", HttpStatus.INTERNAL_ERROR);
             }
 
-            // Set rejoin expiry (30 seconds from now)
             const rejoinExpiry = new Date();
             rejoinExpiry.setSeconds(rejoinExpiry.getSeconds() + 30);
 
             await this._callSessionRepository.setRejoinExpiry(sessionId, rejoinExpiry, session);
-
-            // Update call status to RECONNECTING
             const reconnecting = await this._callSessionRepository.updateCallStatus(sessionId, 'RECONNECTING', session);
 
             if (!reconnecting) {
@@ -172,7 +164,6 @@ export class CallSessionService implements ICallSessionService {
                 throw new AppError("Cannot rejoin call. Session expired or not found.", HttpStatus.BAD_REQUEST);
             }
 
-            // Update call status back to ACTIVE
             const updated = await this._callSessionRepository.updateCallStatus(
                 callSession._id.toString(),
                 'ACTIVE',
@@ -183,7 +174,6 @@ export class CallSessionService implements ICallSessionService {
                 throw new AppError("Failed to rejoin call", HttpStatus.INTERNAL_ERROR);
             }
 
-            // Reset reconnection attempts
             await this._callSessionRepository.updateById(callSession._id.toString(), {
                 reconnectionAttempts: 0,
                 canRejoinUntil: null,

@@ -1,20 +1,20 @@
 import cron from "node-cron";
-import { AppointmentRepository } from "../repositories/appointment.repository";
-import { ScheduleRepository } from "../repositories/schedule.repository";
+import { IAppointmentRepository } from "../repositories/interfaces/IAppointmentRepository";
+import { IScheduleRepository } from "../repositories/interfaces/ISchedule.repository";
 import { NotificationService } from "./notification.service";
 import { socketService } from "./socket.service";
 import { ILoggerService } from "./interfaces/ILogger.service";
 import { APPOINTMENT_STATUS } from "../constants/constants";
 
 export class AppointmentReminderService {
-    private _appointmentRepository: AppointmentRepository;
-    private _scheduleRepository: ScheduleRepository;
+    private _appointmentRepository: IAppointmentRepository;
+    private _scheduleRepository: IScheduleRepository;
     private _notificationService: NotificationService;
     private _cronJob: any = null;
 
     constructor(
-        appointmentRepository: AppointmentRepository,
-        scheduleRepository: ScheduleRepository,
+        appointmentRepository: IAppointmentRepository,
+        scheduleRepository: IScheduleRepository,
         notificationService: NotificationService,
         private _logger: ILoggerService
     ) {

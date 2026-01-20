@@ -25,6 +25,19 @@ interface DaySchedule {
     slots: TimeSlot[];
 }
 
+interface BackendTimeSlot {
+    customId?: string;
+    startTime: string;
+    endTime: string;
+    enabled?: boolean;
+}
+
+interface BackendDaySchedule {
+    day: string;
+    enabled?: boolean;
+    slots?: BackendTimeSlot[];
+}
+
 const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 const getDefaultSchedule = (): DaySchedule[] => {
@@ -80,7 +93,7 @@ const DoctorSchedule: React.FC = () => {
 
                 const scheduleMap = new Map();
                 if (scheduleData.weeklySchedule && Array.isArray(scheduleData.weeklySchedule)) {
-                    scheduleData.weeklySchedule.forEach((daySchedule: any) => {
+                    scheduleData.weeklySchedule.forEach((daySchedule: BackendDaySchedule) => {
                         scheduleMap.set(daySchedule.day, daySchedule);
                     });
                 }
@@ -92,7 +105,7 @@ const DoctorSchedule: React.FC = () => {
                 const transformedSchedule = DAYS_OF_WEEK.map((day) => {
                     const backendDay = scheduleMap.get(day);
                     if (backendDay) {
-                        const slots = (backendDay.slots || []).map((slot: any, slotIndex: number) => {
+                        const slots = (backendDay.slots || []).map((slot: BackendTimeSlot, slotIndex: number) => {
                             const slotData = {
                                 id: `slot-${day}-${slot.startTime || '09:00'}-${slot.endTime || '10:00'}-${slotIndex}`,
                                 customId: slot.customId,
@@ -135,9 +148,49 @@ const DoctorSchedule: React.FC = () => {
         fetchSchedule();
     }, [fetchSchedule]);
 
+    const findCommonRecurringSlots = useCallback(() => {
+        const slotMap = new Map<string, { startTime: string; endTime: string; count: number; customIds: string[] }>();
+
+
+        const enabledDays = schedule.filter(day => day.enabled && day.slots.length > 0);
+
+
+        enabledDays.forEach(day => {
+            day.slots.forEach(slot => {
+                const key = `${slot.startTime}-${slot.endTime}`;
+                if (slotMap.has(key)) {
+                    const existing = slotMap.get(key)!;
+                    existing.count++;
+                    if (slot.customId && !existing.customIds.includes(slot.customId)) {
+                        existing.customIds.push(slot.customId);
+                    }
+                } else {
+                    slotMap.set(key, {
+                        startTime: slot.startTime,
+                        endTime: slot.endTime,
+                        count: 1,
+                        customIds: slot.customId ? [slot.customId] : []
+                    });
+                }
+            });
+        });
+
+
+        const commonSlots = Array.from(slotMap.values())
+            .filter(slot => slot.count > 1)
+            .map(slot => ({
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+                customId: slot.customIds[0],
+                count: slot.count
+            }));
+
+        setCommonSlots(commonSlots);
+    }, [schedule]);
+
     useEffect(() => {
         findCommonRecurringSlots();
-    }, [schedule]);
+    }, [findCommonRecurringSlots]);
 
     const toggleDay = async (dayIndex: number) => {
         const updatedSchedule = [...schedule];
@@ -394,7 +447,7 @@ const DoctorSchedule: React.FC = () => {
             const slot = updatedSchedule[dayIndex].slots[slotIndex];
             slot[field] = value;
 
-    
+
             if (field === 'startTime' && value) {
                 const [h, m] = value.split(':').map(Number);
                 const totalMinutes = h * 60 + m + 15;
@@ -716,45 +769,7 @@ const DoctorSchedule: React.FC = () => {
     };
 
 
-    const findCommonRecurringSlots = () => {
-        const slotMap = new Map<string, { startTime: string; endTime: string; count: number; customIds: string[] }>();
 
-
-        const enabledDays = schedule.filter(day => day.enabled && day.slots.length > 0);
-
-
-        enabledDays.forEach(day => {
-            day.slots.forEach(slot => {
-                const key = `${slot.startTime}-${slot.endTime}`;
-                if (slotMap.has(key)) {
-                    const existing = slotMap.get(key)!;
-                    existing.count++;
-                    if (slot.customId && !existing.customIds.includes(slot.customId)) {
-                        existing.customIds.push(slot.customId);
-                    }
-                } else {
-                    slotMap.set(key, {
-                        startTime: slot.startTime,
-                        endTime: slot.endTime,
-                        count: 1,
-                        customIds: slot.customId ? [slot.customId] : []
-                    });
-                }
-            });
-        });
-
-
-        const commonSlots = Array.from(slotMap.values())
-            .filter(slot => slot.count > 1)
-            .map(slot => ({
-                startTime: slot.startTime,
-                endTime: slot.endTime,
-                customId: slot.customIds[0],
-                count: slot.count
-            }));
-
-        setCommonSlots(commonSlots);
-    };
 
 
     const handleDeleteCommonRecurringSlots = () => {

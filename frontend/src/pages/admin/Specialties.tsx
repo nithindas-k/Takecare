@@ -68,8 +68,9 @@ const AdminSpecialties: React.FC = () => {
         toast.success(`Specialty ${res.data.isActive ? 'activated' : 'deactivated'}`);
         fetchSpecialties();
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Error toggling specialty status");
+    } catch (error: unknown) {
+      const err = error as any;
+      toast.error(err.response?.data?.message || "Error toggling specialty status");
     }
   };
 
@@ -87,8 +88,9 @@ const AdminSpecialties: React.FC = () => {
         toast.success("Specialty deleted successfully");
         fetchSpecialties();
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to delete specialty");
+    } catch (error: unknown) {
+      const err = error as any;
+      toast.error(err.response?.data?.message || "Failed to delete specialty");
     } finally {
       setSpecialtyToDelete(null);
     }
@@ -127,8 +129,9 @@ const AdminSpecialties: React.FC = () => {
         setIsModalOpen(false);
         fetchSpecialties();
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || `Failed to ${modalMode} specialty`);
+    } catch (error: unknown) {
+      const err = error as any;
+      toast.error(err.response?.data?.message || `Failed to ${modalMode} specialty`);
     } finally {
       setIsSubmitting(false);
     }

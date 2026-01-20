@@ -1,14 +1,14 @@
 import { Request, Response, NextFunction } from "express";
-import { UserService } from "../services/user.service";
+import { IUserService } from "../services/interfaces/IUserService";
 import { sendSuccess } from "../utils/response.util";
 import { MESSAGES, HttpStatus } from "../constants/constants";
 import { AppError } from "../types/error.type";
 import { UnifiedUpdateProfileDTO } from "../dtos/user.dtos/user.dto";
 
 export class UserController {
-  private userService: UserService;
+  private userService: IUserService;
 
-  constructor(userService: UserService) {
+  constructor(userService: IUserService) {
     this.userService = userService;
   }
 
@@ -51,7 +51,7 @@ export class UserController {
         try {
           dto.additionalInformation = JSON.parse(req.body.additionalInformation);
         } catch {
-          
+          // ignore
         }
       }
 

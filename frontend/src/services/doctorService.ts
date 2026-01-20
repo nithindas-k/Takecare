@@ -1,4 +1,3 @@
-// src/services/doctorService.ts
 
 import axiosInstance from "../api/axiosInstance";
 import { DOCTOR_API_ROUTES } from "../utils/constants";
@@ -69,7 +68,7 @@ class DoctorService {
     }
   }
 
-  // Schedule methods
+ 
   async createSchedule(scheduleData: unknown) {
     try {
       const response = await axiosInstance.post(DOCTOR_API_ROUTES.SCHEDULE, scheduleData);
@@ -218,7 +217,7 @@ class DoctorService {
     }
   }
 
-  // Recurring slots methods
+
   async addRecurringSlots(recurringData: { startTime: string; endTime: string; days: string[]; skipOverlappingDays?: boolean }) {
     try {
       const response = await axiosInstance.post(DOCTOR_API_ROUTES.RECURRING_SLOTS, recurringData);

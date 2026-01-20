@@ -54,7 +54,7 @@ export const appointmentService = {
         return response.data;
     },
 
-    // Doctor: Reject
+   
     rejectAppointment: async (id: string, rejectionReason: string) => {
         const response = await axiosInstance.put(APPOINTMENT_API_ROUTES.REJECT(id), {
             rejectionReason,
@@ -62,7 +62,7 @@ export const appointmentService = {
         return response.data;
     },
 
-    // Doctor: Complete
+    
     completeAppointment: async (id: string, completionData: { doctorNotes?: string; prescriptionUrl?: string }) => {
         const response = await axiosInstance.put(APPOINTMENT_API_ROUTES.COMPLETE(id), completionData);
         return response.data;
@@ -73,7 +73,6 @@ export const appointmentService = {
         return response.data;
     },
 
-    // Admin: Get All
     getAllAppointments: async (page: number = 1, limit: number = 10, filters: AppointmentFilters = {}) => {
         const response = await axiosInstance.get(APPOINTMENT_API_ROUTES.ADMIN_ALL, {
             params: { page, limit, ...filters },

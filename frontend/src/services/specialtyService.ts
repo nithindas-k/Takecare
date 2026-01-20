@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import axiosInstance from "../api/axiosInstance";
 
 export const specialtyService = {

@@ -5,7 +5,7 @@ import { socketService } from "./socket.service";
 import { ILoggerService } from "./interfaces/ILogger.service";
 
 export class SessionTimerService {
-    private checkInterval: NodeJS.Timeout | null = null;
+    private checkInterval: ReturnType<typeof setInterval> | null = null;
     private readonly CHECK_INTERVAL_MS = 30000;
 
     constructor(

@@ -6,6 +6,8 @@ import { UserRepository } from "../repositories/user.repository";
 import { DoctorRepository } from "../repositories/doctor.repository";
 import { AuthService } from "../services/authService";
 import { OTPService } from "../services/otp.service";
+import { OTPRepository } from "../repositories/otp.repository";
+import { EmailService } from "../services/email.service";
 import { AUTH_ROUTES } from "../constants/routes.constants";
 import { AuthValidator } from "../validators/auth.validator";
 import { validate } from "../middlewares/validation.middleware";
@@ -14,8 +16,13 @@ import { LoggerService } from "../services/logger.service";
 
 const userRepository = new UserRepository();
 const doctorRepository = new DoctorRepository();
+const otpRepository = new OTPRepository();
+
+const emailServiceLogger = new LoggerService("EmailService");
+const emailService = new EmailService(emailServiceLogger);
+
 const otpServiceLogger = new LoggerService("OTPService");
-const otpService = new OTPService(otpServiceLogger);
+const otpService = new OTPService(otpRepository, emailService, otpServiceLogger);
 const authServiceLogger = new LoggerService("AuthService");
 const authControllerLogger = new LoggerService("AuthController");
 

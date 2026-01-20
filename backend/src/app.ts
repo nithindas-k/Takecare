@@ -29,10 +29,14 @@ import callRouter from "./routers/call.router";
 
 import { errorHandler } from "./middlewares/error-handler.middleware";
 import { LoggerService } from "./services/logger.service";
-
-import "./services/passport.service";
+import { PassportService } from "./services/passport.service";
+import { UserRepository } from "./repositories/user.repository";
+import { DoctorRepository } from "./repositories/doctor.repository";
 
 const logger = new LoggerService("App");
+
+const passportService = new PassportService(new UserRepository(), new DoctorRepository());
+passportService.init();
 
 const app = express();
 

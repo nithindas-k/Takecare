@@ -128,7 +128,7 @@ class AuthService {
     }
   }
 
-  // USER resend OTP
+ 
   async userResendOtp(email: string) {
     try {
       const response = await axiosInstance.post(USER_API_ROUTES.RESEND_OTP, {

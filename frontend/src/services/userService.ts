@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// src/services/userService.ts
+
 
 import axiosInstance from "../api/axiosInstance";
 import type { UserData } from "../api/types";
@@ -9,7 +8,7 @@ class UserService {
     try {
       const response = await axiosInstance.get("/users/profile");
       return response.data;
-    } catch (error: any) /* eslint-disable-line @typescript-eslint/no-explicit-any */ {
+    } catch (error: any) {
       return {
         success: false,
         message: error.response?.data?.message || "Failed to fetch profile",
@@ -24,7 +23,7 @@ class UserService {
 
       const response = await axiosInstance.put("/users/profile", userData, config);
       return response.data;
-    } catch (error: any) /* eslint-disable-line @typescript-eslint/no-explicit-any */ {
+    } catch (error: any) {
       return {
         success: false,
         message: error.response?.data?.message || "Failed to update profile",
@@ -38,7 +37,7 @@ class UserService {
       formData.append("image", file);
       const response = await axiosInstance.post("/users/profile/image", formData);
       return response.data;
-    } catch (error: any) /* eslint-disable-line @typescript-eslint/no-explicit-any */ {
+    } catch (error: any) {
       return {
         success: false,
         message: error.response?.data?.message || "Failed to upload image",
@@ -51,7 +50,7 @@ class UserService {
     try {
       const response = await axiosInstance.get("/admin/users");
       return response.data;
-    } catch (error: any) /* eslint-disable-line @typescript-eslint/no-explicit-any */ {
+    } catch (error: any) {
       return {
         success: false,
         message: error.response?.data?.message || "Failed to fetch users",
@@ -63,7 +62,7 @@ class UserService {
     try {
       const response = await axiosInstance.delete(`/admin/users/${userId}`);
       return response.data;
-    } catch (error: any) /* eslint-disable-line @typescript-eslint/no-explicit-any */ {
+    } catch (error: any) {
       return {
         success: false,
         message: error.response?.data?.message || "Failed to delete user",

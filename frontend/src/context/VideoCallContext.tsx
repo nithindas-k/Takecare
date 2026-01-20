@@ -43,7 +43,6 @@ const ICE_SERVERS = {
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' },
-        // Adding open-relay servers for better connectivity in restricted environments
         {
             urls: 'turn:openrelay.metered.ca:80',
             username: 'openrelayproject',
@@ -114,7 +113,6 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }, []);
 
     const createPeerConnection = useCallback((targetId: string) => {
-        // CLEANUP: Close existing connection if it exists
         if (connectionRef.current) {
             console.log("Closing existing peer connection before creating new one");
             connectionRef.current.close();
@@ -203,7 +201,6 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const answerCall = useCallback(async (incomingData?: any) => {
         setCallEnded(false);
         setCallAccepted(true);
-        // Ensure we don't use React events as call data
         const isEvent = incomingData && (incomingData.nativeEvent || incomingData.target);
         const callToAnswer = (incomingData && !isEvent) ? incomingData : incomingCall;
 
@@ -226,16 +223,13 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             to: callToAnswer.from
         });
 
-        // Now that remote description is set, process any queued candidates
         processIceQueue();
     }, [incomingCall, createPeerConnection, socket, processIceQueue]);
 
     const leaveCall = () => {
         setCallEnded(true);
-        console.log("leaveCall: Call ended triggered");
 
         if (connectionRef.current) {
-            console.log("leaveCall: Closing peer connection");
             connectionRef.current.close();
             connectionRef.current = null;
         }
@@ -277,7 +271,6 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             try {
                 if (connectionRef.current) {
                     await connectionRef.current.setRemoteDescription(new RTCSessionDescription(signal));
-                    // Process any candidates that arrived while we were waiting for the answer
                     processIceQueue();
                 }
             } catch (error) {
@@ -319,10 +312,8 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         };
     }, [socket, answerCall]);
 
-    // Better Rejoin Auto-Answer Logic: Wait for BOTH call data AND stream to be ready
     useEffect(() => {
         if (incomingCall?.isRejoin && stream && socket) {
-            console.log("Auto-answering rejoin call (Stream & Socket ready)...");
             answerCall(incomingCall);
         }
     }, [incomingCall, stream, socket, answerCall]);

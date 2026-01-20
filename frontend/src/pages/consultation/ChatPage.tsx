@@ -84,8 +84,8 @@ interface Conversation {
     appointmentId: string;
     conversationId: string;
     realAppointmentId?: string;
-    patient?: any;
-    doctor?: any;
+    patient?: Patient;
+    doctor?: Doctor;
     lastMessage?: {
         content: string;
         createdAt: string;
@@ -356,10 +356,13 @@ const ChatPage = () => {
             const res = await appointmentService.updateDoctorNotes(appointmentId, newNote);
             if (res.success) {
                 toast.success(`${noteCategory.replace('_', ' ')} saved successfully`);
-                setAppointment((prev: any) => ({
-                    ...prev,
-                    doctorNotes: [...(prev?.doctorNotes || []), newNote]
-                }));
+                setAppointment((prev) => {
+                    if (!prev) return null;
+                    return {
+                        ...prev,
+                        doctorNotes: [...(prev.doctorNotes || []), newNote]
+                    };
+                });
 
                 setNoteTitle("");
                 setNoteDescription("");
@@ -367,8 +370,8 @@ const ChatPage = () => {
                 setNoteFrequency("");
                 setNoteDuration("");
             }
-        } catch (error: any) {
-            toast.error(error.message || "Failed to save note");
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : "Failed to save note");
         } finally {
             setIsSavingNote(false);
         }
@@ -500,7 +503,16 @@ const ChatPage = () => {
     useEffect(() => {
         if (!socket) return;
 
-        const onSessionStatusUpdated = (data: any) => {
+        interface SessionStatusData {
+            appointmentId: string;
+            customId?: string;
+            status: SessionStatus;
+            extensionCount?: number;
+            postConsultationChatWindow?: { isActive: boolean; expiresAt: string };
+            TEST_NEEDED?: boolean;
+        }
+
+        const onSessionStatusUpdated = (data: SessionStatusData) => {
             console.log("[SOCKET] Session status updated:", data);
 
 
@@ -551,7 +563,7 @@ const ChatPage = () => {
                     }
                 }
 
-                if (data.status === SESSION_STATUS.ACTIVE || data.status === SESSION_STATUS.ACTIVE) {
+                if (data.status === SESSION_STATUS.ACTIVE) {
                     setIsTimeOver(false);
                 }
 
@@ -570,7 +582,7 @@ const ChatPage = () => {
                 return conv;
             }));
         };
-        const onSessionEnded = (data: any) => {
+        const onSessionEnded = (data: { appointmentId: string }) => {
             if (data.appointmentId === (appointment?._id || id)) {
                 console.log("[SOCKET] Session ended for:", data.appointmentId);
                 toast.info("Session has been ended.");
@@ -619,7 +631,7 @@ const ChatPage = () => {
 
         console.log("[SOCKET] Setting up listeners for:", currentConversationId);
         const convId = currentConversationId;
-        const myUserId = String(user.id || (user as any)._id || "");
+        const myUserId = String(user.id || (user as { _id?: string })._id || "");
 
         const performJoin = () => {
             socket.emit('join-chat', convId);
@@ -645,7 +657,7 @@ const ChatPage = () => {
                 text: newMessage.content,
                 time: new Date(newMessage.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 status: newMessage.read ? 'read' : 'delivered',
-                type: newMessage.type as any,
+                type: newMessage.type as 'text' | 'file' | 'image' | 'system',
                 isDeleted: newMessage.isDeleted,
                 isEdited: newMessage.isEdited,
             };
@@ -720,7 +732,7 @@ const ChatPage = () => {
             socket.off('messages-read', onRead);
             socket.emit('leave-chat', convId);
         };
-    }, [socket, currentConversationId, user, isDoctor]); // Removed 'id' from dependency to prevent unnecessary re-runs
+    }, [socket, currentConversationId, user, isDoctor]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         const initChatContext = async () => {
@@ -775,13 +787,13 @@ const ChatPage = () => {
                 });
 
                 const history = await chatService.getMessages(convId);
-                const uiMessages: Message[] = history.map((m: any) => ({
-                    id: m._id || m.id,
+                const uiMessages: Message[] = history.map((m: IMessage) => ({
+                    id: m._id || m.id || Date.now(),
                     sender: (m.senderModel === 'User' && !isDoctor) || (m.senderModel === 'Doctor' && isDoctor) ? 'user' : 'other',
                     text: m.content,
                     time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                     status: m.read ? 'read' : 'delivered',
-                    type: m.type as any,
+                    type: m.type as 'text' | 'file' | 'image' | 'system',
                     fileName: m.fileName,
                     isDeleted: m.isDeleted,
                     isEdited: m.isEdited,
@@ -1529,7 +1541,7 @@ const ChatPage = () => {
                                         <ChevronLeft className={`transition-transform duration-300 ${!isSidebarOpen ? 'rotate-180' : ''}`} />
                                     </Button>
                                     <div className="flex items-center gap-3">
-                                        <div className="relative">
+                                        <div className="relative shrink-0">
                                             <img src={activeChat.avatar} alt="" className="h-10 w-10 rounded-full object-cover border border-slate-100" />
                                             {activeChat.online && <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></span>}
                                         </div>

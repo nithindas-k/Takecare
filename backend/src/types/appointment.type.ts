@@ -1,4 +1,6 @@
 import { Document, Types } from "mongoose";
+import { IUserDocument } from "./user.type";
+import { IDoctorDocument } from "./doctor.type";
 
 export type AppointmentType = "video" | "chat";
 
@@ -107,13 +109,13 @@ export interface IAppointmentPopulated extends Omit<IAppointment, "patientId" | 
         email: string;
         phone?: string;
         profileImage?: string;
-        userId?: any;
+        userId?: string;
     };
     doctorId: {
         _id: Types.ObjectId | string;
         id?: string;
         customId?: string;
-        userId: any;
+        userId: IUserDocument;
         specialty?: string;
         experienceYears?: number;
         VideoFees?: number;
@@ -125,8 +127,8 @@ export interface IAppointmentPopulated extends Omit<IAppointment, "patientId" | 
             profileImage?: string;
         };
     };
-    patient?: any;
-    doctor?: any;
+    patient?: IUserDocument;
+    doctor?: IDoctorDocument;
 }
 
 export interface DashboardStats {

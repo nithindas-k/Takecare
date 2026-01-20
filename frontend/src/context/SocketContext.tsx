@@ -35,13 +35,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     useEffect(() => {
         if (userId) {
-            // If API_BASE_URL contains /api, we remove it for the socket connection 
-            // because socket.io typically mounts at the root /socket.io
             const socketUrl = API_BASE_URL.replace(/\/api$/, '');
 
             const newSocket = io(socketUrl, {
                 withCredentials: true,
-                transports: ['websocket'], // Prefer websocket for stability in hosted environments
+                transports: ['websocket'],
                 reconnection: true,
                 reconnectionAttempts: 10,
                 reconnectionDelay: 1000,
@@ -148,12 +146,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 data={reminderData}
                 onAction={() => {
                     if (reminderData?.appointmentId) {
-                        // Determine route based on user role and session type
-                        // For simplicity, we can redirect to the appointment details page
                         const path = userRole === 'doctor'
                             ? `/doctor/appointments/${reminderData.appointmentId}`
                             : `/patient/appointments/${reminderData.appointmentId}`;
-                        window.location.href = path; // Using window.location to ensure immediate transition
+                        window.location.href = path;
                     }
                     setIsReminderOpen(false);
                 }}
