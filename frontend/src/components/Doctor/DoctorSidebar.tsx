@@ -35,6 +35,7 @@ const sidebarLinks: SidebarLink[] = [
   // { label: "My Patients", icon: <FaUserMd />, path: "/doctor/patients" },
   { label: "Wallet", icon: <FaMoneyBillWave />, path: "/doctor/wallet" },
   { label: "Profile Settings", icon: <FaCog />, path: "/doctor/profile-settings" },
+  { label: "Reviews", icon: <FaCheckCircle />, path: "/doctor/reviews" },
   { label: "Messages", icon: <FaComments />, path: "/doctor/chat/default", badge: "dot" },
 ];
 

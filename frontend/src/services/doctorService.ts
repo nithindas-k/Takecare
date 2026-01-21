@@ -269,6 +269,32 @@ class DoctorService {
       };
     }
   }
+
+  async getReviews(doctorId: string) {
+    try {
+      const response = await axiosInstance.get(`/reviews/doctor/${doctorId}`);
+      return response.data;
+    } catch (error) {
+      const err = error as ApiError;
+      return {
+        success: false,
+        message: err.response?.data?.message || err.message || "Failed to fetch reviews",
+      };
+    }
+  }
+
+  async respondToReview(reviewId: string, response: string) {
+    try {
+      const res = await axiosInstance.put(`/reviews/respond/${reviewId}`, { response });
+      return res.data;
+    } catch (error) {
+      const err = error as ApiError;
+      return {
+        success: false,
+        message: err.response?.data?.message || err.message || "Failed to submit response",
+      };
+    }
+  }
 }
 
 export default new DoctorService();

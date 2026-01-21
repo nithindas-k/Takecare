@@ -6,12 +6,16 @@ import { DoctorRepository } from "../repositories/doctor.repository";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireAdmin } from "../middlewares/role.middleware";
 import { checkUserBlocked } from "../middlewares/check-user-blocked.middleware";
+import { NotificationRepository } from "../repositories/notification.repository";
+import { UserRepository } from "../repositories/user.repository";
 
 const reviewRouter = Router();
 
 const reviewRepository = new ReviewRepository();
 const doctorRepository = new DoctorRepository();
-const reviewService = new ReviewService(reviewRepository, doctorRepository);
+const notificationRepository = new NotificationRepository();
+const userRepository = new UserRepository();
+const reviewService = new ReviewService(reviewRepository, doctorRepository, notificationRepository, userRepository);
 const reviewController = new ReviewController(reviewService);
 
 // Admin routes
@@ -19,11 +23,13 @@ reviewRouter.get("/", authMiddleware, checkUserBlocked, requireAdmin, reviewCont
 reviewRouter.delete("/admin/:reviewId", authMiddleware, checkUserBlocked, requireAdmin, reviewController.deleteReviewByAdmin);
 
 reviewRouter.get("/doctor/:doctorId", reviewController.getDoctorReviews);
+reviewRouter.get("/my-reviews", authMiddleware, reviewController.getMyReviews);
 reviewRouter.get("/doctor/:doctorId/stats", reviewController.getDoctorStats);
 
 reviewRouter.post("/", authMiddleware, reviewController.addReview);
 reviewRouter.put("/:reviewId", authMiddleware, reviewController.updateReview);
 reviewRouter.delete("/:reviewId", authMiddleware, reviewController.deleteReview);
 reviewRouter.get("/patient-doctor/:doctorId", authMiddleware, reviewController.getReviewByPatientAndDoctor);
+reviewRouter.put("/respond/:reviewId", authMiddleware, reviewController.respondToReview);
 
 export default reviewRouter;

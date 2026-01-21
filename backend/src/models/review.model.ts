@@ -6,6 +6,8 @@ export interface IReview extends Document {
     doctorId: mongoose.Types.ObjectId;
     rating: number;
     comment: string;
+    response?: string;
+    responseDate?: Date;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -16,7 +18,7 @@ const ReviewSchema: Schema = new Schema(
             type: Schema.Types.ObjectId,
             ref: "Appointment",
             required: true,
-            unique: true, 
+            unique: true,
         },
         patientId: {
             type: Schema.Types.ObjectId,
@@ -39,6 +41,13 @@ const ReviewSchema: Schema = new Schema(
             required: true,
             trim: true,
             minlength: 3,
+        },
+        response: {
+            type: String,
+            trim: true,
+        },
+        responseDate: {
+            type: Date,
         },
     },
     {

@@ -21,6 +21,7 @@ import DoctorAppointments from "./pages/doctor/DoctorAppointments";
 import DoctorAppointmentDetails from "./pages/doctor/DoctorAppointmentDetails";
 import DoctorAppointmentRequests from "./pages/doctor/DoctorAppointmentRequests";
 import DoctorSchedule from "./pages/doctor/DoctorSchedule";
+import DoctorReviews from "./pages/doctor/DoctorReviews";
 
 // Patient Routes
 import PatientLogin from "./pages/user/auth/Login";
@@ -289,6 +290,14 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute role="doctor">
                 <ChatPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="reviews"
+            element={
+              <ProtectedRoute role="doctor">
+                <DoctorReviews />
               </ProtectedRoute>
             }
           />

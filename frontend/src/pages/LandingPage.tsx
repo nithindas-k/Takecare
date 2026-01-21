@@ -13,6 +13,7 @@ import {
     FaComments
 } from 'react-icons/fa';
 import { Skeleton } from '../components/ui/skeleton';
+import LandingNavbar from '../components/common/LandingNavbar';
 import doctorService from '../services/doctorService';
 import { API_BASE_URL } from '../utils/constants';
 
@@ -66,7 +67,7 @@ const LandingPage: React.FC = () => {
     const [stats, setStats] = useState({
         doctors: 0,
         patients: 0,
-        rating: 0
+        appointments: 0
     });
     const [featuredDoctors, setFeaturedDoctors] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -80,7 +81,7 @@ const LandingPage: React.FC = () => {
                 setStats({
                     doctors: statsResult.data.doctors || 0,
                     patients: statsResult.data.patients || 0,
-                    rating: statsResult.data.rating || 0
+                    appointments: statsResult.data.appointments || 0
                 });
             }
             const result = await doctorService.getAllDoctors({ page: 1, limit: 3 });
@@ -111,48 +112,13 @@ const LandingPage: React.FC = () => {
     };
 
     return (
-        <div className="bg-white min-h-screen font-sans antialiased">
+        <div className="bg-white min-h-screen font-sans antialiased overflow-x-hidden">
             {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-b border-gray-100 shadow-sm">
-                <div className="max-w-6xl mx-auto px-6">
-                    <div className="flex justify-between items-center h-20">
-                        <div
-                            className="flex flex-col cursor-pointer group select-none transition-all duration-300 transform group-hover:scale-[1.02]"
-                            onClick={() => navigate('/')}
-                        >
-                            <div className="flex items-baseline leading-none">
-                                <span className="text-2xl font-bold text-[#0f172a] tracking-tight transition-colors duration-300">
-                                    Take
-                                </span>
-                                <span className="text-2xl font-bold text-[#00A1B0] tracking-tight transition-all duration-300 group-hover:drop-shadow-[0_0_10px_rgba(0,161,176,0.4)]">
-                                    Care
-                                </span>
-                            </div>
-                            <span className="text-[9px] font-medium text-gray-500 tracking-[0.2em] uppercase mt-0.5 ml-0.5 transition-all duration-300 group-hover:text-[#00A1B0] group-hover:tracking-[0.22em]">
-                                Healthcare Platform
-                            </span>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => navigate('/patient/login')}
-                                className="px-4 py-2 text-sm text-gray-600 font-medium hover:text-gray-900 transition-colors"
-                            >
-                                Sign in
-                            </button>
-                            <button
-                                onClick={() => navigate('/patient/register')}
-                                className="px-5 py-2 bg-[#00A1B0] text-white text-sm rounded-lg font-medium hover:bg-[#008f9c] transition-all shadow-sm"
-                            >
-                                Get Started
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </nav>
+            {/* Navigation */}
+            <LandingNavbar />
 
             {/* Hero Section - Proper spacing from navbar */}
-            <section className="pt-32 pb-20 px-6">
+            <section className="pt-24 pb-12 px-4 md:pt-32 md:pb-20 md:px-6">
                 <div className="max-w-6xl mx-auto">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                         {/* Left: Content */}
@@ -162,7 +128,7 @@ const LandingPage: React.FC = () => {
                                 <span className="text-gray-600 font-medium text-xs">Modern Healthcare</span>
                             </div>
 
-                            <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight tracking-tight">
+                            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight tracking-tight">
                                 Healthcare
                                 <br />
                                 <span className="text-[#00A1B0]">Simplified</span>
@@ -223,32 +189,32 @@ const LandingPage: React.FC = () => {
 
             {/* Stats Bar - Animated & Dynamic */}
             <section className="py-12 bg-gray-50 fade-in">
-                <div className="max-w-6xl mx-auto px-6">
+                <div className="max-w-6xl mx-auto px-4 md:px-6">
                     <div className="grid grid-cols-3 gap-8 text-center">
                         <div>
-                            <div className="text-4xl font-bold text-gray-900 mb-1">
+                            <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">
                                 {isLoading ? '—' : <CountUp end={stats.doctors} suffix="+" />}
                             </div>
                             <p className="text-sm text-gray-500">Doctors</p>
                         </div>
                         <div>
-                            <div className="text-4xl font-bold text-gray-900 mb-1">
+                            <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">
                                 {isLoading ? '—' : <CountUp end={stats.patients} suffix="+" />}
                             </div>
                             <p className="text-sm text-gray-500">Patients</p>
                         </div>
                         <div>
-                            <div className="text-4xl font-bold text-gray-900 mb-1">
-                                <CountUp end={stats.rating} decimals={1} />
+                            <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">
+                                {isLoading ? '—' : <CountUp end={stats.appointments} suffix="+" />}
                             </div>
-                            <p className="text-sm text-gray-500">Rating</p>
+                            <p className="text-sm text-gray-500">Appointments</p>
                         </div>
                     </div>
                 </div>
             </section>
 
             {/* Features - Minimal */}
-            <section className="py-16 px-6 fade-in">
+            <section className="py-12 md:py-16 px-4 md:px-6 fade-in">
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-12">
                         <h2 className="text-3xl font-bold text-gray-900 mb-3">Why Choose Takecare</h2>
@@ -292,7 +258,7 @@ const LandingPage: React.FC = () => {
             </section>
 
             {/* Doctors - Ultra Premium Cards */}
-            <section className="py-16 px-6 bg-gray-50 fade-in">
+            <section className="py-12 md:py-16 px-4 md:px-6 bg-gray-50 fade-in">
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-12">
                         <h2 className="text-3xl font-bold text-gray-900 mb-3">Featured Doctors</h2>
@@ -413,9 +379,9 @@ const LandingPage: React.FC = () => {
             </section>
 
             {/* CTA - Compact */}
-            <section className="py-16 px-6 fade-in">
+            <section className="py-12 md:py-16 px-4 md:px-6 fade-in">
                 <div className="max-w-4xl mx-auto">
-                    <div className="bg-gradient-to-br from-[#00A1B0] to-[#008f9c] rounded-2xl p-12 text-center">
+                    <div className="bg-gradient-to-br from-[#00A1B0] to-[#008f9c] rounded-2xl p-6 md:p-12 text-center">
                         <h2 className="text-4xl font-bold text-white mb-4">Ready to Get Started?</h2>
                         <p className="text-lg text-white/90 mb-8 max-w-xl mx-auto">
                             Join thousands who trust Takecare for their healthcare
@@ -439,7 +405,7 @@ const LandingPage: React.FC = () => {
             </section>
 
             {/* Footer - Minimal */}
-            <footer className="bg-gray-900 text-gray-400 py-12 px-6">
+            <footer className="bg-gray-900 text-gray-400 py-8 md:py-12 px-4 md:px-6">
                 <div className="max-w-6xl mx-auto">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
                         <div>

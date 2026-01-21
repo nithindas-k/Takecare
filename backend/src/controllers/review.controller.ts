@@ -103,4 +103,30 @@ export class ReviewController {
             next(error);
         }
     };
+
+    respondToReview = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const userId = req.user?.userId;
+            const { reviewId } = req.params;
+            const { response } = req.body;
+
+            if (!userId) throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+
+            const review = await this._reviewService.respondToReview(reviewId, userId, response);
+            sendSuccess(res, review, "Response submitted successfully");
+        } catch (error) {
+            next(error);
+        }
+    };
+    getMyReviews = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const userId = req.user?.userId;
+            if (!userId) throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+
+            const reviews = await this._reviewService.getMyReviews(userId);
+            sendSuccess(res, reviews);
+        } catch (error) {
+            next(error);
+        }
+    };
 }

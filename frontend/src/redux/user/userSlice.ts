@@ -24,6 +24,7 @@ export interface UserProfile {
     isVerified?: boolean;
     createdAt?: string;
     updatedAt?: string;
+    doctorProfileId?: string;
 
 }
 

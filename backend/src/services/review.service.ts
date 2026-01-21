@@ -4,11 +4,15 @@ import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository
 import { IReview } from "../models/review.model";
 import { AppError } from "../errors/AppError";
 import { HttpStatus } from "../constants/constants";
+import { INotificationRepository } from "../repositories/interfaces/INotification.repository";
+import { IUserRepository } from "../repositories/interfaces/IUser.repository";
 
 export class ReviewService implements IReviewService {
     constructor(
         private _reviewRepository: IReviewRepository,
-        private _doctorRepository: IDoctorRepository
+        private _doctorRepository: IDoctorRepository,
+        private _notificationRepository: INotificationRepository,
+        private _userRepository: IUserRepository
     ) { }
 
     async addReview(data: {
@@ -26,6 +30,19 @@ export class ReviewService implements IReviewService {
 
         const review = await this._reviewRepository.create(data as any);
         await this._updateDoctorStats(data.doctorId);
+
+        // Notify doctor
+        const doctor = await this._doctorRepository.findById(data.doctorId);
+        if (doctor) {
+            const patient = await this._userRepository.findById(data.patientId);
+            await this._notificationRepository.create({
+                userId: doctor.userId as any,
+                title: "New Review Received",
+                message: `${patient?.name || "A patient"} has left a ${data.rating}-star review for you.`,
+                type: "info"
+            } as any);
+        }
+
         return review;
     }
 
@@ -69,11 +86,17 @@ export class ReviewService implements IReviewService {
     }
 
     async getDoctorReviews(doctorId: string): Promise<IReview[]> {
-        return await this._reviewRepository.findByDoctorId(doctorId);
+        // Safe check: if the ID is a User ID, find the corresponding Doctor ID
+        const doctorDoc = await this._doctorRepository.findByUserId(doctorId);
+        const targetDoctorId = doctorDoc ? doctorDoc._id.toString() : doctorId;
+
+        return await this._reviewRepository.findByDoctorId(targetDoctorId);
     }
 
     async getDoctorStats(doctorId: string): Promise<{ averageRating: number; reviewCount: number }> {
-        return await this._reviewRepository.getAverageRating(doctorId);
+        const doctorDoc = await this._doctorRepository.findByUserId(doctorId);
+        const targetDoctorId = doctorDoc ? doctorDoc._id.toString() : doctorId;
+        return await this._reviewRepository.getAverageRating(targetDoctorId);
     }
 
     async getAllReviews(page: number, limit: number): Promise<{ reviews: IReview[]; total: number; totalPages: number }> {
@@ -102,5 +125,49 @@ export class ReviewService implements IReviewService {
             ratingAvg: stats.averageRating,
             ratingCount: stats.reviewCount
         } as any);
+    }
+
+    async respondToReview(reviewId: string, userId: string, response: string): Promise<IReview> {
+        const doctorDoc = await this._doctorRepository.findByUserId(userId);
+        if (!doctorDoc) {
+            throw new AppError("Doctor profile not found", HttpStatus.NOT_FOUND);
+        }
+
+        const review = await this._reviewRepository.findById(reviewId);
+        if (!review) {
+            throw new AppError("Review not found", HttpStatus.NOT_FOUND);
+        }
+
+        if (review.doctorId.toString() !== doctorDoc._id.toString()) {
+            throw new AppError("Unauthorized to respond to this review", HttpStatus.FORBIDDEN);
+        }
+
+        const updatedReview = await this._reviewRepository.updateById(reviewId, {
+            response,
+            responseDate: new Date()
+        });
+
+        if (!updatedReview) {
+            throw new AppError("Failed to update review with response", HttpStatus.INTERNAL_ERROR);
+        }
+
+        // Notify patient
+        const doctorUser = await this._userRepository.findById(userId);
+        await this._notificationRepository.create({
+            userId: review.patientId as any,
+            title: "Doctor Responded to Your Review",
+            message: `Dr. ${doctorUser?.name || "Your doctor"} has responded to your review.`,
+            type: "info"
+        } as any);
+
+        return updatedReview;
+    }
+
+    async getMyReviews(userId: string): Promise<IReview[]> {
+        const doctorDoc = await this._doctorRepository.findByUserId(userId);
+        if (!doctorDoc) {
+            throw new AppError("Doctor profile not found", HttpStatus.NOT_FOUND);
+        }
+        return await this._reviewRepository.findByDoctorId(doctorDoc._id.toString());
     }
 }

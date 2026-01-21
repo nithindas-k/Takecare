@@ -10,6 +10,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { setUser } from "../../../redux/user/userSlice";
 import authService from "../../../services/authService";
+import LandingNavbar from "../../../components/common/LandingNavbar";
 
 
 type Errors = {
@@ -245,9 +246,10 @@ const PatientOTPVerify: React.FC = () => {
   }, [email, navigate]);
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4 pt-24">
+      <LandingNavbar showActions={false} />
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
-        <div className="flex justify-center lg:justify-end">
+        <div className="hidden lg:flex justify-center lg:justify-end">
           <div className="relative w-full max-w-lg px-4">
             <img
               src="/interfaceUser.png"

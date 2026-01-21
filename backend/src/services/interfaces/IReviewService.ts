@@ -23,4 +23,6 @@ export interface IReviewService {
     getAllReviews(page: number, limit: number): Promise<{ reviews: IReview[]; total: number; totalPages: number }>;
     deleteReviewById(reviewId: string): Promise<void>;
     getReviewByPatientAndDoctorId(patientId: string, doctorId: string): Promise<IReview | null>;
+    respondToReview(reviewId: string, userId: string, response: string): Promise<IReview>;
+    getMyReviews(userId: string): Promise<IReview[]>;
 }
