@@ -7,6 +7,7 @@ import { authMiddleware } from "../middlewares/auth.middleware";
 import { requireAdmin } from "../middlewares/role.middleware";
 import { checkUserBlocked } from "../middlewares/check-user-blocked.middleware";
 import { NotificationRepository } from "../repositories/notification.repository";
+import { NotificationService } from "../services/notification.service";
 import { UserRepository } from "../repositories/user.repository";
 
 const reviewRouter = Router();
@@ -15,7 +16,8 @@ const reviewRepository = new ReviewRepository();
 const doctorRepository = new DoctorRepository();
 const notificationRepository = new NotificationRepository();
 const userRepository = new UserRepository();
-const reviewService = new ReviewService(reviewRepository, doctorRepository, notificationRepository, userRepository);
+const notificationService = new NotificationService(notificationRepository);
+const reviewService = new ReviewService(reviewRepository, doctorRepository, notificationService, userRepository);
 const reviewController = new ReviewController(reviewService);
 
 // Admin routes

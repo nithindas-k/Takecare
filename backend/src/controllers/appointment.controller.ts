@@ -484,7 +484,6 @@ export class AppointmentController implements IAppointmentController {
             }
 
             await this._appointmentService.enablePostConsultationChat(appointmentId, userId);
-            console.log("helo.......................................")
 
             sendSuccess(res, undefined, "Post-consultation chat enabled for 24 hours.");
         } catch (err: unknown) {

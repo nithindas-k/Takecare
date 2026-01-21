@@ -100,6 +100,30 @@ const VideoCallContent: React.FC = () => {
     const [noteFrequency, setNoteFrequency] = React.useState("");
     const [noteDuration, setNoteDuration] = React.useState("");
     const [isSavingNote, setIsSavingNote] = React.useState(false);
+    const audioRef = React.useRef<HTMLAudioElement | null>(null);
+
+    useEffect(() => {
+        if (incomingCall?.isReceivingCall && !callAccepted) {
+            if (!audioRef.current) {
+                audioRef.current = new Audio('/VideoCallSound.mp3');
+                audioRef.current.loop = true;
+            }
+            audioRef.current.play().catch(err => console.warn("Audio play failed:", err));
+        } else {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+                audioRef.current = null;
+            }
+        }
+
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current = null;
+            }
+        };
+    }, [incomingCall, callAccepted]);
 
     const handleSaveNote = async () => {
         if (!id || !noteTitle.trim()) {

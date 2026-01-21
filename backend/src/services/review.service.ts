@@ -4,14 +4,14 @@ import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository
 import { IReview } from "../models/review.model";
 import { AppError } from "../errors/AppError";
 import { HttpStatus } from "../constants/constants";
-import { INotificationRepository } from "../repositories/interfaces/INotification.repository";
+import { INotificationService } from "./notification.service";
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
 
 export class ReviewService implements IReviewService {
     constructor(
         private _reviewRepository: IReviewRepository,
         private _doctorRepository: IDoctorRepository,
-        private _notificationRepository: INotificationRepository,
+        private _notificationService: INotificationService,
         private _userRepository: IUserRepository
     ) { }
 
@@ -35,12 +35,11 @@ export class ReviewService implements IReviewService {
         const doctor = await this._doctorRepository.findById(data.doctorId);
         if (doctor) {
             const patient = await this._userRepository.findById(data.patientId);
-            await this._notificationRepository.create({
-                userId: doctor.userId as any,
+            await this._notificationService.notify(doctor.userId.toString(), {
                 title: "New Review Received",
                 message: `${patient?.name || "A patient"} has left a ${data.rating}-star review for you.`,
                 type: "info"
-            } as any);
+            });
         }
 
         return review;
@@ -153,12 +152,11 @@ export class ReviewService implements IReviewService {
 
         // Notify patient
         const doctorUser = await this._userRepository.findById(userId);
-        await this._notificationRepository.create({
-            userId: review.patientId as any,
+        await this._notificationService.notify(review.patientId.toString(), {
             title: "Doctor Responded to Your Review",
             message: `Dr. ${doctorUser?.name || "Your doctor"} has responded to your review.`,
             type: "info"
-        } as any);
+        });
 
         return updatedReview;
     }

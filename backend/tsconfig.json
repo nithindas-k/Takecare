@@ -10,7 +10,11 @@
     "preserveSymlinks": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": [
+      "jest",
+      "node"
+    ]
   },
   "include": [
     "src"

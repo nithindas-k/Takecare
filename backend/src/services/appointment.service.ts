@@ -614,7 +614,7 @@ export class AppointmentService implements IAppointmentService {
 
             const { appointmentDate, appointmentTime, slotId } = appointment.rescheduleRequest;
 
-           
+
             if (appointment.slotId) {
                 const [oldStartTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
                 await this._scheduleRepository.updateSlotBookedStatus(
@@ -865,6 +865,9 @@ export class AppointmentService implements IAppointmentService {
 
         await this._appointmentRepository.updateById(appointmentId, updateData);
 
+        if (this._chatService) {
+            await this._chatService.sendSystemMessage(appointmentId, "The consultation has been completed.");
+        }
 
         if (appointment.slotId) {
             const [startTime] = appointment.appointmentTime.split("-").map((t: string) => t.trim());
@@ -944,12 +947,24 @@ export class AppointmentService implements IAppointmentService {
         if (status === SESSION_STATUS.ACTIVE) {
             if (!appointment.sessionStartTime) {
                 updateData.sessionStartTime = new Date();
+                if (this._chatService) {
+                    const messageContent = appointment.appointmentType === 'chat'
+                        ? `Doctor has started the chat consultation.`
+                        : `Doctor has started the video consultation.`;
+                    await this._chatService.sendSystemMessage(appointmentId, messageContent);
+                }
             }
         } else if (status === SESSION_STATUS.CONTINUED_BY_DOCTOR) {
             updateData.extensionCount = (appointment.extensionCount || 0) + 1;
+            if (this._chatService) {
+                await this._chatService.sendSystemMessage(appointmentId, "The doctor has extended the consultation session.");
+            }
         } else if (status === SESSION_STATUS.ENDED) {
             updateData.sessionEndTime = new Date();
             updateData.status = APPOINTMENT_STATUS.COMPLETED;
+            if (this._chatService) {
+                await this._chatService.sendSystemMessage(appointmentId, "The consultation has been completed.");
+            }
         }
 
         await this._appointmentRepository.updateById(appointmentId, updateData);
@@ -969,21 +984,6 @@ export class AppointmentService implements IAppointmentService {
 
         socketService.emitToRoom(appointmentId, "session-status-updated", statusData);
 
-
-        if (this._chatService) {
-            let messageContent = "";
-            if (status === SESSION_STATUS.ACTIVE) {
-                messageContent = "Doctor has started the consultation.";
-            } else if (status === SESSION_STATUS.CONTINUED_BY_DOCTOR) {
-                messageContent = `The doctor has extended the session. (Extension #${updateData.extensionCount})`;
-            } else if (status === SESSION_STATUS.ENDED) {
-                messageContent = "The consultation has been concluded.";
-            }
-
-            if (messageContent) {
-                await this._chatService.sendSystemMessage(appointmentId, messageContent);
-            }
-        }
 
         if (updateData.sessionStatus === SESSION_STATUS.ENDED) {
             const endData = { appointmentId };
