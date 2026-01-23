@@ -91,6 +91,7 @@ interface Conversation {
         content: string;
         createdAt: string;
         senderModel?: string;
+        type?: string;
     };
     isOnline?: boolean;
     unreadCount: number;
@@ -734,7 +735,55 @@ const ChatPage = () => {
             socket.off('messages-read', onRead);
             socket.emit('leave-chat', convId);
         };
-    }, [socket, currentConversationId, user, isDoctor]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [socket, currentConversationId, user, isDoctor, id]);
+
+
+    useEffect(() => {
+        if (!socket || !user) return;
+
+        const updateSidebar = (newMessage: IMessage) => {
+            const msgConvId = String(newMessage.conversationId || "");
+            const msgAppId = String(newMessage.appointmentId || "");
+
+            setConversations(prev => {
+
+                const exists = prev.some(c =>
+                    String(c.conversationId) === msgConvId ||
+                    String(c.appointmentId) === msgConvId ||
+                    (msgAppId && (String(c.conversationId) === msgAppId || String(c.appointmentId) === msgAppId))
+                );
+
+                if (!exists) return prev;
+
+                return prev.map(conv => {
+                    const cId = String(conv.conversationId || "");
+                    const aId = String(conv.appointmentId || "");
+
+                    if (cId === msgConvId || aId === msgConvId || (msgAppId && (cId === msgAppId || aId === msgAppId))) {
+                        return {
+                            ...conv,
+                            lastMessage: {
+                                content: newMessage.content,
+                                createdAt: newMessage.createdAt || new Date().toISOString(),
+                                senderModel: newMessage.senderModel,
+                                type: newMessage.type
+                            },
+                        };
+                    }
+                    return conv;
+                }).sort((a, b) => {
+                    const timeA = a.lastMessage?.createdAt ? new Date(a.lastMessage.createdAt).getTime() : 0;
+                    const timeB = b.lastMessage?.createdAt ? new Date(b.lastMessage.createdAt).getTime() : 0;
+                    return timeB - timeA;
+                });
+            });
+        };
+
+        socket.on('receive-message', updateSidebar);
+        return () => {
+            socket.off('receive-message', updateSidebar);
+        };
+    }, [socket, user]);
 
     useEffect(() => {
         const initChatContext = async () => {
@@ -812,16 +861,7 @@ const ChatPage = () => {
         if (user) initChatContext();
     }, [id, user, isDoctor, onlineUsers]);
 
-    useEffect(() => {
-        if (!socket) return;
-        const handleTypingEvent = (data: { id: string, isTyping: boolean }) => {
-            setTypingRooms(prev => ({ ...prev, [data.id]: data.isTyping }));
-        };
-        socket.on('user-typing', handleTypingEvent);
-        return () => {
-            socket.off('user-typing', handleTypingEvent);
-        };
-    }, [socket]);
+
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1489,6 +1529,10 @@ const ChatPage = () => {
                                         <p className="text-xs text-slate-500 truncate italic">
                                             {typingRooms[conv.conversationId || conv.appointmentId] ? (
                                                 <span className="text-[#00A1B0] font-bold animate-pulse">Typing...</span>
+                                            ) : conv.lastMessage?.type === 'image' ? (
+                                                <span className="flex items-center gap-1.5 "> <Camera className="h-3 w-3" /> Image</span>
+                                            ) : (conv.lastMessage?.type === 'audio' || (conv.lastMessage?.type === 'file' && isAudioUrl(conv.lastMessage?.content || ""))) ? (
+                                                <span className="flex items-center gap-1.5 "> <Mic className="h-3 w-3" /> Voice Note</span>
                                             ) : (
                                                 conv.lastMessage?.content || 'No messages'
                                             )}

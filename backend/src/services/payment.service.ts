@@ -69,6 +69,10 @@ export class PaymentService implements IPaymentService {
             throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
         }
 
+        if (appointment.paymentStatus === PAYMENT_STATUS.PAID) {
+            throw new AppError(MESSAGES.APPOINTMENT_ALREADY_PAID, HttpStatus.BAD_REQUEST);
+        }
+
         const amountInPaise = Math.round(Number(amount) * PAYMENT_DEFAULTS.PAISE_MULTIPLIER);
 
         const order = await this._razorpay.orders.create({
@@ -112,6 +116,10 @@ export class PaymentService implements IPaymentService {
 
         if (appointment.patientId.toString() !== patientId) {
             throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
+        }
+
+        if (appointment.paymentStatus === PAYMENT_STATUS.PAID) {
+            throw new AppError(MESSAGES.APPOINTMENT_ALREADY_PAID, HttpStatus.BAD_REQUEST);
         }
 
         const body = `${razorpay_order_id}|${razorpay_payment_id}`;

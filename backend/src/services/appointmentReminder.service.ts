@@ -5,12 +5,15 @@ import { NotificationService } from "./notification.service";
 import { socketService } from "./socket.service";
 import { ILoggerService } from "./interfaces/ILogger.service";
 import { APPOINTMENT_STATUS } from "../constants/constants";
+import { toZonedTime, fromZonedTime } from "date-fns-tz";
+import { differenceInMinutes, startOfDay, endOfDay } from "date-fns";
 
 export class AppointmentReminderService {
     private _appointmentRepository: IAppointmentRepository;
     private _scheduleRepository: IScheduleRepository;
     private _notificationService: NotificationService;
     private _cronJob: any = null;
+    private readonly _timezone = "Asia/Kolkata";
 
     constructor(
         appointmentRepository: IAppointmentRepository,
@@ -24,17 +27,15 @@ export class AppointmentReminderService {
     }
 
     start() {
-        // checking 
         this._cronJob = cron.schedule("* * * * *", async () => {
             await this._checkUpcomingAppointments();
         });
 
-        // clean up in  5  minutes
         cron.schedule("*/5 * * * *", async () => {
             await this._cleanupPendingAppointments();
         });
 
-        this._logger.info("Appointment reminder service started");
+        this._logger.info("Appointment reminder service started with timezone: " + this._timezone);
     }
 
     stop() {
@@ -84,17 +85,18 @@ export class AppointmentReminderService {
 
     private async _checkUpcomingAppointments() {
         try {
-            const now = new Date();
-            const startOfDay = new Date(now);
-            startOfDay.setHours(0, 0, 0, 0);
 
-            const endOfDay = new Date(now);
-            endOfDay.setHours(23, 59, 59, 999);
+            const now = new Date();
+            const nowInIST = toZonedTime(now, this._timezone);
+
+          
+            const startOfToday = startOfDay(nowInIST);
+            const endOfToday = endOfDay(nowInIST);
 
             const appointments = await this._appointmentRepository.findWithPopulate({
                 appointmentDate: {
-                    $gte: startOfDay,
-                    $lte: endOfDay
+                    $gte: fromZonedTime(startOfToday, this._timezone),
+                    $lte: fromZonedTime(endOfToday, this._timezone)
                 },
                 status: APPOINTMENT_STATUS.CONFIRMED,
                 $or: [
@@ -103,107 +105,86 @@ export class AppointmentReminderService {
                 ]
             }, "doctorId");
 
-            this._logger.debug(`Found ${appointments.length} confirmed appointments for today to check for reminders.`);
+            this._logger.debug(`Found ${appointments.length} confirmed appointments for today to check in ${this._timezone}.`);
 
             for (const appointment of appointments) {
-
                 const timeParts = appointment.appointmentTime.split("-");
                 if (timeParts.length === 0) continue;
 
-                const startTime = timeParts[0].trim();
-                const [hours, minutes] = startTime.split(":").map(Number);
+                
+                const startTimeStr = timeParts[0].trim();
+                const [hours, minutes] = startTimeStr.split(":").map(Number);
 
-                const appointmentDateTime = new Date(appointment.appointmentDate);
-                appointmentDateTime.setHours(hours, minutes, 0, 0);
+                
+                const appDate = new Date(appointment.appointmentDate);
+                const appDateTimeInIST = new Date(
+                    appDate.getFullYear(),
+                    appDate.getMonth(),
+                    appDate.getDate(),
+                    hours,
+                    minutes,
+                    0,
+                    0
+                );
 
-                const timeDiffMs = appointmentDateTime.getTime() - now.getTime();
-                const minutesDiff = timeDiffMs / (1000 * 60);
+                
+                const appStartInIST = toZonedTime(appDateTimeInIST, this._timezone);
+
+                
+                const minutesDiff = differenceInMinutes(appStartInIST, nowInIST);
 
                 this._logger.debug(`Checking appointment ${appointment.customId}:`, {
-                    currentTime: now.toLocaleTimeString(),
-                    targetTime: appointmentDateTime.toLocaleTimeString(),
-                    minutesUntilStart: minutesDiff.toFixed(2)
+                    nowInIST: nowInIST.toLocaleTimeString(),
+                    appStartInIST: appStartInIST.toLocaleTimeString(),
+                    minutesUntilStart: minutesDiff
                 });
 
-                if (minutesDiff > 4.5 && minutesDiff <= 5.5 && !appointment.reminderSent) {
-                    this._logger.info(`Sending 5-minute reminder for appointment ${appointment.customId}`);
-
-                    const reminderData = {
+                
+                if (minutesDiff > 4 && minutesDiff <= 6 && !appointment.reminderSent) {
+                    await this._sendNotification(appointment, "warning", {
                         title: "Appointment Starting Soon!",
                         message: `Your appointment #${appointment.customId} is starting in 5 minutes.`,
-                        appointmentId: appointment._id.toString(),
-                        customId: appointment.customId
-                    };
-
-                    const doctorDoc = appointment.doctorId as any;
-                    const doctorUserId = doctorDoc?.userId?.toString();
-                    const patientId = appointment.patientId.toString();
-
-                    if (doctorUserId) {
-                        await this._notificationService.notify(patientId, {
-                            ...reminderData,
-                            type: "warning",
-                        });
-
-                        await this._notificationService.notify(doctorUserId, {
-                            ...reminderData,
-                            type: "warning",
-                        });
-
-                        socketService.sendReminder(patientId, reminderData);
-                        socketService.sendReminder(doctorUserId, reminderData);
-
-                        await this._appointmentRepository.updateById(appointment._id.toString(), {
-                            reminderSent: true
-                        });
-
-                        this._logger.info(`5-minute reminder sent for appointment ${appointment.customId}`);
-                    }
+                    });
+                    await this._appointmentRepository.updateById(appointment._id.toString(), { reminderSent: true });
                 }
 
-                // Start Time
+                    
                 if (minutesDiff <= 0 && minutesDiff >= -2 && !appointment.startNotificationSent) {
-                    this._logger.info(`Sending start-time notification for appointment ${appointment.customId}`);
-
-                    const startData = {
+                    await this._sendNotification(appointment, "success", {
                         title: "Consultation Ready!",
                         message: `Your appointment #${appointment.customId} is starting now. You can join the session.`,
-                        appointmentId: appointment._id.toString(),
-                        customId: appointment.customId,
                         type: "appointment_started"
-                    };
-
-                    const doctorDoc = appointment.doctorId as any;
-                    const doctorUserId = doctorDoc?.userId?.toString();
-                    const patientId = appointment.patientId.toString();
-
-                    if (doctorUserId) {
-
-                        await this._notificationService.notify(patientId, {
-                            ...startData,
-                            type: "success",
-                        });
-
-
-                        await this._notificationService.notify(doctorUserId, {
-                            ...startData,
-                            type: "success",
-                        });
-
-
-                        socketService.sendReminder(patientId, startData);
-                        socketService.sendReminder(doctorUserId, startData);
-
-                        await this._appointmentRepository.updateById(appointment._id.toString(), {
-                            startNotificationSent: true
-                        });
-
-                        this._logger.info(`Start-time notification sent for appointment ${appointment.customId}`);
-                    }
+                    });
+                    await this._appointmentRepository.updateById(appointment._id.toString(), { startNotificationSent: true });
                 }
             }
         } catch (error) {
-            this._logger.error("Error checking upcoming appointments", error);
+            this._logger.error("Error checking upcoming appointments with timezone logic", error);
+        }
+    }
+
+    private async _sendNotification(appointment: any, type: "warning" | "success" | "info" | "error", data: any) {
+        const reminderData = {
+            ...data,
+            appointmentId: appointment._id.toString(),
+            customId: appointment.customId,
+            type: data.type || type
+        };
+
+        const doctorDoc = appointment.doctorId as any;
+        const doctorUserId = doctorDoc?.userId?.toString();
+        const patientId = appointment.patientId.toString();
+
+        if (doctorUserId) {
+            
+            await this._notificationService.notify(patientId, reminderData);
+            await this._notificationService.notify(doctorUserId, reminderData);
+
+            
+            socketService.sendReminder(patientId, reminderData);
+            socketService.sendReminder(doctorUserId, reminderData);
+
+            this._logger.info(`Notification sent for appointment ${appointment.customId}: ${data.title}`);
         }
     }
 }

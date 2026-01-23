@@ -248,6 +248,7 @@ export const MESSAGES = {
   APPOINTMENT_COMPLETED: "Appointment completed successfully",
   APPOINTMENT_ALREADY_COMPLETED: "This appointment is already completed",
   APPOINTMENT_ALREADY_CANCELLED: "This appointment is already cancelled",
+  APPOINTMENT_ALREADY_PAID: "This appointment is already paid",
   APPOINTMENT_CANNOT_CANCEL: "Cannot cancel this appointment",
   APPOINTMENT_CANNOT_MODIFY: "Cannot modify this appointment",
   APPOINTMENT_INVALID_STATUS: "Invalid appointment status",

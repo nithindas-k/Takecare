@@ -108,16 +108,17 @@ const ContactMessages: React.FC = () => {
             <div className="flex-1 flex flex-col lg:pl-64 min-w-0">
                 <TopNav onMenuClick={() => setSidebarOpen(true)} />
 
-                <main className="flex-1 px-4 sm:px-6 lg:px-8 py-8">
+                <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
                     <div className="max-w-5xl mx-auto">
-                        <div className="mb-8">
-                            <h1 className="text-3xl font-bold text-slate-900">Contact Messages</h1>
-                            <p className="text-slate-500 mt-2">Manage incoming inquiries from the contact form</p>
+                        <div className="mb-6 md:mb-8">
+                            <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Contact Messages</h1>
+                            <p className="text-sm md:text-base text-slate-500 mt-1 md:mt-2">Manage incoming inquiries from the contact form</p>
                         </div>
 
                         {loading ? (
-                            <div className="flex items-center justify-center py-20">
-                                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-500"></div>
+                            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-500 mb-4"></div>
+                                <p className="text-slate-400 font-medium">Loading inbox...</p>
                             </div>
                         ) : submissions.length === 0 ? (
                             <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-slate-100">
@@ -128,55 +129,55 @@ const ContactMessages: React.FC = () => {
                                 <p className="text-slate-500 mt-2">When users contact you, their messages will appear here.</p>
                             </div>
                         ) : (
-                            <div className="space-y-6">
+                            <div className="space-y-4 md:space-y-6">
                                 {submissions.map((msg) => (
                                     <motion.div
                                         key={msg._id}
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow"
+                                        className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow relative overflow-hidden group"
                                     >
-                                        <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 bg-cyan-50 text-cyan-600 rounded-xl flex items-center justify-center">
-                                                    <User size={24} />
+                                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
+                                            <div className="flex items-start gap-3 md:gap-4 min-w-0">
+                                                <div className="w-10 h-10 md:w-12 md:h-12 bg-cyan-50 text-cyan-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                                                    <User size={20} className="md:w-6 md:h-6" />
                                                 </div>
-                                                <div>
-                                                    <h3 className="font-bold text-slate-900 text-lg">{msg.name}</h3>
-                                                    <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
-                                                        <span className="flex items-center gap-1">
-                                                            <Mail size={14} />
+                                                <div className="min-w-0">
+                                                    <h3 className="font-bold text-slate-900 text-base md:text-lg truncate">{msg.name}</h3>
+                                                    <div className="flex flex-col gap-1 text-sm text-slate-500 mt-1">
+                                                        <span className="flex items-center gap-1.5 truncate">
+                                                            <Mail size={12} className="text-slate-400" />
                                                             {msg.email}
                                                         </span>
                                                         {msg.phone && (
-                                                            <span className="flex items-center gap-1">
-                                                                <Phone size={14} />
+                                                            <span className="flex items-center gap-1.5">
+                                                                <Phone size={12} className="text-slate-400" />
                                                                 {msg.phone}
                                                             </span>
                                                         )}
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2 px-3 py-1 bg-slate-50 text-slate-500 rounded-full text-xs font-medium">
-                                                <Clock size={14} />
-                                                {new Date(msg.createdAt).toLocaleString()}
+                                            <div className="flex items-center self-start sm:self-auto gap-2 px-3 py-1 bg-slate-50 text-slate-400 group-hover:text-slate-500 rounded-full text-[11px] font-bold uppercase tracking-wider transition-colors">
+                                                <Clock size={12} />
+                                                {new Date(msg.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                             </div>
                                         </div>
 
-                                        <div className="bg-slate-50 rounded-xl p-5">
-                                            <div className="flex items-center gap-2 text-slate-900 font-semibold mb-2">
-                                                <MessageSquare size={18} className="text-cyan-500" />
+                                        <div className="bg-slate-50/50 rounded-xl p-4 md:p-5 border border-slate-50 transition-colors group-hover:bg-slate-50">
+                                            <div className="flex items-center gap-2 text-slate-900 font-bold mb-2 text-sm md:text-base">
+                                                <MessageSquare size={16} className="text-cyan-500" />
                                                 {msg.subject}
                                             </div>
-                                            <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">
-                                                {msg.message}
+                                            <p className="text-sm md:text-base text-slate-600 leading-relaxed whitespace-pre-wrap break-words italic">
+                                                "{msg.message}"
                                             </p>
                                         </div>
 
-                                        <div className="mt-4 flex items-center justify-between">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${msg.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                                                    msg.status === 'responded' ? 'bg-blue-100 text-blue-700' :
-                                                        'bg-slate-100 text-slate-700'
+                                        <div className="mt-4 flex flex-col xs:flex-row items-center justify-between gap-4 pt-2">
+                                            <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${msg.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                                msg.status === 'responded' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                                    'bg-slate-50 text-slate-600 border-slate-100'
                                                 }`}>
                                                 {msg.status}
                                             </span>
@@ -184,9 +185,9 @@ const ContactMessages: React.FC = () => {
                                             {msg.status === 'pending' && (
                                                 <button
                                                     onClick={() => handleReplyClick(msg)}
-                                                    className="px-6 py-2 bg-cyan-500 text-white rounded-lg font-semibold hover:bg-cyan-600 transition-colors shadow-sm"
+                                                    className="w-full xs:w-auto px-6 py-2 bg-[#00A1B0] text-white rounded-xl font-bold text-sm hover:bg-[#008a96] transition-all shadow-lg shadow-cyan-500/10 active:scale-95"
                                                 >
-                                                    Reply
+                                                    Send Reply
                                                 </button>
                                             )}
                                         </div>
@@ -213,41 +214,46 @@ const ContactMessages: React.FC = () => {
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
-                            className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden"
+                            className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
                         >
                             <div className="p-6 border-b border-slate-100">
                                 <h3 className="text-xl font-bold text-slate-900">Reply to {selectedMsg?.name}</h3>
-                                <p className="text-sm text-slate-500 mt-1">Subject: {selectedMsg?.subject}</p>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Subject: {selectedMsg?.subject}</p>
                             </div>
 
                             <div className="p-6">
-                                <label className="block text-sm font-medium text-slate-700 mb-2">Your Message</label>
+                                <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Your Message</label>
                                 <textarea
                                     value={replyText}
                                     onChange={(e) => setReplyText(e.target.value)}
                                     placeholder="Type your response here..."
-                                    className="w-full h-40 p-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition-all resize-none"
+                                    className="w-full h-40 md:h-52 p-4 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-cyan-500/5 focus:border-[#00A1B0] outline-none transition-all resize-none text-slate-700 leading-relaxed shadow-inner"
                                 />
                             </div>
 
-                            <div className="p-6 bg-slate-50 flex items-center justify-end gap-3">
+                            <div className="p-6 bg-slate-50/50 flex flex-col-reverse xs:flex-row items-center justify-end gap-3 px-6 py-4">
                                 <button
                                     onClick={() => setReplyModalOpen(false)}
-                                    className="px-6 py-2 text-slate-600 font-semibold hover:text-slate-900 transition-colors"
+                                    className="w-full xs:w-auto px-6 py-2.5 text-slate-500 font-bold hover:text-slate-900 transition-colors text-sm"
                                 >
-                                    Cancel
+                                    Cancel Request
                                 </button>
                                 <button
                                     onClick={handleSendReply}
                                     disabled={!replyText.trim() || isSending}
-                                    className="px-8 py-2 bg-cyan-500 text-white rounded-lg font-semibold hover:bg-cyan-600 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                    className="w-full xs:w-auto px-10 py-3 bg-[#00A1B0] text-white rounded-2xl font-bold hover:bg-[#008a96] transition-all shadow-xl shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-95"
                                 >
                                     {isSending ? (
                                         <>
-                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                            Sending...
+                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                            Dispatching...
                                         </>
-                                    ) : "Send Reply"}
+                                    ) : (
+                                        <>
+                                            <Mail size={18} />
+                                            Post Reply
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </motion.div>

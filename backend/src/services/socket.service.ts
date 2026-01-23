@@ -61,11 +61,11 @@ export class SocketService {
             });
 
             socket.on("typing", ({ id, userId }: { id: string, userId: string }) => {
-                socket.to(id).emit("user-typing", { userId, isTyping: true });
+                socket.to(id).emit("user-typing", { id, userId, isTyping: true });
             });
 
             socket.on("stop-typing", ({ id, userId }: { id: string, userId: string }) => {
-                socket.to(id).emit("user-typing", { userId, isTyping: false });
+                socket.to(id).emit("user-typing", { id, userId, isTyping: false });
             });
 
             socket.on("mark-read", ({ id, userId }: { id: string, userId: string }) => {
@@ -76,7 +76,8 @@ export class SocketService {
                 const roomId = String(data.conversationId || data.appointmentId || "");
                 if (roomId) {
                     console.log(`Socket [${socket.id}] sending message to room ${roomId}`);
-                   
+                    // Removed redundant broadcast: this._io?.to(roomId).emit("receive-message", data);
+                    // The broadcast is handled by ChatService.sendMessage to ensure permanent IDs and data consistency.
                 } else {
                     console.error("Socket error: send-message received without roomId");
                 }

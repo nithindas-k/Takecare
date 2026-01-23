@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     ArrowLeft,
     Mail,
@@ -57,6 +58,7 @@ const DoctorDetailPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [confirmOpen, setConfirmOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const fetchDoctorDetail = useCallback(async () => {
         if (!doctorId) return;
@@ -97,7 +99,7 @@ const DoctorDetailPage: React.FC = () => {
     };
 
     return (
-        <div className="flex min-h-screen bg-gray-50 font-sans">
+        <div className="flex min-h-screen bg-gray-50 font-sans no-scrollbar">
             <AlertDialog
                 open={confirmOpen}
                 onOpenChange={setConfirmOpen}
@@ -113,10 +115,39 @@ const DoctorDetailPage: React.FC = () => {
                 onConfirm={handleBanToggle}
             />
 
-            <Sidebar />
-            <div className="flex-1 flex flex-col h-screen overflow-hidden">
-                <TopNav />
-                <div className="flex-1 overflow-y-auto p-6 md:p-8">
+            {/* Sidebar - Desktop */}
+            <div className="hidden lg:block w-64 fixed inset-y-0 left-0 z-50">
+                <Sidebar />
+            </div>
+
+            {/* Sidebar - Mobile Overlay */}
+            <AnimatePresence>
+                {sidebarOpen && (
+                    <div className="fixed inset-0 z-[60] lg:hidden">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSidebarOpen(false)}
+                            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ x: -256 }}
+                            animate={{ x: 0 }}
+                            exit={{ x: -256 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="absolute left-0 top-0 h-full w-64 bg-white shadow-2xl"
+                        >
+                            <Sidebar onMobileClose={() => setSidebarOpen(false)} />
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            <div className="flex-1 flex flex-col lg:pl-64 min-w-0">
+                <TopNav onMenuClick={() => setSidebarOpen(true)} />
+
+                <main className="flex-1 overflow-y-auto px-4 md:px-6 lg:px-8 py-6">
                     {loading ? (
                         <div className="max-w-6xl mx-auto">
                             <Skeleton className="h-6 w-48 mb-6" />
@@ -180,48 +211,48 @@ const DoctorDetailPage: React.FC = () => {
                                     <span className="font-medium">Back to Doctors List</span>
                                 </button>
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                                    <div className="flex items-center gap-6">
-                                        <div className="relative">
+                                    <div className="flex items-center gap-4 md:gap-6">
+                                        <div className="relative flex-shrink-0">
                                             {doctor.profileImage ? (
                                                 <img
                                                     src={doctor.profileImage}
                                                     alt={doctor.name}
-                                                    className="w-24 h-24 rounded-2xl object-cover shadow-md border-2 border-white ring-2 ring-gray-100"
+                                                    className="w-16 h-16 md:w-24 md:h-24 rounded-2xl object-cover shadow-md border-2 border-white ring-2 ring-gray-100"
                                                 />
                                             ) : (
-                                                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center shadow-md ring-2 ring-gray-100">
-                                                    <span className="text-3xl font-bold text-white">
+                                                <div className="w-16 h-16 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center shadow-md ring-2 ring-gray-100">
+                                                    <span className="text-xl md:text-3xl font-bold text-white">
                                                         {doctor.name.charAt(0)}
                                                     </span>
                                                 </div>
                                             )}
-                                            <div className={`absolute -bottom-2 -right-2 p-1.5 rounded-full border-4 border-white ${doctor.isActive === false ? "bg-red-500" : "bg-green-500"}`}>
+                                            <div className={`absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 p-1 md:p-1.5 rounded-full border-2 md:border-4 border-white ${doctor.isActive === false ? "bg-red-500" : "bg-green-500"}`}>
                                                 {doctor.isActive === false ? (
-                                                    <Ban className="w-4 h-4 text-white" />
+                                                    <Ban className="w-3 h-3 md:w-4 md:h-4 text-white" />
                                                 ) : (
-                                                    <CheckCircle className="w-4 h-4 text-white" />
+                                                    <CheckCircle className="w-3 h-3 md:w-4 md:h-4 text-white" />
                                                 )}
                                             </div>
                                         </div>
-                                        <div>
-                                            <h1 className="text-3xl font-bold text-gray-800 mb-1">{doctor.name}</h1>
-                                            <div className="flex items-center gap-3 text-gray-500 text-sm">
+                                        <div className="min-w-0">
+                                            <h1 className="text-xl md:text-3xl font-bold text-gray-800 mb-1 truncate">{doctor.name}</h1>
+                                            <div className="flex flex-wrap items-center gap-2 md:gap-3 text-gray-500 text-xs md:text-sm">
                                                 <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-md">
-                                                    <Award className="w-4 h-4 text-cyan-500" />
+                                                    <Award className="w-3 h-3 md:w-4 md:h-4 text-cyan-500" />
                                                     {doctor.department}
                                                 </span>
                                                 <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-md">
-                                                    <Calendar className="w-4 h-4 text-cyan-500" />
+                                                    <Calendar className="w-3 h-3 md:w-4 md:h-4 text-cyan-500" />
                                                     {doctor.experienceYears} Years Exp.
                                                 </span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex gap-3">
+                                    <div className="w-full md:w-auto mt-2 md:mt-0">
                                         <button
                                             onClick={() => setConfirmOpen(true)}
                                             disabled={processing}
-                                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-white shadow-lg transition-all transform hover:scale-105 active:scale-95 ${doctor.isActive === false ? "bg-gradient-to-r from-green-500 to-emerald-600 shadow-green-500/30" : "bg-gradient-to-r from-red-500 to-rose-600 shadow-red-500/30"}`}
+                                            className={`w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm md:text-base text-white shadow-lg transition-all transform hover:scale-105 active:scale-95 ${doctor.isActive === false ? "bg-gradient-to-r from-green-500 to-emerald-600 shadow-green-500/30" : "bg-gradient-to-r from-red-500 to-rose-600 shadow-red-500/30"}`}
                                         >
                                             {processing ? (
                                                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
@@ -241,8 +272,8 @@ const DoctorDetailPage: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                <div className="lg:col-span-1 space-y-8">
+                            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+                                <div className="lg:col-span-1 space-y-6 md:space-y-8">
                                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                                         <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
                                             <User className="w-5 h-5 text-cyan-500" />
@@ -251,21 +282,21 @@ const DoctorDetailPage: React.FC = () => {
                                         <div className="space-y-4">
                                             <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
                                                 <Mail className="w-5 h-5 text-gray-400 mt-0.5" />
-                                                <div>
+                                                <div className="min-w-0">
                                                     <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Email</p>
                                                     <p className="text-gray-700 font-medium break-all">{doctor.email}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
                                                 <Phone className="w-5 h-5 text-gray-400 mt-0.5" />
-                                                <div>
+                                                <div className="min-w-0">
                                                     <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Phone</p>
-                                                    <p className="text-gray-700 font-medium">{doctor.phone}</p>
+                                                    <p className="text-gray-700 font-medium truncate">{doctor.phone}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
                                                 <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
-                                                <div>
+                                                <div className="min-w-0">
                                                     <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Address</p>
                                                     <p className="text-gray-700 font-medium">
                                                         {doctor.address ? (
@@ -314,22 +345,22 @@ const DoctorDetailPage: React.FC = () => {
                                             <IndianRupee className="w-5 h-5 text-cyan-500" />
                                             Consultation Fees
                                         </h3>
-                                        <div className="overflow-x-auto">
+                                        <div className="overflow-x-auto no-scrollbar">
                                             <table className="min-w-full divide-y divide-gray-200">
                                                 <thead className="bg-gray-50">
                                                     <tr>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fee</th>
+                                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fee</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="bg-white divide-y divide-gray-200">
                                                     <tr>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Video Consultation</td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><IndianRupee className="inline w-4 h-4 mr-1" />{doctor.VideoFees}</td>
+                                                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">Video Consultation</td>
+                                                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-bold"><IndianRupee className="inline w-4 h-4 mr-0.5" />{doctor.VideoFees}</td>
                                                     </tr>
                                                     <tr>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Chat Consultation</td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><IndianRupee className="inline w-4 h-4 mr-1" />{doctor.ChatFees}</td>
+                                                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">Chat Consultation</td>
+                                                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-bold"><IndianRupee className="inline w-4 h-4 mr-0.5" />{doctor.ChatFees}</td>
                                                     </tr>
                                                 </tbody>
                                             </table>
@@ -337,14 +368,14 @@ const DoctorDetailPage: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="lg:col-span-2 space-y-8">
+                                <div className="lg:col-span-2 space-y-6 md:space-y-8">
                                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                                         <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
                                             <Shield className="w-5 h-5 text-cyan-500" />
                                             Verification Documents
                                         </h3>
                                         {doctor.documents.length > 0 ? (
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                                 {doctor.documents.map((doc, index) => {
                                                     const isPdf = doc.toLowerCase().endsWith(".pdf");
                                                     return (
@@ -389,10 +420,11 @@ const DoctorDetailPage: React.FC = () => {
                             </div>
                         </>
                     )}
-                </div>
+                </main>
             </div>
         </div>
     );
 };
 
 export default DoctorDetailPage;
+
