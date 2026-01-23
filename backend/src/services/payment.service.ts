@@ -73,6 +73,20 @@ export class PaymentService implements IPaymentService {
             throw new AppError(MESSAGES.APPOINTMENT_ALREADY_PAID, HttpStatus.BAD_REQUEST);
         }
 
+        // Return existing order if it exists
+        if (appointment.razorpayOrderId) {
+            this._logger.info("Reusing existing Razorpay order", {
+                appointmentId,
+                orderId: appointment.razorpayOrderId
+            });
+            return {
+                keyId: env.RAZORPAY_API_KEY!,
+                orderId: appointment.razorpayOrderId,
+                amount: Math.round(Number(amount) * PAYMENT_DEFAULTS.PAISE_MULTIPLIER),
+                currency: currency,
+            };
+        }
+
         const amountInPaise = Math.round(Number(amount) * PAYMENT_DEFAULTS.PAISE_MULTIPLIER);
 
         const order = await this._razorpay.orders.create({
@@ -84,6 +98,11 @@ export class PaymentService implements IPaymentService {
             },
         });
 
+        // Save order ID to appointment to prevent duplicate orders
+        await this._appointmentRepository.updateById(appointmentId, {
+            razorpayOrderId: order.id
+        } as any);
+
         this._logger.info("Razorpay order created", {
             appointmentId,
             orderId: order.id,
@@ -91,7 +110,7 @@ export class PaymentService implements IPaymentService {
         });
 
         return {
-            keyId: env.RAZORPAY_API_KEY,
+            keyId: env.RAZORPAY_API_KEY!,
             orderId: order.id,
             amount: order.amount,
             currency: order.currency,

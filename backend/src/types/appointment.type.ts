@@ -62,6 +62,7 @@ export interface IAppointment {
     paymentStatus: PaymentStatus;
     paymentId?: string | null;
     paymentMethod?: PaymentMethod;
+    razorpayOrderId?: string | null;
 
     sessionStartTime?: Date | null;
     sessionEndTime?: Date | null;

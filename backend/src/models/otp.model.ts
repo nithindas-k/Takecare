@@ -24,7 +24,7 @@ const OTPSchema = new Schema<IOTPDocument>(
       required: true,
       lowercase: true,
       trim: true,
-      unique: true, 
+      unique: true,
     },
     otp: {
       type: String,
@@ -53,7 +53,7 @@ const OTPSchema = new Schema<IOTPDocument>(
   }
 );
 
-OTPSchema.index({ email: 1 });
+
 
 OTPSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 

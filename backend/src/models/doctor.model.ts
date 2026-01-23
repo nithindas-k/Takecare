@@ -83,7 +83,7 @@ const DoctorSchema = new Schema<IDoctorDocument>(
   }
 );
 
-DoctorSchema.index({ userId: 1 }, { unique: true });
+
 DoctorSchema.index({ specialty: 1 });
 DoctorSchema.index({ verificationStatus: 1 });
 DoctorSchema.index({ isActive: 1 });

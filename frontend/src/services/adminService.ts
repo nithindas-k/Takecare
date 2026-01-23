@@ -1,5 +1,5 @@
 import axiosInstance from "../api/axiosInstance";
-import { ADMIN_API_ROUTES } from "../utils/constants";
+import { ADMIN_API_ROUTES, REVIEW_API_ROUTES } from "../utils/constants";
 
 interface ApiError {
   response?: {
@@ -65,7 +65,7 @@ class AdminService {
 
   async banDoctor(doctorId: string) {
     try {
-      const res = await axiosInstance.post(`${ADMIN_API_ROUTES.GET_ALL_DOCTORS}/${doctorId}/ban`);
+      const res = await axiosInstance.post(ADMIN_API_ROUTES.BAN_DOCTOR(doctorId));
       return res.data;
     } catch (error) {
       const err = error as ApiError;
@@ -75,7 +75,7 @@ class AdminService {
 
   async unbanDoctor(doctorId: string) {
     try {
-      const res = await axiosInstance.post(`${ADMIN_API_ROUTES.GET_ALL_DOCTORS}/${doctorId}/unban`);
+      const res = await axiosInstance.post(ADMIN_API_ROUTES.UNBAN_DOCTOR(doctorId));
       return res.data;
     } catch (error) {
       const err = error as ApiError;
@@ -127,7 +127,7 @@ class AdminService {
 
   async getDashboardStats(startDate?: string, endDate?: string) {
     try {
-      const response = await axiosInstance.get("/admin/stats", {
+      const response = await axiosInstance.get(ADMIN_API_ROUTES.DASHBOARD_STATS, {
         params: { startDate, endDate },
       });
       return response.data;
@@ -139,7 +139,7 @@ class AdminService {
 
   async getAllReviews(page: number = 1, limit: number = 10) {
     try {
-      const res = await axiosInstance.get("/reviews", {
+      const res = await axiosInstance.get(REVIEW_API_ROUTES.LIST, {
         params: { page, limit }
       });
       return res.data;
@@ -151,7 +151,7 @@ class AdminService {
 
   async deleteReview(reviewId: string) {
     try {
-      const res = await axiosInstance.delete(`/reviews/admin/${reviewId}`);
+      const res = await axiosInstance.delete(REVIEW_API_ROUTES.ADMIN_DELETE(reviewId));
       return res.data;
     } catch (error) {
       const err = error as ApiError;

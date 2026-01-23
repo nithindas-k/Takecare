@@ -89,7 +89,7 @@ export class AppointmentReminderService {
             const now = new Date();
             const nowInIST = toZonedTime(now, this._timezone);
 
-          
+
             const startOfToday = startOfDay(nowInIST);
             const endOfToday = endOfDay(nowInIST);
 
@@ -111,35 +111,35 @@ export class AppointmentReminderService {
                 const timeParts = appointment.appointmentTime.split("-");
                 if (timeParts.length === 0) continue;
 
-                
                 const startTimeStr = timeParts[0].trim();
                 const [hours, minutes] = startTimeStr.split(":").map(Number);
 
-                
-                const appDate = new Date(appointment.appointmentDate);
-                const appDateTimeInIST = new Date(
-                    appDate.getFullYear(),
-                    appDate.getMonth(),
-                    appDate.getDate(),
+                // 1. Get the proper "Day" in IST from the UTC appointmentDate
+                // Since appointmentDate is stored as 00:00 UTC, we must ensure we get the correct IST date component
+                const appDateInIST = toZonedTime(new Date(appointment.appointmentDate), this._timezone);
+
+                // 2. Construct a Date object that has IST values in its LocalTime fields
+                // This matches the format of nowInIST, allowing for direct comparison
+                const appStartInIST = new Date(
+                    appDateInIST.getFullYear(),
+                    appDateInIST.getMonth(),
+                    appDateInIST.getDate(),
                     hours,
                     minutes,
                     0,
                     0
                 );
 
-                
-                const appStartInIST = toZonedTime(appDateTimeInIST, this._timezone);
-
-                
+                // 3. Calculate difference using the "IST-valued" date objects
                 const minutesDiff = differenceInMinutes(appStartInIST, nowInIST);
 
                 this._logger.debug(`Checking appointment ${appointment.customId}:`, {
-                    nowInIST: nowInIST.toLocaleTimeString(),
-                    appStartInIST: appStartInIST.toLocaleTimeString(),
+                    nowInIST: nowInIST.toLocaleTimeString('en-US', { timeZone: this._timezone }),
+                    appStartInIST: appStartInIST.toLocaleTimeString('en-US', { timeZone: this._timezone }),
                     minutesUntilStart: minutesDiff
                 });
 
-                
+                // Send 5-minute reminder
                 if (minutesDiff > 4 && minutesDiff <= 6 && !appointment.reminderSent) {
                     await this._sendNotification(appointment, "warning", {
                         title: "Appointment Starting Soon!",
@@ -148,7 +148,7 @@ export class AppointmentReminderService {
                     await this._appointmentRepository.updateById(appointment._id.toString(), { reminderSent: true });
                 }
 
-                    
+                // Send "Join Now" notification (0 to 2 minutes window)
                 if (minutesDiff <= 0 && minutesDiff >= -2 && !appointment.startNotificationSent) {
                     await this._sendNotification(appointment, "success", {
                         title: "Consultation Ready!",
@@ -176,11 +176,11 @@ export class AppointmentReminderService {
         const patientId = appointment.patientId.toString();
 
         if (doctorUserId) {
-            
+
             await this._notificationService.notify(patientId, reminderData);
             await this._notificationService.notify(doctorUserId, reminderData);
 
-            
+
             socketService.sendReminder(patientId, reminderData);
             socketService.sendReminder(doctorUserId, reminderData);
 

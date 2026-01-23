@@ -1,12 +1,13 @@
 
 
 import axiosInstance from "../api/axiosInstance";
+import { USER_API_ROUTES, ADMIN_API_ROUTES } from "../utils/constants";
 import type { UserData } from "../api/types";
 
 class UserService {
   async getProfile() {
     try {
-      const response = await axiosInstance.get("/users/profile");
+      const response = await axiosInstance.get(USER_API_ROUTES.PROFILE);
       return response.data;
     } catch (error: any) {
       return {
@@ -21,7 +22,7 @@ class UserService {
       const isFormData = userData instanceof FormData;
       const config = isFormData ? { headers: { "Content-Type": "multipart/form-data" } } : {};
 
-      const response = await axiosInstance.put("/users/profile", userData, config);
+      const response = await axiosInstance.put(USER_API_ROUTES.PROFILE, userData, config);
       return response.data;
     } catch (error: any) {
       return {
@@ -35,7 +36,7 @@ class UserService {
     try {
       const formData = new FormData();
       formData.append("image", file);
-      const response = await axiosInstance.post("/users/profile/image", formData);
+      const response = await axiosInstance.post(USER_API_ROUTES.UPDATE_IMAGE, formData);
       return response.data;
     } catch (error: any) {
       return {
@@ -45,10 +46,10 @@ class UserService {
     }
   }
 
- 
+
   async getAllUsers() {
     try {
-      const response = await axiosInstance.get("/admin/users");
+      const response = await axiosInstance.get(ADMIN_API_ROUTES.GET_ALL_USERS);
       return response.data;
     } catch (error: any) {
       return {
@@ -60,7 +61,7 @@ class UserService {
 
   async deleteUser(userId: string) {
     try {
-      const response = await axiosInstance.delete(`/admin/users/${userId}`);
+      const response = await axiosInstance.delete(ADMIN_API_ROUTES.DELETE_USER(userId));
       return response.data;
     } catch (error: any) {
       return {

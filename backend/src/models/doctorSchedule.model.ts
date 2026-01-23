@@ -155,7 +155,7 @@ const DoctorScheduleSchema = new Schema<IDoctorScheduleDocument>(
 );
 
 
-DoctorScheduleSchema.index({ doctorId: 1 }, { unique: true });
+
 DoctorScheduleSchema.index({ isActive: 1 });
 
 

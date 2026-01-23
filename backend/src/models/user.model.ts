@@ -11,7 +11,7 @@ const UserSchema = new Schema<IUserDocument>(
       required: false,
       unique: true,
       sparse: true,
-      index: true,
+
     },
     name: {
       type: String,

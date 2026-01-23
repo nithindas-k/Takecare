@@ -30,7 +30,7 @@ export const reviewService = {
     },
 
     getMyReview: async (doctorId: string) => {
-        const response = await axiosInstance.get(`/reviews/patient-doctor/${doctorId}`);
+        const response = await axiosInstance.get(REVIEW_API_ROUTES.GET_PATIENT_DOCTOR_REVIEW(doctorId));
         return response.data;
     },
 

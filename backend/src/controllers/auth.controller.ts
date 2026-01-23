@@ -111,6 +111,7 @@ export class AuthController implements IAuthController {
       const token = req.cookies?.[COOKIE_OPTIONS.REFRESH_TOKEN];
 
       if (!token) {
+        this.logger.warn("Refresh token attempt without cookie");
         throw new AppError(MESSAGES.REFRESH_TOKEN_MISSING, HttpStatus.UNAUTHORIZED);
       }
 
@@ -118,6 +119,7 @@ export class AuthController implements IAuthController {
 
       sendSuccess(res, result, MESSAGES.TOKEN_REFRESHED, HttpStatus.OK);
     } catch (err: unknown) {
+      this.logger.error("Refresh token error", err);
       next(err);
     }
   };

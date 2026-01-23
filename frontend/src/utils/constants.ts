@@ -12,6 +12,7 @@ export const USER_API_ROUTES = {
   FORGOT_PASSWORD: "/auth/forgot-password",
   RESET_PASSWORD: "/auth/reset-password",
   PROFILE: "/users/profile",
+  UPDATE_IMAGE: "/users/profile/image",
 } as const;
 
 export const DOCTOR_API_ROUTES = {
@@ -34,6 +35,10 @@ export const DOCTOR_API_ROUTES = {
   DELETE_RECURRING_SLOT: (day: string, slotId: string): string => `/doctors/schedule/recurring-slots/${day}/${slotId}`,
   DELETE_RECURRING_SLOT_BY_TIME: (startTime: string, endTime: string): string => `/doctors/schedule/recurring-slots/by-time/${startTime}/${endTime}`,
   RELATED_DOCTORS: (doctorId: string): string => `/doctors/${doctorId}/related`,
+  LIST: "/doctors",
+  GET_BY_ID: (doctorId: string): string => `/doctors/${doctorId}`,
+  DASHBOARD_STATS: "/doctors/stats",
+  LANDING_STATS: "/doctors/landing-stats",
 } as const;
 
 
@@ -67,6 +72,9 @@ export const ADMIN_API_ROUTES = {
   GET_PATIENT_BY_ID: (patientId: string): string => `/admin/patients/${patientId}`,
   BLOCK_PATIENT: (patientId: string): string => `/admin/patients/${patientId}/block`,
   UNBLOCK_PATIENT: (patientId: string): string => `/admin/patients/${patientId}/unblock`,
+  BAN_DOCTOR: (doctorId: string): string => `/admin/doctors/${doctorId}/ban`,
+  UNBAN_DOCTOR: (doctorId: string): string => `/admin/doctors/${doctorId}/unban`,
+  DASHBOARD_STATS: "/admin/stats",
 } as const;
 
 
@@ -139,12 +147,50 @@ export const PRESCRIPTION_API_ROUTES = {
 } as const;
 
 export const REVIEW_API_ROUTES = {
+  LIST: "/reviews",
   ADD: "/reviews",
   UPDATE: (reviewId: string): string => `/reviews/${reviewId}`,
   DELETE: (reviewId: string): string => `/reviews/${reviewId}`,
   GET_DOCTOR_REVIEWS: (doctorId: string): string => `/reviews/doctor/${doctorId}`,
   GET_DOCTOR_STATS: (doctorId: string): string => `/reviews/doctor/${doctorId}/stats`,
+  GET_PATIENT_DOCTOR_REVIEW: (doctorId: string): string => `/reviews/patient-doctor/${doctorId}`,
+  RESPOND: (reviewId: string): string => `/reviews/respond/${reviewId}`,
+  ADMIN_DELETE: (reviewId: string): string => `/reviews/admin/${reviewId}`,
 } as const;
+
+export const SPECIALTY_API_ROUTES = {
+  LIST: "/specialties",
+  ACTIVE: "/specialties/active",
+  GET_BY_ID: (id: string): string => `/specialties/${id}`,
+  CREATE: "/specialties",
+  UPDATE: (id: string): string => `/specialties/${id}`,
+  DELETE: (id: string): string => `/specialties/${id}`,
+  TOGGLE: (id: string): string => `/specialties/${id}/toggle`,
+} as const;
+
+export const NOTIFICATION_API_ROUTES = {
+  LIST: "/notifications",
+  MARK_READ: (id: string): string => `/notifications/${id}/read`,
+  MARK_ALL_READ: "/notifications/read-all",
+  CLEAR_ALL: "/notifications/clear-all",
+  DELETE: (id: string): string => `/notifications/${id}`,
+} as const;
+
+export const CONTACT_API_ROUTES = {
+  SUBMIT: "/contact/submit",
+  STATS: "/contact/stats",
+  SUBMISSIONS: "/contact/submissions",
+  REPLY: (id: string): string => `/contact/reply/${id}`,
+} as const;
+
+export const CALL_API_ROUTES = {
+  START: (appointmentId: string): string => `/call/${appointmentId}/start`,
+  END: (sessionId: string): string => `/call/session/${sessionId}/end`,
+  STATUS: (appointmentId: string): string => `/call/${appointmentId}/status`,
+  REJOIN: (appointmentId: string): string => `/call/${appointmentId}/rejoin`,
+  ACTIVE: (appointmentId: string): string => `/call/${appointmentId}/active`,
+} as const;
+
 
 export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
 export type HttpStatus = (typeof HTTP_STATUS)[keyof typeof HTTP_STATUS];

@@ -1,6 +1,6 @@
 
 import axiosInstance from "../api/axiosInstance";
-import { DOCTOR_API_ROUTES } from "../utils/constants";
+import { DOCTOR_API_ROUTES, REVIEW_API_ROUTES } from "../utils/constants";
 
 interface ApiError {
   response?: {
@@ -155,7 +155,7 @@ class DoctorService {
 
   async getAllDoctors(params: { page?: number; limit?: number; query?: string; specialty?: string; sort?: string; experience?: number; rating?: number }) {
     try {
-      const response = await axiosInstance.get('/doctors', {
+      const response = await axiosInstance.get(DOCTOR_API_ROUTES.LIST, {
         params: {
           page: params.page || 1,
           limit: params.limit || 10,
@@ -178,7 +178,7 @@ class DoctorService {
 
   async getDoctorById(doctorId: string) {
     try {
-      const response = await axiosInstance.get(`/doctors/${doctorId}`);
+      const response = await axiosInstance.get(DOCTOR_API_ROUTES.GET_BY_ID(doctorId));
       return response.data;
     } catch (error) {
       const err = error as ApiError;
@@ -191,7 +191,7 @@ class DoctorService {
 
   async getRelatedDoctors(doctorId: string) {
     try {
-      const response = await axiosInstance.get(`/doctors/${doctorId}/related`);
+      const response = await axiosInstance.get(DOCTOR_API_ROUTES.RELATED_DOCTORS(doctorId));
       return response.data;
     } catch (error) {
       const err = error as ApiError;
@@ -204,7 +204,7 @@ class DoctorService {
 
   async getDashboardStats(startDate?: string, endDate?: string) {
     try {
-      const response = await axiosInstance.get("/doctors/stats", {
+      const response = await axiosInstance.get(DOCTOR_API_ROUTES.DASHBOARD_STATS, {
         params: { startDate, endDate },
       });
       return response.data;
@@ -259,7 +259,7 @@ class DoctorService {
 
   async getLandingStats() {
     try {
-      const response = await axiosInstance.get('/doctors/landing-stats');
+      const response = await axiosInstance.get(DOCTOR_API_ROUTES.LANDING_STATS);
       return response.data;
     } catch (error) {
       const err = error as ApiError;
@@ -272,7 +272,7 @@ class DoctorService {
 
   async getReviews(doctorId: string) {
     try {
-      const response = await axiosInstance.get(`/reviews/doctor/${doctorId}`);
+      const response = await axiosInstance.get(REVIEW_API_ROUTES.GET_DOCTOR_REVIEWS(doctorId));
       return response.data;
     } catch (error) {
       const err = error as ApiError;
@@ -285,7 +285,7 @@ class DoctorService {
 
   async respondToReview(reviewId: string, response: string) {
     try {
-      const res = await axiosInstance.put(`/reviews/respond/${reviewId}`, { response });
+      const res = await axiosInstance.put(REVIEW_API_ROUTES.RESPOND(reviewId), { response });
       return res.data;
     } catch (error) {
       const err = error as ApiError;

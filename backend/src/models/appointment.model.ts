@@ -135,6 +135,10 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
             enum: ["card", "upi", "wallet", "netbanking", null],
             default: null,
         },
+        razorpayOrderId: {
+            type: String,
+            default: null,
+        },
 
 
         sessionStartTime: {

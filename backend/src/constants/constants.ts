@@ -193,7 +193,7 @@ export const MESSAGES = {
   PATIENT_NOT_FOUND: "Patient not found",
   PROFILE_FETCHED: "Profile fetched successfully",
   TOKEN_REFRESHED: "Token refreshed successfully",
-  REFRESH_TOKEN_MISSING: "Password or email is incorrect",
+  REFRESH_TOKEN_MISSING: "Session expired or refresh token missing",
   ACCESS_TOKEN_MISSING: "No token provided",
   INVALID_ACCESS_TOKEN: "Invalid token",
   EMAIL_REQUIRED: "Email is required",

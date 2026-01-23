@@ -8,7 +8,7 @@ export interface ISpecialty {
   updatedAt?: Date;
 }
 
-export interface ISpecialtyDocument extends ISpecialty, Document {}
+export interface ISpecialtyDocument extends ISpecialty, Document { }
 
 const SpecialtySchema = new Schema<ISpecialtyDocument>(
   {
@@ -36,7 +36,7 @@ const SpecialtySchema = new Schema<ISpecialtyDocument>(
   }
 );
 
-SpecialtySchema.index({ name: 1 }, { unique: true });
+
 SpecialtySchema.index({ isActive: 1 });
 
 const SpecialtyModel: Model<ISpecialtyDocument> =

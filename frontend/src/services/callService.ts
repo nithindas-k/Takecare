@@ -1,4 +1,5 @@
 import axiosInstance from "../api/axiosInstance";
+import { CALL_API_ROUTES } from "../utils/constants";
 
 export interface CallSession {
     id: string;
@@ -23,36 +24,36 @@ export interface RejoinStatus {
 }
 
 const callService = {
-  
+
     startCall: async (appointmentId: string, doctorId: string, patientId: string) => {
-        const response = await axiosInstance.post(`/call/${appointmentId}/start`, {
+        const response = await axiosInstance.post(CALL_API_ROUTES.START(appointmentId), {
             doctorId,
             patientId
         });
         return response.data;
     },
 
-    
+
     endCall: async (sessionId: string) => {
-        const response = await axiosInstance.post(`/call/session/${sessionId}/end`);
+        const response = await axiosInstance.post(CALL_API_ROUTES.END(sessionId));
         return response.data;
     },
 
-    
+
     getCallStatus: async (appointmentId: string): Promise<{ data: RejoinStatus }> => {
-        const response = await axiosInstance.get(`/call/${appointmentId}/status`);
+        const response = await axiosInstance.get(CALL_API_ROUTES.STATUS(appointmentId));
         return response.data;
     },
 
-    
+
     rejoinCall: async (appointmentId: string) => {
-        const response = await axiosInstance.post(`/call/${appointmentId}/rejoin`);
+        const response = await axiosInstance.post(CALL_API_ROUTES.REJOIN(appointmentId));
         return response.data;
     },
 
-  
+
     getActiveCall: async (appointmentId: string): Promise<{ data: CallSession | null }> => {
-        const response = await axiosInstance.get(`/call/${appointmentId}/active`);
+        const response = await axiosInstance.get(CALL_API_ROUTES.ACTIVE(appointmentId));
         return response.data;
     }
 };
