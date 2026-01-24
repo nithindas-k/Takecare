@@ -211,6 +211,10 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
             },
             canRejoinUntil: { type: Date, default: null }
         },
+        checkoutLockUntil: {
+            type: Date,
+            default: null,
+        },
     },
     {
         timestamps: true,
@@ -233,6 +237,7 @@ AppointmentSchema.index({ patientId: 1, status: 1 });
 AppointmentSchema.index({ doctorId: 1, status: 1 });
 AppointmentSchema.index({ appointmentDate: 1, doctorId: 1 });
 AppointmentSchema.index({ status: 1, appointmentDate: 1 });
+AppointmentSchema.index({ checkoutLockUntil: 1 }, { expireAfterSeconds: 0 });
 
 
 AppointmentSchema.pre('save', async function (next) {

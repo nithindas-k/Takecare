@@ -152,13 +152,16 @@ export class PaymentService implements IPaymentService {
                 razorpay_order_id,
                 razorpay_payment_id,
             });
+            
+            await this._appointmentRepository.updateById(appointmentId, { checkoutLockUntil: null } as any);
             throw new AppError(MESSAGES.PAYMENT_VERIFICATION_FAILED, HttpStatus.BAD_REQUEST);
         }
 
         await this._appointmentRepository.updateById(appointmentId, {
             paymentStatus: PAYMENT_STATUS.PAID,
             paymentId: razorpay_payment_id,
-        });
+            checkoutLockUntil: null
+        } as any);
 
         if (this._notificationService) {
             await this._notificationService.notify(patientId, {

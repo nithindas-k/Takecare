@@ -90,6 +90,8 @@ export interface IAppointment {
         canRejoinUntil: Date | null;
     };
 
+    checkoutLockUntil?: Date | null;
+
     createdAt?: Date;
     updatedAt?: Date;
 }

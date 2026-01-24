@@ -128,19 +128,18 @@ export class AppointmentService implements IAppointmentService {
 
                         if (existingAppointment) {
                             const now = new Date();
-                            const lastUpdate = new Date((existingAppointment as any).updatedAt || (existingAppointment as any).createdAt);
-                            const diffInSeconds = (now.getTime() - lastUpdate.getTime()) / 1000;
 
-                            if (diffInSeconds < 30) {
-                                this._logger.warn("Prevented duplicate checkout session for same user and slot", {
+                            // Check if there is an active checkout lock
+                            if (existingAppointment.checkoutLockUntil && existingAppointment.checkoutLockUntil > now) {
+                                this._logger.warn("Prevented duplicate checkout session - active lock found", {
                                     patientId,
                                     slotId: appointmentData.slotId,
-                                    diffInSeconds
+                                    lockUntil: existingAppointment.checkoutLockUntil
                                 });
-                                throw new AppError("A booking for this slot is already in progress", HttpStatus.BAD_REQUEST);
+                                throw new AppError("A payment session is already active for this appointment. please wait a moment or complete the existing payment.", HttpStatus.CONFLICT);
                             }
 
-                            this._logger.info("Found existing PENDING appointment. Updating and reusing.", {
+                            this._logger.info("Found existing PENDING appointment. reusing.", {
                                 appointmentId: existingAppointment._id.toString(),
                                 previousStatus: existingAppointment.status
                             });
@@ -149,6 +148,9 @@ export class AppointmentService implements IAppointmentService {
                             const adminCommission = (consultationFees * PAYMENT_COMMISSION.ADMIN_PERCENT) / 100;
                             const doctorEarnings = (consultationFees * PAYMENT_COMMISSION.DOCTOR_PERCENT) / 100;
 
+                            // Set a new lock for 1 minute
+                            const lockTime = new Date(now.getTime() + 60000); // 1 minute from now
+
                             const updated = await this._appointmentRepository.updateById(existingAppointment._id.toString(), {
                                 appointmentType: appointmentData.appointmentType,
                                 consultationFees,
@@ -156,7 +158,8 @@ export class AppointmentService implements IAppointmentService {
                                 doctorEarnings,
                                 reason: appointmentData.reason || existingAppointment.reason,
                                 appointmentTime: appointmentData.appointmentTime,
-                                appointmentDate: new Date(appointmentData.appointmentDate)
+                                appointmentDate: new Date(appointmentData.appointmentDate),
+                                checkoutLockUntil: lockTime
                             }, session);
 
                             const populatedAppointment = await this._appointmentRepository.findByIdPopulated(updated!._id.toString(), session);
@@ -192,6 +195,7 @@ export class AppointmentService implements IAppointmentService {
                 paymentStatus: PAYMENT_STATUS.PENDING,
                 paymentId: null,
                 paymentMethod: null,
+                checkoutLockUntil: new Date(Date.now() + 60000), // Lock for 1 min
             };
 
 
