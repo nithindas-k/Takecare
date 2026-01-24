@@ -127,8 +127,6 @@ export class AppointmentService implements IAppointmentService {
                         }, session);
 
                         if (existingAppointment) {
-                            // Check if the appointment was recently updated (within 30 seconds)
-                            // This prevents opening multiple payment modals from different sessions
                             const now = new Date();
                             const lastUpdate = new Date((existingAppointment as any).updatedAt || (existingAppointment as any).createdAt);
                             const diffInSeconds = (now.getTime() - lastUpdate.getTime()) / 1000;
@@ -139,7 +137,7 @@ export class AppointmentService implements IAppointmentService {
                                     slotId: appointmentData.slotId,
                                     diffInSeconds
                                 });
-                                throw new AppError("A booking for this slot is already in progress in another window. Please finish there or try again in a moment.", HttpStatus.BAD_REQUEST);
+                                throw new AppError("A booking for this slot is already in progress", HttpStatus.BAD_REQUEST);
                             }
 
                             this._logger.info("Found existing PENDING appointment. Updating and reusing.", {

@@ -73,7 +73,6 @@ export class PaymentService implements IPaymentService {
             throw new AppError(MESSAGES.APPOINTMENT_ALREADY_PAID, HttpStatus.BAD_REQUEST);
         }
 
-        // Return existing order if it exists
         if (appointment.razorpayOrderId) {
             this._logger.info("Reusing existing Razorpay order", {
                 appointmentId,
