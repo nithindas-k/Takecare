@@ -51,7 +51,7 @@ export class UserController {
         try {
           dto.additionalInformation = JSON.parse(req.body.additionalInformation);
         } catch {
-          // ignore
+    
         }
       }
 

@@ -129,7 +129,7 @@ export class AppointmentService implements IAppointmentService {
                         if (existingAppointment) {
                             const now = new Date();
 
-                            // Check if there is an active checkout lock
+                        
                             if (existingAppointment.checkoutLockUntil && existingAppointment.checkoutLockUntil > now) {
                                 this._logger.warn("Prevented duplicate checkout session - active lock found", {
                                     patientId,
@@ -148,8 +148,7 @@ export class AppointmentService implements IAppointmentService {
                             const adminCommission = (consultationFees * PAYMENT_COMMISSION.ADMIN_PERCENT) / 100;
                             const doctorEarnings = (consultationFees * PAYMENT_COMMISSION.DOCTOR_PERCENT) / 100;
 
-                            // Set a new lock for 1 minute
-                            const lockTime = new Date(now.getTime() + 60000); // 1 minute from now
+                            const lockTime = new Date(now.getTime() + 60000); 
 
                             const updated = await this._appointmentRepository.updateById(existingAppointment._id.toString(), {
                                 appointmentType: appointmentData.appointmentType,
@@ -195,7 +194,7 @@ export class AppointmentService implements IAppointmentService {
                 paymentStatus: PAYMENT_STATUS.PENDING,
                 paymentId: null,
                 paymentMethod: null,
-                checkoutLockUntil: new Date(Date.now() + 60000), // Lock for 1 min
+                checkoutLockUntil: new Date(Date.now() + 60000),
             };
 
 
@@ -1047,7 +1046,7 @@ export class AppointmentService implements IAppointmentService {
             await this._chatService.sendSystemMessage(appointmentId, messageContent);
         }
 
-        // Emit status update
+     
         const statusUpdate = {
             appointmentId,
             customId: appointment.customId,
