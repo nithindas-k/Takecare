@@ -110,4 +110,44 @@ export class UserService implements IUserService {
   async getUserAppointments(userId: string): Promise<AppointmentListItem[]> {
     return [];
   }
+
+  async toggleFavoriteDoctor(userId: string, doctorId: string): Promise<boolean> {
+    const user = await this._userRepository.findById(userId);
+    if (!user) throw new NotFoundError(MESSAGES.USER_NOT_FOUND);
+
+    const favorites = user.favorites || [];
+    const index = favorites.findIndex(id => id.toString() === doctorId);
+
+    let isAdded = false;
+    if (index === -1) {
+      favorites.push(doctorId as any);
+      isAdded = true;
+    } else {
+      favorites.splice(index, 1);
+      isAdded = false;
+    }
+
+    await this._userRepository.updateById(userId, { favorites });
+    return isAdded;
+  }
+
+  async getFavoriteDoctors(userId: string): Promise<any[]> {
+    const user = await this._userRepository.findById(userId);
+    if (!user) throw new NotFoundError(MESSAGES.USER_NOT_FOUND);
+
+    // We need to populate the favorites
+    // If our repository doesn't support populate on findById, we might need a workaround or add it.
+    // Let's assume user.populate exists or use repository.
+    const populatedUser = await (this._userRepository as any).model
+      .findById(userId)
+      .populate({
+        path: 'favorites',
+        populate: {
+          path: 'userId',
+          select: 'name email profileImage'
+        }
+      });
+
+    return populatedUser?.favorites || [];
+  }
 }

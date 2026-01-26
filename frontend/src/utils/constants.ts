@@ -14,6 +14,8 @@ export const USER_API_ROUTES = {
   PROFILE: "/users/profile",
   UPDATE_IMAGE: "/users/profile/image",
   CHANGE_PASSWORD: "/auth/change-password",
+  TOGGLE_FAVORITE: (doctorId: string) => `/users/favorites/${doctorId}`,
+  GET_FAVORITES: "/users/favorites",
 } as const;
 
 export const DOCTOR_API_ROUTES = {

@@ -70,6 +70,30 @@ class UserService {
       };
     }
   }
+
+  async toggleFavorite(doctorId: string) {
+    try {
+      const response = await axiosInstance.post(USER_API_ROUTES.TOGGLE_FAVORITE(doctorId));
+      return response.data;
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to toggle favorite",
+      };
+    }
+  }
+
+  async getFavorites() {
+    try {
+      const response = await axiosInstance.get(USER_API_ROUTES.GET_FAVORITES);
+      return response.data;
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to fetch favorites",
+      };
+    }
+  }
 }
 
 export default new UserService();

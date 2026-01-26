@@ -6,4 +6,6 @@ export interface IUserService {
   updateUserProfile(userId: string, data: UnifiedUpdateProfileDTO, imageFile?: Express.Multer.File): Promise<UnifiedUserProfileResponseDTO>;
   deleteUserAccount(userId: string): Promise<void>;
   getUserAppointments(userId: string): Promise<AppointmentListItem[]>;
+  toggleFavoriteDoctor(userId: string, doctorId: string): Promise<boolean>;
+  getFavoriteDoctors(userId: string): Promise<any[]>;
 }

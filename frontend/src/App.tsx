@@ -45,6 +45,7 @@ import AppointmentDetails from "./pages/user/AppointmentDetails";
 import About from "./pages/user/About";
 import Contact from "./pages/user/Contact";
 import PatientDashboard from "./pages/user/Dashboard";
+import FavoriteDoctors from "./pages/user/FavoriteDoctors";
 import DoctorChangePassword from "./pages/doctor/DoctorChangePassword";
 
 // Admin Routes
@@ -413,6 +414,14 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute role="patient">
                 <ChatPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="favorites"
+            element={
+              <ProtectedRoute role="patient">
+                <FavoriteDoctors />
               </ProtectedRoute>
             }
           />

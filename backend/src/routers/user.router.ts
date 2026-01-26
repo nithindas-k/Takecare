@@ -32,5 +32,21 @@ router.put(
     userController.updateProfile
 );
 
+router.post(
+    USER_ROUTES.TOGGLE_FAVORITE,
+    authMiddleware,
+    checkUserBlocked,
+    requirePatient,
+    userController.toggleFavorite
+);
+
+router.get(
+    USER_ROUTES.GET_FAVORITES,
+    authMiddleware,
+    checkUserBlocked,
+    requirePatient,
+    userController.getFavorites
+);
+
 
 export default router;

@@ -9,11 +9,14 @@ import {
   FaRegComment,
   FaMoneyBillWave,
   FaArrowLeft,
+  FaHeart,
 } from "react-icons/fa";
 import NavBar from "../../components/common/NavBar";
 import Footer from "../../components/common/Footer";
 import doctorService from "../../services/doctorService";
+import userService from "../../services/userService";
 import ReviewsList from "../../components/reviews/ReviewsList";
+import { toast } from "sonner";
 
 import { API_BASE_URL } from "../../utils/constants";
 import { Skeleton } from "../../components/ui/skeleton";
@@ -47,6 +50,7 @@ const DoctorProfile: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [relatedDoctors, setRelatedDoctors] = useState<DoctorDTO[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'reviews'>('overview');
+  const [isFavorited, setIsFavorited] = useState<boolean>(false);
 
 
   useEffect(() => {
@@ -57,6 +61,19 @@ const DoctorProfile: React.FC = () => {
     }
 
     let mounted = true;
+
+    const checkFavoriteStatus = async () => {
+      try {
+        const response = await userService.getFavorites();
+        if (response.success && Array.isArray(response.data)) {
+          const isFav = response.data.some((doc: any) => (doc.id || doc._id) === doctorId);
+          if (mounted) setIsFavorited(isFav);
+        }
+      } catch (error) {
+        console.error("Failed to check favorite status", error);
+      }
+    };
+
     const fetchDoctor = async () => {
       setLoading(true);
       setErrorMsg(null);
@@ -138,9 +155,25 @@ const DoctorProfile: React.FC = () => {
 
     fetchDoctor();
     fetchRelatedDoctors();
+    checkFavoriteStatus();
 
     return () => { mounted = false; };
   }, [doctorId]);
+
+  const handleToggleFavorite = async () => {
+    if (!doctorId) return;
+    try {
+      const response = await userService.toggleFavorite(doctorId);
+      if (response.success) {
+        setIsFavorited(prev => !prev);
+        toast.success(response.message);
+      } else {
+        toast.error(response.message);
+      }
+    } catch (error) {
+      toast.error("Failed to update favorite status");
+    }
+  };
 
   const getImageUrl = (imagePath: string | null | undefined) => {
     if (!imagePath) return '/doctor.png';
@@ -237,6 +270,13 @@ const DoctorProfile: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex gap-3 mt-6">
+                    <button
+                      className={`flex-1 md:flex-none p-3 border rounded-xl transition-all flex justify-center ${isFavorited ? 'bg-red-50 border-red-200 text-red-500 shadow-sm shadow-red-100' : 'border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-[#00A1B0]'}`}
+                      onClick={handleToggleFavorite}
+                      title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
+                    >
+                      <FaHeart />
+                    </button>
                     <button className="flex-1 md:flex-none p-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-[#00A1B0] transition-all flex justify-center" title="Send Message"><FaRegComment /></button>
                     <button className="flex-1 md:flex-none p-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-[#00A1B0] transition-all flex justify-center"><FaVideo /></button>
                   </div>

@@ -4,6 +4,7 @@ import NavBar from '../../components/common/NavBar';
 import Footer from '../../components/common/Footer';
 import { FaStar, FaHeart, FaMapMarkerAlt, FaCircle, FaMoneyBillWave, FaSearch, FaFilter, FaStethoscope, FaBriefcase, FaTimes } from 'react-icons/fa';
 import doctorService from '../../services/doctorService';
+import userService from '../../services/userService';
 import { API_BASE_URL } from '../../utils/constants';
 import {
     Pagination,
@@ -29,6 +30,18 @@ const Doctors: React.FC = () => {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalDoctors, setTotalDoctors] = useState(0);
+    const [favorites, setFavorites] = useState<string[]>([]);
+
+    const fetchFavorites = useCallback(async () => {
+        try {
+            const response = await userService.getFavorites();
+            if (response.success && Array.isArray(response.data)) {
+                setFavorites(response.data.map((doc: any) => doc.id || doc._id));
+            }
+        } catch (error) {
+            console.error("Failed to fetch favorites", error);
+        }
+    }, []);
 
     const fetchDoctors = useCallback(async () => {
         setLoading(true);
@@ -64,7 +77,27 @@ const Doctors: React.FC = () => {
 
     useEffect(() => {
         fetchDoctors();
-    }, [fetchDoctors]);
+        fetchFavorites();
+    }, [fetchDoctors, fetchFavorites]);
+
+    const handleToggleFavorite = async (e: React.MouseEvent, doctorId: string) => {
+        e.stopPropagation();
+        try {
+            const response = await userService.toggleFavorite(doctorId);
+            if (response.success) {
+                setFavorites(prev =>
+                    prev.includes(doctorId)
+                        ? prev.filter(id => id !== doctorId)
+                        : [...prev, doctorId]
+                );
+                toast.success(response.message);
+            } else {
+                toast.error(response.message);
+            }
+        } catch (error) {
+            toast.error("An error occurred");
+        }
+    };
 
     const handleSearch = () => {
         if (searchQuery.trim() == "") {
@@ -268,7 +301,10 @@ const Doctors: React.FC = () => {
                                     <div className="absolute top-3 left-3 bg-[#00A1B0] text-white text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1 shadow-sm">
                                         <FaStar className="text-yellow-300" /> {doctor.rating}
                                     </div>
-                                    <button className="absolute top-3 right-3 bg-white/80 p-2 rounded-full text-gray-400 hover:text-red-500 hover:bg-white transition-colors" onClick={(e) => e.stopPropagation()}>
+                                    <button
+                                        className={`absolute top-3 right-3 bg-white/80 p-2 rounded-full transition-colors ${favorites.includes(doctor.id) ? 'text-red-500 bg-white' : 'text-gray-400 hover:text-red-500 hover:bg-white'}`}
+                                        onClick={(e) => handleToggleFavorite(e, doctor.id)}
+                                    >
                                         <FaHeart />
                                     </button>
                                 </div>

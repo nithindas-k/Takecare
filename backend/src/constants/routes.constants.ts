@@ -70,6 +70,8 @@ export const DOCTOR_ROUTES = {
 
 export const USER_ROUTES = {
     PROFILE: "/profile",
+    TOGGLE_FAVORITE: "/favorites/:doctorId",
+    GET_FAVORITES: "/favorites",
 } as const;
 
 export const APPOINTMENT_ROUTES = {

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut, User, Menu, X } from "lucide-react";
-import { FaCalendarCheck } from "react-icons/fa";
+import { FaCalendarCheck, FaHeart } from "react-icons/fa";
 import authService from "../../services/authService";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../../redux/store";
@@ -133,6 +133,16 @@ const NavBar: React.FC = () => {
                       <User size={18} />
                       <span className="font-medium">Profile</span>
                     </button>
+                    <button
+                      onClick={() => {
+                        setShowLogoutMenu(false);
+                        navigate("/patient/favorites");
+                      }}
+                      className="w-full px-4 py-2 text-left text-gray-700 hover:bg-[#00A1B0]/10 hover:text-[#00A1B0] flex items-center gap-2 transition-colors"
+                    >
+                      <FaHeart size={18} className="text-red-500" />
+                      <span className="font-medium">Favorites</span>
+                    </button>
                     <hr className="my-1 border-gray-200" />
                     <button
                       onClick={handleLogout}
@@ -165,34 +175,37 @@ const NavBar: React.FC = () => {
       </div>
 
       {/* Mobile Menu Dropdown */}
-      {isMobileMenuOpen && (
-        <div className="absolute top-full left-0 w-full bg-[#00A1B0] border-t border-[#008f9c] shadow-lg z-40 py-4 px-4 flex flex-col space-y-4 md:hidden">
-          {navLinks.map((link) => (
-            <span
-              key={link.label}
-              onClick={() => {
-                navigate(link.path);
-                setIsMobileMenuOpen(false);
-              }}
-              className="text-white hover:text-[#d1fcfd] font-medium cursor-pointer text-lg border-b border-[#00A1B0]/20 pb-2"
-            >
-              {link.label}
-            </span>
-          ))}
+      <div
+        className={`absolute top-full left-0 w-full bg-[#00A1B0] border-t border-[#008f9c] shadow-lg z-40 px-4 flex flex-col space-y-4 md:hidden transition-all duration-300 ease-in-out origin-top overflow-hidden ${isMobileMenuOpen
+          ? "max-h-[400px] opacity-100 py-6 translate-y-0"
+          : "max-h-0 opacity-0 py-0 -translate-y-4 pointer-events-none"
+          }`}
+      >
+        {navLinks.map((link) => (
+          <span
+            key={link.label}
+            onClick={() => {
+              navigate(link.path);
+              setIsMobileMenuOpen(false);
+            }}
+            className="text-white hover:text-[#d1fcfd] font-medium cursor-pointer text-lg border-b border-white/10 pb-2 transition-colors"
+          >
+            {link.label}
+          </span>
+        ))}
 
-          {!isAuthenticated && (
-            <button
-              onClick={() => {
-                navigate('/login');
-                setIsMobileMenuOpen(false);
-              }}
-              className="w-full px-6 py-2 bg-white text-[#00A1B0] rounded-full font-semibold shadow hover:bg-gray-100 transition text-center"
-            >
-              LOGIN
-            </button>
-          )}
-        </div>
-      )}
+        {!isAuthenticated && (
+          <button
+            onClick={() => {
+              navigate('/patient/login');
+              setIsMobileMenuOpen(false);
+            }}
+            className="w-full px-6 py-3 bg-white text-[#00A1B0] rounded-xl font-bold shadow-lg hover:bg-gray-100 transition text-center"
+          >
+            LOGIN
+          </button>
+        )}
+      </div>
     </nav>
   );
 };

@@ -43,7 +43,7 @@ export class UserController {
         try {
           dto.information = JSON.parse(req.body.information);
         } catch {
-          
+
         }
       }
 
@@ -51,7 +51,7 @@ export class UserController {
         try {
           dto.additionalInformation = JSON.parse(req.body.additionalInformation);
         } catch {
-    
+
         }
       }
 
@@ -60,6 +60,32 @@ export class UserController {
       const result = await this.userService.updateUserProfile(userId, dto, file);
       sendSuccess(res, result, MESSAGES.PROFILE_UPDATED, HttpStatus.OK);
     } catch (error: unknown) {
+      next(error);
+    }
+  };
+
+  toggleFavorite = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = this.getUserIdFromReq(req);
+      const { doctorId } = req.params;
+      if (!userId) throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+      if (!doctorId) throw new AppError("Doctor ID required", HttpStatus.BAD_REQUEST);
+
+      const isAdded = await this.userService.toggleFavoriteDoctor(userId, doctorId);
+      sendSuccess(res, { isAdded }, isAdded ? "Added to favorites" : "Removed from favorites", HttpStatus.OK);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getFavorites = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = this.getUserIdFromReq(req);
+      if (!userId) throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+
+      const favorites = await this.userService.getFavoriteDoctors(userId);
+      sendSuccess(res, favorites, "Favorites fetched", HttpStatus.OK);
+    } catch (error) {
       next(error);
     }
   };

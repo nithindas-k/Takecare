@@ -14,6 +14,7 @@ export interface IUser {
   profileImage?: string | null;
   googleId?: string;
   isActive: boolean;
+  favorites?: Types.ObjectId[];
   createdAt?: Date;
   updatedAt?: Date;
 
