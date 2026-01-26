@@ -86,7 +86,22 @@ const RescheduleModal: React.FC<RescheduleModalProps> = ({ isOpen, onClose, onCo
 
                 const response = await doctorService.getAvailableSlots(doctorId, dateStr);
                 if (response?.success) {
-                    setAvailableSlots(response.data || []);
+                    let slots = response.data || [];
+
+             
+                    const now = new Date();
+                    const isToday = selectedDay.toDateString() === now.toDateString();
+
+                    if (isToday) {
+                        slots = slots.filter((slot: Slot) => {
+                            const [hours, minutes] = slot.startTime.split(':').map(Number);
+                            const slotDate = new Date();
+                            slotDate.setHours(hours, minutes, 0, 0);
+                            return slotDate > now;
+                        });
+                    }
+
+                    setAvailableSlots(slots);
                 }
             } catch (err) {
                 console.error("Failed to fetch slots:", err);
