@@ -1,5 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import { toast } from "sonner";
 import Button from "../../../components/Button";
 import Input from "../../../components/Input";
 import authService from "../../../services/authService";
@@ -22,15 +24,19 @@ const PatientResetPassword: React.FC = () => {
     newPassword: "",
     confirmPassword: "",
   });
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [errors, setErrors] = useState<Errors>({});
-  const [serverError, setServerError] = useState("");
+
   const [submitting, setSubmitting] = useState(false);
 
   const validate = useCallback((data: FormData): Errors => {
     const e: Errors = {};
     if (!data.newPassword) e.newPassword = "New password is required.";
-    else if (data.newPassword.length < 6) e.newPassword = "Password must be at least 6 characters.";
+    else if (!/^(?=.*[A-Z])(?=.*\d).{6,}$/.test(data.newPassword)) {
+      e.newPassword = "Password must be at least 6 characters and include one uppercase letter and one number";
+    }
     if (!data.confirmPassword) e.confirmPassword = "Please confirm password.";
     else if (data.confirmPassword !== data.newPassword) e.confirmPassword = "Passwords do not match.";
     return e;
@@ -47,7 +53,7 @@ const PatientResetPassword: React.FC = () => {
       delete next[name as keyof FormData];
       return next;
     });
-    setServerError("");
+
   }, []);
 
   const handleSubmit = useCallback(
@@ -59,7 +65,6 @@ const PatientResetPassword: React.FC = () => {
 
       try {
         setSubmitting(true);
-        setServerError("");
         const response = await authService.resetPassword({
           email,
           resetToken,
@@ -68,13 +73,14 @@ const PatientResetPassword: React.FC = () => {
         });
 
         if (response.success) {
+          toast.success("Password reset successful!");
           navigate("/patient/login");
         } else {
-          setServerError(response.message || "Failed to reset password.");
+          toast.error(response.message || "Failed to reset password.");
         }
       } catch (e: unknown) {
         const err = e as { message?: string };
-        setServerError(err.message || "An unexpected error occurred.");
+        toast.error(err.message || "An unexpected error occurred.");
       } finally {
         setSubmitting(false);
       }
@@ -95,29 +101,49 @@ const PatientResetPassword: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Reset Password</h1>
             <p className="text-gray-600 mb-8">Enter your new password</p>
 
-            {serverError && <div className="mb-4 text-red-600 text-sm">{serverError}</div>}
-            {Object.keys(errors).length > 0 && !serverError && (
+            {Object.keys(errors).length > 0 && (
               <div className="mb-4 text-red-600 text-sm">Please fix the highlighted fields.</div>
             )}
 
             <form onSubmit={handleSubmit} noValidate className="space-y-5">
               <Input
                 label="New Password"
-                type="password"
                 name="newPassword"
+                type={showNewPassword ? "text" : "password"}
                 value={formData.newPassword}
                 onChange={handleChange}
                 error={errors.newPassword}
                 placeholder="Enter new password"
+                className="pr-12"
+                icon={
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="text-gray-400 hover:text-teal-500 transition-colors focus:outline-none"
+                  >
+                    {showNewPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                  </button>
+                }
               />
+
               <Input
                 label="Confirm Password"
-                type="password"
                 name="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 error={errors.confirmPassword}
                 placeholder="Confirm new password"
+                className="pr-12"
+                icon={
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="text-gray-400 hover:text-teal-500 transition-colors focus:outline-none"
+                  >
+                    {showConfirmPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                  </button>
+                }
               />
               <Button type="submit" loading={submitting} disabled={!isValid || submitting} className="w-full py-3 mt-6">
                 {submitting ? "Resetting..." : "Reset Password"}

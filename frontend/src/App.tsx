@@ -39,11 +39,13 @@ import ConsultationType from "./pages/user/ConsultationType";
 import PaymentPage from "./pages/user/PaymentPage";
 import BookingSuccess from "./pages/user/BookingSuccess";
 import PatientProfileSettings from "./pages/user/PatientProfileSettings";
+import PatientChangePassword from "./pages/user/PatientChangePassword";
 import Appointments from "./pages/user/Appointments";
 import AppointmentDetails from "./pages/user/AppointmentDetails";
 import About from "./pages/user/About";
 import Contact from "./pages/user/Contact";
 import PatientDashboard from "./pages/user/Dashboard";
+import DoctorChangePassword from "./pages/doctor/DoctorChangePassword";
 
 // Admin Routes
 import AdminLogin from "./pages/admin/auth/Login";
@@ -238,6 +240,14 @@ const App: React.FC = () => {
             }
           />
           <Route
+            path="change-password"
+            element={
+              <ProtectedRoute role="doctor">
+                <DoctorChangePassword />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="appointments"
             element={
               <ProtectedRoute role="doctor">
@@ -354,6 +364,14 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute role="patient">
                 <PatientProfileSettings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="change-password"
+            element={
+              <ProtectedRoute role="patient">
+                <PatientChangePassword />
               </ProtectedRoute>
             }
           />

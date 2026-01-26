@@ -10,6 +10,7 @@ import {
   FaClock,
   FaCheckCircle,
   FaTimes,
+  FaLock,
 } from "react-icons/fa";
 
 import type { AppDispatch } from "../../redux/store";
@@ -37,6 +38,7 @@ const sidebarLinks: SidebarLink[] = [
   { label: "Profile Settings", icon: <FaCog />, path: "/doctor/profile-settings" },
   { label: "Reviews", icon: <FaCheckCircle />, path: "/doctor/reviews" },
   { label: "Messages", icon: <FaComments />, path: "/doctor/chat/default", badge: "dot" },
+  { label: "Change Password", icon: <FaLock />, path: "/doctor/change-password" },
 ];
 
 interface DoctorSidebarProps {

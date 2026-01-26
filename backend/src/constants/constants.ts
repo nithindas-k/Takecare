@@ -165,7 +165,7 @@ export const MESSAGES = {
   GOOGLE_PROFILE_EMAIL_MISSING: "No email in Google profile",
 
   PASSWORDS_NOT_MATCH: "Passwords do not match",
-  PASSWORD_TOO_WEAK: "Password must be at least 6 characters",
+  PASSWORD_TOO_WEAK: "Password must be at least 6 characters and include one uppercase letter and one number",
   INVALID_EMAIL_FORMAT: "Invalid email format",
   INVALID_PHONE_NUMBER: "Invalid phone number",
   INVALID_NAME: "Name must be at least 2 characters",

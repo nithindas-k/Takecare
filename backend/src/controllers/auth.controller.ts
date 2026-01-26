@@ -7,6 +7,7 @@ import {
   ForgotPasswordDTO,
   ForgotPasswordVerifyOtpDTO,
   ResetPasswordDTO,
+  ChangePasswordDTO,
   Role,
 } from "../dtos/common.dto";
 import { HttpStatus, MESSAGES, ROLES, COOKIE_OPTIONS } from "../constants/constants";
@@ -151,6 +152,20 @@ export class AuthController implements IAuthController {
       const dto: ResetPasswordDTO = req.body;
       await this._authService.resetPassword(dto);
       sendSuccess(res, undefined, MESSAGES.PASSWORD_RESET_SUCCESS, HttpStatus.OK);
+    } catch (err: unknown) {
+      next(err);
+    }
+  };
+
+  changePassword = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const dto: ChangePasswordDTO = req.body;
+    
+      const user = req.user as any;
+      const userId = user.userId || user.id || user._id;
+
+      await this._authService.changePassword({ ...dto, userId });
+      sendSuccess(res, undefined, "Password changed successfully", HttpStatus.OK);
     } catch (err: unknown) {
       next(err);
     }

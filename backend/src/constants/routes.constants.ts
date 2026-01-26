@@ -33,6 +33,7 @@ export const AUTH_ROUTES = {
     RESET_PASSWORD: "/reset-password",
 
 
+    CHANGE_PASSWORD: "/change-password",
     REFRESH_TOKEN: "/refresh-token",
 } as const;
 

@@ -6,6 +6,7 @@ import type {
   ForgotPasswordDTO,
   ForgotPasswordVerifyOtpDTO,
   ResetPasswordDTO,
+  ChangePasswordDTO,
   AuthResponseDTO,
   BaseUserResponseDTO,
 } from "../../dtos/common.dto";
@@ -18,6 +19,7 @@ export interface IAuthService {
   forgotPassword(data: ForgotPasswordDTO): Promise<void>;
   forgotPasswordVerifyOtp(data: ForgotPasswordVerifyOtpDTO): Promise<{ resetToken: string }>;
   resetPassword(data: ResetPasswordDTO): Promise<void>;
+  changePassword(data: ChangePasswordDTO): Promise<void>;
   getDoctorStatus(userId: string): Promise<string>;
   getDoctorId(userId: string): Promise<string | undefined>;
   refreshToken(token: string): Promise<{ accessToken: string }>;

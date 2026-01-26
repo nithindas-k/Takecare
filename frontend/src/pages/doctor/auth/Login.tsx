@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Button from "../../../components/Button";
 import Input from "../../../components/Input";
@@ -25,6 +26,7 @@ const DoctorLogin: React.FC = () => {
     email: "",
     password: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
 
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -179,12 +181,22 @@ const DoctorLogin: React.FC = () => {
                 <Input
                   label=""
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={handleChange}
                   error={errors.password}
                   placeholder="Enter your password"
                   disabled={submitting}
+                  className="pr-10"
+                  icon={
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-gray-400 hover:text-teal-500 transition-colors focus:outline-none"
+                    >
+                      {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                    </button>
+                  }
                 />
               </div>
 

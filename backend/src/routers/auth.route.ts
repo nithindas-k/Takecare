@@ -11,6 +11,7 @@ import { EmailService } from "../services/email.service";
 import { AUTH_ROUTES } from "../constants/routes.constants";
 import { AuthValidator } from "../validators/auth.validator";
 import { validate } from "../middlewares/validation.middleware";
+import { authMiddleware } from "../middlewares/auth.middleware";
 
 import { LoggerService } from "../services/logger.service";
 
@@ -74,6 +75,8 @@ router.post(AUTH_ROUTES.LOGIN, validate(AuthValidator.validateLoginInput), authC
 router.post(AUTH_ROUTES.FORGOT_PASSWORD, validate(AuthValidator.validateForgotPasswordInput), authController.forgotPassword);
 router.post(AUTH_ROUTES.FORGOT_PASSWORD_VERIFY_OTP, validate(AuthValidator.validateForgotPasswordVerifyOtpInput), authController.forgotPasswordVerify);
 router.post(AUTH_ROUTES.RESET_PASSWORD, validate(AuthValidator.validateResetPasswordInput), authController.resetPassword);
+
+router.post(AUTH_ROUTES.CHANGE_PASSWORD, authMiddleware, authController.changePassword);
 
 
 router.post(AUTH_ROUTES.REFRESH_TOKEN, authController.refreshToken);

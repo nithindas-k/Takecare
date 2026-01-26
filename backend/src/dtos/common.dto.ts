@@ -71,6 +71,13 @@ export interface ResetPasswordDTO {
   confirmPassword: string;
 }
 
+export interface ChangePasswordDTO {
+  userId: string;
+  oldPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 
 export interface AuthResponseDTO<T = BaseUserResponseDTO> {
   user: T;

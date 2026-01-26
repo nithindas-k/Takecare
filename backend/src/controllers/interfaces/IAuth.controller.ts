@@ -7,6 +7,7 @@ import {
   ForgotPasswordDTO,
   ForgotPasswordVerifyOtpDTO,
   ResetPasswordDTO,
+  ChangePasswordDTO,
   Role,
 } from "../../dtos/common.dto";
 
@@ -49,6 +50,12 @@ export interface IAuthController {
 
   resetPassword(
     req: Request<Record<string, never>, unknown, ResetPasswordDTO>,
+    res: Response,
+    next: NextFunction
+  ): Promise<void>;
+
+  changePassword(
+    req: Request<Record<string, never>, unknown, ChangePasswordDTO>,
     res: Response,
     next: NextFunction
   ): Promise<void>;

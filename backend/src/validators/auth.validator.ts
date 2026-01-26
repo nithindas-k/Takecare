@@ -31,6 +31,14 @@ export class AuthValidator {
                 throw new ValidationError(MESSAGES.INVALID_GENDER);
             }
         }
+
+        if (!data.password || !/^(?=.*[A-Z])(?=.*\d).{6,}$/.test(data.password)) {
+            throw new ValidationError(MESSAGES.PASSWORD_TOO_WEAK);
+        }
+
+        if (data.password !== data.confirmPassword) {
+            throw new ValidationError(MESSAGES.PASSWORDS_NOT_MATCH);
+        }
     }
 
     static validateLoginInput(data: LoginDTO): void {
@@ -82,6 +90,10 @@ export class AuthValidator {
         }
         if (!data.newPassword || !data.confirmPassword) {
             throw new ValidationError(MESSAGES.MISSING_FIELDS);
+        }
+        // Strong password check
+        if (!/^(?=.*[A-Z])(?=.*\d).{6,}$/.test(data.newPassword)) {
+            throw new ValidationError(MESSAGES.PASSWORD_TOO_WEAK);
         }
         if (data.newPassword !== data.confirmPassword) {
             throw new ValidationError(MESSAGES.PASSWORDS_NOT_MATCH);

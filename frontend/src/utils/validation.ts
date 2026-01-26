@@ -11,7 +11,8 @@ export const validatePhone = (phone: string): boolean => {
 };
 
 export const validatePassword = (password: string): boolean => {
-  return password.length >= 6;
+  const strongPasswordRegex = /^(?=.*[A-Z])(?=.*\d).{6,}$/;
+  return strongPasswordRegex.test(password);
 };
 
 export const validateName = (name: string): boolean => {

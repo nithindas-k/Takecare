@@ -10,7 +10,8 @@ import {
 
     FaSignOutAlt,
     FaCheckCircle,
-    FaTimes
+    FaTimes,
+    FaLock
 } from "react-icons/fa";
 import type { AppDispatch } from "../../redux/store";
 import {
@@ -33,6 +34,7 @@ const sidebarLinks: SidebarLink[] = [
     { label: "Wallet", icon: <FaWallet />, path: "/patient/wallet" },
     { label: "Message", icon: <FaComments />, path: "/patient/chat/default", badge: "dot" },
     { label: "Settings", icon: <FaCog />, path: "/patient/profile-settings" },
+    { label: "Change Password", icon: <FaLock />, path: "/patient/change-password" },
 ];
 
 interface PatientSidebarProps {

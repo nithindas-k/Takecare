@@ -16,7 +16,8 @@ export const comparePassword = async (
 };
 
 export const validatePassword = (password: string): void => {
-  if (password.length < 6) {
+  const strongPasswordRegex = /^(?=.*[A-Z])(?=.*\d).{6,}$/;
+  if (!strongPasswordRegex.test(password)) {
     throw new ValidationError(MESSAGES.PASSWORD_TOO_WEAK);
   }
 };

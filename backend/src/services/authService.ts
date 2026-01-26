@@ -2,7 +2,7 @@ import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from ".
 import { hashPassword, comparePassword, validatePassword, validatePasswordMatch } from "../utils/password.util";
 import { MESSAGES, ROLES, GENDER, CONFIG } from "../constants/constants";
 import { IAuthService } from "./interfaces/IAuthService";
-import { RegisterDTO, LoginDTO, VerifyOtpDTO, ResendOtpDTO, ForgotPasswordDTO, ForgotPasswordVerifyOtpDTO, ResetPasswordDTO, AuthResponseDTO, BaseUserResponseDTO, Gender } from "../dtos/common.dto";
+import { RegisterDTO, LoginDTO, VerifyOtpDTO, ResendOtpDTO, ForgotPasswordDTO, ForgotPasswordVerifyOtpDTO, ResetPasswordDTO, ChangePasswordDTO, AuthResponseDTO, BaseUserResponseDTO, Gender } from "../dtos/common.dto";
 import { IUserDocument } from "../types/user.type";
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
@@ -149,6 +149,35 @@ export class AuthService implements IAuthService {
 
     await this._userRepository.updateById(user._id, { passwordHash });
     await this._otpService.deleteOtp(data.email);
+  }
+
+  async changePassword(data: ChangePasswordDTO): Promise<void> {
+    const { userId, oldPassword, newPassword, confirmPassword } = data;
+
+    validatePasswordMatch(newPassword, confirmPassword);
+    validatePassword(newPassword);
+
+    const user = await this._userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundError(MESSAGES.USER_NOT_FOUND);
+    }
+
+    if (!user.passwordHash) {
+      throw new UnauthorizedError(MESSAGES.GOOGLE_SIGNIN_REQUIRED);
+    }
+
+    const isMatch = await comparePassword(oldPassword, user.passwordHash);
+    if (!isMatch) {
+      throw new UnauthorizedError("Incorrect old password");
+    }
+
+    // Check if new password is same as old
+    if (oldPassword === newPassword) {
+      throw new UnauthorizedError("New password cannot be the same as old password");
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+    await this._userRepository.updateById(userId, { passwordHash });
   }
 
   async getDoctorStatus(userId: string): Promise<string> {

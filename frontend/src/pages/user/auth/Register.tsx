@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import Button from "../../../components/Button";
 import Input from "../../../components/Input";
 import { Link, useNavigate } from "react-router-dom";
@@ -48,6 +49,8 @@ const PatientRegister: React.FC = () => {
     password: false,
     confirmPassword: false,
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -323,7 +326,7 @@ const PatientRegister: React.FC = () => {
               <Input
                 label="Create Password"
                 name="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={formData.password}
                 onChange={handleChange}
                 onBlur={handleBlur}
@@ -331,12 +334,22 @@ const PatientRegister: React.FC = () => {
                 placeholder="Minimum 6 characters"
                 disabled={submitting}
                 autoComplete="new-password"
+                className="pr-12"
+                icon={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-gray-400 hover:text-teal-500 transition-colors focus:outline-none"
+                  >
+                    {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                  </button>
+                }
               />
 
               <Input
                 label="Confirm Password"
                 name="confirmPassword"
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 onBlur={handleBlur}
@@ -344,6 +357,16 @@ const PatientRegister: React.FC = () => {
                 placeholder="Re-enter your password"
                 disabled={submitting}
                 autoComplete="new-password"
+                className="pr-12"
+                icon={
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="text-gray-400 hover:text-teal-500 transition-colors focus:outline-none"
+                  >
+                    {showConfirmPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                  </button>
+                }
               />
 
               <Button

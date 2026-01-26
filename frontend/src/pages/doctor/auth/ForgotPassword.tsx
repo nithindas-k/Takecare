@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import Button from "../../../components/Button";
 import Input from "../../../components/Input";
 import authService from "../../../services/authService";
@@ -16,7 +17,7 @@ const DoctorForgotPassword: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({ email: "" });
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState(false);
-  const [serverError, setServerError] = useState("");
+
 
   const validate = useCallback((data: FormData) => {
     const e: Errors = {};
@@ -36,7 +37,7 @@ const DoctorForgotPassword: React.FC = () => {
       delete next[name as keyof FormData];
       return next;
     });
-    setServerError("");
+
   }, []);
 
   const handleSubmit = useCallback(
@@ -48,16 +49,16 @@ const DoctorForgotPassword: React.FC = () => {
 
       try {
         setSubmitting(true);
-        setServerError("");
         const response = await authService.forgotPassword(formData.email, "doctor");
         if (response.success) {
+          toast.success("OTP sent successfully!");
           navigate("/doctor/forgot-password-otp", { state: { email: formData.email } });
         } else {
-          setServerError(response.message || "Failed to send OTP. Please try again.");
+          toast.error(response.message || "Failed to send OTP. Please try again.");
         }
       } catch (e: unknown) {
         const err = e as { message?: string };
-        setServerError(err.message || "An unexpected error occurred.");
+        toast.error(err.message || "An unexpected error occurred.");
       } finally {
         setSubmitting(false);
       }
@@ -80,10 +81,7 @@ const DoctorForgotPassword: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Forgot Password</h1>
             <p className="text-gray-600 mb-8">Enter your email to receive OTP</p>
 
-            {serverError && <div className="mb-4 text-red-600 text-sm">{serverError}</div>}
-            {!serverError && Object.keys(errors).length > 0 && (
-              <div className="mb-4 text-red-600 text-sm">Please fix the highlighted fields.</div>
-            )}
+            {Object.keys(errors).length > 0 && <div className="mb-4 text-red-600 text-sm">Please fix the highlighted fields.</div>}
 
             <form onSubmit={handleSubmit} noValidate className="space-y-5">
               <Input

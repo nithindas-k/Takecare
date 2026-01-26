@@ -1,6 +1,7 @@
 
 
 import React, { useCallback, useMemo, useState } from "react";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Button from "../../../components/Button";
 import Input from "../../../components/Input";
@@ -30,6 +31,8 @@ const DoctorRegister: React.FC = () => {
     password: "",
     confirmPassword: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -232,24 +235,44 @@ const DoctorRegister: React.FC = () => {
               <Input
                 label="Create Password"
                 name="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={formData.password}
                 onChange={handleChange}
                 error={errors.password}
                 placeholder="Create password (min 6 characters)"
                 disabled={submitting}
+                className="pr-12"
+                icon={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-gray-400 hover:text-teal-500 transition-colors focus:outline-none"
+                  >
+                    {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                  </button>
+                }
               />
 
               {/* Confirm Password */}
               <Input
                 label="Confirm Password"
                 name="confirmPassword"
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 error={errors.confirmPassword}
                 placeholder="Confirm your password"
                 disabled={submitting}
+                className="pr-12"
+                icon={
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="text-gray-400 hover:text-teal-500 transition-colors focus:outline-none"
+                  >
+                    {showConfirmPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                  </button>
+                }
               />
 
               {/* Submit Button */}

@@ -128,7 +128,7 @@ class AuthService {
     }
   }
 
- 
+
   async userResendOtp(email: string) {
     try {
       const response = await axiosInstance.post(USER_API_ROUTES.RESEND_OTP, {
@@ -355,6 +355,26 @@ class AuthService {
       return {
         success: false,
         message: getErrorMessage(error) || "Failed to reset password",
+      };
+    }
+  }
+
+  async changePassword(
+    data: {
+      oldPassword: string;
+      newPassword: string;
+      confirmPassword: string;
+    },
+    role: "user" | "doctor" = "user"
+  ) {
+    const apiRoutes = this.getApiRoutes(role);
+    try {
+      const response = await axiosInstance.post(apiRoutes.CHANGE_PASSWORD, data);
+      return response.data;
+    } catch (error: unknown) {
+      return {
+        success: false,
+        message: getErrorMessage(error) || "Failed to change password",
       };
     }
   }

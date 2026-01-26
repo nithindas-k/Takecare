@@ -13,6 +13,7 @@ export const USER_API_ROUTES = {
   RESET_PASSWORD: "/auth/reset-password",
   PROFILE: "/users/profile",
   UPDATE_IMAGE: "/users/profile/image",
+  CHANGE_PASSWORD: "/auth/change-password",
 } as const;
 
 export const DOCTOR_API_ROUTES = {
@@ -39,6 +40,7 @@ export const DOCTOR_API_ROUTES = {
   GET_BY_ID: (doctorId: string): string => `/doctors/${doctorId}`,
   DASHBOARD_STATS: "/doctors/stats",
   LANDING_STATS: "/doctors/landing-stats",
+  CHANGE_PASSWORD: "/auth/change-password",
 } as const;
 
 
