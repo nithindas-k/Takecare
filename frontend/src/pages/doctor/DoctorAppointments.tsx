@@ -93,11 +93,11 @@ const DoctorAppointments: React.FC = () => {
         }
     }, [activeTab, hasLoadedOnce, page, limit, debouncedSearch]);
 
-    // Debounce Search
+
     useEffect(() => {
         const handler = setTimeout(() => {
             setDebouncedSearch(searchQuery);
-            setPage(1); // Reset to first page on new search
+            setPage(1);
         }, 500);
 
         return () => {
@@ -105,16 +105,16 @@ const DoctorAppointments: React.FC = () => {
         };
     }, [searchQuery]);
 
-    useEffect(() => {
-        setPage(1);
-    }, [activeTab]);
+
 
     useEffect(() => {
         fetchCounts();
-        fetchAppointments(page > 1);
-    }, [fetchCounts, fetchAppointments, page]);
+    }, [fetchCounts]);
 
-    // Removed client-side filtering as backend search is now implemented
+    useEffect(() => {
+        fetchAppointments(page > 1);
+    }, [fetchAppointments, page]);
+
     const filteredAppointments = appointments;
 
     const getTabCount = (status: string) => {
@@ -144,7 +144,7 @@ const DoctorAppointments: React.FC = () => {
 
             <DoctorLayout>
                 {/* Loading State */}
-                {/* Loading State */}
+
                 {loading && !hasLoadedOnce && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -242,7 +242,12 @@ const DoctorAppointments: React.FC = () => {
                             <div className="border-b border-gray-100">
                                 <div className="flex gap-1 p-2 bg-gray-50/50">
                                     <button
-                                        onClick={() => setActiveTab('upcoming')}
+                                        onClick={() => {
+                                            if (activeTab !== 'upcoming') {
+                                                setActiveTab('upcoming');
+                                                setPage(1);
+                                            }
+                                        }}
                                         className={`flex-1 px-4 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${activeTab === 'upcoming'
                                             ? 'bg-white text-[#00A1B0] shadow-sm border border-gray-100'
                                             : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100/50'
@@ -251,7 +256,12 @@ const DoctorAppointments: React.FC = () => {
                                         Upcoming ({getTabCount('upcoming')})
                                     </button>
                                     <button
-                                        onClick={() => setActiveTab('completed')}
+                                        onClick={() => {
+                                            if (activeTab !== 'completed') {
+                                                setActiveTab('completed');
+                                                setPage(1);
+                                            }
+                                        }}
                                         className={`flex-1 px-4 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${activeTab === 'completed'
                                             ? 'bg-white text-[#00A1B0] shadow-sm border border-gray-100'
                                             : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100/50'
@@ -260,7 +270,12 @@ const DoctorAppointments: React.FC = () => {
                                         Completed ({getTabCount('completed')})
                                     </button>
                                     <button
-                                        onClick={() => setActiveTab('cancelled')}
+                                        onClick={() => {
+                                            if (activeTab !== 'cancelled') {
+                                                setActiveTab('cancelled');
+                                                setPage(1);
+                                            }
+                                        }}
                                         className={`flex-1 px-4 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all ${activeTab === 'cancelled'
                                             ? 'bg-white text-[#00A1B0] shadow-sm border border-gray-100'
                                             : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100/50'

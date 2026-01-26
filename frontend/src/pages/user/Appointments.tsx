@@ -191,7 +191,7 @@ const Appointments: React.FC = () => {
         setLoading(true);
         setError('');
         try {
-            const status = mapStatusToTab(activeTab) === 'upcoming' && activeTab === 'upcoming' ? undefined : activeTab;
+            const status = activeTab === 'upcoming' ? 'confirmed' : activeTab;
             // Using debouncedSearch for backend filtering
             const response = await appointmentService.getMyAppointments(status, page, limit, debouncedSearch);
             if (!response?.success) {
@@ -228,10 +228,6 @@ const Appointments: React.FC = () => {
         };
     }, [searchQuery]);
 
-    // Reset page on tab change
-    useEffect(() => {
-        setPage(1);
-    }, [activeTab]);
 
     useEffect(() => {
         let isMounted = true;
@@ -241,7 +237,7 @@ const Appointments: React.FC = () => {
         };
     }, [fetchAppointments]);
 
-    // Use normalizedAppointments directly as backend now handles filtering
+
     const filteredAppointments = normalizedAppointments;
 
     const getTabCount = (status: 'upcoming' | 'cancelled' | 'completed') => {
@@ -315,7 +311,12 @@ const Appointments: React.FC = () => {
 
                             <div className="flex mt-6 border-b border-gray-200">
                                 <button
-                                    onClick={() => setActiveTab('upcoming')}
+                                    onClick={() => {
+                                        if (activeTab !== 'upcoming') {
+                                            setActiveTab('upcoming');
+                                            setPage(1);
+                                        }
+                                    }}
                                     className={`flex-1 px-2 md:px-6 py-3 font-semibold transition-all relative whitespace-nowrap text-[11px] sm:text-xs md:text-sm lg:text-base ${activeTab === 'upcoming'
                                         ? 'text-[#00A1B0] border-b-2 border-[#00A1B0]'
                                         : 'text-gray-500 hover:text-gray-700'
@@ -325,7 +326,12 @@ const Appointments: React.FC = () => {
                                     <span className="ml-1 md:ml-2 px-1.5 md:px-2 py-0.5 bg-[#00A1B0]/10 text-[#00A1B0] text-[9px] md:text-xs rounded-full">{getTabCount('upcoming')}</span>
                                 </button>
                                 <button
-                                    onClick={() => setActiveTab('cancelled')}
+                                    onClick={() => {
+                                        if (activeTab !== 'cancelled') {
+                                            setActiveTab('cancelled');
+                                            setPage(1);
+                                        }
+                                    }}
                                     className={`flex-1 px-2 md:px-6 py-3 font-semibold transition-all relative whitespace-nowrap text-[11px] sm:text-xs md:text-sm lg:text-base ${activeTab === 'cancelled'
                                         ? 'text-[#00A1B0] border-b-2 border-[#00A1B0]'
                                         : 'text-gray-500 hover:text-gray-700'
@@ -335,7 +341,12 @@ const Appointments: React.FC = () => {
                                     <span className="ml-1 md:ml-2 px-1.5 md:px-2 py-0.5 bg-gray-100 text-gray-600 text-[9px] md:text-xs rounded-full">{getTabCount('cancelled')}</span>
                                 </button>
                                 <button
-                                    onClick={() => setActiveTab('completed')}
+                                    onClick={() => {
+                                        if (activeTab !== 'completed') {
+                                            setActiveTab('completed');
+                                            setPage(1);
+                                        }
+                                    }}
                                     className={`flex-1 px-2 md:px-6 py-3 font-semibold transition-all relative whitespace-nowrap text-[11px] sm:text-xs md:text-sm lg:text-base ${activeTab === 'completed'
                                         ? 'text-[#00A1B0] border-b-2 border-[#00A1B0]'
                                         : 'text-gray-500 hover:text-gray-700'

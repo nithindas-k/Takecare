@@ -119,6 +119,7 @@ const App: React.FC = () => {
     requestAnimationFrame(raf)
 
     async function userFetch() {
+      if (!localStorage.getItem("authToken")) return;
       try {
         const response = await userService.getProfile()
         if (response.success && response.data) {
