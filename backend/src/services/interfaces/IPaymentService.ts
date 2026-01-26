@@ -10,4 +10,6 @@ export interface IPaymentService {
         patientId: string,
         dto: VerifyRazorpayPaymentDTO
     ): Promise<{ appointmentId: string; paymentId: string }>;
+
+    unlockSlot(appointmentId: string): Promise<void>;
 }

@@ -96,6 +96,7 @@ export const APPOINTMENT_ROUTES = {
 export const PAYMENT_ROUTES = {
     RAZORPAY_ORDER: "/razorpay/order",
     RAZORPAY_VERIFY: "/razorpay/verify",
+    UNLOCK_SLOT: "/unlock-slot",
 } as const;
 
 export const WALLET_ROUTES = {

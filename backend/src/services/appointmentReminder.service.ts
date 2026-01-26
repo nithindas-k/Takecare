@@ -4,7 +4,7 @@ import { IScheduleRepository } from "../repositories/interfaces/ISchedule.reposi
 import { NotificationService } from "./notification.service";
 import { socketService } from "./socket.service";
 import { ILoggerService } from "./interfaces/ILogger.service";
-import { APPOINTMENT_STATUS } from "../constants/constants";
+import { APPOINTMENT_STATUS, PAYMENT_STATUS } from "../constants/constants";
 import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import { differenceInMinutes, startOfDay, endOfDay } from "date-fns";
 
@@ -51,7 +51,7 @@ export class AppointmentReminderService {
 
             const pendingAppointments = await this._appointmentRepository.find({
                 status: APPOINTMENT_STATUS.PENDING,
-                paymentStatus: "pending",
+                paymentStatus: PAYMENT_STATUS.PENDING,
                 createdAt: { $lt: fiveMinutesAgo }
             });
 

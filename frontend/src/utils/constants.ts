@@ -124,6 +124,7 @@ export const APPOINTMENT_API_ROUTES = {
 export const PAYMENT_API_ROUTES = {
   RAZORPAY_ORDER: "/payments/razorpay/order",
   RAZORPAY_VERIFY: "/payments/razorpay/verify",
+  UNLOCK_SLOT: "/payments/unlock-slot",
 } as const;
 
 export const WALLET_API_ROUTES = {

@@ -2,7 +2,7 @@ import crypto from "crypto";
 import Razorpay from "razorpay";
 import { env } from "../configs/env";
 import { AppError } from "../errors/AppError";
-import { HttpStatus, MESSAGES, PAYMENT_DEFAULTS, PAYMENT_STATUS, ROLES } from "../constants/constants";
+import { HttpStatus, MESSAGES, PAYMENT_DEFAULTS, PAYMENT_STATUS, ROLES, APPOINTMENT_STATUS } from "../constants/constants";
 import type { IAppointmentRepository } from "../repositories/interfaces/IAppointmentRepository";
 import type { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
 import type { IUserRepository } from "../repositories/interfaces/IUser.repository";
@@ -86,6 +86,38 @@ export class PaymentService implements IPaymentService {
             };
         }
 
+        // --- DOUBLE BOOKING PREVENTION START ---
+        // Check if ANY other appointment for this slot is effectively "locked"
+        // Locked means:
+        // 1. Payment is PAID/CONFIRMED (obviously)
+        // 2. OR checkoutLockUntil is in the future (another user is paying right now)
+        const conflictingAppointment = await this._appointmentRepository.findOne({
+            doctorId: appointment.doctorId,
+            appointmentDate: appointment.appointmentDate,
+            appointmentTime: appointment.appointmentTime,
+            _id: { $ne: appointment._id }, // Exclude self
+            $or: [
+                { paymentStatus: PAYMENT_STATUS.PAID },
+                { status: APPOINTMENT_STATUS.CONFIRMED },
+                { checkoutLockUntil: { $gt: new Date() } }
+            ]
+        });
+
+        if (conflictingAppointment) {
+            this._logger.warn("Slot conflict detected", {
+                currentAppt: appointmentId,
+                conflictingAppt: conflictingAppointment.id
+            });
+            throw new AppError("This slot is currently being processed by another user or is already booked.", HttpStatus.CONFLICT);
+        }
+
+        // Lock THIS appointment for 10 minutes
+        const lockDuration = 10 * 60 * 1000; // 10 minutes
+        await this._appointmentRepository.updateById(appointmentId, {
+            checkoutLockUntil: new Date(Date.now() + lockDuration)
+        } as any);
+        // --- DOUBLE BOOKING PREVENTION END ---
+
         const amountInPaise = Math.round(Number(amount) * PAYMENT_DEFAULTS.PAISE_MULTIPLIER);
 
         const order = await this._razorpay.orders.create({
@@ -114,6 +146,18 @@ export class PaymentService implements IPaymentService {
             amount: order.amount,
             currency: order.currency,
         };
+    }
+
+    async unlockSlot(appointmentId: string): Promise<void> {
+        this._ensureKeys();
+        if (!appointmentId) return;
+
+        // Clear the lock
+        await this._appointmentRepository.updateById(appointmentId, {
+            checkoutLockUntil: null
+        } as any);
+
+        this._logger.info("Slot unlocked manually", { appointmentId });
     }
 
     async verifyRazorpayPayment(
@@ -152,7 +196,7 @@ export class PaymentService implements IPaymentService {
                 razorpay_order_id,
                 razorpay_payment_id,
             });
-            
+
             await this._appointmentRepository.updateById(appointmentId, { checkoutLockUntil: null } as any);
             throw new AppError(MESSAGES.PAYMENT_VERIFICATION_FAILED, HttpStatus.BAD_REQUEST);
         }

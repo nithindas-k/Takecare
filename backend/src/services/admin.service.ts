@@ -18,6 +18,7 @@ import { IDoctorDocument } from "../types/doctor.type";
 import { UnauthorizedError } from "../errors/AppError";
 import { ILoggerService } from "./interfaces/ILogger.service";
 import { VerificationStatus } from "../dtos/doctor.dtos/doctor.dto";
+import { ROLES } from "../constants/constants";
 
 
 export class AdminService implements IAdminService {
@@ -125,7 +126,7 @@ export class AdminService implements IAdminService {
   async getPatientById(patientId: string): Promise<PatientListItem | null> {
     const patient = await this._userRepository.findById(patientId);
 
-    if (!patient || patient.role !== "patient") {
+    if (!patient || patient.role !== ROLES.PATIENT) {
       return null;
     }
 

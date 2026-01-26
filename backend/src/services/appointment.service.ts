@@ -129,7 +129,7 @@ export class AppointmentService implements IAppointmentService {
                         if (existingAppointment) {
                             const now = new Date();
 
-                        
+
                             if (existingAppointment.checkoutLockUntil && existingAppointment.checkoutLockUntil > now) {
                                 this._logger.warn("Prevented duplicate checkout session - active lock found", {
                                     patientId,
@@ -148,7 +148,7 @@ export class AppointmentService implements IAppointmentService {
                             const adminCommission = (consultationFees * PAYMENT_COMMISSION.ADMIN_PERCENT) / 100;
                             const doctorEarnings = (consultationFees * PAYMENT_COMMISSION.DOCTOR_PERCENT) / 100;
 
-                            const lockTime = new Date(now.getTime() + 60000); 
+                            const lockTime = new Date(now.getTime() + 60000);
 
                             const updated = await this._appointmentRepository.updateById(existingAppointment._id.toString(), {
                                 appointmentType: appointmentData.appointmentType,
@@ -382,7 +382,7 @@ export class AppointmentService implements IAppointmentService {
 
             const updatedAppointment = await this._appointmentRepository.updateById(appointmentId, {
                 status: APPOINTMENT_STATUS.CANCELLED,
-                cancelledBy: userRole === ROLES.PATIENT ? "patient" : userRole === ROLES.ADMIN ? "admin" : "doctor",
+                cancelledBy: userRole === ROLES.PATIENT ? ROLES.PATIENT : userRole === ROLES.ADMIN ? ROLES.ADMIN : ROLES.DOCTOR,
                 cancellationReason,
                 cancelledAt: new Date(),
             }, session);
@@ -1046,7 +1046,7 @@ export class AppointmentService implements IAppointmentService {
             await this._chatService.sendSystemMessage(appointmentId, messageContent);
         }
 
-     
+
         const statusUpdate = {
             appointmentId,
             customId: appointment.customId,

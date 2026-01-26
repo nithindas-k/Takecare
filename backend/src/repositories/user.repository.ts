@@ -2,6 +2,7 @@ import UserModel from "../models/user.model";
 import { IUserDocument } from "../types/user.type";
 import { BaseRepository } from "./base.repository";
 import { IUserRepository } from "./interfaces/IUser.repository";
+import { ROLES } from "../constants/constants";
 
 export class UserRepository extends BaseRepository<IUserDocument> implements IUserRepository {
   constructor() {
@@ -37,7 +38,7 @@ export class UserRepository extends BaseRepository<IUserDocument> implements IUs
   }
 
   async getAllPatients(skip: number, limit: number, filter?: { search?: string; isActive?: boolean }): Promise<{ patients: IUserDocument[]; total: number }> {
-    const query: Record<string, unknown> = { role: "patient" };
+    const query: Record<string, unknown> = { role: ROLES.PATIENT };
 
     if (filter) {
       if (typeof filter.isActive === 'boolean') {

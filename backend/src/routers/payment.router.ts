@@ -51,4 +51,12 @@ paymentRouter.post(
     paymentController.verifyRazorpayPayment
 );
 
+paymentRouter.post(
+    PAYMENT_ROUTES.UNLOCK_SLOT,
+    authMiddleware,
+    checkUserBlocked,
+    requirePatient,
+    paymentController.unlockSlot
+);
+
 export default paymentRouter;

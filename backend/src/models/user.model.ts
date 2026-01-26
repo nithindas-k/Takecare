@@ -3,6 +3,7 @@ import mongoose, { Schema, Model } from "mongoose";
 import type { IUserDocument } from "../types/user.type";
 import type { JsonTransformReturnType } from "../types/common";
 import { IDGenerator, IDPrefix } from "../utils/idGenerator.util";
+import { ROLES, GENDER } from "../constants/constants";
 
 const UserSchema = new Schema<IUserDocument>(
   {
@@ -36,13 +37,13 @@ const UserSchema = new Schema<IUserDocument>(
     },
     role: {
       type: String,
-      enum: ["patient", "doctor", "admin"],
-      default: "patient",
+      enum: Object.values(ROLES),
+      default: ROLES.PATIENT,
       required: true,
     },
     gender: {
       type: String,
-      enum: ["male", "female", "other"],
+      enum: Object.values(GENDER),
       default: null,
     },
     dob: {
@@ -84,11 +85,11 @@ UserSchema.index({ role: 1, isActive: 1 });
 
 UserSchema.pre('save', async function (next) {
   if (this.isNew && !this.customId) {
-    if (this.role === 'patient') {
+    if (this.role === ROLES.PATIENT) {
       this.customId = IDGenerator.generatePatientId();
-    } else if (this.role === 'doctor') {
+    } else if (this.role === ROLES.DOCTOR) {
       this.customId = IDGenerator.generateDoctorId();
-    } else if (this.role === 'admin') {
+    } else if (this.role === ROLES.ADMIN) {
 
       this.customId = IDGenerator.generatePatientId();
     }

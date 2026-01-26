@@ -35,4 +35,17 @@ export class PaymentController implements IPaymentController {
             next(err);
         }
     };
+
+    unlockSlot = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        try {
+        
+            const appointmentId = req.params.appointmentId || req.body.appointmentId;
+            if (!appointmentId) throw new AppError("Appointment ID required", HttpStatus.BAD_REQUEST);
+
+            await this._paymentService.unlockSlot(appointmentId);
+            sendSuccess(res, undefined, "Slot unlocked");
+        } catch (err: unknown) {
+            next(err);
+        }
+    };
 }

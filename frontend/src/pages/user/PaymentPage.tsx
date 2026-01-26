@@ -162,6 +162,10 @@ const PaymentPage: React.FC = () => {
                 modal: {
                     ondismiss: () => {
                         setProcessing(false);
+                        // Unlock the slot since user cancelled
+                        if (appointmentId) {
+                            paymentService.unlockSlot(appointmentId);
+                        }
                         toast.info("Payment cancelled. Redirecting to appointment details...");
                         navigate(`/patient/appointments/${appointmentId}`);
                     },
@@ -176,6 +180,9 @@ const PaymentPage: React.FC = () => {
                 console.error('Razorpay payment failed:', resp);
                 toast.error(resp?.error?.description || 'Payment failed');
                 setProcessing(false);
+                if (appointmentId) {
+                    paymentService.unlockSlot(appointmentId);
+                }
                 navigate(`/patient/appointments/${appointmentId}`);
             });
 
@@ -183,7 +190,12 @@ const PaymentPage: React.FC = () => {
         } catch (error: any) {
             console.error('Razorpay payment error:', error);
             const errorMessage = error?.response?.data?.message || error?.message || 'Payment failed. Please try again.';
-            toast.error(errorMessage);
+
+            if (error?.response?.status === 409) {
+                toast.error("This slot is already being processed or booked by another user.");
+            } else {
+                toast.error(errorMessage);
+            }
             setProcessing(false);
 
 
