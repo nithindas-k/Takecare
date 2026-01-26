@@ -19,7 +19,7 @@ const AppointmentReminder: React.FC = () => {
 
 
     useEffect(() => {
-        if (!user || user.role === 'admin') return;
+        if (!user || user.role === 'admin' || !localStorage.getItem("authToken")) return;
 
         const fetchNextAppointment = async () => {
             try {
@@ -96,7 +96,7 @@ const AppointmentReminder: React.FC = () => {
         const interval = setInterval(fetchNextAppointment, 60000 * 5);
         return () => clearInterval(interval);
 
-    }, [user]);
+    }, [user?.id, user?.role]);
 
 
     const [reminderStatus, setReminderStatus] = useState({ early: false, started: false });

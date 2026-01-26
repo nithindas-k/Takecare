@@ -98,6 +98,14 @@ const BookingPage: React.FC = () => {
     }, [doctorId, selectedDay]);
 
     useEffect(() => {
+        
+        sessionStorage.removeItem('appointmentId');
+        sessionStorage.removeItem('bookingData');
+        sessionStorage.removeItem('tempAppointmentId');
+        sessionStorage.removeItem('appointmentData'); 
+    }, []);
+
+    useEffect(() => {
         if (doctorId) {
             fetchDoctorDetails();
         }
