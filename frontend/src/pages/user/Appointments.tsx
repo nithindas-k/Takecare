@@ -113,6 +113,7 @@ const Appointments: React.FC = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'upcoming' | 'cancelled' | 'completed'>('upcoming');
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const lastFetchedPage = useRef<number | null>(null);
 
     const [appointments, setAppointments] = useState<PopulatedAppointment[]>([]);
@@ -187,14 +188,12 @@ const Appointments: React.FC = () => {
     }, [appointments, getDoctorInfo]);
 
     const fetchAppointments = useCallback(async (isMounted: boolean) => {
-        if (lastFetchedPage.current === page && appointments.length > 0) {
-            setLoading(false);
-            return;
-        }
         setLoading(true);
         setError('');
         try {
-            const response = await appointmentService.getMyAppointments(undefined, page, limit);
+            const status = mapStatusToTab(activeTab) === 'upcoming' && activeTab === 'upcoming' ? undefined : activeTab;
+            // Using debouncedSearch for backend filtering
+            const response = await appointmentService.getMyAppointments(status, page, limit, debouncedSearch);
             if (!response?.success) {
                 throw new Error(response?.message || 'Failed to fetch appointments');
             }
@@ -202,6 +201,7 @@ const Appointments: React.FC = () => {
             const nextAppointments = payload?.appointments || payload?.items || [];
             const nextTotal = typeof payload?.total === 'number' ? payload.total : null;
             if (!isMounted) return;
+            // append strictly if page > 1, else replace
             setAppointments((prev) => (page === 1 ? nextAppointments : [...prev, ...nextAppointments]));
             setTotal(nextTotal);
             lastFetchedPage.current = page;
@@ -214,7 +214,24 @@ const Appointments: React.FC = () => {
                 setLoading(false);
             }
         }
-    }, [page, appointments.length, limit]);
+    }, [page, limit, debouncedSearch, activeTab]);
+
+    // Debounce Search Effect
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+            setPage(1); // Reset to first page on new search
+        }, 500);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [searchQuery]);
+
+    // Reset page on tab change
+    useEffect(() => {
+        setPage(1);
+    }, [activeTab]);
 
     useEffect(() => {
         let isMounted = true;
@@ -224,10 +241,8 @@ const Appointments: React.FC = () => {
         };
     }, [fetchAppointments]);
 
-    const filteredAppointments = normalizedAppointments.filter((apt) => {
-        if (apt.tab !== activeTab) return false;
-        return apt.doctorName.toLowerCase().includes(searchQuery.toLowerCase());
-    });
+    // Use normalizedAppointments directly as backend now handles filtering
+    const filteredAppointments = normalizedAppointments;
 
     const getTabCount = (status: 'upcoming' | 'cancelled' | 'completed') => {
         return normalizedAppointments.filter((apt) => apt.tab === status).length;

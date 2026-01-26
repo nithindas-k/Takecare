@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react';
 import type { PopulatedAppointment } from '../../types/appointment.types';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader } from "../../components/ui/card"
+import { Skeleton } from "../../components/ui/skeleton";
 import { FaCalendarAlt, FaComments, FaEye, FaSearch, FaVideo, FaChevronDown } from 'react-icons/fa';
 
 
@@ -17,6 +18,7 @@ const DoctorAppointments: React.FC = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'upcoming' | 'cancelled' | 'completed'>('upcoming');
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [appointments, setAppointments] = useState<PopulatedAppointment[]>([]);
     const [tabCounts, setTabCounts] = useState<{ upcoming: number; cancelled: number; completed: number }>({
         upcoming: 0,
@@ -58,7 +60,8 @@ const DoctorAppointments: React.FC = () => {
 
             setError('');
             const status = activeTab === 'upcoming' ? 'confirmed' : activeTab;
-            const response = await appointmentService.getDoctorAppointments(status, isAppending ? page : 1, limit);
+            // Pass undefined for patientId (4th arg) and debouncedSearch for search (5th arg)
+            const response = await appointmentService.getDoctorAppointments(status, isAppending ? page : 1, limit, undefined, debouncedSearch);
 
             if (response?.success) {
                 const nextAppointments = response.data.appointments || [];
@@ -88,7 +91,19 @@ const DoctorAppointments: React.FC = () => {
             setRefreshing(false);
             setHasLoadedOnce(true);
         }
-    }, [activeTab, hasLoadedOnce, page, limit]);
+    }, [activeTab, hasLoadedOnce, page, limit, debouncedSearch]);
+
+    // Debounce Search
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+            setPage(1); // Reset to first page on new search
+        }, 500);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [searchQuery]);
 
     useEffect(() => {
         setPage(1);
@@ -99,9 +114,8 @@ const DoctorAppointments: React.FC = () => {
         fetchAppointments(page > 1);
     }, [fetchCounts, fetchAppointments, page]);
 
-    const filteredAppointments = appointments.filter(
-        (apt) => apt.patientId?.name && apt.patientId.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // Removed client-side filtering as backend search is now implemented
+    const filteredAppointments = appointments;
 
     const getTabCount = (status: string) => {
         if (status === 'upcoming') return tabCounts.upcoming;
@@ -130,9 +144,32 @@ const DoctorAppointments: React.FC = () => {
 
             <DoctorLayout>
                 {/* Loading State */}
+                {/* Loading State */}
                 {loading && !hasLoadedOnce && (
-                    <div className="flex justify-center items-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00A1B0]"></div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                <div className="p-4 border-b border-gray-100 flex items-start gap-3">
+                                    <Skeleton className="w-14 h-14 rounded-full" />
+                                    <div className="flex-1 space-y-2">
+                                        <Skeleton className="h-3 w-16" />
+                                        <Skeleton className="h-4 w-3/4" />
+                                        <div className="flex justify-between items-center mt-2">
+                                            <Skeleton className="h-4 w-20" />
+                                            <Skeleton className="h-5 w-16 rounded-full" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="p-4 bg-gray-50 space-y-4">
+                                    <div className="flex items-center justify-between gap-2 p-2.5 bg-white rounded-xl border border-gray-100 shadow-sm">
+                                        <Skeleton className="h-4 w-24" />
+                                        <div className="w-px h-3 bg-gray-200" />
+                                        <Skeleton className="h-4 w-20" />
+                                    </div>
+                                    <Skeleton className="w-full h-10 rounded-xl" />
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
 

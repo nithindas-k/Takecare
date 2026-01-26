@@ -81,13 +81,14 @@ export class AppointmentController implements IAppointmentController {
             }
 
             const status = req.query.status as string | undefined;
+            const search = req.query.search as string | undefined;
             const page = parseInt(req.query.page as string) || PAGINATION.DEFAULT_PAGE;
             const limit = parseInt(req.query.limit as string) || PAGINATION.DEFAULT_LIMIT;
 
             const result = await this._appointmentService.listAppointments(
                 userId,
                 userRole,
-                { status, page, limit }
+                { status, search, page, limit }
             );
 
             sendSuccess(res, result);
@@ -244,13 +245,14 @@ export class AppointmentController implements IAppointmentController {
 
             const status = req.query.status as string | undefined;
             const patientId = req.query.patientId as string | undefined;
+            const search = req.query.search as string | undefined;
             const page = parseInt(req.query.page as string) || PAGINATION.DEFAULT_PAGE;
             const limit = parseInt(req.query.limit as string) || PAGINATION.DEFAULT_LIMIT;
 
             const result = await this._appointmentService.listAppointments(
                 userId,
                 userRole,
-                { status, patientId, page, limit }
+                { status, patientId, search, page, limit }
             );
 
             sendSuccess(res, result);

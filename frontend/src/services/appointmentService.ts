@@ -13,9 +13,9 @@ export const appointmentService = {
     },
 
 
-    getMyAppointments: async (status?: string, page: number = 1, limit: number = 10) => {
+    getMyAppointments: async (status?: string, page: number = 1, limit: number = 10, search?: string) => {
         const response = await axiosInstance.get(APPOINTMENT_API_ROUTES.MY_APPOINTMENTS, {
-            params: { status, page, limit },
+            params: { status, page, limit, search },
         });
         return response.data;
     },
@@ -42,9 +42,9 @@ export const appointmentService = {
     },
 
 
-    getDoctorAppointments: async (status?: string, page: number = 1, limit: number = 10, patientId?: string) => {
+    getDoctorAppointments: async (status?: string, page: number = 1, limit: number = 10, patientId?: string, search?: string) => {
         const response = await axiosInstance.get(APPOINTMENT_API_ROUTES.DOCTOR_LIST, {
-            params: { status, page, limit, patientId },
+            params: { status, page, limit, patientId, search },
         });
         return response.data;
     },
@@ -54,7 +54,7 @@ export const appointmentService = {
         return response.data;
     },
 
-   
+
     rejectAppointment: async (id: string, rejectionReason: string) => {
         const response = await axiosInstance.put(APPOINTMENT_API_ROUTES.REJECT(id), {
             rejectionReason,
@@ -62,7 +62,7 @@ export const appointmentService = {
         return response.data;
     },
 
-    
+
     completeAppointment: async (id: string, completionData: { doctorNotes?: string; prescriptionUrl?: string }) => {
         const response = await axiosInstance.put(APPOINTMENT_API_ROUTES.COMPLETE(id), completionData);
         return response.data;
