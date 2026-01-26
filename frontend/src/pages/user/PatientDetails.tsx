@@ -56,8 +56,8 @@ const PatientDetails: React.FC = () => {
     };
 
     const handleNext = () => {
-        if (!formData.firstName || !formData.phone || !formData.email) {
-            toast.error('Please fill in all required fields');
+        if (!formData.firstName || !formData.phone || !formData.email || !formData.reason) {
+            toast.error('Please fill in all required fields including Reason for Visit');
             return;
         }
 
@@ -168,13 +168,14 @@ const PatientDetails: React.FC = () => {
 
                                 {/* Reason for Visit */}
                                 <div className="mb-6">
-                                    <label className="block text-gray-700 text-sm font-semibold mb-2">Reason for Visit</label>
+                                    <label className="block text-gray-700 text-sm font-semibold mb-2">Reason for Visit *</label>
                                     <textarea
                                         name="reason"
                                         value={formData.reason}
                                         onChange={handleChange}
                                         rows={4}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-700 focus:outline-none focus:border-[#008f9c] focus:ring-1 focus:ring-[#008f9c] transition-colors bg-white hover:border-gray-400 resize-none"
+                                        required
                                     ></textarea>
                                 </div>
                             </form>
