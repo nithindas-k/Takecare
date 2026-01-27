@@ -28,7 +28,7 @@ export const PAGINATION = {
 
 export const DOCTOR_PUBLIC_DEFAULTS = {
   LOCATION: "Kerala, India",
-  RATING: 4.5,
+  RATING: 0,
   PROFILE_IMAGE: "/default-doctor.png",
   NAME: "Dr. User",
   GENDER: "Unknown",

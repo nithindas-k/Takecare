@@ -17,6 +17,13 @@ import {
 } from '../../components/ui/pagination';
 import { toast } from 'sonner';
 import { Skeleton } from '../../components/ui/skeleton';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "../../components/ui/select";
 
 const Doctors: React.FC = () => {
     const navigate = useNavigate();
@@ -198,63 +205,72 @@ const Doctors: React.FC = () => {
                             <span className="text-xs font-black text-[#00A1B0] px-2 tracking-tighter whitespace-nowrap">{totalDoctors} Found</span>
                         </div>
 
-                        <div className="flex items-center gap-2 px-4 md:px-6 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 transition-all hover:shadow-md h-[52px]">
-                            <FaFilter className="text-[#00A1B0] w-3 h-3 shrink-0" />
-                            <select
-                                className="w-full bg-transparent border-none text-[10px] md:text-[11px] font-black text-slate-800 uppercase tracking-widest focus:ring-0 focus:outline-none cursor-pointer appearance-none pr-6"
-                                value={speciality}
-                                onChange={(e) => setSpeciality(e.target.value)}
-                            >
-                                <option value="">Spec</option>
-                                <option value="Cardiologist">Cardio</option>
-                                <option value="Neurologist">Neuro</option>
-                                <option value="Dermatologist">Derma</option>
-                                <option value="Pediatrician">Pediat</option>
-                                <option value="Psychologist">Psych</option>
-                            </select>
+                        <div className="flex items-center px-4 md:px-6 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 transition-all hover:shadow-md h-[52px] min-w-[140px]">
+                            <FaFilter className="text-[#00A1B0] w-3 h-3 shrink-0 mr-2" />
+                            <Select value={speciality} onValueChange={(val) => setSpeciality(val === 'all' ? '' : val)}>
+                                <SelectTrigger className="w-full bg-transparent border-none h-auto p-0 focus:ring-0 shadow-none text-[10px] md:text-[11px] font-black text-slate-800 uppercase tracking-widest gap-1">
+                                    <SelectValue placeholder="SPEC" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Specs</SelectItem>
+                                    <SelectItem value="Cardiologist">Cardio</SelectItem>
+                                    <SelectItem value="Neurologist">Neuro</SelectItem>
+                                    <SelectItem value="Dermatologist">Derma</SelectItem>
+                                    <SelectItem value="Pediatrician">Pediat</SelectItem>
+                                    <SelectItem value="Psychologist">Psych</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
 
-                        <div className="flex items-center gap-2 px-4 md:px-6 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 transition-all hover:shadow-md h-[52px]">
-                            <FaBriefcase className="text-[#00A1B0] w-3 h-3 shrink-0" />
-                            <select
-                                className="w-full bg-transparent border-none text-[10px] md:text-[11px] font-black text-slate-800 uppercase tracking-widest focus:ring-0 focus:outline-none cursor-pointer appearance-none pr-6"
-                                value={experience}
-                                onChange={(e) => setExperience(e.target.value)}
-                            >
-                                <option value="">Exp</option>
-                                <option value="5">5+ Years</option>
-                                <option value="10">10+ Years</option>
-                                <option value="20">20+ Years</option>
-                            </select>
+                        <div className="flex items-center px-4 md:px-6 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 transition-all hover:shadow-md h-[52px] min-w-[140px]">
+                            <FaBriefcase className="text-[#00A1B0] w-3 h-3 shrink-0 mr-2" />
+                            <Select value={experience} onValueChange={(val) => setExperience(val === 'all' ? '' : val)}>
+                                <SelectTrigger className="w-full bg-transparent border-none h-auto p-0 focus:ring-0 shadow-none text-[10px] md:text-[11px] font-black text-slate-800 uppercase tracking-widest gap-1">
+                                    <SelectValue placeholder="EXP" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Any Exp</SelectItem>
+                                    <SelectItem value="5">5+ Years</SelectItem>
+                                    <SelectItem value="10">10+ Years</SelectItem>
+                                    <SelectItem value="15">15+ Years</SelectItem>
+                                    <SelectItem value="20">20+ Years</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
 
-                        <div className="flex items-center gap-2 px-4 md:px-6 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 transition-all hover:shadow-md h-[52px]">
-                            <FaStar className="text-[#00A1B0] w-3 h-3 shrink-0" />
-                            <select
-                                className="w-full bg-transparent border-none text-[10px] md:text-[11px] font-black text-slate-800 uppercase tracking-widest focus:ring-0 focus:outline-none cursor-pointer appearance-none pr-6"
-                                value={rating}
-                                onChange={(e) => setRating(e.target.value)}
-                            >
-                                <option value="">Stars</option>
-                                <option value="4">4.0+ </option>
-                                <option value="3">3.0+ </option>
-                            </select>
+                        <div className="flex items-center px-4 md:px-6 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 transition-all hover:shadow-md h-[52px] min-w-[140px]">
+                            <FaStar className="text-[#00A1B0] w-3 h-3 shrink-0 mr-2" />
+                            <Select value={rating} onValueChange={(val) => setRating(val === 'all' ? '' : val)}>
+                                <SelectTrigger className="w-full bg-transparent border-none h-auto p-0 focus:ring-0 shadow-none text-[10px] md:text-[11px] font-black text-slate-800 uppercase tracking-widest gap-1">
+                                    <SelectValue placeholder="STARS" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Any Rating</SelectItem>
+                                    <SelectItem value="5">5 Stars</SelectItem>
+                                    <SelectItem value="4">4+ Stars</SelectItem>
+                                    <SelectItem value="3">3+ Stars</SelectItem>
+                                    <SelectItem value="2">2+ Stars</SelectItem>
+                                    <SelectItem value="1">1+ Stars</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
 
+
                     <div className="flex items-center gap-3 w-full lg:w-auto mt-2 lg:mt-0">
-                        <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 flex-1 lg:flex-none transition-all hover:shadow-md h-[52px]">
+                        <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-2xl shadow-sm border border-slate-100 flex-1 lg:flex-none transition-all hover:shadow-md h-[52px] min-w-[180px]">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Sort</span>
                             <div className="h-4 w-px bg-slate-100"></div>
-                            <select
-                                className="flex-1 bg-transparent border-none text-xs font-black text-slate-800 focus:ring-0 focus:outline-none cursor-pointer pr-10"
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value)}
-                            >
-                                <option value="">Latest</option>
-                                <option value="price_asc">Price ↑</option>
-                                <option value="price_desc">Price ↓</option>
-                            </select>
+                            <Select value={sortBy} onValueChange={(val) => setSortBy(val === 'all' ? '' : val)}>
+                                <SelectTrigger className="w-full bg-transparent border-none h-auto p-0 focus:ring-0 shadow-none text-xs font-black text-slate-800 focus:outline-none">
+                                    <SelectValue placeholder="Latest" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Latest</SelectItem>
+                                    <SelectItem value="price_asc">Price: Low to High</SelectItem>
+                                    <SelectItem value="price_desc">Price: High to Low</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         <button
@@ -410,7 +426,7 @@ const Doctors: React.FC = () => {
                 )}
             </div>
             <Footer />
-        </div>
+        </div >
     );
 };
 

@@ -9,7 +9,9 @@ import doctorService from '../../services/doctorService';
 import { API_BASE_URL } from '../../utils/constants';
 import { Skeleton } from '../../components/ui/skeleton';
 
-import { FaUserMd, FaBrain, FaBone, FaHeartbeat, FaTooth, FaCalendarCheck, FaCheck, FaHandHoldingMedical, FaClock, FaVials, FaShieldAlt } from 'react-icons/fa';
+import userService from '../../services/userService';
+import { toast } from 'sonner';
+import { FaUserMd, FaBrain, FaBone, FaHeartbeat, FaTooth, FaCalendarCheck, FaCheck, FaHandHoldingMedical, FaClock, FaVials, FaShieldAlt, FaHeart } from 'react-icons/fa';
 
 // Register ScrollTrigger
 gsap.registerPlugin(ScrollTrigger);
@@ -34,9 +36,40 @@ const Home: React.FC = () => {
   const navigate = useNavigate();
   const [latestDoctors, setLatestDoctors] = useState<any[]>([]);
   const [totalDoctors, setTotalDoctors] = useState<number>(0);
+  const [favorites, setFavorites] = useState<string[]>([]);
   const doctorCountLabel = totalDoctors > 0 ? `${totalDoctors}+` : "—";
 
   const [isLoading, setIsLoading] = useState(true);
+
+  const fetchFavorites = useCallback(async () => {
+    try {
+      const response = await userService.getFavorites();
+      if (response.success && Array.isArray(response.data)) {
+        setFavorites(response.data.map((doc: any) => doc.id || doc._id));
+      }
+    } catch (error) {
+      console.error("Failed to fetch favorites", error);
+    }
+  }, []);
+
+  const handleToggleFavorite = async (e: React.MouseEvent, doctorId: string) => {
+    e.stopPropagation();
+    try {
+      const response = await userService.toggleFavorite(doctorId);
+      if (response.success) {
+        setFavorites(prev =>
+          prev.includes(doctorId)
+            ? prev.filter(id => id !== doctorId)
+            : [...prev, doctorId]
+        );
+        toast.success(response.message);
+      } else {
+        toast.error(response.message);
+      }
+    } catch (error) {
+      toast.error("An error occurred");
+    }
+  };
 
   const fetchLatestDoctors = useCallback(async () => {
     setIsLoading(true);
@@ -44,6 +77,7 @@ const Home: React.FC = () => {
       const result = await doctorService.getAllDoctors({ page: 1, limit: 4 });
       const list = result?.data?.doctors ?? result?.doctors ?? [];
       const total = result?.data?.total ?? result?.total ?? 0;
+
       setLatestDoctors(Array.isArray(list) ? list : []);
       setTotalDoctors(Number.isFinite(total) ? total : 0);
     } catch (err) {
@@ -159,8 +193,9 @@ const Home: React.FC = () => {
     );
 
     fetchLatestDoctors();
+    fetchFavorites();
 
-  }, [fetchLatestDoctors]);
+  }, [fetchLatestDoctors, fetchFavorites]);
 
   const getImageUrl = (imagePath: string | null | undefined) => {
     if (!imagePath) return '/doctor.png';
@@ -414,8 +449,11 @@ const Home: React.FC = () => {
                         className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
                         onError={(e) => ((e.target as HTMLImageElement).src = "/doctor.png")}
                       />
-                      <button className="absolute top-4 right-4 p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm text-gray-400 hover:text-red-500 transition-colors hover:bg-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                      <button
+                        className={`absolute top-4 right-4 p-2 rounded-full shadow-sm transition-colors ${favorites.includes(id) ? 'text-[#00A1B0] bg-white' : 'text-gray-400 bg-white/80 hover:text-[#00A1B0] hover:bg-white'}`}
+                        onClick={(e) => handleToggleFavorite(e, id)}
+                      >
+                        <FaHeart className="w-5 h-5" />
                       </button>
                     </div>
                     <div className="p-3 md:p-5">

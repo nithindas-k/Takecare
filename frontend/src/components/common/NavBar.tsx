@@ -140,7 +140,7 @@ const NavBar: React.FC = () => {
                       }}
                       className="w-full px-4 py-2 text-left text-gray-700 hover:bg-[#00A1B0]/10 hover:text-[#00A1B0] flex items-center gap-2 transition-colors"
                     >
-                      <FaHeart size={18} className="text-red-500" />
+                      <FaHeart size={18} className="text-[#00A1B0]" />
                       <span className="font-medium">Favorites</span>
                     </button>
                     <hr className="my-1 border-gray-200" />
