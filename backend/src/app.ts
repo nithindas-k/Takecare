@@ -145,12 +145,14 @@ const PORT = Number(env.PORT);
 const httpServer = createServer(app);
 socketService.init(httpServer);
 
+console.log("NEW TEST WORKING1");
 const startServer = async () => {
   try {
     await connectDB();
     httpServer.listen(PORT, () => {
       logger.info(`Server running on http://localhost:${PORT}`);
       logger.info(`API Base: http://localhost:${PORT}/api`);
+      console.log("NEW TEST WORKING2");
     });
   } catch (error) {
     logger.error("Server startup failed", error);
