@@ -271,7 +271,7 @@ const DoctorProfile: React.FC = () => {
                   </div>
                   <div className="flex gap-3 mt-6">
                     <button
-                      className={`flex-1 md:flex-none p-3 border rounded-xl transition-all flex justify-center ${isFavorited ? 'bg-red-50 border-red-200 text-red-500 shadow-sm shadow-red-100' : 'border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-[#00A1B0]'}`}
+                      className={`flex-1 md:flex-none p-3 border rounded-xl transition-all flex justify-center ${isFavorited ? 'bg-cyan-50 border-cyan-200 text-[#00A1B0] shadow-sm shadow-cyan-100' : 'border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-[#00A1B0]'}`}
                       onClick={handleToggleFavorite}
                       title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
                     >

@@ -310,7 +310,7 @@ const Doctors: React.FC = () => {
                                         <FaStar className="text-yellow-300" /> {doctor.rating}
                                     </div>
                                     <button
-                                        className={`absolute top-3 right-3 bg-white/80 p-2 rounded-full transition-colors ${favorites.includes(doctor.id) ? 'text-red-500 bg-white' : 'text-gray-400 hover:text-red-500 hover:bg-white'}`}
+                                        className={`absolute top-3 right-3 bg-white/80 p-2 rounded-full transition-colors ${favorites.includes(doctor.id) ? 'text-[#00A1B0] bg-white' : 'text-gray-400 hover:text-[#00A1B0] hover:bg-white'}`}
                                         onClick={(e) => handleToggleFavorite(e, doctor.id)}
                                     >
                                         <FaHeart />

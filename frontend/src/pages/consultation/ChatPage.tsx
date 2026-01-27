@@ -1613,7 +1613,7 @@ const ChatPage = () => {
                                                     <Clock className="h-3.5 w-3.5" /> Follow-up Open
                                                 </div>
                                             )}
-                                            <div className="hidden md:flex items-center px-4 h-9 bg-slate-100 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200">
+                                            <div className="flex items-center px-4 h-9 bg-slate-100 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200">
                                                 Session Ended
                                             </div>
                                         </div>
@@ -1625,7 +1625,7 @@ const ChatPage = () => {
                                                     onClick={() => updateSessionStatus(SESSION_STATUS.ENDED)}
                                                     variant="destructive"
                                                     size="sm"
-                                                    className="hidden md:flex items-center gap-2 rounded-xl px-4 h-9 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-red-500/20"
+                                                    className="flex items-center gap-2 rounded-xl px-4 h-9 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-red-500/20"
                                                 >
                                                     <XCircle className="h-4 w-4" />
                                                     Wind Up
@@ -1636,13 +1636,13 @@ const ChatPage = () => {
                                                         <Button
                                                             onClick={() => updateSessionStatus(SESSION_STATUS.ACTIVE)}
                                                             size="sm"
-                                                            className="hidden md:flex items-center gap-2 rounded-xl px-4 h-9 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-[#00A1B0]/20"
+                                                            className="flex items-center gap-2 rounded-xl px-4 h-9 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-[#00A1B0]/20"
                                                         >
                                                             <Play className="h-4 w-4" />
                                                             Start Session
                                                         </Button>
                                                     ) : (
-                                                        <div className="hidden md:flex items-center gap-2 px-4 h-9 bg-slate-100 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 cursor-not-allowed" title="You can only start the session on the scheduled date">
+                                                        <div className="flex items-center gap-2 px-4 h-9 bg-slate-100 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 cursor-not-allowed" title="You can only start the session on the scheduled date">
                                                             <Clock className="h-3.5 w-3.5" />
                                                             Scheduled: {appointment?.appointmentDate ? new Date(appointment.appointmentDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Future'}
                                                         </div>
