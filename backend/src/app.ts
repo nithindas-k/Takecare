@@ -57,13 +57,13 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(
   session({
-    secret: env.SESSION_SECRET, //=
+    secret: env.SESSION_SECRET, 
     resave: false,
     saveUninitialized: false,
     cookie: {
       secure: false,
       httpOnly: true,
-      maxAge: CONFIG.SESSION_MAX_AGE, //=
+      maxAge: CONFIG.SESSION_MAX_AGE,
     },
   })
 );
