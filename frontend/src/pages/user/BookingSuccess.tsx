@@ -119,7 +119,7 @@ const BookingSuccess: React.FC = () => {
                         <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-[#00A1B0]/10">
                             <CheckCircle2 className="h-7 w-7 text-[#00A1B0]" />
                         </div>
-                        <CardTitle className="text-2xl text-[#002f33]">Appointment booked successfully</CardTitle>
+                        <CardTitle className="text-2xl text-[#00A1B0]">Appointment booked successfully</CardTitle>
                         <CardDescription>
                             Your booking is confirmed. You can view it in your appointments.
                         </CardDescription>
