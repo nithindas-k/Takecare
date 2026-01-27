@@ -57,11 +57,19 @@ const Doctors: React.FC = () => {
             });
 
             if (response && response.success && response.data) {
-                setDoctors(response.data.doctors || []);
+                const mappedDoctors = (response.data.doctors || []).map((doc: any) => ({
+                    ...doc,
+                    id: doc.id || doc._id
+                }));
+                setDoctors(mappedDoctors);
                 setTotalPages(response.data.totalPages || 1);
                 setTotalDoctors(response.data.total || 0);
             } else if (response && response.data) {
-                setDoctors(response.data.doctors || []);
+                const mappedDoctors = (response.data.doctors || []).map((doc: any) => ({
+                    ...doc,
+                    id: doc.id || doc._id
+                }));
+                setDoctors(mappedDoctors);
                 setTotalPages(response.data.totalPages || 1);
                 setTotalDoctors(response.data.total || 0);
             } else {

@@ -280,7 +280,7 @@ const DoctorProfile: React.FC = () => {
                     <button className="flex-1 md:flex-none p-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-[#00A1B0] transition-all flex justify-center" title="Send Message"><FaRegComment /></button>
                     <button className="flex-1 md:flex-none p-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-[#00A1B0] transition-all flex justify-center"><FaVideo /></button>
                   </div>
-                  <button onClick={handleBooking} className="w-full mt-4 bg-[#00A1B0] hover:bg-[#008f9c] text-white py-3.5 rounded-xl font-bold shadow-lg shadow-[#00A1B0]/20 transition-all active:scale-[0.98] text-sm" disabled={!doctor.available}>{doctor.available ? "Book Appointment Now" : "Currently Unavailable"}</button>
+                  <button onClick={handleBooking} className="w-full mt-4 bg-[#00A1B0] hover:bg-[#008f9c] text-white py-3.5 rounded-xl font-bold shadow-none hover:shadow-none transition-all active:scale-[0.98] text-sm" disabled={!doctor.available}>{doctor.available ? "Book Appointment Now" : "Currently Unavailable"}</button>
                 </div>
               </div>
             </div>
