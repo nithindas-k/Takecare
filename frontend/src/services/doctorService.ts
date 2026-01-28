@@ -116,10 +116,11 @@ class DoctorService {
       const response = await axiosInstance.post(url, { date, reason, slots });
       return response.data;
     } catch (error) {
-      const err = error as ApiError;
+      const err = error as any;
       return {
         success: false,
         message: err.response?.data?.message || err.message || "Failed to block date",
+        status: err.response?.status
       };
     }
   }

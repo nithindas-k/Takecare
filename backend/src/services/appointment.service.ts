@@ -414,7 +414,14 @@ export class AppointmentService implements IAppointmentService {
                 } else {
                     refundAmount = totalFee;
 
-                    if (doctor) await this._walletService.deductMoney(doctor.userId.toString(), appointment.doctorEarnings, `Cancellation: appointment #${appointment.customId || appointment.id} cancelled by ${userRole}`, appointment._id.toString(), "Consultation Reversal", session);
+                    if (doctor) {
+                        const currentBalance = await this._walletService.getWalletBalance(doctor.userId.toString());
+                        if (currentBalance < appointment.doctorEarnings) {
+                            throw new AppError("Insufficient wallet balance to process refund. Please top up your wallet or contact support.", HttpStatus.BAD_REQUEST);
+                        }
+                        await this._walletService.deductMoney(doctor.userId.toString(), appointment.doctorEarnings, `Cancellation: appointment #${appointment.customId || appointment.id} cancelled by ${userRole}`, appointment._id.toString(), "Consultation Reversal", session);
+
+                    }
 
                     const admins = await this._userRepository.findByRole(ROLES.ADMIN);
                     const adminUser = admins[0];
@@ -458,7 +465,7 @@ export class AppointmentService implements IAppointmentService {
                 } else {
                     if (patient) await this._notificationService.notify(patient._id.toString(), {
                         title: "Appointment Cancelled",
-                        message: `Your appointment #${customId} has been cancelled by the ${userRole}.`,
+                        message: `Your appointment #${customId} has been cancelled by the ${userRole}. Reason: ${cancellationReason}`,
                         type: "info",
                         appointmentId: appointment._id.toString()
                     });

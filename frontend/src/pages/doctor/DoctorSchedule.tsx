@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DoctorNavbar from '../../components/Doctor/DoctorNavbar';
 import DoctorLayout from '../../components/Doctor/DoctorLayout';
 import Breadcrumbs from '../../components/common/Breadcrumbs';
@@ -73,6 +74,9 @@ const DoctorSchedule: React.FC = () => {
     const [blockSubmitting, setBlockSubmitting] = useState(false);
     const [blockWholeDay, setBlockWholeDay] = useState(true);
     const [selectedBlockSlots, setSelectedBlockSlots] = useState<string[]>([]);
+
+    const navigate = useNavigate();
+    const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
 
 
     const [recurringStartTime, setRecurringStartTime] = useState('');
@@ -575,7 +579,11 @@ const DoctorSchedule: React.FC = () => {
                 setSelectedBlockSlots([]);
                 fetchSchedule();
             } else {
-                toast.error(response?.message || 'Failed to block date');
+                if (response?.status === 409) {
+                    setConflictDialogOpen(true);
+                } else {
+                    toast.error(response?.message || 'Failed to block date');
+                }
             }
         } catch (error) {
             console.error('Error blocking date:', error);
@@ -1414,6 +1422,31 @@ const DoctorSchedule: React.FC = () => {
                             </DialogFooter>
                         </div>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Conflict Dialog for Active Appointments */}
+            <Dialog open={conflictDialogOpen} onOpenChange={setConflictDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-amber-600">
+                            <FaExclamationTriangle /> Active Appointments Found
+                        </DialogTitle>
+                        <DialogDescription className="pt-2 text-gray-600">
+                            You have active appointments on specific date. You cannot block this date until these appointments are cancelled or rescheduled.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-2 sm:gap-0 mt-4">
+                        <Button variant="outline" onClick={() => setConflictDialogOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={() => navigate('/doctor/appointments')}
+                            className="bg-[#00A1B0] hover:bg-[#008f9d] text-white"
+                        >
+                            View Appointments
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

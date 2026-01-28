@@ -208,6 +208,31 @@ export class ScheduleService implements IScheduleService {
         ScheduleValidator.validateBlockDate(data);
 
         const date = new Date(data.date);
+
+        // Prevent blocking if active appointments exist
+        const startOfDay = new Date(date);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(date);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const { appointments: existingAppts } = await this._appointmentRepository.findAll({
+            doctorId,
+            startDate: startOfDay,
+            endDate: endOfDay
+        });
+
+        const activeStatuses = ['pending', 'confirmed', 'upcoming', 'reschedule_requested'];
+        const hasActiveAppointments = existingAppts.some(app =>
+            activeStatuses.includes(app.status as string)
+        );
+
+        if (hasActiveAppointments) {
+            throw new AppError(
+                "Cannot block this date because there are active appointments. Please cancel or reschedule them first.",
+                HttpStatus.CONFLICT
+            );
+        }
+
         const schedule = await this._scheduleRepository.addBlockedDate(
             doctorId,
             date,
