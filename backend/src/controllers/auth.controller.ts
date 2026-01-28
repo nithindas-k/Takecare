@@ -40,7 +40,7 @@ export class AuthController implements IAuthController {
     res.cookie(COOKIE_OPTIONS.REFRESH_TOKEN, token, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? COOKIE_OPTIONS.SAME_SITE_NONE : COOKIE_OPTIONS.SAME_SITE_STRICT,
+      sameSite: isProduction ? COOKIE_OPTIONS.SAME_SITE_NONE : COOKIE_OPTIONS.SAME_SITE_LAX,
       maxAge: COOKIE_OPTIONS.MAX_AGE,
       path: '/'
     });
@@ -160,7 +160,7 @@ export class AuthController implements IAuthController {
   changePassword = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const dto: ChangePasswordDTO = req.body;
-    
+
       const user = req.user as any;
       const userId = user.userId || user.id || user._id;
 
@@ -259,7 +259,7 @@ export class AuthController implements IAuthController {
       res.clearCookie(COOKIE_OPTIONS.REFRESH_TOKEN, {
         httpOnly: true,
         secure: env.NODE_ENV === COOKIE_OPTIONS.ENV_PRODUCTION,
-        sameSite: env.NODE_ENV === COOKIE_OPTIONS.ENV_PRODUCTION ? COOKIE_OPTIONS.SAME_SITE_NONE : COOKIE_OPTIONS.SAME_SITE_STRICT
+        sameSite: env.NODE_ENV === COOKIE_OPTIONS.ENV_PRODUCTION ? COOKIE_OPTIONS.SAME_SITE_NONE : COOKIE_OPTIONS.SAME_SITE_LAX
       });
 
       req.session.destroy((err) => {

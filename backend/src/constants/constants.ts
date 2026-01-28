@@ -17,6 +17,7 @@ export const COOKIE_OPTIONS = {
   REFRESH_TOKEN: "refreshToken",
   MAX_AGE: env.REFRESH_TOKEN_MAX_AGE,
   SAME_SITE_STRICT: "strict",
+  SAME_SITE_LAX: "lax",
   SAME_SITE_NONE: "none",
   ENV_PRODUCTION: "production",
 } as const;
