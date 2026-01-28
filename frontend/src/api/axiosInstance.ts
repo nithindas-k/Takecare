@@ -58,7 +58,8 @@ axiosInstance.interceptors.response.use(
 
     if (
       error.response?.status === 401 &&
-      !originalRequest._retry
+      !originalRequest._retry &&
+      !originalRequest.url?.includes('/login') // Prevent refresh loop on login failure
     ) {
       originalRequest._retry = true;
       try {
