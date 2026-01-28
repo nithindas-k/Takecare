@@ -22,7 +22,7 @@ export const DOCTOR_API_ROUTES = {
   LOGIN: "/auth/login",
   REGISTER: "/auth/register",
   VERIFY_OTP: "/auth/verify-otp",
-  VERIFY_OTP_PASSWORD: "/doctors/forgot-password-verify-otp",
+  VERIFY_OTP_PASSWORD: "/auth/forgot-password-verify-otp",
   RESEND_OTP: "/auth/resend-otp",
   FORGOT_PASSWORD: "/auth/forgot-password",
   RESET_PASSWORD: "/auth/reset-password",
