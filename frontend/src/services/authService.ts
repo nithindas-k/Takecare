@@ -289,10 +289,12 @@ class AuthService {
   async forgotPassword(
     email: string,
     role: "user" | "doctor" = "user") {
+    const beRole = role === "user" ? "patient" : role;
     const apiRoutes = this.getApiRoutes(role);
     try {
       const response = await axiosInstance.post(apiRoutes.FORGOT_PASSWORD, {
         email,
+        role: beRole,
       });
       return response.data;
     } catch (error: unknown) {
