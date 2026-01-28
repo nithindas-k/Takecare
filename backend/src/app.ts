@@ -41,7 +41,7 @@ passportService.init();
 const app = express();
 
 const corsOptions = {
-  origin: env.CLIENT_URL,
+  origin: [env.CLIENT_URL as string, env.CLIENT_URL_1 as string, env.CLIENT_URL_2 as string],
   credentials: true,
   optionsSuccessStatus: 200,
 };
@@ -57,7 +57,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(
   session({
-    secret: env.SESSION_SECRET, 
+    secret: env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
