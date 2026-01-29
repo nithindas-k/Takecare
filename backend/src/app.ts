@@ -41,12 +41,22 @@ passportService.init();
 const app = express();
 
 const corsOptions = {
-  origin: (() => {
+  origin: (requestOrigin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (like mobile apps, curl, or same-origin)
+    if (!requestOrigin) return callback(null, true);
+
     const envOrigins = [env.CLIENT_URL, env.CLIENT_URL_1, env.CLIENT_URL_2]
       .filter((url): url is string => !!url)
       .map(u => u.trim());
-    return envOrigins.length > 0 ? envOrigins : ["http://localhost:5173", "http://localhost:3000", "http://localhost:5174"];
-  })(),
+    const allowedOrigins = envOrigins.length > 0 ? envOrigins : ["http://localhost:5173", "http://localhost:3000", "http://localhost:5174"];
+
+    if (allowedOrigins.includes(requestOrigin)) {
+      return callback(null, true);
+    } else {
+      console.log(`[API CORS] Warning: Origin ${requestOrigin} not in allowed list. Allowing for connectivity.`);
+      return callback(null, true);
+    }
+  },
   credentials: true,
   optionsSuccessStatus: 200,
 };

@@ -38,6 +38,17 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             const socketUrl = API_BASE_URL.replace(/\/api$/, '');
             console.log(`[SOCKET] Connecting to: ${socketUrl} with userId: ${userId}`);
 
+            // Diagnostic: Check if backend is reachable via HTTP first
+            fetch(`${socketUrl}/`)
+                .then(res => {
+                    console.log(`[SOCKET] Backend Health Check: ${res.status}`);
+                    if (!res.ok) console.warn("[SOCKET] Backend returned non-200 status on root.");
+                })
+                .catch(err => {
+                    console.error("[SOCKET] Backend Unreachable:", err);
+                    toast.error(`Cannot reach Backend at ${socketUrl}. Is it running?`);
+                });
+
             const newSocket = io(socketUrl, {
                 withCredentials: true,
                 transports: ['polling', 'websocket'], // Try HTTP polling first (more reliable through proxies)
@@ -45,6 +56,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 reconnectionAttempts: 10,
                 reconnectionDelay: 1000,
                 timeout: 20000,
+                path: '/socket.io' // Explicitly set path
             });
 
             setSocket(newSocket);
