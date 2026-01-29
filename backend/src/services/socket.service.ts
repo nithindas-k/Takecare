@@ -7,9 +7,13 @@ export class SocketService {
     private _onlineUsers = new Map<string, string>();
 
     init(httpServer: HttpServer) {
+        const origins = [env.CLIENT_URL, env.CLIENT_URL_1, env.CLIENT_URL_2].filter(
+            (url): url is string => !!url
+        );
+
         this._io = new Server(httpServer, {
             cors: {
-                origin: [env.CLIENT_URL as string, env.CLIENT_URL_1 as string, env.CLIENT_URL_2 as string],
+                origin: origins,
                 methods: ["GET", "POST"],
                 credentials: true
             },
@@ -43,7 +47,7 @@ export class SocketService {
                 this._onlineUsers.set(userId, socket.id);
                 this._io?.emit("user-status", { userId, status: 'online' });
 
-            
+
                 const onlineUserIds = Array.from(this._onlineUsers.keys());
                 socket.emit("online-users", onlineUserIds);
             });
@@ -76,7 +80,7 @@ export class SocketService {
                 const roomId = String(data.conversationId || data.appointmentId || "");
                 if (roomId) {
                     console.log(`Socket [${socket.id}] sending message to room ${roomId}`);
-                    
+
                 } else {
                     console.error("Socket error: send-message received without roomId");
                 }

@@ -41,7 +41,7 @@ passportService.init();
 const app = express();
 
 const corsOptions = {
-  origin: [env.CLIENT_URL as string, env.CLIENT_URL_1 as string, env.CLIENT_URL_2 as string],
+  origin: [env.CLIENT_URL, env.CLIENT_URL_1, env.CLIENT_URL_2].filter((url): url is string => !!url),
   credentials: true,
   optionsSuccessStatus: 200,
 };
