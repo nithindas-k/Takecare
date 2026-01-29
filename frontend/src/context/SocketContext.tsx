@@ -38,7 +38,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             const socketUrl = API_BASE_URL.replace(/\/api$/, '');
             console.log(`[SOCKET] Connecting to: ${socketUrl} with userId: ${userId}`);
 
-            // Diagnostic: Check if backend is reachable via HTTP first
+
             fetch(`${socketUrl}/`)
                 .then(res => {
                     console.log(`[SOCKET] Backend Health Check: ${res.status}`);
@@ -49,12 +49,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     toast.error(`Cannot reach Backend at ${socketUrl}. Is it running?`);
                 });
 
-            const isLocal = socketUrl.includes("localhost") || socketUrl.includes("127.0.0.1");
-
             const newSocket = io(socketUrl, {
                 withCredentials: true,
-               
-                transports: isLocal ? ['polling', 'websocket'] : ['websocket'],
+                transports: ['polling', 'websocket'], 
                 reconnection: true,
                 reconnectionAttempts: 10,
                 reconnectionDelay: 1000,
