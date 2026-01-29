@@ -51,12 +51,12 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
             const newSocket = io(socketUrl, {
                 withCredentials: true,
-                transports: ['polling', 'websocket'], // Try HTTP polling first (more reliable through proxies)
+                transports: ['websocket'], // Force WebSocket to bypass 'Sticky Session' requirement on AWS/Cloud hosting 
                 reconnection: true,
                 reconnectionAttempts: 10,
                 reconnectionDelay: 1000,
                 timeout: 20000,
-                path: '/socket.io' // Explicitly set path
+                path: '/socket.io'
             });
 
             setSocket(newSocket);
