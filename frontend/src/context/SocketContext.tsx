@@ -40,7 +40,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
             const newSocket = io(socketUrl, {
                 withCredentials: true,
-                transports: ['websocket', 'polling'], 
+                transports: ['websocket', 'polling'],
                 reconnection: true,
                 reconnectionAttempts: 10,
                 reconnectionDelay: 1000,
@@ -71,13 +71,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
             newSocket.on('connect_error', (err) => {
                 console.error("[SOCKET] Connection Error:", err.message);
-                // Only show toast if it persists or is a critical setup error
-                if (!newSocket.active) {
-                    toast.error(`Socket Connection Failed: ${err.message}`, {
-                        description: `Target: ${socketUrl}. Check console for details.`,
-                        id: "socket-error-toast"
-                    });
-                }
+                toast.error(`Socket Connection Failed: ${err.message}`, {
+                    description: `Target: ${socketUrl}`,
+                    id: "socket-error-toast",
+                    duration: 5000,
+                });
             });
 
             newSocket.on('disconnect', (reason) => {
