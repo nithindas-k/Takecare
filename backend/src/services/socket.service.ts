@@ -26,7 +26,6 @@ export class SocketService {
                         return callback(null, true);
                     } else {
                         // Soft-fail: Log the blocked origin but allow it effectively debugging the "exact match" issue.
-                        // In production, you might want to switch this to callback(new Error('Not allowed by CORS'));
                         console.log(`[SOCKET CORS] Warning: Origin ${requestOrigin} not in allowed list. Allowing for connectivity.`);
                         return callback(null, true);
                     }

@@ -49,9 +49,12 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     toast.error(`Cannot reach Backend at ${socketUrl}. Is it running?`);
                 });
 
+            const isLocal = socketUrl.includes("localhost") || socketUrl.includes("127.0.0.1");
+
             const newSocket = io(socketUrl, {
                 withCredentials: true,
-                transports: ['websocket'], // Force WebSocket to bypass 'Sticky Session' requirement on AWS/Cloud hosting 
+               
+                transports: isLocal ? ['polling', 'websocket'] : ['websocket'],
                 reconnection: true,
                 reconnectionAttempts: 10,
                 reconnectionDelay: 1000,
