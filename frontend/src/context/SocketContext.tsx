@@ -36,10 +36,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     useEffect(() => {
         if (userId) {
             const socketUrl = API_BASE_URL.replace(/\/api$/, '');
+            console.log(`[SOCKET] Connecting to: ${socketUrl} with userId: ${userId}`);
 
             const newSocket = io(socketUrl, {
                 withCredentials: true,
-                transports: ['websocket'],
+                transports: ['websocket', 'polling'], // Allow polling fallback
                 reconnection: true,
                 reconnectionAttempts: 10,
                 reconnectionDelay: 1000,
@@ -49,7 +50,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             setSocket(newSocket);
 
             newSocket.on('connect', () => {
-                console.log("Socket Connected:", newSocket.id);
+                console.log("[SOCKET] Connected successfully. Socket ID:", newSocket.id);
                 newSocket.emit('join', userId);
             });
 
@@ -69,7 +70,14 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             });
 
             newSocket.on('connect_error', (err) => {
-                console.error("Socket Connection Error:", err.message);
+                console.error("[SOCKET] Connection Error:", err.message);
+                // Only show toast if it persists or is a critical setup error
+                if (!newSocket.active) {
+                    toast.error(`Socket Connection Failed: ${err.message}`, {
+                        description: `Target: ${socketUrl}. Check console for details.`,
+                        id: "socket-error-toast"
+                    });
+                }
             });
 
             newSocket.on('disconnect', (reason) => {

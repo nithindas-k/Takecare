@@ -7,9 +7,14 @@ export class SocketService {
     private _onlineUsers = new Map<string, string>();
 
     init(httpServer: HttpServer) {
-        const origins = [env.CLIENT_URL, env.CLIENT_URL_1, env.CLIENT_URL_2].filter(
-            (url): url is string => !!url
-        );
+        const envOrigins = [env.CLIENT_URL, env.CLIENT_URL_1, env.CLIENT_URL_2]
+            .filter((url): url is string => !!url)
+            .map(url => url.trim());
+
+        // Use environment variables if available, otherwise fallback to localhost for development
+        const origins = envOrigins.length > 0 ? envOrigins : ["http://localhost:5173", "http://localhost:3000", "http://localhost:5174"];
+
+        console.log("[SOCKET] Initializing with allowed origins:", origins);
 
         this._io = new Server(httpServer, {
             cors: {
