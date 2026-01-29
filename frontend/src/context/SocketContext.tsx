@@ -40,7 +40,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
             const newSocket = io(socketUrl, {
                 withCredentials: true,
-                transports: ['websocket', 'polling'], // Allow polling fallback
+                transports: ['websocket', 'polling'], 
                 reconnection: true,
                 reconnectionAttempts: 10,
                 reconnectionDelay: 1000,

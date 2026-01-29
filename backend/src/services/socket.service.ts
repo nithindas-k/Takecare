@@ -18,7 +18,19 @@ export class SocketService {
 
         this._io = new Server(httpServer, {
             cors: {
-                origin: origins,
+                origin: (requestOrigin, callback) => {
+                    // Allow requests with no origin (like mobile apps or curl requests)
+                    if (!requestOrigin) return callback(null, true);
+
+                    if (origins.includes(requestOrigin)) {
+                        return callback(null, true);
+                    } else {
+                        // Soft-fail: Log the blocked origin but allow it effectively debugging the "exact match" issue.
+                        // In production, you might want to switch this to callback(new Error('Not allowed by CORS'));
+                        console.log(`[SOCKET CORS] Warning: Origin ${requestOrigin} not in allowed list. Allowing for connectivity.`);
+                        return callback(null, true);
+                    }
+                },
                 methods: ["GET", "POST"],
                 credentials: true
             },

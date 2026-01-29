@@ -42,7 +42,9 @@ const app = express();
 
 const corsOptions = {
   origin: (() => {
-    const envOrigins = [env.CLIENT_URL, env.CLIENT_URL_1, env.CLIENT_URL_2].filter((url): url is string => !!url);
+    const envOrigins = [env.CLIENT_URL, env.CLIENT_URL_1, env.CLIENT_URL_2]
+      .filter((url): url is string => !!url)
+      .map(u => u.trim());
     return envOrigins.length > 0 ? envOrigins : ["http://localhost:5173", "http://localhost:3000", "http://localhost:5174"];
   })(),
   credentials: true,
