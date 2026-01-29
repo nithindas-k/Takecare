@@ -9,7 +9,7 @@ export class SocketService {
     init(httpServer: HttpServer) {
         this._io = new Server(httpServer, {
             cors: {
-                origin: env.CLIENT_URL,
+                origin: [env.CLIENT_URL as string, env.CLIENT_URL_1 as string, env.CLIENT_URL_2 as string],
                 methods: ["GET", "POST"],
                 credentials: true
             },
@@ -43,7 +43,7 @@ export class SocketService {
                 this._onlineUsers.set(userId, socket.id);
                 this._io?.emit("user-status", { userId, status: 'online' });
 
-                // Send current online users list to the user who just joined
+            
                 const onlineUserIds = Array.from(this._onlineUsers.keys());
                 socket.emit("online-users", onlineUserIds);
             });
@@ -76,8 +76,7 @@ export class SocketService {
                 const roomId = String(data.conversationId || data.appointmentId || "");
                 if (roomId) {
                     console.log(`Socket [${socket.id}] sending message to room ${roomId}`);
-                    // Removed redundant broadcast: this._io?.to(roomId).emit("receive-message", data);
-                    // The broadcast is handled by ChatService.sendMessage to ensure permanent IDs and data consistency.
+                    
                 } else {
                     console.error("Socket error: send-message received without roomId");
                 }
