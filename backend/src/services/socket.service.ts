@@ -14,24 +14,13 @@ export class SocketService {
             console.log("ENV origins :- ", envOrigins);
 
         // Use environment variables if available, otherwise fallback to localhost for development
-        const origins = envOrigins.length > 0 ? envOrigins : ["http://localhost:5173", "http://localhost:3000", "http://localhost:5174"];
+        const origins = ["https://takecare.nithin.site"];
 
         console.log("[SOCKET] Initializing with allowed origins:", origins);
 
         this._io = new Server(httpServer, {
             cors: {
-                origin: (requestOrigin, callback) => {
-                    // Allow requests with no origin (like mobile apps or curl requests)
-                    if (!requestOrigin) return callback(null, true);
-
-                    if (origins.includes(requestOrigin)) {
-                        return callback(null, true);
-                    } else {
-                        // Soft-fail: Log the blocked origin but allow it effectively debugging the "exact match" issue.
-                        console.log(`[SOCKET CORS] Warning: Origin ${requestOrigin} not in allowed list. Allowing for connectivity.`);
-                        return callback(null, true);
-                    }
-                },
+                origin: "https://takecare.nithin.site",
                 methods: ["GET", "POST"],
                 credentials: true
             },
