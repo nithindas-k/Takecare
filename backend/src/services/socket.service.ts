@@ -11,6 +11,8 @@ export class SocketService {
             .filter((url): url is string => !!url)
             .map(url => url.trim());
 
+            console.log("ENV origins :- ", envOrigins);
+
         // Use environment variables if available, otherwise fallback to localhost for development
         const origins = envOrigins.length > 0 ? envOrigins : ["http://localhost:5173", "http://localhost:3000", "http://localhost:5174"];
 
