@@ -11,16 +11,15 @@ export class SocketService {
             .filter((url): url is string => !!url)
             .map(url => url.trim());
 
-            console.log("ENV origins :- ", envOrigins);
+        console.log("ENV origins :- ", envOrigins);
 
-        // Use environment variables if available, otherwise fallback to localhost for development
-        const origins = ["https://takecare.nithin.site"];
 
-        console.log("[SOCKET] Initializing with allowed origins:", origins);
+
+        const allowedOrigins = [...envOrigins, "https://takecare.nithin.site"];
 
         this._io = new Server(httpServer, {
             cors: {
-                origin: "https://takecare.nithin.site",
+                origin: allowedOrigins,
                 methods: ["GET", "POST"],
                 credentials: true
             },
