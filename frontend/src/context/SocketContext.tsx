@@ -34,7 +34,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     useEffect(() => {
         if (userId) {
-            const socketUrl = "https://takecare.nithin.site";
+            const socketUrl = "https://api.nithin.site";
             console.log(`[SOCKET] Connecting to: ${socketUrl} with userId: ${userId}`);
 
 
