@@ -18,7 +18,7 @@ export class SocketService {
 
         this._io = new Server(httpServer, {
             cors: {
-                origin: "https://takecare.nithin.site",
+                origin: ["https://takecare.nithin.site", "https://www.takecare.nithin.site"],
                 methods: ["GET", "POST"],
                 credentials: true
             },
