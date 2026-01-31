@@ -3,7 +3,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../redux/user/userSlice';
-import { API_BASE_URL } from '../utils/constants';
 import { toast } from 'sonner';
 import ReminderModal from '../components/common/ReminderModal';
 
