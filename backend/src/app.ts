@@ -42,10 +42,13 @@ const app = express();
 
 const corsOptions = {
   origin: (requestOrigin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-   
+
     if (!requestOrigin) return callback(null, true);
 
-    const allowedOrigins = ["https://takecare.nithin.site"];
+    const allowedOrigins = [
+      "https://takecare.nithin.site",
+      "https://www.takecare.nithin.site"
+    ];
 
     if (allowedOrigins.includes(requestOrigin)) {
       return callback(null, true);
