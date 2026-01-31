@@ -35,7 +35,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     useEffect(() => {
         if (userId) {
-            const socketUrl = API_BASE_URL.replace(/\/api$/, '');
+            const socketUrl = "https://takecare.nithin.site";
             console.log(`[SOCKET] Connecting to: ${socketUrl} with userId: ${userId}`);
 
 

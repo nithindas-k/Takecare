@@ -15,11 +15,10 @@ export class SocketService {
 
 
 
-        const allowedOrigins = [...envOrigins, "https://takecare.nithin.site"];
 
         this._io = new Server(httpServer, {
             cors: {
-                origin: allowedOrigins,
+                origin: "https://takecare.nithin.site",
                 methods: ["GET", "POST"],
                 credentials: true
             },
