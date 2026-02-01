@@ -1277,7 +1277,12 @@ const ChatPage = () => {
     };
 
     return (
-        <div className="flex h-[100dvh] w-full font-sans bg-white text-slate-900 overflow-hidden">
+        <motion.div
+            initial={{ opacity: 0, scale: 0.95, filter: "blur(4px)" }}
+            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="flex h-[100dvh] w-full font-sans bg-white text-slate-900 overflow-hidden"
+        >
             {/* Image Cropper Modal - Ultra Professional Responsive Design */}
             <Dialog open={isCropping} onOpenChange={(open) => !isUploading && setIsCropping(open)}>
                 <DialogContent className="max-w-[95vw] md:max-w-3xl lg:max-w-4xl bg-gradient-to-br from-white via-white to-slate-50 border-slate-200 shadow-2xl p-0 overflow-hidden rounded-2xl md:rounded-3xl max-h-[95vh] flex flex-col">
@@ -2400,7 +2405,7 @@ const ChatPage = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div >
+        </motion.div >
     );
 };
 
