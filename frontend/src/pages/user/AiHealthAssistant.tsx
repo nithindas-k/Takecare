@@ -176,23 +176,23 @@ const AiHealthAssistant: React.FC = () => {
                                                 initial={{ opacity: 0, y: 10 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 transition={{ duration: 0.2 }}
-                                                className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+                                                className={`flex w-full ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
                                             >
-                                                <div className={`flex items-start gap-4 max-w-[85%] sm:max-w-[70%] ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}>
+                                                <div className={`flex items-start gap-3 sm:gap-4 max-w-[92%] sm:max-w-[80%] lg:max-w-[70%] ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}>
 
                                                     {/* Clean Avatars */}
-                                                    <div className={`w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0 border ${msg.sender === 'user'
+                                                    <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-md flex items-center justify-center flex-shrink-0 border shadow-sm ${msg.sender === 'user'
                                                         ? 'bg-slate-800 border-slate-700 text-white'
                                                         : 'bg-white border-slate-200 text-[#00A1B0]'
                                                         }`}>
-                                                        {msg.sender === 'user' ? <User size={18} /> : <Bot size={20} />}
+                                                        {msg.sender === 'user' ? <User size={16} className="sm:size-[18px]" /> : <Bot size={18} className="sm:size-[20px]" />}
                                                     </div>
 
                                                     {/* Clean Message Bubbles */}
-                                                    <div className="flex flex-col gap-2">
-                                                        <div className={`px-4 py-3 rounded-lg text-[14.5px] leading-relaxed border ${msg.sender === "user"
-                                                            ? "bg-slate-800 border-slate-700 text-slate-50"
-                                                            : "bg-white border-slate-200 text-slate-700 shadow-sm"
+                                                    <div className="flex flex-col gap-2 min-w-0">
+                                                        <div className={`px-4 py-3 rounded-2xl text-[14px] sm:text-[14.5px] leading-relaxed border break-words overflow-hidden ${msg.sender === "user"
+                                                            ? "bg-slate-800 border-slate-700 text-slate-50 rounded-tr-none"
+                                                            : "bg-white border-slate-200 text-slate-700 shadow-sm rounded-tl-none"
                                                             }`}>
                                                             {msg.text}
 
@@ -286,7 +286,7 @@ const AiHealthAssistant: React.FC = () => {
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        <span className={`text-[10px] font-bold text-slate-400 flex items-center gap-1.5 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                                        <span className={`text-[10px] sm:text-[11px] font-bold text-slate-400 flex items-center gap-1.5 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                                                             {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                             {msg.sender === 'ai' && <Sparkles size={10} className="text-[#00A1B0]/50" />}
                                                         </span>
