@@ -14,6 +14,15 @@ export const BASE_ROUTES = {
     SPECIALTIES: "/specialties",
     CONTACT: "/contact",
     CALL: "/call",
+    AI: "/ai",
+} as const;
+
+export const AI_ROUTES = {
+    ANALYZE: "/analyze",
+    PRESCRIPTION: "/prescription-suggestions",
+    SUMMARY: "/patient-summary",
+    CHAT_SUMMARY: "/chat-summary",
+    ADMIN_QUERY: "/admin-query",
 } as const;
 
 
@@ -70,8 +79,8 @@ export const DOCTOR_ROUTES = {
 
 export const USER_ROUTES = {
     PROFILE: "/profile",
-    TOGGLE_FAVORITE:"/favorites/:doctorId",
-    GET_FAVORITES:"/favorites",
+    TOGGLE_FAVORITE: "/favorites/:doctorId",
+    GET_FAVORITES: "/favorites",
 } as const;
 
 export const APPOINTMENT_ROUTES = {

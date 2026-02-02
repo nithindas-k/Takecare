@@ -26,6 +26,7 @@ import prescriptionRouter from "./routers/prescription.router";
 import specialtyRouter from "./routers/specialty.router";
 import contactRouter from "./routes/contact.routes";
 import callRouter from "./routers/call.router";
+import aiRouter from "./routers/ai.router";
 
 import { errorHandler } from "./middlewares/error-handler.middleware";
 import { LoggerService } from "./services/logger.service";
@@ -47,7 +48,13 @@ const corsOptions = {
 
     const allowedOrigins = [
       "https://takecare.nithin.site",
-      "https://www.takecare.nithin.site"
+      "https://www.takecare.nithin.site",
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "http://127.0.0.1:5173",
+      "http://127.0.0.1:3000",
+      "http://localhost:5174",
+      "http://127.0.0.1:5174"
     ];
 
     if (allowedOrigins.includes(requestOrigin)) {
@@ -116,6 +123,8 @@ app.use(BASE_ROUTES.PRESCRIPTIONS, prescriptionRouter);
 app.use(BASE_ROUTES.SPECIALTIES, specialtyRouter);
 app.use(BASE_ROUTES.CONTACT, contactRouter);
 app.use(BASE_ROUTES.CALL, callRouter);
+app.use("/ai", aiRouter);
+app.use("/api/ai", aiRouter);
 
 
 

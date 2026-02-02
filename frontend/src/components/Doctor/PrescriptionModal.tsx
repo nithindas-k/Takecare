@@ -24,6 +24,9 @@ interface Medicine {
     instructions: string;
 }
 
+
+
+
 const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, appointmentId, patientId, onSuccess }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [diagnosis, setDiagnosis] = useState('');
@@ -37,6 +40,10 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
     const [isDrawing, setIsDrawing] = useState(false);
     const [hasSignature, setHasSignature] = useState(false);
     const [appointment, setAppointment] = useState<any>(null);
+
+
+
+
 
     React.useEffect(() => {
         const fetchAppointment = async () => {
@@ -133,6 +140,7 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
             setLabTests(newLabTests);
         }
     };
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -369,9 +377,11 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
 
                                 {/* Diagnosis Section */}
                                 <div className="space-y-3">
-                                    <div className="flex items-center gap-2 border-b border-[#00A1B0]/20 pb-2">
-                                        <Stethoscope className="w-4 h-4 text-[#00A1B0]" />
-                                        <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Diagnosis & Findings</h3>
+                                    <div className="flex items-center justify-between border-b border-[#00A1B0]/20 pb-2">
+                                        <div className="flex items-center gap-2">
+                                            <Stethoscope className="w-4 h-4 text-[#00A1B0]" />
+                                            <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Diagnosis & Findings</h3>
+                                        </div>
                                     </div>
                                     <textarea
                                         value={diagnosis}
@@ -500,10 +510,13 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
                                     {/* Detailed Notes & Follow up */}
                                     <div className="space-y-6">
                                         <div className="space-y-3">
-                                            <div className="flex items-center gap-2 border-b border-[#00A1B0]/20 pb-2">
-                                                <FileText className="w-4 h-4 text-[#00A1B0]" />
-                                                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Additional Notes</h3>
+                                            <div className="flex items-center justify-between border-b border-[#00A1B0]/20 pb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <FileText className="w-4 h-4 text-[#00A1B0]" />
+                                                    <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Additional Notes</h3>
+                                                </div>
                                             </div>
+
                                             <textarea
                                                 value={notes}
                                                 onChange={(e) => setNotes(e.target.value)}
@@ -607,6 +620,7 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
                         </Button>
                     </div>
                 </motion.div>
+
             </div>
         </AnimatePresence>
     );

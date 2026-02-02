@@ -5,7 +5,7 @@ import {
     ChevronLeft, Check, CheckCheck,
     Info, Search, Plus, Camera, Paperclip, Mic, Trash2, Pause, Play,
     Menu, ArrowLeft, Lock, MessagesSquare, X, Download, ExternalLink, XCircle, Clock, ClipboardList,
-    StickyNote, BookOpen
+    StickyNote, BookOpen, Sparkles, Loader2
 } from 'lucide-react';
 import type { EmojiClickData } from 'emoji-picker-react';
 import EmojiPicker from 'emoji-picker-react';
@@ -29,6 +29,7 @@ import { selectCurrentUser } from '../../redux/user/userSlice';
 import { chatService } from '../../services/chatService';
 import type { IMessage } from '../../services/chatService';
 import { appointmentService } from '../../services/appointmentService';
+import { aiService } from '../../services/aiService';
 import { toast } from 'sonner';
 import { API_BASE_URL, SESSION_STATUS } from '../../utils/constants';
 import type { SessionStatus } from '../../utils/constants';
@@ -274,6 +275,7 @@ const ChatPage = () => {
     const [deleteConfirmMessageId, setDeleteConfirmMessageId] = useState<string | number | null>(null);
     const [showWindUpConfirm, setShowWindUpConfirm] = useState(false);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [showClinicalNotesMobile, setShowClinicalNotesMobile] = useState(false);
 
     const attachmentOptions = [
         { id: 'image', label: 'Image', icon: <Camera className="h-5 w-5" />, color: 'bg-rose-500' },
@@ -377,6 +379,72 @@ const ChatPage = () => {
             toast.error(error instanceof Error ? error.message : "Failed to save note");
         } finally {
             setIsSavingNote(false);
+        }
+    };
+
+    const [isScribing, setIsScribing] = useState(false);
+
+    const handleAutoScribe = async () => {
+        if (messages.length === 0) {
+            toast.error("No messages to summarize");
+            return;
+        }
+
+        try {
+            setIsScribing(true);
+            const chatLog = messages.map(m => ({
+                senderModel: m.sender === 'user' ? (isDoctor ? 'Doctor' : 'User') : (isDoctor ? 'User' : 'Doctor'),
+                content: m.text,
+                type: m.type
+            }));
+
+            const result = await aiService.summarizeChat(chatLog);
+
+            // Create notes from result
+            const appointmentId = currentAppointmentId || id;
+            if (!appointmentId) return;
+
+            const newNotes = [];
+
+            if (result.observations?.length > 0) {
+                newNotes.push({
+                    title: "AI Observation Summary",
+                    description: Array.isArray(result.observations) ? result.observations.join("\n") : result.observations,
+                    category: "observation",
+                    createdAt: new Date().toISOString()
+                });
+            }
+            if (result.diagnoses?.length > 0) {
+                newNotes.push({
+                    title: "AI Potential Diagnoses",
+                    description: Array.isArray(result.diagnoses) ? result.diagnoses.join(", ") : result.diagnoses,
+                    category: "diagnosis",
+                    createdAt: new Date().toISOString()
+                });
+            }
+            if (result.plan?.length > 0) {
+                newNotes.push({
+                    title: "AI Suggested Plan",
+                    description: Array.isArray(result.plan) ? result.plan.join("\n") : result.plan,
+                    category: "lab_test",
+                    createdAt: new Date().toISOString()
+                });
+            }
+
+            for (const note of newNotes) {
+                await appointmentService.updateDoctorNotes(appointmentId, { ...note, id: Date.now().toString() });
+            }
+
+            // Refresh appointment data
+            const res = await chatService.getAppointment(appointmentId);
+            if (res.data) setAppointment(res.data);
+
+            toast.success("AI Scribe completed successfully! Key points added to observations.");
+        } catch (error) {
+            console.error("Auto Scribe Error:", error);
+            toast.error("Failed to run AI Scribe");
+        } finally {
+            setIsScribing(false);
         }
     };
 
@@ -1666,6 +1734,17 @@ const ChatPage = () => {
                                             )}
                                         </>
                                     )}
+                                    {isDoctor && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => setShowClinicalNotesMobile(true)}
+                                            className="lg:hidden rounded-full text-[#00A1B0] hover:bg-[#00A1B0]/10"
+                                            title="Clinical Notes & AI Scribe"
+                                        >
+                                            <StickyNote className="h-5 w-5" />
+                                        </Button>
+                                    )}
                                     <Button variant="ghost" size="icon" className="rounded-full text-slate-400"><Search className="h-4 w-4" /></Button>
                                     <Button variant="ghost" size="icon" className="rounded-full text-slate-400"><MoreVertical className="h-4 w-4" /></Button>
                                 </div>
@@ -2025,6 +2104,124 @@ const ChatPage = () => {
                 </AnimatePresence>
             </div >
 
+            {/* Mobile Clinical Notes & AI Scribe Modal */}
+            <Dialog open={showClinicalNotesMobile} onOpenChange={setShowClinicalNotesMobile}>
+                <DialogContent className="max-w-[95vw] sm:max-w-lg p-0 bg-slate-50 border-none overflow-hidden rounded-3xl h-[85vh] flex flex-col">
+                    <div className="p-4 bg-white border-b border-slate-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-lg bg-[#00A1B0]/10 flex items-center justify-center text-[#00A1B0]">
+                                <StickyNote size={18} />
+                            </div>
+                            <h3 className="font-bold text-slate-800 tracking-tight">Clinical Insights</h3>
+                        </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between px-1">
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Medical Profile</h4>
+                                <div className="px-2 py-0.5 rounded-full bg-slate-200/50 text-[8px] font-black text-slate-500 uppercase tracking-widest">
+                                    Patient Data
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm">
+                                    <p className="text-[9px] text-slate-400 font-black uppercase mb-1.5 tracking-tighter">Gender / Age</p>
+                                    <p className="text-xs font-bold text-slate-700">{appointment?.patientId?.gender} • {appointment?.patientId?.dob ? new Date().getFullYear() - new Date(appointment.patientId.dob).getFullYear() : 'N/A'} yrs</p>
+                                </div>
+                                <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm">
+                                    <p className="text-[9px] text-slate-400 font-black uppercase mb-1.5 tracking-tighter">Blood Group</p>
+                                    <p className="text-xs font-bold text-slate-700">{appointment?.patientId?.bloodGroup || 'N/A'}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 pt-4 border-t border-slate-200/60">
+                            <div className="flex items-center gap-2 px-1 mb-2">
+                                <div className="h-6 w-6 rounded-lg bg-[#00A1B0]/10 flex items-center justify-center text-[#00A1B0]">
+                                    <Sparkles size={14} />
+                                </div>
+                                <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest leading-none">AI Observations</h4>
+                                <Button
+                                    onClick={handleAutoScribe}
+                                    disabled={isScribing || messages.length === 0}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="ml-auto h-8 px-3 font-black text-[10px] uppercase bg-[#00A1B0] text-white hover:bg-[#008f9c] rounded-xl transition-all shadow-lg shadow-[#00A1B0]/20"
+                                >
+                                    {isScribing ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Sparkles className="h-3 w-3 mr-2" />}
+                                    AI Scribe
+                                </Button>
+                            </div>
+
+                            {/* Reuse Note Form Layout */}
+                            <div className="space-y-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                <div className="flex flex-wrap gap-1.5 mb-1">
+                                    {(['observation', 'diagnosis', 'medicine', 'lab_test'] as const).map((cat) => (
+                                        <button
+                                            key={cat}
+                                            onClick={() => setNoteCategory(cat)}
+                                            className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${noteCategory === cat ? 'bg-[#00A1B0] text-white shadow-md' : 'bg-slate-50 text-slate-400'}`}
+                                        >
+                                            {cat.replace('_', ' ')}
+                                        </button>
+                                    ))}
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="Title"
+                                    value={noteTitle}
+                                    onChange={(e) => setNoteTitle(e.target.value)}
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-xs font-bold tracking-wide outline-none focus:ring-1 focus:ring-[#00A1B0]/30 transition-all"
+                                />
+                                {noteCategory === 'medicine' ? (
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <input type="text" placeholder="Dose" value={noteDosage} onChange={(e) => setNoteDosage(e.target.value)} className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[10px] font-bold outline-none" />
+                                        <input type="text" placeholder="Freq" value={noteFrequency} onChange={(e) => setNoteFrequency(e.target.value)} className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[10px] font-bold outline-none" />
+                                        <input type="text" placeholder="Dur" value={noteDuration} onChange={(e) => setNoteDuration(e.target.value)} className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-[10px] font-bold outline-none" />
+                                    </div>
+                                ) : (
+                                    <textarea
+                                        placeholder="Details..."
+                                        value={noteDescription}
+                                        onChange={(e) => setNoteDescription(e.target.value)}
+                                        rows={3}
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-xs font-medium resize-none outline-none focus:ring-1 focus:ring-[#00A1B0]/30 transition-all"
+                                    />
+                                )}
+                                <Button
+                                    onClick={handleSaveNote}
+                                    disabled={isSavingNote || !noteTitle.trim()}
+                                    className="w-full h-11 bg-[#00A1B0] hover:bg-[#008f9c] text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-md active:scale-95 transition-all"
+                                >
+                                    {isSavingNote ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus size={16} className="mr-2" /> Save {noteCategory.replace('_', ' ')}</>}
+                                </Button>
+                            </div>
+
+                            {/* Notes List */}
+                            <div className="space-y-3 pb-4">
+                                {appointment?.doctorNotes && appointment.doctorNotes.length > 0 ? (
+                                    [...appointment.doctorNotes].reverse().map((note: any, idx: number) => (
+                                        <div key={note.id || idx} className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-[#00A1B0]"></div>
+                                                <span className="text-[10px] font-black text-slate-900 tracking-widest">{note.title}</span>
+                                                <span className="ml-auto text-[8px] font-bold text-slate-400">{new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            </div>
+                                            <p className="text-xs text-slate-500 font-medium leading-relaxed">{note.description}</p>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="py-10 text-center opacity-30">
+                                        <BookOpen size={24} className="mx-auto mb-2" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest">No entries yet</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             {/* Right Sidebar */}
             {
                 id !== 'default' && isDoctor && (
@@ -2092,6 +2289,22 @@ const ChatPage = () => {
                                     <StickyNote size={14} />
                                 </div>
                                 <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Clinical Observations</h4>
+                                {isDoctor && (
+                                    <Button
+                                        onClick={handleAutoScribe}
+                                        disabled={isScribing || messages.length === 0}
+                                        variant="ghost"
+                                        size="sm"
+                                        className="ml-auto h-7 px-2 font-black text-[9px] uppercase tracking-tighter text-[#00A1B0] hover:text-white hover:bg-[#00A1B0] rounded-lg transition-all"
+                                    >
+                                        {isScribing ? (
+                                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                        ) : (
+                                            <Sparkles className="h-3 w-3 mr-1" />
+                                        )}
+                                        AI Scribe
+                                    </Button>
+                                )}
                             </div>
 
                             {/* New Note Form */}

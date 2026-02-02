@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
     FaThLarge,
+    FaRobot,
     FaCalendarCheck,
     FaWallet,
     FaComments,
@@ -32,6 +33,7 @@ const sidebarLinks: SidebarLink[] = [
     { label: "Dashboard", icon: <FaThLarge />, path: "/patient/dashboard" },
     { label: "My Appointments", icon: <FaCalendarCheck />, path: "/patient/appointments" },
     { label: "Wallet", icon: <FaWallet />, path: "/patient/wallet" },
+    { label: "AI Health Assistant", icon: <FaRobot />, path: "/patient/ai-assistant" },
     { label: "Message", icon: <FaComments />, path: "/patient/chat/default", badge: "dot" },
     { label: "Settings", icon: <FaCog />, path: "/patient/profile-settings" },
     { label: "Change Password", icon: <FaLock />, path: "/patient/change-password" },

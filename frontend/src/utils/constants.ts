@@ -1,7 +1,12 @@
+import axios from "axios";
 
 export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 export const AUTH_BASE_URL: string = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
+export const axiosInstance = axios.create({
+  baseURL: API_BASE_URL + "/api",
+  withCredentials: true,
+});
 
 export const USER_API_ROUTES = {
   LOGIN: "/auth/login",
