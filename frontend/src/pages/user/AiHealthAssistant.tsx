@@ -168,7 +168,7 @@ const AiHealthAssistant: React.FC = () => {
 
                             {/* Chat Workspace */}
                             <CardContent className="flex-1 p-0 overflow-hidden bg-slate-50/20">
-                                <div className="h-full overflow-y-auto px-6 py-8 space-y-6 scrollbar-thin">
+                                <div className="h-full overflow-y-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6 scrollbar-thin overflow-x-hidden">
                                     <AnimatePresence initial={false}>
                                         {messages.map((msg) => (
                                             <motion.div
@@ -178,19 +178,19 @@ const AiHealthAssistant: React.FC = () => {
                                                 transition={{ duration: 0.2 }}
                                                 className={`flex w-full ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
                                             >
-                                                <div className={`flex items-start gap-3 sm:gap-4 max-w-[92%] sm:max-w-[80%] lg:max-w-[70%] ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}>
+                                                <div className={`flex items-start gap-2.5 sm:gap-4 max-w-[95%] sm:max-w-[80%] lg:max-w-[70%] ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}>
 
                                                     {/* Clean Avatars */}
                                                     <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-md flex items-center justify-center flex-shrink-0 border shadow-sm ${msg.sender === 'user'
                                                         ? 'bg-slate-800 border-slate-700 text-white'
                                                         : 'bg-white border-slate-200 text-[#00A1B0]'
                                                         }`}>
-                                                        {msg.sender === 'user' ? <User size={16} className="sm:size-[18px]" /> : <Bot size={18} className="sm:size-[20px]" />}
+                                                        {msg.sender === 'user' ? <User size={15} className="sm:size-[18px]" /> : <Bot size={17} className="sm:size-[20px]" />}
                                                     </div>
 
                                                     {/* Clean Message Bubbles */}
-                                                    <div className="flex flex-col gap-2 min-w-0">
-                                                        <div className={`px-4 py-3 rounded-2xl text-[14px] sm:text-[14.5px] leading-relaxed border break-words overflow-hidden ${msg.sender === "user"
+                                                    <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+                                                        <div className={`px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl text-[13.5px] sm:text-[14.5px] leading-relaxed border break-words overflow-hidden ${msg.sender === "user"
                                                             ? "bg-slate-800 border-slate-700 text-slate-50 rounded-tr-none"
                                                             : "bg-white border-slate-200 text-slate-700 shadow-sm rounded-tl-none"
                                                             }`}>
@@ -198,14 +198,14 @@ const AiHealthAssistant: React.FC = () => {
 
                                                             {/* AI Clarifying Questions */}
                                                             {msg.questions && msg.questions.length > 0 && (
-                                                                <div className="mt-3 flex flex-wrap gap-2">
+                                                                <div className="mt-3 flex flex-col gap-2">
                                                                     {msg.questions.map((q, i) => (
                                                                         <Button
                                                                             key={i}
                                                                             variant="outline"
                                                                             size="sm"
                                                                             onClick={() => handleSendMessage(q)}
-                                                                            className="text-[13px] bg-slate-50 border-slate-200 hover:bg-white hover:border-[#00A1B0] hover:text-[#00A1B0] transition-all rounded-full h-8 px-4"
+                                                                            className="text-[12px] sm:text-[13px] bg-slate-50 border-slate-200 hover:bg-white hover:border-[#00A1B0] hover:text-[#00A1B0] transition-all rounded-xl min-h-[32px] h-auto py-2 px-3 text-left justify-start whitespace-normal leading-tight"
                                                                         >
                                                                             {q}
                                                                         </Button>
@@ -286,7 +286,7 @@ const AiHealthAssistant: React.FC = () => {
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        <span className={`text-[10px] sm:text-[11px] font-bold text-slate-400 flex items-center gap-1.5 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                                        <span className={`text-[10px] font-bold text-slate-400 flex items-center gap-1.5 mt-0.5 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                                                             {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                             {msg.sender === 'ai' && <Sparkles size={10} className="text-[#00A1B0]/50" />}
                                                         </span>
@@ -297,11 +297,11 @@ const AiHealthAssistant: React.FC = () => {
                                     </AnimatePresence>
 
                                     {isTyping && (
-                                        <div className="flex items-start gap-4 animate-in fade-in duration-300">
-                                            <div className="w-9 h-9 rounded-md bg-white border border-slate-200 flex items-center justify-center text-[#00A1B0]">
-                                                <Bot size={20} />
+                                        <div className="flex items-start gap-2.5 animate-in fade-in duration-300">
+                                            <div className="w-8 h-8 rounded-md bg-white border border-slate-200 flex items-center justify-center text-[#00A1B0] shadow-sm">
+                                                <Bot size={17} />
                                             </div>
-                                            <div className="bg-white border border-slate-200 p-3 rounded-lg shadow-sm flex gap-1.5 items-center h-10 px-4">
+                                            <div className="bg-white border border-slate-200 p-2.5 rounded-2xl rounded-tl-none shadow-sm flex gap-1.5 items-center h-9 px-4">
                                                 <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                                                 <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
                                                 <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></div>
@@ -313,34 +313,34 @@ const AiHealthAssistant: React.FC = () => {
                             </CardContent>
 
                             {/* Precise Input Area */}
-                            <CardFooter className="p-3 sm:p-4 border-t border-slate-100 flex-col gap-2 sm:gap-3">
+                            <CardFooter className="p-2 sm:p-4 border-t border-slate-100 flex-col gap-2 sm:gap-3 bg-white">
                                 <form
                                     onSubmit={(e) => {
                                         e.preventDefault();
                                         handleSendMessage();
                                     }}
-                                    className="w-full flex items-center gap-2 sm:gap-3"
+                                    className="w-full flex items-center gap-2"
                                 >
                                     <Input
                                         ref={inputRef}
                                         type="text"
                                         value={inputValue}
                                         onChange={(e) => setInputValue(e.target.value)}
-                                        placeholder="Describe your symptoms..."
-                                        className="flex-1 bg-white border-slate-200 h-10 sm:h-11 px-3 sm:px-4 text-sm sm:text-[14.5px] text-slate-700 placeholder:text-slate-400 font-medium focus-visible:ring-1 focus-visible:ring-[#00A1B0] transition-all rounded-lg"
+                                        placeholder="How can I help you today?"
+                                        className="flex-1 bg-slate-50 border-slate-200 h-10 sm:h-11 px-3 sm:px-4 text-[14px] sm:text-[14.5px] text-slate-700 placeholder:text-slate-400 focus-visible:ring-1 focus-visible:ring-[#00A1B0] transition-all rounded-xl"
                                         autoFocus
                                     />
                                     <Button
                                         type="submit"
                                         disabled={!inputValue.trim() || isTyping}
-                                        className="h-10 w-10 sm:h-11 sm:px-5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg flex-shrink-0 flex items-center justify-center p-0"
+                                        className="h-10 w-10 sm:h-11 sm:w-11 bg-slate-800 hover:bg-slate-900 text-white rounded-xl flex-shrink-0 flex items-center justify-center p-0 shadow-sm transition-all active:scale-95"
                                     >
                                         <Send size={18} />
                                     </Button>
                                 </form>
 
-                                <div className="flex items-center gap-2 px-2 py-1.5 sm:py-2 bg-slate-50 border border-slate-200 border-dashed rounded-lg w-full">
-                                    <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#00A1B0]" />
+                                <div className="flex items-center gap-2 px-2.5 py-1.5 sm:py-2 bg-slate-50 border border-slate-200 border-dashed rounded-lg w-full">
+                                    <AlertCircle className="h-3.5 w-3.5 text-[#00A1B0]" />
                                     <p className="text-[9px] sm:text-[11px] text-slate-500 font-bold uppercase tracking-tight leading-none">
                                         Independent AI Analysis | Not for Emergencies
                                     </p>

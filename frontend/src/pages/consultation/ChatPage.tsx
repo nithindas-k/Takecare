@@ -406,10 +406,24 @@ const ChatPage = () => {
 
             const newNotes = [];
 
+            const safeJoin = (arr: any) => {
+                if (!arr) return "";
+                if (typeof arr === 'string') return arr;
+                if (!Array.isArray(arr)) return String(arr);
+                return arr.map(item => {
+                    if (typeof item === 'string') return item;
+                    if (typeof item === 'object' && item !== null) {
+                        // If it's an object with a label/text/value, use that, otherwise stringify
+                        return item.text || item.label || item.value || JSON.stringify(item);
+                    }
+                    return String(item);
+                }).join("\n");
+            };
+
             if (result.observations?.length > 0) {
                 newNotes.push({
                     title: "AI Observation Summary",
-                    description: Array.isArray(result.observations) ? result.observations.join("\n") : result.observations,
+                    description: safeJoin(result.observations),
                     category: "observation",
                     createdAt: new Date().toISOString()
                 });
@@ -417,7 +431,7 @@ const ChatPage = () => {
             if (result.diagnoses?.length > 0) {
                 newNotes.push({
                     title: "AI Potential Diagnoses",
-                    description: Array.isArray(result.diagnoses) ? result.diagnoses.join(", ") : result.diagnoses,
+                    description: safeJoin(result.diagnoses),
                     category: "diagnosis",
                     createdAt: new Date().toISOString()
                 });
@@ -425,7 +439,7 @@ const ChatPage = () => {
             if (result.plan?.length > 0) {
                 newNotes.push({
                     title: "AI Suggested Plan",
-                    description: Array.isArray(result.plan) ? result.plan.join("\n") : result.plan,
+                    description: safeJoin(result.plan),
                     category: "lab_test",
                     createdAt: new Date().toISOString()
                 });
@@ -1632,13 +1646,13 @@ const ChatPage = () => {
                             </div>
                         ) : (
                             <>
-                                <div className="flex items-center gap-2 md:gap-4 flex-1">
+                                <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
                                     {/* Back to Appointments (Mobile Only) */}
                                     <Button
                                         variant="ghost"
                                         size="icon"
                                         onClick={handleBackToWebsite}
-                                        className="md:hidden text-slate-400 hover:text-slate-900"
+                                        className="md:hidden text-slate-400 hover:text-slate-900 shrink-0"
                                         title="Exit Chat"
                                     >
                                         <ArrowLeft className="h-5 w-5" />
@@ -1649,45 +1663,45 @@ const ChatPage = () => {
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => setIsSidebarOpen(true)}
-                                        className="md:hidden text-slate-400 hover:text-slate-900"
+                                        className="md:hidden text-slate-400 hover:text-slate-900 shrink-0"
                                         title="View Chat List"
                                     >
                                         <Menu className="h-5 w-5" />
                                     </Button>
 
                                     {/* Desktop Toggle Sidebar */}
-                                    <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="rounded-full md:flex hidden text-slate-400 hover:text-slate-900">
+                                    <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="rounded-full md:flex hidden text-slate-400 hover:text-slate-900 shrink-0">
                                         <ChevronLeft className={`transition-transform duration-300 ${!isSidebarOpen ? 'rotate-180' : ''}`} />
                                     </Button>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                                         <div className="relative shrink-0">
-                                            <img src={activeChat.avatar} alt="" className="h-10 w-10 rounded-full object-cover border border-slate-100" />
-                                            {activeChat.online && <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></span>}
+                                            <img src={activeChat.avatar} alt="" className="h-8 w-8 sm:h-10 sm:w-10 rounded-full object-cover border border-slate-100" />
+                                            {activeChat.online && <span className="absolute bottom-0 right-0 h-2.5 w-2.5 sm:h-3 sm:w-3 bg-green-500 border-2 border-white rounded-full"></span>}
                                         </div>
-                                        <div>
-                                            <h2 className="text-sm font-bold text-slate-900 leading-none">{activeChat.name}</h2>
-                                            <div className="flex items-center gap-1.5 mt-1">
+                                        <div className="min-w-0">
+                                            <h2 className="text-[13px] sm:text-sm font-bold text-slate-900 leading-tight truncate">{activeChat.name}</h2>
+                                            <div className="flex items-center gap-1.5 mt-0.5 sm:mt-1 overflow-hidden">
                                                 {isOtherTyping ? (
-                                                    <p className="text-[10px] text-[#00A1B0] font-bold uppercase tracking-widest animate-pulse">Typing...</p>
+                                                    <p className="text-[9px] sm:text-[10px] text-[#00A1B0] font-bold uppercase tracking-widest animate-pulse truncate">Typing...</p>
                                                 ) : (
-                                                    <p className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">
-                                                        {activeChat.online ? 'Online' : 'Offline'} • {activeChat.specialty}
+                                                    <p className="text-[9px] sm:text-[11px] text-slate-500 uppercase tracking-wider font-bold truncate">
+                                                        {activeChat.online ? 'Online' : 'Offline'} <span className="hidden xs:inline">• {activeChat.specialty}</span>
                                                     </p>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                                     {isDoctor && sessionStatus === SESSION_STATUS.ENDED && (
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1 sm:gap-2">
                                             {isPostConsultationWindowOpen && (
-                                                <div className="hidden md:flex items-center gap-2 px-4 h-9 bg-amber-50 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-200">
-                                                    <Clock className="h-3.5 w-3.5" /> Follow-up Open
+                                                <div className="hidden xs:flex items-center gap-1 sm:gap-2 px-2 sm:px-4 h-8 sm:h-9 bg-amber-50 text-amber-600 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest border border-amber-200 shadow-sm">
+                                                    <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> <span className="hidden sm:inline">Follow-up Open</span>
                                                 </div>
                                             )}
-                                            <div className="flex items-center px-4 h-9 bg-slate-100 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200">
-                                                Session Ended
+                                            <div className="flex items-center px-2 sm:px-4 h-8 sm:h-9 bg-slate-100 text-slate-400 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest border border-slate-200">
+                                                Ended
                                             </div>
                                         </div>
                                     )}
@@ -1698,9 +1712,9 @@ const ChatPage = () => {
                                                     onClick={() => updateSessionStatus(SESSION_STATUS.ENDED)}
                                                     variant="destructive"
                                                     size="sm"
-                                                    className="flex items-center gap-2 rounded-xl px-4 h-9 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-red-500/20"
+                                                    className="flex items-center gap-1 sm:gap-2 rounded-xl px-2 sm:px-4 h-8 sm:h-9 font-black uppercase text-[8px] sm:text-[10px] tracking-widest shadow-lg shadow-red-500/20 active:scale-95 transition-all"
                                                 >
-                                                    <XCircle className="h-4 w-4" />
+                                                    <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                                     Wind Up
                                                 </Button>
                                             ) : (
@@ -1709,15 +1723,15 @@ const ChatPage = () => {
                                                         <Button
                                                             onClick={() => updateSessionStatus(SESSION_STATUS.ACTIVE)}
                                                             size="sm"
-                                                            className="flex items-center gap-2 rounded-xl px-4 h-9 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-[#00A1B0]/20"
+                                                            className="flex items-center gap-1 sm:gap-2 rounded-xl px-2 sm:px-4 h-8 sm:h-9 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-black uppercase text-[8px] sm:text-[10px] tracking-widest shadow-lg shadow-[#00A1B0]/20 active:scale-95 transition-all"
                                                         >
-                                                            <Play className="h-4 w-4" />
-                                                            Start Session
+                                                            <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                                            Start
                                                         </Button>
                                                     ) : (
-                                                        <div className="flex items-center gap-2 px-4 h-9 bg-slate-100 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 cursor-not-allowed" title="You can only start the session on the scheduled date">
-                                                            <Clock className="h-3.5 w-3.5" />
-                                                            Scheduled: {appointment?.appointmentDate ? new Date(appointment.appointmentDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Future'}
+                                                        <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 h-8 sm:h-9 bg-slate-100 text-slate-500 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest border border-slate-200 cursor-not-allowed" title={`Scheduled for ${appointment?.appointmentDate ? new Date(appointment.appointmentDate).toLocaleDateString() : 'future'}`}>
+                                                            <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                                                            Date: {appointment?.appointmentDate ? new Date(appointment.appointmentDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Future'}
                                                         </div>
                                                     )
                                                 )
@@ -1727,9 +1741,9 @@ const ChatPage = () => {
                                                     onClick={handleDisableChat}
                                                     variant="ghost"
                                                     size="sm"
-                                                    className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 font-black uppercase text-[9px] tracking-widest border border-red-200 rounded-full px-4 shadow-sm transition-all active:scale-95"
+                                                    className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 font-black uppercase text-[8px] sm:text-[9px] tracking-widest border border-red-200 rounded-full px-2 sm:px-4 h-8 sm:h-9 shadow-sm transition-all active:scale-95"
                                                 >
-                                                    <XCircle className="h-3.5 w-3.5 mr-1.5" /> Close Session
+                                                    <XCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" /> Close
                                                 </Button>
                                             )}
                                         </>
@@ -1739,14 +1753,14 @@ const ChatPage = () => {
                                             variant="ghost"
                                             size="icon"
                                             onClick={() => setShowClinicalNotesMobile(true)}
-                                            className="lg:hidden rounded-full text-[#00A1B0] hover:bg-[#00A1B0]/10"
+                                            className="lg:hidden rounded-lg h-8 w-8 text-[#00A1B0] hover:bg-[#00A1B0]/10 shrink-0"
                                             title="Clinical Notes & AI Scribe"
                                         >
-                                            <StickyNote className="h-5 w-5" />
+                                            <StickyNote className="h-4.5 w-4.5" />
                                         </Button>
                                     )}
-                                    <Button variant="ghost" size="icon" className="rounded-full text-slate-400"><Search className="h-4 w-4" /></Button>
-                                    <Button variant="ghost" size="icon" className="rounded-full text-slate-400"><MoreVertical className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" className="rounded-full text-slate-400 h-8 w-8 hover:bg-slate-50 shrink-0 hidden sm:flex"><Search className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" className="rounded-full text-slate-400 h-8 w-8 hover:bg-slate-50 shrink-0"><MoreVertical className="h-4 w-4" /></Button>
                                 </div>
                             </>
                         )}

@@ -260,17 +260,17 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
                                 {/* Doctor's Consultation Notes Reference */}
                                 {appointment?.doctorNotes && appointment.doctorNotes.length > 0 && (
                                     <div className="p-6 rounded-3xl bg-teal-50/50 border border-teal-100 space-y-6">
-                                        <div className="flex items-center justify-between">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-2xl bg-teal-600 flex items-center justify-center text-white shadow-lg shadow-teal-200">
+                                                <div className="w-10 h-10 rounded-2xl bg-teal-600 flex items-center justify-center text-white shadow-lg shadow-teal-200 shrink-0">
                                                     <BookOpen className="w-5 h-5" />
                                                 </div>
-                                                <div>
-                                                    <h3 className="text-xs font-black text-gray-800 uppercase tracking-widest">Session Highlights</h3>
-                                                    <p className="text-[10px] text-teal-600 font-bold uppercase tracking-tighter">Clinical observations & suggestions</p>
+                                                <div className="min-w-0">
+                                                    <h3 className="text-xs font-black text-gray-800 uppercase tracking-widest truncate">Session Highlights</h3>
+                                                    <p className="text-[10px] text-teal-600 font-bold uppercase tracking-tighter truncate">Clinical observations & suggestions</p>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-2">
+                                            <div className="flex flex-wrap gap-2">
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
@@ -280,7 +280,7 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
                                                         setDiagnosis(prev => prev ? `${prev}\n${text}` : text);
                                                         toast.success("Diagnosis notes copied");
                                                     }}
-                                                    className="text-[9px] font-black border-teal-200 text-teal-700 hover:bg-teal-100 rounded-xl px-4 h-9"
+                                                    className="flex-1 sm:flex-none text-[9px] font-black border-teal-200 text-teal-700 hover:bg-teal-100 rounded-xl px-4 h-9 min-w-[120px]"
                                                 >
                                                     COPY DIAGNOSIS
                                                 </Button>
@@ -304,7 +304,7 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
                                                         setMedicines(prev => existingEmpty ? newMeds : [...prev, ...newMeds]);
                                                         toast.success(`Imported ${meds.length} medicines`);
                                                     }}
-                                                    className="text-[9px] font-black bg-teal-600 text-white hover:bg-teal-700 rounded-xl px-4 h-9 shadow-sm"
+                                                    className="flex-1 sm:flex-none text-[9px] font-black bg-teal-600 text-white hover:bg-teal-700 rounded-xl px-4 h-9 shadow-sm min-w-[120px]"
                                                 >
                                                     IMPORT ALL MEDS
                                                 </Button>
@@ -316,15 +316,19 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
                                                 <div key={idx} className="group p-4 bg-white rounded-2xl border border-teal-100 shadow-sm hover:shadow-md transition-all relative">
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <span className={`px-2 py-0.5 rounded-lg text-[7px] font-black uppercase tracking-tighter ${note.category === 'medicine' ? 'bg-amber-100 text-amber-700' :
-                                                            note.category === 'lab_test' ? 'bg-indigo-100 text-indigo-700' :
-                                                                note.category === 'diagnosis' ? 'bg-red-100 text-red-700' :
-                                                                    'bg-teal-100 text-teal-700'
+                                                                note.category === 'lab_test' ? 'bg-indigo-100 text-indigo-700' :
+                                                                    note.category === 'diagnosis' ? 'bg-red-100 text-red-700' :
+                                                                        'bg-teal-100 text-teal-700'
                                                             }`}>
                                                             {note.category || 'observation'}
                                                         </span>
-                                                        <span className="text-[8px] text-gray-400 font-bold ml-auto">{new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                        <span className="text-[8px] text-gray-400 font-bold ml-auto">
+                                                            {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
                                                     </div>
-                                                    <h4 className="text-[11px] font-bold text-gray-800 mb-1 truncate">{note.title}</h4>
+                                                    <h4 className="text-[11px] font-bold text-gray-800 mb-1 truncate">
+                                                        {typeof note.title === 'string' ? note.title : JSON.stringify(note.title)}
+                                                    </h4>
                                                     {note.category === 'medicine' ? (
                                                         <div className="flex flex-wrap gap-1 mt-2">
                                                             <div className="bg-teal-50 text-[8px] font-black text-teal-600 px-1.5 py-0.5 rounded border border-teal-100">
@@ -338,7 +342,9 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <p className="text-[11px] text-gray-500 line-clamp-2 font-medium leading-relaxed">{note.description}</p>
+                                                        <p className="text-[11px] text-gray-500 line-clamp-2 font-medium leading-relaxed">
+                                                            {typeof note.description === 'string' ? note.description : (note.description?.text || note.description?.content || JSON.stringify(note.description))}
+                                                        </p>
                                                     )}
 
                                                     {/* Contextual Copy Button */}
@@ -360,7 +366,8 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
                                                                 setLabTests(prev => existingEmpty ? [note.title] : [...prev, note.title]);
                                                                 toast.success(`Added ${note.title} to lab tests`);
                                                             } else {
-                                                                setDiagnosis(prev => prev ? `${prev}\n• ${note.title}: ${note.description}` : `${note.title}: ${note.description}`);
+                                                                const desc = typeof note.description === 'string' ? note.description : (note.description?.text || note.description?.content || JSON.stringify(note.description));
+                                                                setDiagnosis(prev => prev ? `${prev}\n• ${note.title}: ${desc}` : `${note.title}: ${desc}`);
                                                                 toast.success(`Ported to diagnosis`);
                                                             }
                                                         }}
