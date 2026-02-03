@@ -422,6 +422,7 @@ const App: React.FC = () => {
             }
           />
           <Route
+            path="favorites"
             element={
               <ProtectedRoute role="patient">
                 <FavoriteDoctors />

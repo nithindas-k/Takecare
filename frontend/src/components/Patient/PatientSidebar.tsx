@@ -8,7 +8,7 @@ import {
     FaWallet,
     FaComments,
     FaCog,
-
+    FaHeart,
     FaSignOutAlt,
     FaCheckCircle,
     FaTimes,
@@ -32,6 +32,7 @@ interface SidebarLink {
 const sidebarLinks: SidebarLink[] = [
     { label: "Dashboard", icon: <FaThLarge />, path: "/patient/dashboard" },
     { label: "My Appointments", icon: <FaCalendarCheck />, path: "/patient/appointments" },
+    { label: "Favorites", icon: <FaHeart />, path: "/patient/favorites" },
     { label: "Wallet", icon: <FaWallet />, path: "/patient/wallet" },
     { label: "AI Health Assistant", icon: <FaRobot />, path: "/patient/ai-assistant" },
     { label: "Message", icon: <FaComments />, path: "/patient/chat/default", badge: "dot" },

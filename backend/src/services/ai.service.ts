@@ -13,7 +13,7 @@ import { Types } from "mongoose";
 
 export class AiService implements IAiService {
     private groq: Groq;
-    private model: string = "llama-3.1-8b-instant"; 
+    private model: string = "llama-3.1-8b-instant";
     private doctorRepository: IDoctorRepository;
     private appointmentRepository?: IAppointmentRepository;
     private userRepository?: IUserRepository;
@@ -51,14 +51,12 @@ export class AiService implements IAiService {
             rating: d.ratingAvg
         }));
 
-        console.log(`✅ AI Service: Found ${doctorsContext.length} approved doctors in database`);
-        if (doctorsContext.length > 0) {
-            console.log(`📋 Sample doctors:`, doctorsContext.slice(0, 3).map(d => `${d.name} (${d.specialty})`));
-        }
-
         const prompt = `
 ### SYSTEM ROLE:
-You are the "TakeCare Premium AI Health Assistant", a professional medical intake specialist. Your goal is to guide patients to the right care with empathy and precision.
+You are the "TakeCare Premium AI Health Assistant", a professional medical intake specialist. Your goal is to guide patients to the right care with clinical precision and safety.
+
+### EMERGENCY TRIAGE (CRITICAL):
+If the user reports "Red Flag" symptoms (e.g., chest pain, shortness of breath, sudden numbness, severe bleeding, Loss of consciousness, or suicidal thoughts), you MUST prioritize safety.
 
 ### CONTEXT:
 - DATABASE DOCTORS: ${JSON.stringify(doctorsContext)}
@@ -66,27 +64,25 @@ You are the "TakeCare Premium AI Health Assistant", a professional medical intak
 
 ### TASK:
 1. Analyze the user's INPUT: "${symptoms}"
-2. If the input is a greeting or too vague, acknowledge it warmly and ask 2-3 specific medical clarifying questions (e.g., duration, severity, specific location of pain).
-3. If the symptoms are clear, match them with 1-2 most relevant REAL DOCTORS from the database.
-4. If no specific doctor matches, suggest the general "specialty" they should look for.
+2. Check for emergencies first.
+3. Match with REAL DOCTORS from the database ONLY.
+4. If the input is vague, ask 2 focus questions about onset and severity.
 
 ### RESPONSE RULES:
-- Never provide a final diagnosis or prescribe medicine.
-- Be empathetic (e.g., "I'm sorry to hear you're feeling this way").
-- Keep responses concise and clinical.
+- NEVER provide a final diagnosis or prescribe medicine.
+- DO NOT invent doctors. Match strictly from the list provided.
+- ALWAYS include a brief medical disclaimer.
 - Respond ONLY in this JSON format:
 {
-  "reply": "A brief, empathetic analysis of their situation.",
-  "questions": ["Specific question 1", "Specific question 2"],
-  "specialty": "The recommended medical department",
+  "reply": "Emppathetic analysis.",
+  "isEmergency": boolean,
+  "emergencyInstruction": "Instructions if isEmergency is true (e.g., Call 911)",
+  "questions": ["Question 1", "Question 2"],
+  "specialty": "Recommended department",
   "recommendedDoctors": [
-    {
-      "id": "doctorID",
-      "name": "Doctor Name",
-      "specialty": "Specialty",
-      "matchReason": "A professional explanation of why this doctor fits these symptoms."
-    }
-  ]
+    { "id": "doctorID", "name": "Name", "specialty": "Specialty", "matchReason": "Professional logic" }
+  ],
+  "disclaimer": "This is an AI assessment, not a medical diagnosis. Please consult a professional for emergencies."
 }`;
 
         try {
@@ -94,7 +90,7 @@ You are the "TakeCare Premium AI Health Assistant", a professional medical intak
                 messages: [
                     {
                         role: "system",
-                        content: "You are a professional medical intake assistant. You only output JSON. You are helpful, empathetic, and prioritize guiding users to the correct specialist."
+                        content: "You are a professional medical intake assistant. You only output JSON. You prioritize user safety and triage."
                     },
                     { role: "user", content: prompt }
                 ],
@@ -104,9 +100,6 @@ You are the "TakeCare Premium AI Health Assistant", a professional medical intak
 
             const text = chatCompletion.choices[0]?.message?.content || "{}";
             const parsed = JSON.parse(text);
-
-            console.log(`🤖 AI Response - Recommended ${parsed.recommendedDoctors?.length || 0} doctors`);
-            console.log(`🏥 Specialty: ${parsed.specialty || 'None'}`);
 
             if (parsed.recommendedDoctors) {
                 parsed.recommendedDoctors = parsed.recommendedDoctors.map((d: any) => ({
@@ -119,17 +112,10 @@ You are the "TakeCare Premium AI Health Assistant", a professional medical intak
         } catch (error: any) {
             console.error("AI Service Groq Error:", error);
 
-            // Fallback logic remains the same
-            const input = symptoms.toLowerCase();
-            let suggestedSpecialty = "General Physician";
-            if (input.includes("tooth") || input.includes("dental")) suggestedSpecialty = "Dentist";
-            else if (input.includes("skin") || input.includes("rash")) suggestedSpecialty = "Dermatologist";
-            else if (input.includes("heart") || input.includes("chest")) suggestedSpecialty = "Cardiologist";
-            // ... (rest of simple fallback logic)
-
             return {
                 reply: `I'm having trouble connecting to my full medical database. Based on your symptoms, I recommend seeing a specialists.`,
-                specialty: suggestedSpecialty,
+                isEmergency: false,
+                specialty: "General Physician",
                 recommendedDoctors: []
             };
         }
@@ -148,11 +134,11 @@ You are the "TakeCare Premium AI Health Assistant", a professional medical intak
                 messages: [
                     {
                         role: "system",
-                        content: `You are an "AI Medical Scribe". Your task is to extract key clinical information from the following doctor-patient conversation.
+                        content: `You are an "AI Medical Scribe". Your task is to extract key clinical information into a professional format.
                         Categorize findings into:
-                        1. Symptoms/Observations (What the patient reported)
-                        2. Potential Diagnoses (Mentioned by the doctor)
-                        3. Plan/Next Steps (Advice or tests mentioned)
+                        1. Subjective (What the patient reported: symptoms, duration, history)
+                        2. Assessment (What the doctor hypothesized or discussed)
+                        3. Plan (Specific treatments, tests, or follow-ups mentioned)
                         
                         Respond ONLY in JSON: { 'observations': [], 'diagnoses': [], 'plan': [] }`
                     },
