@@ -5,7 +5,7 @@ import {
     ChevronLeft, Check, CheckCheck,
     Info, Search, Plus, Camera, Paperclip, Mic, Trash2, Pause, Play,
     Menu, ArrowLeft, Lock, MessagesSquare, X, Download, ExternalLink, XCircle, Clock, ClipboardList,
-    StickyNote, BookOpen, Sparkles, Loader2
+    StickyNote, BookOpen, Loader2
 } from 'lucide-react';
 import type { EmojiClickData } from 'emoji-picker-react';
 import EmojiPicker from 'emoji-picker-react';
@@ -29,7 +29,7 @@ import { selectCurrentUser } from '../../redux/user/userSlice';
 import { chatService } from '../../services/chatService';
 import type { IMessage } from '../../services/chatService';
 import { appointmentService } from '../../services/appointmentService';
-import { aiService } from '../../services/aiService';
+
 import { toast } from 'sonner';
 import { API_BASE_URL, SESSION_STATUS } from '../../utils/constants';
 import type { SessionStatus } from '../../utils/constants';
@@ -383,85 +383,9 @@ const ChatPage = () => {
         }
     };
 
-    const [isScribing, setIsScribing] = useState(false);
 
-    const handleAutoScribe = async () => {
-        if (messages.length === 0) {
-            toast.error("No messages to summarize");
-            return;
-        }
 
-        try {
-            setIsScribing(true);
-            const chatLog = messages.map(m => ({
-                senderModel: m.sender === 'user' ? (isDoctor ? 'Doctor' : 'User') : (isDoctor ? 'User' : 'Doctor'),
-                content: m.text,
-                type: m.type
-            }));
 
-            const result = await aiService.summarizeChat(chatLog);
-
-            // Create notes from result
-            const appointmentId = currentAppointmentId || id;
-            if (!appointmentId) return;
-
-            const newNotes = [];
-
-            const safeJoin = (arr: any) => {
-                if (!arr) return "";
-                if (typeof arr === 'string') return arr;
-                if (!Array.isArray(arr)) return String(arr);
-                return arr.map(item => {
-                    if (typeof item === 'string') return item;
-                    if (typeof item === 'object' && item !== null) {
-                        // If it's an object with a label/text/value, use that, otherwise stringify
-                        return item.text || item.label || item.value || JSON.stringify(item);
-                    }
-                    return String(item);
-                }).join("\n");
-            };
-
-            if (result.observations?.length > 0) {
-                newNotes.push({
-                    title: "AI Observation Summary",
-                    description: safeJoin(result.observations),
-                    category: "observation",
-                    createdAt: new Date().toISOString()
-                });
-            }
-            if (result.diagnoses?.length > 0) {
-                newNotes.push({
-                    title: "AI Potential Diagnoses",
-                    description: safeJoin(result.diagnoses),
-                    category: "diagnosis",
-                    createdAt: new Date().toISOString()
-                });
-            }
-            if (result.plan?.length > 0) {
-                newNotes.push({
-                    title: "AI Suggested Plan",
-                    description: safeJoin(result.plan),
-                    category: "lab_test",
-                    createdAt: new Date().toISOString()
-                });
-            }
-
-            for (const note of newNotes) {
-                await appointmentService.updateDoctorNotes(appointmentId, { ...note, id: Date.now().toString() });
-            }
-
-            // Refresh appointment data
-            const res = await chatService.getAppointment(appointmentId);
-            if (res.data) setAppointment(res.data);
-
-            toast.success("AI Scribe completed successfully! Key points added to observations.");
-        } catch (error) {
-            console.error("Auto Scribe Error:", error);
-            toast.error("Failed to run AI Scribe");
-        } finally {
-            setIsScribing(false);
-        }
-    };
 
     const [isOtherTyping, setIsOtherTyping] = useState(false);
     const [typingRooms, setTypingRooms] = useState<Record<string, boolean>>({});
@@ -1759,7 +1683,7 @@ const ChatPage = () => {
                                             size="icon"
                                             onClick={() => setShowClinicalNotesMobile(true)}
                                             className="lg:hidden rounded-lg h-8 w-8 text-[#00A1B0] hover:bg-[#00A1B0]/10 shrink-0"
-                                            title="Clinical Notes & AI Scribe"
+                                            title="Clinical Notes"
                                         >
                                             <StickyNote className="h-4.5 w-4.5" />
                                         </Button>
@@ -2123,7 +2047,7 @@ const ChatPage = () => {
                 </AnimatePresence>
             </div >
 
-            {/* Mobile Clinical Notes & AI Scribe Modal */}
+            {/* Mobile Clinical Notes Modal */}
             <Dialog open={showClinicalNotesMobile} onOpenChange={setShowClinicalNotesMobile}>
                 <DialogContent className="max-w-[95vw] sm:max-w-lg p-0 bg-slate-50 border-none overflow-hidden rounded-3xl h-[85vh] flex flex-col">
                     <div className="p-4 bg-white border-b border-slate-100 flex items-center justify-between">
@@ -2155,22 +2079,7 @@ const ChatPage = () => {
                         </div>
 
                         <div className="space-y-4 pt-4 border-t border-slate-200/60">
-                            <div className="flex items-center gap-2 px-1 mb-2">
-                                <div className="h-6 w-6 rounded-lg bg-[#00A1B0]/10 flex items-center justify-center text-[#00A1B0]">
-                                    <Sparkles size={14} />
-                                </div>
-                                <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest leading-none">AI Observations</h4>
-                                <Button
-                                    onClick={handleAutoScribe}
-                                    disabled={isScribing || messages.length === 0}
-                                    variant="ghost"
-                                    size="sm"
-                                    className="ml-auto h-8 px-3 font-black text-[10px] uppercase bg-[#00A1B0] text-white hover:bg-[#008f9c] rounded-xl transition-all shadow-lg shadow-[#00A1B0]/20"
-                                >
-                                    {isScribing ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Sparkles className="h-3 w-3 mr-2" />}
-                                    AI Scribe
-                                </Button>
-                            </div>
+                            <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest leading-none">Clinical Observations</h4>
 
                             {/* Reuse Note Form Layout */}
                             <div className="space-y-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
@@ -2302,171 +2211,154 @@ const ChatPage = () => {
                                 </div>
                             </>
                         )}
-                        <div className="space-y-4 pt-4 border-t border-slate-200/60">
-                            <div className="flex items-center gap-2 px-1 mb-2">
-                                <div className="h-6 w-6 rounded-lg bg-[#00A1B0]/10 flex items-center justify-center text-[#00A1B0]">
-                                    <StickyNote size={14} />
-                                </div>
-                                <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Clinical Observations</h4>
-                                {isDoctor && (
-                                    <Button
-                                        onClick={handleAutoScribe}
-                                        disabled={isScribing || messages.length === 0}
-                                        variant="ghost"
-                                        size="sm"
-                                        className="ml-auto h-7 px-2 font-black text-[9px] uppercase tracking-tighter text-[#00A1B0] hover:text-white hover:bg-[#00A1B0] rounded-lg transition-all"
+                        <div className="flex items-center gap-2 px-1 mb-2">
+                            <div className="h-6 w-6 rounded-lg bg-[#00A1B0]/10 flex items-center justify-center text-[#00A1B0]">
+                                <StickyNote size={14} />
+                            </div>
+                            <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Clinical Observations</h4>
+                        </div>
+
+                        {/* New Note Form */}
+                        <div className="space-y-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                            {/* Category Selector */}
+                            <div className="flex flex-wrap gap-1.5 mb-1">
+                                {(['observation', 'diagnosis', 'medicine', 'lab_test'] as const).map((cat) => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => setNoteCategory(cat)}
+                                        className={`px-2.5 py-1 rounded-lg text-[7px] font-black uppercase tracking-widest transition-all ${noteCategory === cat
+                                            ? 'bg-[#00A1B0] text-white shadow-md shadow-[#00A1B0]/10'
+                                            : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                                            }`}
                                     >
-                                        {isScribing ? (
-                                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                                        ) : (
-                                            <Sparkles className="h-3 w-3 mr-1" />
-                                        )}
-                                        AI Scribe
-                                    </Button>
-                                )}
+                                        {cat.replace('_', ' ')}
+                                    </button>
+                                ))}
                             </div>
 
-                            {/* New Note Form */}
-                            <div className="space-y-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                {/* Category Selector */}
-                                <div className="flex flex-wrap gap-1.5 mb-1">
-                                    {(['observation', 'diagnosis', 'medicine', 'lab_test'] as const).map((cat) => (
-                                        <button
-                                            key={cat}
-                                            onClick={() => setNoteCategory(cat)}
-                                            className={`px-2.5 py-1 rounded-lg text-[7px] font-black uppercase tracking-widest transition-all ${noteCategory === cat
-                                                ? 'bg-[#00A1B0] text-white shadow-md shadow-[#00A1B0]/10'
-                                                : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
-                                                }`}
-                                        >
-                                            {cat.replace('_', ' ')}
-                                        </button>
-                                    ))}
-                                </div>
+                            <input
+                                type="text"
+                                placeholder={
+                                    noteCategory === 'medicine' ? "Medicine Name" :
+                                        noteCategory === 'lab_test' ? "Test Name" :
+                                            noteCategory === 'diagnosis' ? "Diagnosis Title" : "Symptom / Title"
+                                }
+                                value={noteTitle}
+                                onChange={(e) => setNoteTitle(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:ring-1 focus:ring-[#00A1B0]/30 outline-none font-bold tracking-wider transition-all"
+                            />
 
-                                <input
-                                    type="text"
-                                    placeholder={
-                                        noteCategory === 'medicine' ? "Medicine Name" :
-                                            noteCategory === 'lab_test' ? "Test Name" :
-                                                noteCategory === 'diagnosis' ? "Diagnosis Title" : "Symptom / Title"
-                                    }
-                                    value={noteTitle}
-                                    onChange={(e) => setNoteTitle(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:ring-1 focus:ring-[#00A1B0]/30 outline-none font-bold tracking-wider transition-all"
-                                />
-
-                                {noteCategory === 'medicine' ? (
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <input
-                                            type="text"
-                                            placeholder="Dosage"
-                                            value={noteDosage}
-                                            onChange={(e) => setNoteDosage(e.target.value)}
-                                            className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-[10px] text-slate-900 placeholder:text-slate-400 focus:ring-1 focus:ring-[#00A1B0]/30 outline-none font-bold transition-all"
-                                        />
-                                        <input
-                                            type="text"
-                                            placeholder="Freq"
-                                            value={noteFrequency}
-                                            onChange={(e) => setNoteFrequency(e.target.value)}
-                                            className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-[10px] text-slate-900 placeholder:text-slate-400 focus:ring-1 focus:ring-[#00A1B0]/30 outline-none font-bold transition-all"
-                                        />
-                                        <input
-                                            type="text"
-                                            placeholder="Dur"
-                                            value={noteDuration}
-                                            onChange={(e) => setNoteDuration(e.target.value)}
-                                            className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-[10px] text-slate-900 placeholder:text-slate-400 focus:ring-1 focus:ring-[#00A1B0]/30 outline-none font-bold transition-all"
-                                        />
-                                    </div>
-                                ) : (
-                                    <textarea
-                                        placeholder={
-                                            noteCategory === 'lab_test' ? "Reason for test / Details" :
-                                                "Description / Observations"
-                                        }
-                                        value={noteDescription}
-                                        onChange={(e) => setNoteDescription(e.target.value)}
-                                        rows={3}
-                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:ring-1 focus:ring-[#00A1B0]/30 outline-none font-medium leading-relaxed resize-none transition-all"
+                            {noteCategory === 'medicine' ? (
+                                <div className="grid grid-cols-3 gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Dosage"
+                                        value={noteDosage}
+                                        onChange={(e) => setNoteDosage(e.target.value)}
+                                        className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-[10px] text-slate-900 placeholder:text-slate-400 focus:ring-1 focus:ring-[#00A1B0]/30 outline-none font-bold transition-all"
                                     />
-                                )}
-                                <Button
-                                    onClick={handleSaveNote}
-                                    disabled={
-                                        isSavingNote ||
-                                        !noteTitle.trim() ||
-                                        (noteCategory === 'medicine'
-                                            ? (!noteDosage.trim() || !noteFrequency.trim() || !noteDuration.trim())
-                                            : !noteDescription.trim())
+                                    <input
+                                        type="text"
+                                        placeholder="Freq"
+                                        value={noteFrequency}
+                                        onChange={(e) => setNoteFrequency(e.target.value)}
+                                        className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-[10px] text-slate-900 placeholder:text-slate-400 focus:ring-1 focus:ring-[#00A1B0]/30 outline-none font-bold transition-all"
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="Dur"
+                                        value={noteDuration}
+                                        onChange={(e) => setNoteDuration(e.target.value)}
+                                        className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-[10px] text-slate-900 placeholder:text-slate-400 focus:ring-1 focus:ring-[#00A1B0]/30 outline-none font-bold transition-all"
+                                    />
+                                </div>
+                            ) : (
+                                <textarea
+                                    placeholder={
+                                        noteCategory === 'lab_test' ? "Reason for test / Details" :
+                                            "Description / Observations"
                                     }
-                                    className="w-full h-10 bg-[#00A1B0] hover:bg-[#008f9c] text-white rounded-xl font-black uppercase tracking-widest text-[9px] shadow-md shadow-[#00A1B0]/10 disabled:opacity-50 transition-all active:scale-95"
-                                >
-                                    {isSavingNote ? (
-                                        <div className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-                                    ) : (
-                                        <div className="flex items-center gap-2">
-                                            <Plus size={14} /> Save {noteCategory.replace('_', ' ')}
-                                        </div>
-                                    )}
-                                </Button>
-                            </div>
-
-                            {/* Notes List */}
-                            <div className="space-y-3 mt-4">
-                                {appointment?.doctorNotes && appointment.doctorNotes.length > 0 ? (
-                                    [...appointment.doctorNotes].reverse().map((note: any, idx: number) => (
-                                        <motion.div
-                                            key={note.id || idx}
-                                            initial={{ opacity: 0, x: 20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:border-[#00A1B0]/30 transition-all group"
-                                        >
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-[#00A1B0]"></div>
-                                                <span className="text-[10px] font-black text-slate-900 tracking-widest leading-none">{note.title}</span>
-                                                {note.category && note.category !== 'observation' && (
-                                                    <span className="px-1.5 py-0.5 rounded bg-[#00A1B0]/5 text-[7px] font-black text-[#00A1B0] uppercase tracking-tighter border border-[#00A1B0]/10">
-                                                        {note.category.replace('_', ' ')}
-                                                    </span>
-                                                )}
-                                                <span className="ml-auto text-[8px] font-bold text-slate-400">
-                                                    {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </div>
-                                            {note.category === 'medicine' ? (
-                                                <div className="flex gap-2">
-                                                    <div className="bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 text-[8px] font-black text-[#00A1B0] tracking-tighter">
-                                                        {note.dosage}
-                                                    </div>
-                                                    <div className="bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 text-[8px] font-black text-[#00A1B0] tracking-tighter">
-                                                        {note.frequency}
-                                                    </div>
-                                                    <div className="bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 text-[8px] font-black text-[#00A1B0] tracking-tighter">
-                                                        {note.duration}
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <p className="text-xs text-slate-500 font-medium leading-relaxed whitespace-pre-wrap">
-                                                    {note.description}
-                                                </p>
-                                            )}
-                                        </motion.div>
-                                    ))
+                                    value={noteDescription}
+                                    onChange={(e) => setNoteDescription(e.target.value)}
+                                    rows={3}
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:ring-1 focus:ring-[#00A1B0]/30 outline-none font-medium leading-relaxed resize-none transition-all"
+                                />
+                            )}
+                            <Button
+                                onClick={handleSaveNote}
+                                disabled={
+                                    isSavingNote ||
+                                    !noteTitle.trim() ||
+                                    (noteCategory === 'medicine'
+                                        ? (!noteDosage.trim() || !noteFrequency.trim() || !noteDuration.trim())
+                                        : !noteDescription.trim())
+                                }
+                                className="w-full h-10 bg-[#00A1B0] hover:bg-[#008f9c] text-white rounded-xl font-black uppercase tracking-widest text-[9px] shadow-md shadow-[#00A1B0]/10 disabled:opacity-50 transition-all active:scale-95"
+                            >
+                                {isSavingNote ? (
+                                    <div className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
                                 ) : (
-                                    <div className="py-8 flex flex-col items-center justify-center text-center opacity-40">
-                                        <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-                                            <BookOpen size={20} className="text-slate-400" />
-                                        </div>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No observations yet</p>
+                                    <div className="flex items-center gap-2">
+                                        <Plus size={14} /> Save {noteCategory.replace('_', ' ')}
                                     </div>
                                 )}
-                            </div>
+                            </Button>
+                        </div>
+
+                        {/* Notes List */}
+                        <div className="space-y-3 mt-4">
+                            {appointment?.doctorNotes && appointment.doctorNotes.length > 0 ? (
+                                [...appointment.doctorNotes].reverse().map((note: any, idx: number) => (
+                                    <motion.div
+                                        key={note.id || idx}
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:border-[#00A1B0]/30 transition-all group"
+                                    >
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-[#00A1B0]"></div>
+                                            <span className="text-[10px] font-black text-slate-900 tracking-widest leading-none">{note.title}</span>
+                                            {note.category && note.category !== 'observation' && (
+                                                <span className="px-1.5 py-0.5 rounded bg-[#00A1B0]/5 text-[7px] font-black text-[#00A1B0] uppercase tracking-tighter border border-[#00A1B0]/10">
+                                                    {note.category.replace('_', ' ')}
+                                                </span>
+                                            )}
+                                            <span className="ml-auto text-[8px] font-bold text-slate-400">
+                                                {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                        {note.category === 'medicine' ? (
+                                            <div className="flex gap-2">
+                                                <div className="bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 text-[8px] font-black text-[#00A1B0] tracking-tighter">
+                                                    {note.dosage}
+                                                </div>
+                                                <div className="bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 text-[8px] font-black text-[#00A1B0] tracking-tighter">
+                                                    {note.frequency}
+                                                </div>
+                                                <div className="bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 text-[8px] font-black text-[#00A1B0] tracking-tighter">
+                                                    {note.duration}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-slate-500 font-medium leading-relaxed whitespace-pre-wrap">
+                                                {note.description}
+                                            </p>
+                                        )}
+                                    </motion.div>
+                                ))
+                            ) : (
+                                <div className="py-8 flex flex-col items-center justify-center text-center opacity-40">
+                                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                                        <BookOpen size={20} className="text-slate-400" />
+                                    </div>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">No observations yet</p>
+                                </div>
+                            )}
                         </div>
                     </aside>
-                )
-            }
+                )}
+
+
             {/* Deletion Confirmation Dialog */}
             <Dialog open={!!deleteConfirmMessageId} onOpenChange={() => setDeleteConfirmMessageId(null)}>
                 <DialogContent>

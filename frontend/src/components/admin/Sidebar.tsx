@@ -12,8 +12,7 @@ import {
   LogOut,
   Activity,
   X,
-  Star,
-  Sparkles
+  Star
 } from "lucide-react";
 import authService from "../../services/authService";
 import { toast } from "sonner";
@@ -24,7 +23,7 @@ interface SidebarProps {
 
 const sidebarItems = [
   { label: "Dashboard", icon: BarChart2, path: "/admin/dashboard" },
-  { label: "AI Analytics", icon: Sparkles, path: "/admin/ai-analytics" },
+
   { label: "Doctor Request", icon: Zap, path: "/admin/doctor-request", hasNotification: true },
   { label: "Doctors", icon: Stethoscope, path: "/admin/doctors" },
   { label: "Patients", icon: Users, path: "/admin/patients" },

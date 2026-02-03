@@ -47,7 +47,7 @@ import About from "./pages/user/About";
 import Contact from "./pages/user/Contact";
 import PatientDashboard from "./pages/user/Dashboard";
 import FavoriteDoctors from "./pages/user/FavoriteDoctors";
-import AiHealthAssistant from "./pages/user/AiHealthAssistant";
+
 import DoctorChangePassword from "./pages/doctor/DoctorChangePassword";
 
 // Admin Routes
@@ -65,7 +65,7 @@ import AdminAppointmentDetailsPage from "./pages/admin/AdminAppointmentDetailsPa
 import ContactMessages from "./pages/admin/ContactMessages";
 import ReviewsPage from "./pages/admin/ReviewsPage";
 import AuthCallback from "./pages/AuthCallback";
-import AIAnalytics from "./pages/admin/AIAnalytics";
+
 
 // Wallet and Earnings
 import UserWallet from "./pages/user/Wallet";
@@ -429,14 +429,7 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="ai-assistant"
-            element={
-              <ProtectedRoute role="patient">
-                <AiHealthAssistant />
-              </ProtectedRoute>
-            }
-          />
+
         </Route>
 
         <Route path="/admin">
@@ -561,14 +554,7 @@ const App: React.FC = () => {
             }
           />
 
-          <Route
-            path="ai-analytics"
-            element={
-              <ProtectedRoute role="admin">
-                <AIAnalytics />
-              </ProtectedRoute>
-            }
-          />
+
 
         </Route>
 

@@ -25,7 +25,7 @@ interface SidebarLink {
   label: string;
   icon?: React.ReactNode;
   path: string;
-  badge?: "notification" | "dot" | "ai";
+  badge?: "notification" | "dot";
 }
 
 const sidebarLinks: SidebarLink[] = [
@@ -164,11 +164,7 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
                 <span className="ml-auto h-2 w-2 rounded-full bg-yellow-400"></span>
               )}
 
-              {link.badge === "ai" && (
-                <span className="ml-auto px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full">
-                  AI
-                </span>
-              )}
+
 
             </li>
           ))}
