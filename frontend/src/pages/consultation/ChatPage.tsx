@@ -49,6 +49,7 @@ interface Patient {
 interface Doctor {
     _id: string;
     userId?: {
+        _id: string;
         name: string;
         profileImage: string;
     };
@@ -910,12 +911,14 @@ const ChatPage = () => {
                     ? otherParty?.userId?.profileImage || otherParty?.profileImage
                     : otherParty?.profileImage;
 
+                const getOnlineId = (party: any) => party?.userId?._id || party?._id;
+
                 setActiveChat({
                     id: otherParty?._id || otherParty?.id || "",
                     name: otherName,
                     specialty: otherParty?.specialty || 'General',
                     avatar: getAvatarUrl(otherAvatarRaw, otherName),
-                    online: onlineUsers.includes(otherParty?._id || otherParty?.id || ""),
+                    online: onlineUsers.includes(getOnlineId(otherParty)),
                     unread: 0
                 });
 
@@ -1606,7 +1609,9 @@ const ChatPage = () => {
                                 >
                                     <div className="relative">
                                         <img src={avatarInList} alt="" className="h-12 w-12 rounded-full object-cover bg-slate-100" />
-                                        {onlineUsers.includes(otherPartyInList?._id || otherPartyInList?.id || "") && <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></span>}
+                                        {onlineUsers.includes(otherPartyInList?.userId?._id || otherPartyInList?._id || "") && (
+                                            <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 border-2 border-white rounded-full transition-all duration-300"></span>
+                                        )}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-start">

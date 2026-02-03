@@ -1,5 +1,5 @@
 import Groq from "groq-sdk";
-import { IAiService } from "./interfaces/IAiService";
+import { IAiService, ChatHistoryItem, AiSymptomResponse, AiScribeResponse, AiAdminQueryResponse, RecommendedDoctor } from "./interfaces/IAiService";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
 import { IAppointmentRepository } from "../repositories/interfaces/IAppointmentRepository";
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
@@ -7,6 +7,8 @@ import { WalletRepository } from "../repositories/wallet.repository";
 import { VerificationStatus } from "../dtos/doctor.dtos/doctor.dto";
 import { env } from "../configs/env";
 import { Types } from "mongoose";
+import { DashboardStats } from "../types/appointment.type";
+import { IWalletRepository, EarningStat } from "../repositories/interfaces/IWalletRepository";
 
 export class AiService implements IAiService {
     private groq: Groq;
@@ -14,13 +16,13 @@ export class AiService implements IAiService {
     private doctorRepository: IDoctorRepository;
     private appointmentRepository?: IAppointmentRepository;
     private userRepository?: IUserRepository;
-    private walletRepository?: WalletRepository;
+    private walletRepository?: IWalletRepository;
 
     constructor(
         doctorRepository: IDoctorRepository,
         appointmentRepository?: IAppointmentRepository,
         userRepository?: IUserRepository,
-        walletRepository?: WalletRepository
+        walletRepository?: IWalletRepository
     ) {
         const apiKey = env.GROQ_API_KEY;
         if (!apiKey) {
@@ -33,7 +35,7 @@ export class AiService implements IAiService {
         this.walletRepository = walletRepository;
     }
 
-    async analyzeSymptoms(symptoms: string, history: any[] = []): Promise<any> {
+    async analyzeSymptoms(symptoms: string, history: ChatHistoryItem[] = []): Promise<AiSymptomResponse> {
         const { doctors } = await this.doctorRepository.getAllDoctors(0, 50, {
             verificationStatus: VerificationStatus.Approved,
             isActive: true
@@ -41,7 +43,7 @@ export class AiService implements IAiService {
 
         const doctorsContext = doctors.map(d => ({
             id: d._id.toString(),
-            name: (d.userId as any)?.name,
+            name: (d.userId as { name?: string })?.name || "Unknown",
             specialty: d.specialty,
             experience: d.experienceYears,
             about: d.about,
@@ -100,30 +102,33 @@ ${JSON.stringify(doctorsContext)}
             });
 
             const text = chatCompletion.choices[0]?.message?.content || "{}";
-            const parsed = JSON.parse(text);
+            const parsed = JSON.parse(text) as AiSymptomResponse;
 
             if (parsed.recommendedDoctors) {
-                parsed.recommendedDoctors = parsed.recommendedDoctors.map((d: any) => ({
+                parsed.recommendedDoctors = parsed.recommendedDoctors.map((d: RecommendedDoctor) => ({
                     ...d,
                     id: d.id?.toString()
                 }));
             }
             return parsed;
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("AI Service Groq Error:", error);
             return {
                 reply: `I'm having trouble connecting. Please consult a General Physician.`,
                 isEmergency: false,
+                emergencyInstruction: "",
+                questions: [],
                 specialty: "General Physician",
-                recommendedDoctors: []
+                recommendedDoctors: [],
+                disclaimer: "AI guidance only, not a diagnosis."
             };
         }
     }
 
 
 
-    async summarizeChat(messages: any[]): Promise<any> {
+    async summarizeChat(messages: { type: string, senderModel: string, content: string }[]): Promise<AiScribeResponse> {
         try {
             const chatHistory = messages
                 .filter(m => m.type === 'text')
@@ -134,13 +139,19 @@ ${JSON.stringify(doctorsContext)}
                 messages: [
                     {
                         role: "system",
-                        content: `You are an "AI Medical Scribe". Your task is to extract key clinical information into a professional format.
-                        Categorize findings into:
-                        1. Subjective (What the patient reported: symptoms, duration, history)
-                        2. Assessment (What the doctor hypothesized or discussed)
-                        3. Plan (Specific treatments, tests, or follow-ups mentioned)
+                        content: `You are an "AI Medical Scribe". Your task is to summarize consultation chats into clean, professional lists.
                         
-                        Respond ONLY in JSON: { 'observations': [], 'diagnoses': [], 'plan': [] }`
+                        Categorize into these 3 keys:
+                        1. observations: Patient's symptoms and history (e.g., "Patient reports fever for 5 days").
+                        2. diagnoses: Potential conditions discussed (e.g., "Possible viral infection").
+                        3. plan: Recommended treatments or tests (e.g., "Blood test required").
+
+                        RULES:
+                        - Each array element must be a plain, human-readable STRING. 
+                        - DO NOT include JSON-like keys (e.g., NO {"Subjective": "..."}) inside the arrays.
+                        - Be concise and clinical.
+                        
+                        Respond ONLY in JSON: { "observations": [string], "diagnoses": [string], "plan": [string] }`
                     },
                     { role: "user", content: `Conversation:\n${chatHistory}` }
                 ],
@@ -149,7 +160,21 @@ ${JSON.stringify(doctorsContext)}
             });
 
             const text = chatCompletion.choices[0]?.message?.content || "{}";
-            return JSON.parse(text);
+            const parsed = JSON.parse(text);
+
+            const cleanup = (arr: unknown[]) => arr.map(item => {
+                if (item && typeof item === 'object' && !Array.isArray(item)) {
+                    const values = Object.values(item);
+                    return values.length > 0 ? String(values[0]) : "";
+                }
+                return String(item);
+            });
+
+            return {
+                observations: cleanup(parsed.observations || []),
+                diagnoses: cleanup(parsed.diagnoses || []),
+                plan: cleanup(parsed.plan || [])
+            };
         } catch (error) {
             console.error("Summarize Chat Error:", error);
             return { observations: [], diagnoses: [], plan: [] };
@@ -157,10 +182,17 @@ ${JSON.stringify(doctorsContext)}
     }
 
     // AI Business Analyst: Analyze admin queries about platform performance
-    async analyzeAdminQuery(query: string, context?: any): Promise<any> {
+    async analyzeAdminQuery(query: string, context?: unknown): Promise<AiAdminQueryResponse> {
         try {
             // Aggregate platform data
-            const platformData: any = {
+            const platformData: {
+                timestamp: string;
+                query: string;
+                dashboardStats?: DashboardStats;
+                doctorEarnings?: EarningStat[];
+                totalPatients?: number;
+                totalDoctors?: number;
+            } = {
                 timestamp: new Date().toISOString(),
                 query: query
             };
@@ -229,9 +261,9 @@ Analyze the platform data and answer the admin's query with:
             });
 
             const text = chatCompletion.choices[0]?.message?.content || "{}";
-            const parsed = JSON.parse(text);
+            const parsed = JSON.parse(text) as AiAdminQueryResponse;
 
-            
+
             parsed.dataSnapshot = {
                 totalDoctors: platformData.totalDoctors || 0,
                 totalPatients: platformData.totalPatients || 0,
@@ -241,7 +273,7 @@ Analyze the platform data and answer the admin's query with:
 
             return parsed;
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("AI Admin Query Error:", error);
             return {
                 answer: "I'm having trouble analyzing the data right now. Please try again.",
