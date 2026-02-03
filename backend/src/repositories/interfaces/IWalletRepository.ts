@@ -9,4 +9,5 @@ export interface IWalletRepository {
     getTransactionsByUserId(userId: string, skip: number, limit: number, filters?: { search?: string, type?: string, date?: string }): Promise<{ transactions: ITransactionDocument[], total: number, earnings: number, deductions: number }>;
     getAdminTransactions(skip: number, limit: number, filters?: { date?: string }): Promise<{ transactions: ITransactionDocument[], total: number }>;
     getTotalCommission(): Promise<number>;
+    getDoctorEarningsStats(): Promise<any[]>;
 }

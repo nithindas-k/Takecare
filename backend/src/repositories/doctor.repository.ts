@@ -193,6 +193,10 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
       profileImage: user.profileImage || null,
     };
   }
+
+  async countApprovedDoctors(): Promise<number> {
+    return await this.model.countDocuments({ verificationStatus: VerificationStatus.Approved });
+  }
 }
 
 type PopulatedDoctorRequest = IDoctor & {

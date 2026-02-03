@@ -6,9 +6,6 @@ import { IUserRepository } from "../repositories/interfaces/IUser.repository";
 import { WalletRepository } from "../repositories/wallet.repository";
 import { VerificationStatus } from "../dtos/doctor.dtos/doctor.dto";
 import { env } from "../configs/env";
-import WalletModel from "../models/wallet.model";
-import DoctorModel from "../models/doctor.model";
-import UserModel from "../models/user.model";
 import { Types } from "mongoose";
 
 export class AiService implements IAiService {
@@ -51,38 +48,42 @@ export class AiService implements IAiService {
             rating: d.ratingAvg
         }));
 
+        const recentHistory = history.slice(-5);
+        const olderHistory = history.slice(0, -5);
+
+        const healthContext = olderHistory
+            .filter(h => h.role === 'user')
+            .map(h => h.text)
+            .join(". ")
+            .substring(0, 500);
+
         const prompt = `
 ### SYSTEM ROLE:
-You are the "TakeCare Premium AI Health Assistant", a professional medical intake specialist. Your goal is to guide patients to the right care with clinical precision and safety.
+You are the "TakeCare Premium AI Health Assistant". A specialized Medical Triage AI.
 
-### EMERGENCY TRIAGE (CRITICAL):
-If the user reports "Red Flag" symptoms (e.g., chest pain, shortness of breath, sudden numbness, severe bleeding, Loss of consciousness, or suicidal thoughts), you MUST prioritize safety.
+### USER CONTEXT:
+- PREVIOUS HISTORY: ${healthContext || "None."}
+- RECENT CHAT: ${JSON.stringify(recentHistory)}
+- CURRENT INPUT: "${symptoms}"
 
-### CONTEXT:
-- DATABASE DOCTORS: ${JSON.stringify(doctorsContext)}
-- CONVERSATION HISTORY: ${JSON.stringify(history)}
+### DATABASE DOCTORS:
+${JSON.stringify(doctorsContext)}
 
-### TASK:
-1. Analyze the user's INPUT: "${symptoms}"
-2. Check for emergencies first.
-3. Match with REAL DOCTORS from the database ONLY.
-4. If the input is vague, ask 2 focus questions about onset and severity.
+### RESPONSE RULES (ULTIMATE):
+1. **Language**: Respond in the EXACT same language used by the user.
+2. **Emergency**: If "isEmergency" is true, the "recommendedDoctors" array MUST be empty. Safety first.
+3. **No Hallucination**: If no specialist in the database matches the symptoms, do NOT recommend any. Suggest a general checkup.
+4. **Disclaimers**: Always include a medical disclaimer.
 
-### RESPONSE RULES:
-- NEVER provide a final diagnosis or prescribe medicine.
-- DO NOT invent doctors. Match strictly from the list provided.
-- ALWAYS include a brief medical disclaimer.
-- Respond ONLY in this JSON format:
+### OUTPUT JSON FORMAT:
 {
-  "reply": "Emppathetic analysis.",
+  "reply": "Concise empathetic response in user's language.",
   "isEmergency": boolean,
-  "emergencyInstruction": "Instructions if isEmergency is true (e.g., Call 911)",
-  "questions": ["Question 1", "Question 2"],
-  "specialty": "Recommended department",
-  "recommendedDoctors": [
-    { "id": "doctorID", "name": "Name", "specialty": "Specialty", "matchReason": "Professional logic" }
-  ],
-  "disclaimer": "This is an AI assessment, not a medical diagnosis. Please consult a professional for emergencies."
+  "emergencyInstruction": "Instructions if red flags detected.",
+  "questions": ["1 Focused question if needed"],
+  "specialty": "Recommended medical department",
+  "recommendedDoctors": [{ "id": "id", "name": "name", "matchReason": "why" }],
+  "disclaimer": "AI guidance only, not a diagnosis."
 }`;
 
         try {
@@ -90,7 +91,7 @@ If the user reports "Red Flag" symptoms (e.g., chest pain, shortness of breath, 
                 messages: [
                     {
                         role: "system",
-                        content: "You are a professional medical intake assistant. You only output JSON. You prioritize user safety and triage."
+                        content: "You are a specialized Medical Triage AI. Focus on accuracy and language mirroring. Only output JSON."
                     },
                     { role: "user", content: prompt }
                 ],
@@ -111,9 +112,8 @@ If the user reports "Red Flag" symptoms (e.g., chest pain, shortness of breath, 
 
         } catch (error: any) {
             console.error("AI Service Groq Error:", error);
-
             return {
-                reply: `I'm having trouble connecting to my full medical database. Based on your symptoms, I recommend seeing a specialists.`,
+                reply: `I'm having trouble connecting. Please consult a General Physician.`,
                 isEmergency: false,
                 specialty: "General Physician",
                 recommendedDoctors: []
@@ -122,7 +122,7 @@ If the user reports "Red Flag" symptoms (e.g., chest pain, shortness of breath, 
     }
 
 
-    // AI Medical Scribe: Extract key clinical information from conversation
+
     async summarizeChat(messages: any[]): Promise<any> {
         try {
             const chatHistory = messages
@@ -171,55 +171,15 @@ If the user reports "Red Flag" symptoms (e.g., chest pain, shortness of breath, 
                 platformData.dashboardStats = stats;
             }
 
-            // Get doctor earnings data
-            const doctorEarnings = await WalletModel.aggregate([
-                {
-                    $lookup: {
-                        from: 'users',
-                        localField: 'userId',
-                        foreignField: '_id',
-                        as: 'user'
-                    }
-                },
-                {
-                    $unwind: '$user'
-                },
-                {
-                    $match: {
-                        'user.role': 'doctor'
-                    }
-                },
-                {
-                    $lookup: {
-                        from: 'doctors',
-                        localField: 'userId',
-                        foreignField: 'userId',
-                        as: 'doctorInfo'
-                    }
-                },
-                {
-                    $unwind: { path: '$doctorInfo', preserveNullAndEmptyArrays: true }
-                },
-                {
-                    $project: {
-                        doctorId: '$userId',
-                        name: '$user.name',
-                        specialty: '$doctorInfo.specialty',
-                        balance: 1,
-                        isActive: '$doctorInfo.isActive'
-                    }
-                },
-                {
-                    $sort: { balance: -1 }
-                }
-            ]);
+            // Get doctor earnings data using wallet repository
+            const doctorEarnings = await this.walletRepository?.getDoctorEarningsStats() || [];
 
             platformData.doctorEarnings = doctorEarnings;
 
-            // Get total counts
+            // Get total counts using repositories
             const [totalPatients, totalDoctors] = await Promise.all([
-                UserModel.countDocuments({ role: 'patient', isActive: true }),
-                DoctorModel.countDocuments({ verificationStatus: VerificationStatus.Approved })
+                this.userRepository?.countActivePatients() || Promise.resolve(0),
+                this.doctorRepository.countApprovedDoctors()
             ]);
             platformData.totalPatients = totalPatients;
             platformData.totalDoctors = totalDoctors;
@@ -271,7 +231,7 @@ Analyze the platform data and answer the admin's query with:
             const text = chatCompletion.choices[0]?.message?.content || "{}";
             const parsed = JSON.parse(text);
 
-            // Add raw data for reference
+            
             parsed.dataSnapshot = {
                 totalDoctors: platformData.totalDoctors || 0,
                 totalPatients: platformData.totalPatients || 0,

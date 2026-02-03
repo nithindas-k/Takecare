@@ -120,4 +120,48 @@ export class WalletRepository implements IWalletRepository {
         ]);
         return result[0]?.total || 0;
     }
+
+    async getDoctorEarningsStats(): Promise<any[]> {
+        return await WalletModel.aggregate([
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'userId',
+                    foreignField: '_id',
+                    as: 'user'
+                }
+            },
+            {
+                $unwind: '$user'
+            },
+            {
+                $match: {
+                    'user.role': 'doctor'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'doctors',
+                    localField: 'userId',
+                    foreignField: 'userId',
+                    as: 'doctorInfo'
+                }
+            },
+            {
+                $unwind: { path: '$doctorInfo', preserveNullAndEmptyArrays: true }
+            },
+            {
+                $project: {
+                    doctorId: '$userId',
+                    name: '$user.name',
+                    specialty: '$doctorInfo.specialty',
+                    balance: 1,
+                    isActive: '$doctorInfo.isActive'
+                }
+            },
+            {
+                $sort: { balance: -1 }
+            }
+        ]);
+    }
 }

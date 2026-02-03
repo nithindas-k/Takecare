@@ -63,4 +63,8 @@ export class UserRepository extends BaseRepository<IUserDocument> implements IUs
     const total = await this.model.countDocuments(query);
     return { patients, total };
   }
+
+  async countActivePatients(): Promise<number> {
+    return await this.model.countDocuments({ role: ROLES.PATIENT, isActive: true });
+  }
 }
