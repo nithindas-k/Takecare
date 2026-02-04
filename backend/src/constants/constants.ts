@@ -105,6 +105,34 @@ export const CONFIG = {
   OTP_RESEND_DELAY_SECONDS: 30,
 } as const;
 
+export const APPOINTMENT_LOCKS = {
+  DUPLICATE_DETECTION_HOURS: 12,
+  CHECKOUT_LOCK_SECONDS: 60,
+  PAYMENT_LOCK_MINUTES: 10,
+} as const;
+
+export const APPOINTMENT_RULES = {
+  MAX_RESCHEDULE_COUNT: 3,
+} as const;
+
+export const NOTIFICATION_TYPES = {
+  SUCCESS: "success",
+  ERROR: "error",
+  WARNING: "warning",
+  INFO: "info",
+} as const;
+
+export type NotificationType = typeof NOTIFICATION_TYPES[keyof typeof NOTIFICATION_TYPES];
+
+export const TIME_FORMAT = {
+  DELIMITER: "-",
+  REGEX: /^(\d{2}:\d{2})-(\d{2}:\d{2})$/,
+} as const;
+
+export const CRYPTO = {
+  RAZORPAY_SIGNATURE_ALGORITHM: "sha256",
+} as const;
+
 
 export enum HttpStatus {
   OK = StatusCodes.OK,
@@ -275,4 +303,10 @@ export const MESSAGES = {
   PAYMENT_APPOINTMENT_ID_REQUIRED: "appointmentId is required",
   PAYMENT_AMOUNT_INVALID: "amount must be greater than 0",
   RAZORPAY_KEYS_NOT_CONFIGURED: "Razorpay keys are not configured. Missing: {missing}",
+
+  APPOINTMENT_MAX_RESCHEDULE: "Maximum reschedule limit reached",
+  APPOINTMENT_ONLY_PAID_APPROVED: "Only paid appointments can be approved",
+  UNAUTHORIZED_ACTION: "Unauthorized",
+  SLOT_CONFLICT: "This slot is currently being processed by another user or is already booked",
+  PAYMENT_SESSION_ACTIVE: "A payment session is already active for this appointment. Please wait a moment or complete the existing payment",
 };

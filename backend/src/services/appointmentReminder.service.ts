@@ -4,9 +4,10 @@ import { IScheduleRepository } from "../repositories/interfaces/ISchedule.reposi
 import { NotificationService } from "./notification.service";
 import { socketService } from "./socket.service";
 import { ILoggerService } from "./interfaces/ILogger.service";
-import { APPOINTMENT_STATUS, PAYMENT_STATUS } from "../constants/constants";
+import { APPOINTMENT_STATUS, PAYMENT_STATUS, NOTIFICATION_TYPES } from "../constants/constants";
 import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import { differenceInMinutes, startOfDay, endOfDay } from "date-fns";
+import { parseAppointmentTime } from "../utils/time.util";
 
 export class AppointmentReminderService {
     private _appointmentRepository: IAppointmentRepository;
@@ -62,7 +63,7 @@ export class AppointmentReminderService {
                 for (const appt of pendingAppointments) {
 
                     if (appt.slotId && appt.doctorId) {
-                        const [startTime] = appt.appointmentTime.split("-").map((t: string) => t.trim());
+                        const startTime = parseAppointmentTime(appt.appointmentTime);
                         await this._scheduleRepository.updateSlotBookedStatus(
                             appt.doctorId.toString(),
                             appt.slotId,
@@ -141,7 +142,7 @@ export class AppointmentReminderService {
 
                 // Send 5-minute reminder
                 if (minutesDiff > 4 && minutesDiff <= 6 && !appointment.reminderSent) {
-                    await this._sendNotification(appointment, "warning", {
+                    await this._sendNotification(appointment, NOTIFICATION_TYPES.WARNING, {
                         title: "Appointment Starting Soon!",
                         message: `Your appointment #${appointment.customId} is starting in 5 minutes.`,
                     });
@@ -150,7 +151,7 @@ export class AppointmentReminderService {
 
                 // Send "Join Now" notification (0 to 2 minutes window)
                 if (minutesDiff <= 0 && minutesDiff >= -2 && !appointment.startNotificationSent) {
-                    await this._sendNotification(appointment, "success", {
+                    await this._sendNotification(appointment, NOTIFICATION_TYPES.SUCCESS, {
                         title: "Consultation Ready!",
                         message: `Your appointment #${appointment.customId} is starting now. You can join the session.`,
                         type: "appointment_started"

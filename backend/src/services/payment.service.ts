@@ -2,7 +2,7 @@ import crypto from "crypto";
 import Razorpay from "razorpay";
 import { env } from "../configs/env";
 import { AppError } from "../errors/AppError";
-import { HttpStatus, MESSAGES, PAYMENT_DEFAULTS, PAYMENT_STATUS, ROLES, APPOINTMENT_STATUS } from "../constants/constants";
+import { HttpStatus, MESSAGES, PAYMENT_DEFAULTS, PAYMENT_STATUS, ROLES, APPOINTMENT_STATUS, APPOINTMENT_LOCKS, CRYPTO } from "../constants/constants";
 import type { IAppointmentRepository } from "../repositories/interfaces/IAppointmentRepository";
 import type { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
 import type { IUserRepository } from "../repositories/interfaces/IUser.repository";
@@ -108,11 +108,11 @@ export class PaymentService implements IPaymentService {
                 currentAppt: appointmentId,
                 conflictingAppt: conflictingAppointment.id
             });
-            throw new AppError("This slot is currently being processed by another user or is already booked.", HttpStatus.CONFLICT);
+            throw new AppError(MESSAGES.SLOT_CONFLICT, HttpStatus.CONFLICT);
         }
 
-        // Lock THIS appointment for 10 minutes
-        const lockDuration = 10 * 60 * 1000; // 10 minutes
+        // Lock THIS appointment for configured duration
+        const lockDuration = APPOINTMENT_LOCKS.PAYMENT_LOCK_MINUTES * 60 * 1000;
         await this._appointmentRepository.updateById(appointmentId, {
             checkoutLockUntil: new Date(Date.now() + lockDuration)
         } as any);
@@ -186,7 +186,7 @@ export class PaymentService implements IPaymentService {
 
         const body = `${razorpay_order_id}|${razorpay_payment_id}`;
         const expectedSignature = crypto
-            .createHmac("sha256", env.RAZORPAY_API_SECRET)
+            .createHmac(CRYPTO.RAZORPAY_SIGNATURE_ALGORITHM, env.RAZORPAY_API_SECRET)
             .update(body)
             .digest("hex");
 

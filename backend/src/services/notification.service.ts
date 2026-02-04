@@ -1,5 +1,6 @@
 import { INotificationRepository } from "../repositories/interfaces/INotification.repository";
 import { socketService } from "./socket.service";
+import { NotificationType } from "../constants/constants";
 
 import { Document } from "mongoose";
 import { INotification } from "../types/notification.type";
@@ -9,7 +10,7 @@ import { INotificationDocument } from "../models/notification.model";
 export interface NotificationData {
     title: string;
     message: string;
-    type: "success" | "error" | "warning" | "info";
+    type: NotificationType;
     appointmentId?: string;
 }
 

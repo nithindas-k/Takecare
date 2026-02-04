@@ -6,7 +6,7 @@ import { IAppointmentRepository } from "../repositories/interfaces/IAppointmentR
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
 import { AppError } from "../errors/AppError";
-import { MESSAGES, HttpStatus } from "../constants/constants";
+import { MESSAGES, HttpStatus, NOTIFICATION_TYPES } from "../constants/constants";
 
 import { INotificationService } from "./notification.service";
 
@@ -48,7 +48,7 @@ export class WalletService implements IWalletService {
             await this._notificationService.notify(userId, {
                 title: title,
                 message: `₹${amount} has been added to your wallet. ${description}`,
-                type: "success",
+                type: NOTIFICATION_TYPES.SUCCESS,
                 appointmentId
             });
         }
@@ -69,7 +69,7 @@ export class WalletService implements IWalletService {
             await this._notificationService.notify(userId, {
                 title: "Wallet Debited",
                 message: `₹${amount} has been deducted from your wallet. ${description}`,
-                type: "warning",
+                type: NOTIFICATION_TYPES.WARNING,
                 appointmentId
             });
         }

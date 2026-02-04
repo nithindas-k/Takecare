@@ -3,7 +3,7 @@ import { IReviewRepository } from "../repositories/interfaces/IReview.repository
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
 import { IReview } from "../models/review.model";
 import { AppError } from "../errors/AppError";
-import { HttpStatus } from "../constants/constants";
+import { HttpStatus, MESSAGES, NOTIFICATION_TYPES } from "../constants/constants";
 import { INotificationService } from "./notification.service";
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
 
@@ -38,7 +38,7 @@ export class ReviewService implements IReviewService {
             await this._notificationService.notify(doctor.userId.toString(), {
                 title: "New Review Received",
                 message: `${patient?.name || "A patient"} has left a ${data.rating}-star review for you.`,
-                type: "info"
+                type: NOTIFICATION_TYPES.INFO
             });
         }
 
@@ -155,7 +155,7 @@ export class ReviewService implements IReviewService {
         await this._notificationService.notify(review.patientId.toString(), {
             title: "Doctor Responded to Your Review",
             message: `Dr. ${doctorUser?.name || "Your doctor"} has responded to your review.`,
-            type: "info"
+            type: NOTIFICATION_TYPES.INFO
         });
 
         return updatedReview;
