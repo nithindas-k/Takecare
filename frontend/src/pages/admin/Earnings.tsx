@@ -4,6 +4,7 @@ import TopNav from "../../components/admin/TopNav";
 import { DollarSign, TrendingUp, Users, Calendar, Download, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { walletService } from '../../services/walletService';
 import { Skeleton } from '../../components/ui/skeleton';
+import { motion, AnimatePresence } from "framer-motion";
 
 interface TransactionReport {
     _id: string;
@@ -34,6 +35,7 @@ interface EarningsStats {
 }
 
 const AdminEarnings: React.FC = () => {
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [stats, setStats] = useState<EarningsStats | null>(null);
     const [transactions, setTransactions] = useState<TransactionReport[]>([]);
     const [loading, setLoading] = useState(true);
@@ -89,12 +91,37 @@ const AdminEarnings: React.FC = () => {
 
     return (
         <div className="flex min-h-screen bg-[#F8FAFC]">
-            <div className="hidden lg:block sticky top-0 h-screen">
+            {/* Desktop Sidebar */}
+            <div className="hidden lg:block w-64 fixed inset-y-0 left-0 z-50">
                 <Sidebar />
             </div>
 
-            <div className="flex-1 flex flex-col min-w-0">
-                <TopNav onMenuClick={() => { }} />
+            {/* Mobile Sidebar */}
+            <AnimatePresence>
+                {sidebarOpen && (
+                    <div className="fixed inset-0 z-[60] lg:hidden">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSidebarOpen(false)}
+                            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ x: -256 }}
+                            animate={{ x: 0 }}
+                            exit={{ x: -256 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="absolute left-0 top-0 h-full w-64 bg-white shadow-2xl"
+                        >
+                            <Sidebar onMobileClose={() => setSidebarOpen(false)} />
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            <div className="flex-1 flex flex-col lg:pl-64 min-w-0">
+                <TopNav onMenuClick={() => setSidebarOpen(true)} />
 
                 <main className="flex-1 p-6 lg:p-10">
                     <div className="max-w-7xl mx-auto space-y-8">
@@ -243,5 +270,6 @@ const AdminEarnings: React.FC = () => {
         </div>
     );
 };
+
 
 export default AdminEarnings;
