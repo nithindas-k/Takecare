@@ -48,8 +48,10 @@ export interface IAppointmentRepository extends IBaseRepository<IAppointmentDocu
         summary: {
             totalVolume: number;
             totalRefunds: number;
+            netRevenue: number;
             doctorPayout: number;
             adminEarnings: number;
+            heldAmount: number;
         };
         appointments: IAppointmentPopulated[];
     }>;

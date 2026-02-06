@@ -501,8 +501,10 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
         summary: {
             totalVolume: number;
             totalRefunds: number;
+            netRevenue: number;
             doctorPayout: number;
             adminEarnings: number;
+            heldAmount: number;
         };
         appointments: IAppointmentPopulated[];
     }> {
@@ -546,6 +548,13 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
 
         const [summaryResult] = await this.model.aggregate(pipeline);
 
+        const totalVolume = summaryResult?.totalVolume || 0;
+        const totalRefunds = summaryResult?.totalRefunds || 0;
+        const doctorPayout = summaryResult?.doctorPayout || 0;
+        const adminEarnings = summaryResult?.adminEarnings || 0;
+        const netRevenue = totalVolume - totalRefunds;
+        const heldAmount = netRevenue - (doctorPayout + adminEarnings);
+
         const appointments = await this.model.find(dateQuery)
             .populate({
                 path: "patientId",
@@ -564,10 +573,12 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
 
         return {
             summary: {
-                totalVolume: summaryResult?.totalVolume || 0,
-                totalRefunds: summaryResult?.totalRefunds || 0,
-                doctorPayout: summaryResult?.doctorPayout || 0,
-                adminEarnings: summaryResult?.adminEarnings || 0
+                totalVolume,
+                totalRefunds,
+                netRevenue,
+                doctorPayout,
+                adminEarnings,
+                heldAmount
             },
             appointments
         };

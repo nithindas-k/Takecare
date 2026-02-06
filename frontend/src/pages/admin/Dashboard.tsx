@@ -143,13 +143,16 @@ const Dashboard = () => {
       // Summary Section
       doc.setFontSize(14);
       doc.setTextColor(0);
-      doc.text("Financial Summary", 14, 45);
+      doc.text("Financial Summary (Booking Basis)", 14, 45);
 
       const summaryData = [
-        ["Total Platform Revenue", `Rs. ${summary.adminEarnings.toLocaleString()}`],
-        ["Total Doctor Payouts", `Rs. ${summary.doctorPayout.toLocaleString()}`],
-        ["Total Refunds Processed", `Rs. ${summary.totalRefunds.toLocaleString()}`],
         ["Total Transaction Volume", `Rs. ${summary.totalVolume.toLocaleString()}`],
+        ["(-) Total Refunds Processed", `Rs. ${summary.totalRefunds.toLocaleString()}`],
+        ["(=) Net Revenue", `Rs. ${summary.netRevenue.toLocaleString()}`],
+        ["", ""], // Spacer
+        ["Doctor Payouts (Completed)", `Rs. ${summary.doctorPayout.toLocaleString()}`],
+        ["Platform Earnings (Completed)", `Rs. ${summary.adminEarnings.toLocaleString()}`],
+        ["Unrealized/Held Amount", `Rs. ${summary.heldAmount.toLocaleString()}`],
       ];
 
       autoTable(doc, {
