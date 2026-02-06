@@ -44,7 +44,6 @@ const AdminEarnings: React.FC = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [limit] = useState(10);
 
-    // Reset to page 1 when date changes
     useEffect(() => {
         setCurrentPage(1);
     }, [selectedDate]);

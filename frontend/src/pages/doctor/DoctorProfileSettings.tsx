@@ -142,8 +142,18 @@ const DoctorProfileSettings: React.FC = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+
+
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+      if (!validTypes.includes(file.type)) {
+        toast.error("Only image files (JPG, PNG, GIF) are allowed");
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+
       if (file.size > 4 * 1024 * 1024) {
-        toast.error("Image must be under 4MB");
+        toast.error("Image size must be less than 4MB");
+        if (fileInputRef.current) fileInputRef.current.value = "";
         return;
       }
 

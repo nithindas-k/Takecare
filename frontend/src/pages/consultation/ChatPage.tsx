@@ -1043,16 +1043,26 @@ const ChatPage = () => {
         const file = e.target.files?.[0];
         if (!file || !id) return;
 
-        if (file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.addEventListener('load', () => {
-                setImageToCrop(reader.result as string);
-                setIsCropping(true);
-            });
-            reader.readAsDataURL(file);
-        } else {
-            toast.error("Only image files are allowed");
+      
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+        if (!validTypes.includes(file.type)) {
+            toast.error("Only image files (JPG, PNG, GIF) are allowed");
+            if (fileInputRef.current) fileInputRef.current.value = "";
+            return;
         }
+
+        if (file.size > 4 * 1024 * 1024) {
+            toast.error("Image size must be less than 4MB");
+            if (fileInputRef.current) fileInputRef.current.value = "";
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.addEventListener('load', () => {
+            setImageToCrop(reader.result as string);
+            setIsCropping(true);
+        });
+        reader.readAsDataURL(file);
     };
 
     const onCropComplete = (_: Area, croppedAreaPixels: Area) => {

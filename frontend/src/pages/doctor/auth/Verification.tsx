@@ -158,6 +158,13 @@ const DoctorVerification: React.FC = () => {
       setErrors((prev) => ({ ...prev, certificateFiles: "Only image files (.jpg, .jpeg, .png) are allowed." }));
       return;
     }
+
+    const largeFiles = files.filter(file => file.size > 4 * 1024 * 1024);
+    if (largeFiles.length > 0) {
+      setErrors((prev) => ({ ...prev, certificateFiles: "Each file must be less than 4MB." }));
+      return;
+    }
+
     const newDocuments: DocumentPreview[] = files.map((file, index) => ({ id: `new-${Date.now()}-${index}`, url: URL.createObjectURL(file), name: file.name, isExisting: false, file }));
     setDocuments((prev) => [...prev, ...newDocuments]);
     setFormData((prev) => ({ ...prev, certificateFiles: [...prev.certificateFiles, ...files] }));
