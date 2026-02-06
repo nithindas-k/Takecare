@@ -405,13 +405,7 @@ export class ChatService implements IChatService {
             appointmentId
         };
 
-
-        socketService.emitMessage(appointmentId, messagePayload);
         socketService.emitToRoom(conversationId, "receive-message", messagePayload);
-
-
-        if (ptId) socketService.emitToUser(ptId, "receive-message", messagePayload);
-        if (drUserId) socketService.emitToUser(drUserId, "receive-message", messagePayload);
 
         return message;
     }
