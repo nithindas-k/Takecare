@@ -84,6 +84,7 @@ export const ADMIN_API_ROUTES = {
   BAN_DOCTOR: (doctorId: string): string => `/admin/doctors/${doctorId}/ban`,
   UNBAN_DOCTOR: (doctorId: string): string => `/admin/doctors/${doctorId}/unban`,
   DASHBOARD_STATS: "/admin/stats",
+  REPORT: "/admin/report",
 } as const;
 
 

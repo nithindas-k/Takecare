@@ -28,15 +28,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, Download, Loader2 } from "lucide-react";
 import adminService from "../../services/adminService";
 import { toast } from "sonner";
 import { FaUserMd, FaUsers, FaCalendarCheck, FaMoneyBillWave } from "react-icons/fa";
-import { subDays, startOfDay, endOfDay } from "date-fns";
+import { subDays, startOfDay, endOfDay, format } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { DatePicker } from "../../components/ui/date-picker";
 import { Button } from "../../components/ui/button";
 import { Skeleton } from "../../components/ui/skeleton";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const statusChartConfig = {
   appointments: {
@@ -63,6 +65,7 @@ const statusChartConfig = {
 const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
   const [stats, setStats] = useState<any>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [activeStatus, setActiveStatus] = useState("completed");
@@ -104,6 +107,102 @@ const Dashboard = () => {
 
     fetchStats();
   }, [dateRange]);
+
+  const handleDownloadReport = async () => {
+    try {
+      setDownloading(true);
+      toast.info("Generating report...");
+      const startDate = dateRange?.from?.toISOString();
+      const endDate = dateRange?.to?.toISOString();
+
+      const response = await adminService.getReportData(startDate, endDate);
+
+      if (!response.success || !response.data) {
+        throw new Error("Failed to fetch report data");
+      }
+
+      const { summary, appointments } = response.data;
+      const doc = new jsPDF();
+
+      // Header
+      doc.setFontSize(20);
+      doc.setTextColor(0, 161, 176); // Brand Color (Cyan)
+      doc.text("TakeCare - Financial & Activity Report", 14, 22);
+
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Generated on: ${format(new Date(), "PPP p")}`, 14, 30);
+
+      let dateText = "Overall";
+      if (dateRange?.from) {
+        dateText = `${format(dateRange.from, "PPP")}`;
+        if (dateRange.to) dateText += ` - ${format(dateRange.to, "PPP")}`;
+      }
+      doc.text(`Period: ${dateText}`, 14, 35);
+
+      // Summary Section
+      doc.setFontSize(14);
+      doc.setTextColor(0);
+      doc.text("Financial Summary", 14, 45);
+
+      const summaryData = [
+        ["Total Platform Revenue", `Rs. ${summary.adminEarnings.toLocaleString()}`],
+        ["Total Doctor Payouts", `Rs. ${summary.doctorPayout.toLocaleString()}`],
+        ["Total Refunds Processed", `Rs. ${summary.totalRefunds.toLocaleString()}`],
+        ["Total Transaction Volume", `Rs. ${summary.totalVolume.toLocaleString()}`],
+      ];
+
+      autoTable(doc, {
+        startY: 50,
+        head: [['Metric', 'Amount']],
+        body: summaryData,
+        theme: 'grid',
+        headStyles: { fillColor: [0, 161, 176], textColor: 255 },
+        styles: { fontSize: 10, cellPadding: 3 },
+        columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' } },
+        margin: { left: 14, right: 14 },
+      });
+
+      // Appointment Details
+      const finalY = (doc as any).lastAutoTable.finalY || 60;
+      doc.setFontSize(14);
+      doc.text("Detailed Appointments Log", 14, finalY + 15);
+
+      const tableRows = appointments.map((appt: any) => [
+        format(new Date(appt.createdAt), "dd/MM/yyyy"),
+        appt.customId || "-",
+        appt.doctor?.userId?.name || "Unknown Doctor",
+        appt.patientId?.name || "Unknown Patient",
+        appt.status,
+        appt.paymentStatus,
+        `Rs. ${appt.consultationFees}`,
+        `Rs. ${appt.adminCommission}`,
+      ]);
+
+      autoTable(doc, {
+        startY: finalY + 20,
+        head: [['Date', 'ID', 'Doctor', 'Patient', 'Status', 'Payment', 'Fee', 'Admin Fee']],
+        body: tableRows,
+        theme: 'striped',
+        headStyles: { fillColor: [66, 66, 66], textColor: 255 },
+        styles: { fontSize: 8, cellPadding: 2 },
+        columnStyles: {
+          6: { halign: 'right' },
+          7: { halign: 'right' }
+        },
+        margin: { left: 14, right: 14 },
+      });
+
+      doc.save(`TakeCare_Report_${format(new Date(), "yyyy-MM-dd")}.pdf`);
+      toast.success("Report downloaded successfully");
+
+    } catch (error) {
+      console.error("Download failed:", error);
+      toast.error("Failed to download report");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const statusData = useMemo(() => {
     if (!stats) return [];
@@ -242,6 +341,15 @@ const Dashboard = () => {
                     <DatePicker date={dateRange?.to} setDate={(d) => setDateRange(prev => ({ from: prev?.from, to: d }))} className="w-[125px] h-7 text-[10px] border-none bg-transparent shadow-none" />
                   </div>
                 </div>
+                <Button
+                  size="sm"
+                  onClick={handleDownloadReport}
+                  disabled={downloading}
+                  className="h-7 text-xs bg-gray-800 hover:bg-gray-700 text-white gap-2"
+                >
+                  {downloading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+                  PDF Report
+                </Button>
               </div>
             </div>
 

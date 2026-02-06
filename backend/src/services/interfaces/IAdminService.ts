@@ -25,4 +25,5 @@ export interface IAdminService {
   getAllPatients(filters: UserFilterDTO): Promise<{ patients: PatientListItem[]; total: number; page: number; limit: number; totalPages: number }>;
   getPatientById(patientId: string): Promise<PatientListItem | null>;
   getDashboardStats(startDate?: string, endDate?: string): Promise<DashboardStats>;
+  getReportData(startDate?: string, endDate?: string): Promise<any>;
 }

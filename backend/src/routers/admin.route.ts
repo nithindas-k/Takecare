@@ -27,6 +27,7 @@ const adminController = new AdminController(adminService);
 
 router.post(ADMIN_ROUTES.LOGIN, adminController.login);
 router.get("/stats", authMiddleware, checkUserBlocked, requireAdmin, adminController.getDashboardStats);
+router.get("/report", authMiddleware, checkUserBlocked, requireAdmin, adminController.getReportData);
 
 router.get(ADMIN_ROUTES.DOCTOR_REQUESTS, authMiddleware, checkUserBlocked, requireAdmin, adminController.getDoctorRequests);
 router.get(ADMIN_ROUTES.DOCTOR_BY_ID, authMiddleware, checkUserBlocked, requireAdmin, adminController.getDoctorRequestDetails);

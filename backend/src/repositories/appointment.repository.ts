@@ -496,5 +496,81 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
 
         return counts[0] || { upcoming: 0, completed: 0, cancelled: 0 };
     }
+
+    async getReportData(startDate?: Date, endDate?: Date): Promise<{
+        summary: {
+            totalVolume: number;
+            totalRefunds: number;
+            doctorPayout: number;
+            adminEarnings: number;
+        };
+        appointments: IAppointmentPopulated[];
+    }> {
+        const dateQuery: { createdAt?: { $gte?: Date; $lte?: Date } } = {};
+        if (startDate || endDate) {
+            dateQuery.createdAt = {};
+            if (startDate) dateQuery.createdAt.$gte = startDate;
+            if (endDate) dateQuery.createdAt.$lte = endDate;
+        }
+
+        const pipeline: PipelineStage[] = [];
+        if (Object.keys(dateQuery).length > 0) {
+            pipeline.push({ $match: dateQuery });
+        }
+
+        pipeline.push({
+            $group: {
+                _id: null,
+                totalVolume: {
+                    $sum: {
+                        $cond: [{ $in: ["$paymentStatus", ["paid", "refunded"]] }, "$consultationFees", 0]
+                    }
+                },
+                totalRefunds: {
+                    $sum: {
+                        $cond: [{ $eq: ["$paymentStatus", "refunded"] }, "$consultationFees", 0]
+                    }
+                },
+                doctorPayout: {
+                    $sum: {
+                        $cond: [{ $eq: ["$status", "completed"] }, "$doctorEarnings", 0]
+                    }
+                },
+                adminEarnings: {
+                    $sum: {
+                        $cond: [{ $eq: ["$status", "completed"] }, "$adminCommission", 0]
+                    }
+                }
+            }
+        });
+
+        const [summaryResult] = await this.model.aggregate(pipeline);
+
+        const appointments = await this.model.find(dateQuery)
+            .populate({
+                path: "patientId",
+                select: "name email phone profileImage"
+            })
+            .populate({
+                path: "doctorId",
+                select: "userId specialty",
+                populate: {
+                    path: "userId",
+                    select: "name email"
+                }
+            })
+            .sort({ createdAt: -1 })
+            .lean<IAppointmentPopulated[]>();
+
+        return {
+            summary: {
+                totalVolume: summaryResult?.totalVolume || 0,
+                totalRefunds: summaryResult?.totalRefunds || 0,
+                doctorPayout: summaryResult?.doctorPayout || 0,
+                adminEarnings: summaryResult?.adminEarnings || 0
+            },
+            appointments
+        };
+    }
 }
 

@@ -137,6 +137,18 @@ class AdminService {
     }
   }
 
+  async getReportData(startDate?: string, endDate?: string) {
+    try {
+      const response = await axiosInstance.get(ADMIN_API_ROUTES.REPORT, {
+        params: { startDate, endDate },
+      });
+      return response.data;
+    } catch (error) {
+      const err = error as ApiError;
+      return { success: false, message: err.response?.data?.message || err.message || "Error fetching report data" };
+    }
+  }
+
   async getAllReviews(page: number = 1, limit: number = 10) {
     try {
       const res = await axiosInstance.get(REVIEW_API_ROUTES.LIST, {

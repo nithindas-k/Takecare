@@ -14,4 +14,5 @@ export interface IAdminController {
     blockPatient: (req: Request, res: Response, next: NextFunction) => Promise<void>;
     unblockPatient: (req: Request, res: Response, next: NextFunction) => Promise<void>;
     getDashboardStats: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+    getReportData: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 }

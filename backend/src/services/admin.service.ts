@@ -197,4 +197,10 @@ export class AdminService implements IAdminService {
     const end = endDate ? new Date(endDate) : undefined;
     return await this._appointmentRepository.getAdminDashboardStats(start, end);
   }
+
+  async getReportData(startDate?: string, endDate?: string): Promise<any> {
+    const start = startDate ? new Date(startDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+    return await this._appointmentRepository.getReportData(start, end);
+  }
 }

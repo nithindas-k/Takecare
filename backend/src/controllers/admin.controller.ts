@@ -169,4 +169,15 @@ export class AdminController implements IAdminController {
       next(err);
     }
   };
+
+  getReportData = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const startDate = req.query.startDate as string;
+      const endDate = req.query.endDate as string;
+      const data = await this._adminservice.getReportData(startDate, endDate);
+      sendSuccess(res, data);
+    } catch (err: unknown) {
+      next(err);
+    }
+  };
 }

@@ -44,4 +44,13 @@ export interface IAppointmentRepository extends IBaseRepository<IAppointmentDocu
     getStatusCounts(
         filter: { doctorId?: string; patientId?: string }
     ): Promise<{ upcoming: number; completed: number; cancelled: number }>;
+    getReportData(startDate?: Date, endDate?: Date): Promise<{
+        summary: {
+            totalVolume: number;
+            totalRefunds: number;
+            doctorPayout: number;
+            adminEarnings: number;
+        };
+        appointments: IAppointmentPopulated[];
+    }>;
 }
