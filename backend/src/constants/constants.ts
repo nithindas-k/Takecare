@@ -54,6 +54,40 @@ export const APPOINTMENT_STATUS = {
   RESCHEDULE_REQUESTED: "reschedule_requested",
 } as const;
 
+export const APPOINTMENT_TYPE = {
+  VIDEO: "video",
+  CHAT: "chat",
+} as const;
+
+export const CANCELED_BY = {
+  PATIENT: "patient",
+  DOCTOR: "doctor",
+  ADMIN: "admin",
+} as const;
+
+export const SESSION_STATUS = {
+  IDLE: "idle",
+  ACTIVE: "ACTIVE",
+  WAITING_FOR_DOCTOR: "WAITING_FOR_DOCTOR",
+  CONTINUED_BY_DOCTOR: "CONTINUED_BY_DOCTOR",
+  ENDED: "ENDED",
+  TEST_NEEDED: "TEST_NEEDED",
+} as const;
+
+export const PAYMENT_METHOD = {
+  CARD: "card",
+  UPI: "upi",
+  WALLET: "wallet",
+  NETBANKING: "netbanking",
+} as const;
+
+export const DOC_NOTE_CATEGORY = {
+  OBSERVATION: "observation",
+  DIAGNOSIS: "diagnosis",
+  MEDICINE: "medicine",
+  LAB_TEST: "lab_test",
+} as const;
+
 export const PAYMENT_STATUS = {
   PENDING: "pending",
   PAID: "paid",

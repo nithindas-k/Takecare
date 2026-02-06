@@ -1,3 +1,4 @@
+import type { AppointmentType, AppointmentStatus, PaymentStatus, CanceledBy } from "../utils/constants";
 
 export interface AppointmentData {
     doctorId: string;
@@ -5,7 +6,7 @@ export interface AppointmentData {
     appointmentDate: string | Date;
     appointmentTime: string;
     slotId?: string;
-    appointmentType: 'video' | 'chat';
+    appointmentType: AppointmentType;
     reason: string;
 }
 
@@ -59,20 +60,20 @@ export interface PopulatedAppointment {
     };
     appointmentDate: string;
     appointmentTime: string;
-    appointmentType: 'video' | 'chat';
-    status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'rejected' | 'upcoming' | 'reschedule_requested';
+    appointmentType: AppointmentType;
+    status: AppointmentStatus;
     rescheduleRequest?: {
         appointmentDate: string;
         appointmentTime: string;
         slotId?: string;
     } | null;
     rescheduleRejectReason?: string | null;
-    paymentStatus: 'pending' | 'paid' | 'failed';
+    paymentStatus: PaymentStatus;
     consultationFees?: number;
     reason?: string;
     rejectionReason?: string;
     cancellationReason?: string;
-    cancelledBy?: 'doctor' | 'patient' | 'admin' | string;
+    cancelledBy?: CanceledBy | string;
     cancelledAt?: string;
     createdAt?: string;
     updatedAt?: string;

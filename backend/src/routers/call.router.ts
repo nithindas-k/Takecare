@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { CallController } from "../controllers/call.controller";
-import { CallSessionService } from "../services/call-session.service";
+import { CallSessionService } from "../services/callSession.service";
 import { CallSessionRepository } from "../repositories/call-session.repository";
 import { AppointmentRepository } from "../repositories/appointment.repository";
 import { authMiddleware } from "../middlewares/auth.middleware";

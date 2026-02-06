@@ -4,7 +4,7 @@ import passport from "passport";
 import AuthController from "../controllers/auth.controller";
 import { UserRepository } from "../repositories/user.repository";
 import { DoctorRepository } from "../repositories/doctor.repository";
-import { AuthService } from "../services/authService";
+import { AuthService } from "../services/auth.service";
 import { OTPService } from "../services/otp.service";
 import { OTPRepository } from "../repositories/otp.repository";
 import { EmailService } from "../services/email.service";

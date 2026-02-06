@@ -2,6 +2,8 @@ import mongoose, { Schema, Model } from "mongoose";
 import type { IAppointmentDocument } from "../types/appointment.type";
 import { IDGenerator } from "../utils/idGenerator.util";
 
+import { APPOINTMENT_STATUS, APPOINTMENT_TYPE, CANCELED_BY, DOC_NOTE_CATEGORY, PAYMENT_METHOD, PAYMENT_STATUS, SESSION_STATUS } from "../constants/constants";
+
 const AppointmentSchema = new Schema<IAppointmentDocument>(
     {
         customId: {
@@ -30,7 +32,7 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
 
         appointmentType: {
             type: String,
-            enum: ["video", "chat"],
+            enum: Object.values(APPOINTMENT_TYPE),
             required: true,
         },
 
@@ -52,8 +54,8 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
 
         status: {
             type: String,
-            enum: ["pending", "confirmed", "cancelled", "completed", "rejected", "reschedule_requested"],
-            default: "pending",
+            enum: Object.values(APPOINTMENT_STATUS),
+            default: APPOINTMENT_STATUS.PENDING,
             required: true,
             index: true,
         },
@@ -90,7 +92,7 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
 
         cancelledBy: {
             type: String,
-            enum: ["patient", "doctor", "admin", null],
+            enum: [...Object.values(CANCELED_BY), null],
             default: null,
         },
         cancellationReason: {
@@ -123,8 +125,8 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
 
         paymentStatus: {
             type: String,
-            enum: ["pending", "paid", "refunded", "failed"],
-            default: "pending",
+            enum: Object.values(PAYMENT_STATUS),
+            default: PAYMENT_STATUS.PENDING,
         },
         paymentId: {
             type: String,
@@ -132,7 +134,7 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
         },
         paymentMethod: {
             type: String,
-            enum: ["card", "upi", "wallet", "netbanking", null],
+            enum: [...Object.values(PAYMENT_METHOD), null],
             default: null,
         },
         razorpayOrderId: {
@@ -162,8 +164,8 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
                 description: { type: String, required: false, default: '' },
                 category: {
                     type: String,
-                    enum: ['observation', 'diagnosis', 'medicine', 'lab_test'],
-                    default: 'observation'
+                    enum: Object.values(DOC_NOTE_CATEGORY),
+                    default: DOC_NOTE_CATEGORY.OBSERVATION
                 },
                 dosage: { type: String, default: null },
                 frequency: { type: String, default: null },
@@ -179,8 +181,8 @@ const AppointmentSchema = new Schema<IAppointmentDocument>(
         },
         sessionStatus: {
             type: String,
-            enum: ["idle", "ACTIVE", "WAITING_FOR_DOCTOR", "CONTINUED_BY_DOCTOR", "ENDED", "TEST_NEEDED"],
-            default: "idle",
+            enum: Object.values(SESSION_STATUS),
+            default: SESSION_STATUS.IDLE,
         },
         extensionCount: {
             type: Number,

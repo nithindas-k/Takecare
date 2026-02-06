@@ -233,3 +233,57 @@ export const canExtendSession = (status: SessionStatus): boolean => {
 export const isSessionLocked = (status: SessionStatus): boolean => {
   return status === SESSION_STATUS.ENDED;
 };
+
+export const APPOINTMENT_TYPE = {
+  VIDEO: "video",
+  CHAT: "chat",
+} as const;
+
+export type AppointmentType = typeof APPOINTMENT_TYPE[keyof typeof APPOINTMENT_TYPE];
+
+export const APPOINTMENT_STATUS = {
+  PENDING: "pending",
+  CONFIRMED: "confirmed",
+  REJECTED: "rejected",
+  CANCELLED: "cancelled",
+  COMPLETED: "completed",
+  UPCOMING: "upcoming",
+  RESCHEDULE_REQUESTED: "reschedule_requested",
+} as const;
+
+export type AppointmentStatus = typeof APPOINTMENT_STATUS[keyof typeof APPOINTMENT_STATUS];
+
+export const CANCELED_BY = {
+  PATIENT: "patient",
+  DOCTOR: "doctor",
+  ADMIN: "admin",
+} as const;
+
+export type CanceledBy = typeof CANCELED_BY[keyof typeof CANCELED_BY];
+
+export const PAYMENT_METHOD = {
+  CARD: "card",
+  UPI: "upi",
+  WALLET: "wallet",
+  NETBANKING: "netbanking",
+} as const;
+
+export type PaymentMethod = typeof PAYMENT_METHOD[keyof typeof PAYMENT_METHOD];
+
+export const DOC_NOTE_CATEGORY = {
+  OBSERVATION: "observation",
+  DIAGNOSIS: "diagnosis",
+  MEDICINE: "medicine",
+  LAB_TEST: "lab_test",
+} as const;
+
+export type DocNoteCategory = typeof DOC_NOTE_CATEGORY[keyof typeof DOC_NOTE_CATEGORY];
+
+export const PAYMENT_STATUS = {
+  PENDING: "pending",
+  PAID: "paid",
+  REFUNDED: "refunded",
+  FAILED: "failed",
+} as const;
+
+export type PaymentStatus = typeof PAYMENT_STATUS[keyof typeof PAYMENT_STATUS];
