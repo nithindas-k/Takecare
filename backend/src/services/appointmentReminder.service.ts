@@ -147,6 +147,27 @@ export class AppointmentReminderService {
                         message: `Your appointment #${appointment.customId} is starting in 5 minutes.`,
                     });
                     await this._appointmentRepository.updateById(appointment._id.toString(), { reminderSent: true });
+
+                    // Emit socket event to show 5-minute reminder modal instantly
+                    const doctorDoc = appointment.doctorId as any;
+                    const doctorUserId = doctorDoc?.userId?.toString();
+                    const patientId = appointment.patientId.toString();
+
+                    const reminderPayload = {
+                        appointmentId: appointment._id.toString(),
+                        customId: appointment.customId,
+                        appointmentTime: appointment.appointmentTime,
+                        appointmentDate: appointment.appointmentDate,
+                        minutesUntilStart: 5,
+                        type: '5min_reminder'
+                    };
+
+                    if (doctorUserId) {
+                        socketService.emitToUser(doctorUserId, 'appointment-reminder-5min', reminderPayload);
+                    }
+                    socketService.emitToUser(patientId, 'appointment-reminder-5min', reminderPayload);
+
+                    this._logger.info(`5-minute reminder modal triggered via socket for appointment ${appointment.customId}`);
                 }
 
                 // Send "Join Now" notification (0 to 2 minutes window)
@@ -157,6 +178,28 @@ export class AppointmentReminderService {
                         type: "appointment_started"
                     });
                     await this._appointmentRepository.updateById(appointment._id.toString(), { startNotificationSent: true });
+
+                    // Emit socket event to show "Join Now" button/modal instantly
+                    const doctorDoc = appointment.doctorId as any;
+                    const doctorUserId = doctorDoc?.userId?.toString();
+                    const patientId = appointment.patientId.toString();
+
+                    const readyPayload = {
+                        appointmentId: appointment._id.toString(),
+                        customId: appointment.customId,
+                        appointmentTime: appointment.appointmentTime,
+                        appointmentDate: appointment.appointmentDate,
+                        appointmentType: appointment.appointmentType,
+                        isLive: true,
+                        type: 'appointment_ready'
+                    };
+
+                    if (doctorUserId) {
+                        socketService.emitToUser(doctorUserId, 'appointment-ready', readyPayload);
+                    }
+                    socketService.emitToUser(patientId, 'appointment-ready', readyPayload);
+
+                    this._logger.info(`Join Now button triggered via socket for appointment ${appointment.customId}`);
                 }
             }
         } catch (error) {
