@@ -1,5 +1,5 @@
 import React from "react";
-import PatientSidebar from "../../components/Patient/PatientSidebar";
+import PatientLayout from "../../components/Patient/PatientLayout";
 import ChangePassword from "../../components/common/ChangePassword";
 import NavBar from "../../components/common/NavBar";
 
@@ -7,24 +7,14 @@ const PatientChangePassword: React.FC = () => {
     return (
         <div className="min-h-screen bg-slate-50">
             <NavBar />
-            <div className="container mx-auto px-4 pt-24 pb-12">
-                <div className="flex flex-col lg:flex-row gap-8">
-                    {/* Sidebar */}
-                    <div className="w-full lg:w-72 flex-shrink-0">
-                        <PatientSidebar />
-                    </div>
-
-                    {/* Main Content */}
-                    <div className="flex-1">
-                        <div className="mb-8">
-                            <h1 className="text-2xl font-bold text-gray-800">Security Settings</h1>
-                            <p className="text-gray-500 mt-1">Manage your password and account security</p>
-                        </div>
-
-                        <ChangePassword role="user" />
-                    </div>
+            <PatientLayout>
+                <div className="mb-8">
+                    <h1 className="text-2xl font-bold text-gray-800">Security Settings</h1>
+                    <p className="text-gray-500 mt-1">Manage your password and account security</p>
                 </div>
-            </div>
+
+                <ChangePassword role="user" />
+            </PatientLayout>
         </div>
     );
 };

@@ -7,6 +7,7 @@ import userService from '../../services/userService';
 import { API_BASE_URL } from '../../utils/constants';
 import { toast } from 'sonner';
 import { Skeleton } from '../../components/ui/skeleton';
+import PatientLayout from '../../components/Patient/PatientLayout';
 
 const FavoriteDoctors: React.FC = () => {
     const navigate = useNavigate();
@@ -96,9 +97,9 @@ const FavoriteDoctors: React.FC = () => {
                 </div>
             </div>
 
-            <div className="container mx-auto px-4 pb-32">
+            <PatientLayout>
                 {loading ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
                         {[1, 2, 3, 4].map((i) => (
                             <div key={i} className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 p-3 md:p-4 space-y-4">
                                 <Skeleton className="h-40 md:h-64 w-full rounded-lg" />
@@ -111,7 +112,7 @@ const FavoriteDoctors: React.FC = () => {
                         ))}
                     </div>
                 ) : doctors.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
                         {doctors.map((doctor) => (
                             <div key={doctor.id} className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-gray-100 group relative">
                                 <div className="relative h-40 md:h-64 overflow-hidden bg-gray-100 cursor-pointer" onClick={() => navigate(`/doctors/${doctor.id}`)}>
@@ -201,7 +202,7 @@ const FavoriteDoctors: React.FC = () => {
                         </button>
                     </div>
                 )}
-            </div>
+            </PatientLayout>
             <Footer />
         </div>
     );

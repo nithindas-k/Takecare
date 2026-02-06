@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import NavBar from '../../components/common/NavBar';
-import PatientSidebar from '../../components/Patient/PatientSidebar';
+import PatientLayout from '../../components/Patient/PatientLayout';
 import { FaVideo, FaComments, FaEye, FaSearch, FaCalendarAlt, FaExclamationCircle, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import { appointmentService } from '../../services/appointmentService';
 
@@ -285,149 +285,141 @@ const Appointments: React.FC = () => {
                 </div>
             </div>
 
-            <main className="max-w-7xl mx-auto pt-8 pb-14 px-4">
-                <div className="flex flex-col lg:flex-row gap-6">
-                    <div className="w-full lg:w-[300px] flex-shrink-0">
-                        <PatientSidebar />
+            <PatientLayout>
+                <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <h2 className="text-2xl font-bold text-gray-800">Appointments</h2>
+                        <div className="flex items-center gap-3">
+                            <div className="relative flex-1 md:w-64">
+                                <input
+                                    type="text"
+                                    placeholder="Search appointments..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00A1B0]/20 focus:border-[#00A1B0] outline-none"
+                                />
+                                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                                <h2 className="text-2xl font-bold text-gray-800">Appointments</h2>
-                                <div className="flex items-center gap-3">
-                                    <div className="relative flex-1 md:w-64">
-                                        <input
-                                            type="text"
-                                            placeholder="Search appointments..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00A1B0]/20 focus:border-[#00A1B0] outline-none"
-                                        />
-                                        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex mt-6 border-b border-gray-200">
-                                <button
-                                    onClick={() => {
-                                        if (activeTab !== 'upcoming') {
-                                            setActiveTab('upcoming');
-                                            setPage(1);
-                                        }
-                                    }}
-                                    className={`flex-1 px-2 md:px-6 py-3 font-semibold transition-all relative whitespace-nowrap text-[11px] sm:text-xs md:text-sm lg:text-base ${activeTab === 'upcoming'
-                                        ? 'text-[#00A1B0] border-b-2 border-[#00A1B0]'
-                                        : 'text-gray-500 hover:text-gray-700'
-                                        }`}
-                                >
-                                    Upcoming
-                                    <span className="ml-1 md:ml-2 px-1.5 md:px-2 py-0.5 bg-[#00A1B0]/10 text-[#00A1B0] text-[9px] md:text-xs rounded-full">{getTabCount('upcoming')}</span>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (activeTab !== 'cancelled') {
-                                            setActiveTab('cancelled');
-                                            setPage(1);
-                                        }
-                                    }}
-                                    className={`flex-1 px-2 md:px-6 py-3 font-semibold transition-all relative whitespace-nowrap text-[11px] sm:text-xs md:text-sm lg:text-base ${activeTab === 'cancelled'
-                                        ? 'text-[#00A1B0] border-b-2 border-[#00A1B0]'
-                                        : 'text-gray-500 hover:text-gray-700'
-                                        }`}
-                                >
-                                    Cancelled
-                                    <span className="ml-1 md:ml-2 px-1.5 md:px-2 py-0.5 bg-gray-100 text-gray-600 text-[9px] md:text-xs rounded-full">{getTabCount('cancelled')}</span>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (activeTab !== 'completed') {
-                                            setActiveTab('completed');
-                                            setPage(1);
-                                        }
-                                    }}
-                                    className={`flex-1 px-2 md:px-6 py-3 font-semibold transition-all relative whitespace-nowrap text-[11px] sm:text-xs md:text-sm lg:text-base ${activeTab === 'completed'
-                                        ? 'text-[#00A1B0] border-b-2 border-[#00A1B0]'
-                                        : 'text-gray-500 hover:text-gray-700'
-                                        }`}
-                                >
-                                    Completed
-                                    <span className="ml-1 md:ml-2 px-1.5 md:px-2 py-0.5 bg-gray-100 text-gray-600 text-[9px] md:text-xs rounded-full">{getTabCount('completed')}</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        {error && (
-                            <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-6">{error}</div>
-                        )}
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                            {loading && appointments.length === 0 ? (
-                                <>
-                                    {[1, 2, 3, 4, 5, 6].map((i) => (
-                                        <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                                            <div className="p-4 border-b border-gray-100 flex items-start gap-3">
-                                                <Skeleton className="w-14 h-14 rounded-full" />
-                                                <div className="flex-1 space-y-2">
-                                                    <Skeleton className="h-3 w-16" />
-                                                    <Skeleton className="h-4 w-3/4" />
-                                                    <Skeleton className="h-3 w-1/2" />
-                                                </div>
-                                            </div>
-                                            <div className="p-4 bg-gray-50 space-y-4">
-                                                <div className="flex justify-between">
-                                                    <Skeleton className="h-4 w-24" />
-                                                    <Skeleton className="h-4 w-24" />
-                                                </div>
-                                                <Skeleton className="h-10 w-full rounded-lg" />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </>
-                            ) : filteredAppointments.length === 0 ? (
-                                <div className="col-span-full text-center py-12">
-                                    <div className="text-gray-400 text-6xl mb-4">📅</div>
-                                    <h3 className="text-xl font-semibold text-gray-600 mb-2">No Appointments Found</h3>
-                                    <p className="text-gray-500">{activeTab === 'upcoming' ? "You don't have any upcoming appointments" : `No ${activeTab} appointments to display`}</p>
-                                </div>
-                            ) : (
-                                filteredAppointments.map((appointment) => (
-                                    <AppointmentCard
-                                        key={appointment.id}
-                                        appointment={appointment}
-                                        handleViewDetails={handleViewDetails}
-                                        formatDateShort={formatDateShort}
-                                    />
-                                ))
-                            )}
-                        </div>
-
-                        {filteredAppointments.length > 0 && hasMore && (
-                            <div className="text-center mt-8">
-                                <button
-                                    onClick={() => setPage((p) => p + 1)}
-                                    disabled={loading}
-                                    className="group relative inline-flex items-center justify-center px-10 py-3 font-bold text-[#00A1B0] transition-all duration-300 bg-[#D2F1F4] hover:bg-[#b8e9ed] rounded-xl shadow-sm hover:shadow-md focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed overflow-hidden"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
-                                    {loading ? (
-                                        <div className="flex items-center gap-2.5">
-                                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                            <span className="tracking-wide text-sm">Fetching More...</span>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-2.5">
-                                            <span className="tracking-wide text-sm">Load More Appointments</span>
-                                            <FaChevronDown className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-y-1" />
-                                        </div>
-                                    )}
-                                </button>
-                            </div>
-                        )}
+                    <div className="flex mt-6 border-b border-gray-200">
+                        <button
+                            onClick={() => {
+                                if (activeTab !== 'upcoming') {
+                                    setActiveTab('upcoming');
+                                    setPage(1);
+                                }
+                            }}
+                            className={`flex-1 px-2 md:px-6 py-3 font-semibold transition-all relative whitespace-nowrap text-[11px] sm:text-xs md:text-sm lg:text-base ${activeTab === 'upcoming'
+                                ? 'text-[#00A1B0] border-b-2 border-[#00A1B0]'
+                                : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            Upcoming
+                            <span className="ml-1 md:ml-2 px-1.5 md:px-2 py-0.5 bg-[#00A1B0]/10 text-[#00A1B0] text-[9px] md:text-xs rounded-full">{getTabCount('upcoming')}</span>
+                        </button>
+                        <button
+                            onClick={() => {
+                                if (activeTab !== 'cancelled') {
+                                    setActiveTab('cancelled');
+                                    setPage(1);
+                                }
+                            }}
+                            className={`flex-1 px-2 md:px-6 py-3 font-semibold transition-all relative whitespace-nowrap text-[11px] sm:text-xs md:text-sm lg:text-base ${activeTab === 'cancelled'
+                                ? 'text-[#00A1B0] border-b-2 border-[#00A1B0]'
+                                : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            Cancelled
+                            <span className="ml-1 md:ml-2 px-1.5 md:px-2 py-0.5 bg-gray-100 text-gray-600 text-[9px] md:text-xs rounded-full">{getTabCount('cancelled')}</span>
+                        </button>
+                        <button
+                            onClick={() => {
+                                if (activeTab !== 'completed') {
+                                    setActiveTab('completed');
+                                    setPage(1);
+                                }
+                            }}
+                            className={`flex-1 px-2 md:px-6 py-3 font-semibold transition-all relative whitespace-nowrap text-[11px] sm:text-xs md:text-sm lg:text-base ${activeTab === 'completed'
+                                ? 'text-[#00A1B0] border-b-2 border-[#00A1B0]'
+                                : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            Completed
+                            <span className="ml-1 md:ml-2 px-1.5 md:px-2 py-0.5 bg-gray-100 text-gray-600 text-[9px] md:text-xs rounded-full">{getTabCount('completed')}</span>
+                        </button>
                     </div>
                 </div>
-            </main>
+
+                {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-6">{error}</div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {loading && appointments.length === 0 ? (
+                        <>
+                            {[1, 2, 3, 4, 5, 6].map((i) => (
+                                <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                    <div className="p-4 border-b border-gray-100 flex items-start gap-3">
+                                        <Skeleton className="w-14 h-14 rounded-full" />
+                                        <div className="flex-1 space-y-2">
+                                            <Skeleton className="h-3 w-16" />
+                                            <Skeleton className="h-4 w-3/4" />
+                                            <Skeleton className="h-3 w-1/2" />
+                                        </div>
+                                    </div>
+                                    <div className="p-4 bg-gray-50 space-y-4">
+                                        <div className="flex justify-between">
+                                            <Skeleton className="h-4 w-24" />
+                                            <Skeleton className="h-4 w-24" />
+                                        </div>
+                                        <Skeleton className="h-10 w-full rounded-lg" />
+                                    </div>
+                                </div>
+                            ))}
+                        </>
+                    ) : filteredAppointments.length === 0 ? (
+                        <div className="col-span-full text-center py-12">
+                            <div className="text-gray-400 text-6xl mb-4">📅</div>
+                            <h3 className="text-xl font-semibold text-gray-600 mb-2">No Appointments Found</h3>
+                            <p className="text-gray-500">{activeTab === 'upcoming' ? "You don't have any upcoming appointments" : `No ${activeTab} appointments to display`}</p>
+                        </div>
+                    ) : (
+                        filteredAppointments.map((appointment) => (
+                            <AppointmentCard
+                                key={appointment.id}
+                                appointment={appointment}
+                                handleViewDetails={handleViewDetails}
+                                formatDateShort={formatDateShort}
+                            />
+                        ))
+                    )}
+                </div>
+
+                {filteredAppointments.length > 0 && hasMore && (
+                    <div className="text-center mt-8">
+                        <button
+                            onClick={() => setPage((p) => p + 1)}
+                            disabled={loading}
+                            className="group relative inline-flex items-center justify-center px-10 py-3 font-bold text-[#00A1B0] transition-all duration-300 bg-[#D2F1F4] hover:bg-[#b8e9ed] rounded-xl shadow-sm hover:shadow-md focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
+                            {loading ? (
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                    <span className="tracking-wide text-sm">Fetching More...</span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2.5">
+                                    <span className="tracking-wide text-sm">Load More Appointments</span>
+                                    <FaChevronDown className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-y-1" />
+                                </div>
+                            )}
+                        </button>
+                    </div>
+                )}
+            </PatientLayout>
 
 
         </div>

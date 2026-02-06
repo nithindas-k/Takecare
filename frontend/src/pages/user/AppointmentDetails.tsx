@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import NavBar from '../../components/common/NavBar';
-import PatientSidebar from '../../components/Patient/PatientSidebar';
+import PatientLayout from '../../components/Patient/PatientLayout';
 import { FaVideo, FaComments, FaArrowLeft, FaTimes, FaChevronDown, FaChevronUp, FaStethoscope, FaCalendarAlt, FaStar, FaCreditCard, FaExclamationTriangle, FaCheck, FaClock } from 'react-icons/fa';
 import ReviewForm from '../../components/reviews/ReviewForm';
 import { reviewService } from '../../services/reviewService';
@@ -471,228 +471,256 @@ const AppointmentDetails: React.FC = () => {
             </div>
 
             {/* Main Content */}
-            <main className="max-w-7xl mx-auto pt-8 pb-14 px-4">
-                <div className="grid grid-cols-12 gap-6">
-                    {/* Sidebar */}
-                    <div className="col-span-12 xl:col-span-3">
-                        <PatientSidebar />
+            <PatientLayout>
+                {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-6">
+                        {error}
                     </div>
+                )}
 
-                    {/* Appointment Details Content */}
-                    <div className="col-span-12 xl:col-span-9">
-                        {error && (
-                            <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-6">
-                                {error}
+
+                {/* Payment Pending Warning */}
+                {
+                    normalized.status === 'pending' && (appointment?.paymentStatus === 'pending' || appointment?.paymentStatus === 'failed') && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+                            <FaExclamationTriangle className="text-amber-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <h4 className="font-semibold text-amber-800 text-sm">Action Required: Payment Pending</h4>
+                                <p className="text-sm text-amber-700 mt-1">
+                                    Please complete the payment within <strong>5 minutes</strong> to confirm your booking.
+                                    If payment is not received, this appointment will be automatically cancelled.
+                                </p>
                             </div>
-                        )}
-
-
-                        {/* Payment Pending Warning */}
-                        {
-                            normalized.status === 'pending' && (appointment?.paymentStatus === 'pending' || appointment?.paymentStatus === 'failed') && (
-                                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-start gap-3">
-                                    <FaExclamationTriangle className="text-amber-600 mt-0.5 flex-shrink-0" />
-                                    <div>
-                                        <h4 className="font-semibold text-amber-800 text-sm">Action Required: Payment Pending</h4>
-                                        <p className="text-sm text-amber-700 mt-1">
-                                            Please complete the payment within <strong>5 minutes</strong> to confirm your booking.
-                                            If payment is not received, this appointment will be automatically cancelled.
+                        </div>
+                    )
+                }
+                {/* Appointment Detail Card */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+                    {/* Main Appointment Info */}
+                    <div className="p-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                            {/* Doctor Info */}
+                            <div className="lg:col-span-5">
+                                <div className="flex items-start gap-4">
+                                    <img
+                                        src={normalized.doctorImage}
+                                        alt={normalized.doctorName}
+                                        className="w-20 h-20 rounded-full aspect-square object-cover border-2 border-gray-200 flex-shrink-0"
+                                        onError={(e) => {
+                                            e.currentTarget.src = '/doctor.png';
+                                        }}
+                                    />
+                                    <div className="flex-1">
+                                        <p className="text-sm text-gray-500 font-medium mb-1">
+                                            {normalized.id}
                                         </p>
-                                    </div>
-                                </div>
-                            )
-                        }
-                        {/* Appointment Detail Card */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
-                            {/* Main Appointment Info */}
-                            <div className="p-6">
-                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                                    {/* Doctor Info */}
-                                    <div className="lg:col-span-5">
-                                        <div className="flex items-start gap-4">
-                                            <img
-                                                src={normalized.doctorImage}
-                                                alt={normalized.doctorName}
-                                                className="w-20 h-20 rounded-full aspect-square object-cover border-2 border-gray-200 flex-shrink-0"
-                                                onError={(e) => {
-                                                    e.currentTarget.src = '/doctor.png';
-                                                }}
-                                            />
-                                            <div className="flex-1">
-                                                <p className="text-sm text-gray-500 font-medium mb-1">
-                                                    {normalized.id}
-                                                </p>
-                                                <h3 className="text-xl font-bold text-gray-800 mb-2">
-                                                    {normalized.doctorName}
-                                                </h3>
-                                                <div className="space-y-1.5">
-                                                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#00A1B0]/10 text-[#00A1B0] border border-[#00A1B0]/20 text-xs font-semibold">
-                                                        <FaStethoscope className="text-[#00A1B0]" size={12} />
-                                                        {normalized.department}
-                                                    </div>
-
-
-                                                </div>
+                                        <h3 className="text-xl font-bold text-gray-800 mb-2">
+                                            {normalized.doctorName}
+                                        </h3>
+                                        <div className="space-y-1.5">
+                                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#00A1B0]/10 text-[#00A1B0] border border-[#00A1B0]/20 text-xs font-semibold">
+                                                <FaStethoscope className="text-[#00A1B0]" size={12} />
+                                                {normalized.department}
                                             </div>
-                                        </div>
-                                    </div>
 
-                                    {/* Appointment Type */}
-                                    <div className="lg:col-span-4">
-                                        <div>
-                                            <p className="text-sm text-gray-500 mb-2">Type of Appointment</p>
-                                            <div className="flex items-center gap-2">
-                                                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#00A1B0]/10 text-[#00A1B0]">
-                                                    {normalized.appointmentType === 'video' ? (
-                                                        <FaVideo size={16} />
-                                                    ) : (
-                                                        <FaComments size={16} />
-                                                    )}
-                                                    <span className="font-medium">
-                                                        {normalized.appointmentType === 'video' ? 'Video Call' : 'Chat'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
 
-                                    {/* Status & Fees */}
-                                    <div className="lg:col-span-3">
-                                        <div className="text-right">
-                                            <span
-                                                className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mb-3 ${getStatusColor(
-                                                    normalized.status
-                                                )}`}
-                                            >
-                                                {normalized.displayStatus}
-                                            </span>
-                                            <p className="text-sm font-semibold text-gray-800">
-                                                Consultation Fees: ₹{normalized.consultationFees}
-                                            </p>
-                                            <div className="flex justify-end gap-2 mt-3">
-                                                {normalized.isUpcoming && (
-                                                    <div className="flex gap-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => setRescheduleOpen(true)}
-                                                            className="border-[#00A1B0] text-[#00A1B0] hover:bg-[#00A1B0]/10"
-                                                        >
-                                                            <FaCalendarAlt className="mr-1" size={14} />
-                                                            Reschedule
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={openCancelDialog}
-                                                            className="border-red-200 text-red-600 hover:bg-red-50"
-                                                        >
-                                                            <FaTimes className="text-red-600" size={14} />
-                                                            Cancel
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Reschedule Request Section */}
-                            {normalized.status === 'reschedule_requested' && appointment?.rescheduleRequest && (
-                                <div className="px-5 py-3 bg-amber-50/50 border-t border-amber-100">
-                                    <button
-                                        onClick={() => setShowRescheduleDetail(!showRescheduleDetail)}
-                                        className="w-full flex items-center justify-between text-left hover:bg-amber-100/50 rounded-lg p-1.5 -m-1.5 transition-colors"
-                                    >
-                                        <div className="flex items-start gap-3">
-                                            <div className="flex-shrink-0 w-5 h-5 text-amber-600 mt-0.5">
-                                                <FaExclamationTriangle className="w-full h-full" />
-                                            </div>
-
-                                            <div>
-                                                <h6 className="text-sm font-semibold text-amber-900">
-                                                    Action Required: New Time Proposed
-                                                </h6>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm text-amber-700 font-medium">
-                                                {showRescheduleDetail ? 'Show Less' : 'Show More'}
-                                            </span>
-                                            {showRescheduleDetail ? (
-                                                <FaChevronUp size={14} className="text-amber-600" />
+                            {/* Appointment Type */}
+                            <div className="lg:col-span-4">
+                                <div>
+                                    <p className="text-sm text-gray-500 mb-2">Type of Appointment</p>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#00A1B0]/10 text-[#00A1B0]">
+                                            {normalized.appointmentType === 'video' ? (
+                                                <FaVideo size={16} />
                                             ) : (
-                                                <FaChevronDown size={14} className="text-amber-600" />
+                                                <FaComments size={16} />
                                             )}
+                                            <span className="font-medium">
+                                                {normalized.appointmentType === 'video' ? 'Video Call' : 'Chat'}
+                                            </span>
                                         </div>
-                                    </button>
+                                    </div>
+                                </div>
+                            </div>
 
-                                    <div
-                                        className={`overflow-hidden transition-all duration-300 ease-in-out ${showRescheduleDetail ? 'max-h-[500px] opacity-100 mt-3' : 'max-h-0 opacity-0'
-                                            }`}
+                            {/* Status & Fees */}
+                            <div className="lg:col-span-3">
+                                <div className="text-right">
+                                    <span
+                                        className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mb-3 ${getStatusColor(
+                                            normalized.status
+                                        )}`}
                                     >
-                                        <div className="pl-0 md:pl-8 space-y-3.5">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                <Card className="border-amber-200/50 bg-white shadow-none hover:border-amber-300 transition-colors">
-                                                    <CardHeader className="p-3 pb-1">
-                                                        <CardTitle className="text-[9px] font-black text-amber-600/80 uppercase tracking-widest flex items-center gap-2">
-                                                            <FaCalendarAlt size={10} className="opacity-60" />
-                                                            Proposed Date
-                                                        </CardTitle>
-                                                    </CardHeader>
-                                                    <CardContent className="p-3 pt-0">
-                                                        <p className="text-base font-bold text-[#5c3d1e]">
-                                                            {new Date(appointment.rescheduleRequest.appointmentDate).toLocaleDateString('en-US', {
-                                                                day: 'numeric',
-                                                                month: 'long',
-                                                                year: 'numeric'
-                                                            })}
-                                                        </p>
-                                                    </CardContent>
-                                                </Card>
-
-                                                <Card className="border-amber-200/50 bg-white shadow-none hover:border-amber-300 transition-colors">
-                                                    <CardHeader className="p-3 pb-1">
-                                                        <CardTitle className="text-[9px] font-black text-amber-600/80 uppercase tracking-widest flex items-center gap-2">
-                                                            <FaClock size={10} className="opacity-60" />
-                                                            Proposed Time
-                                                        </CardTitle>
-                                                    </CardHeader>
-                                                    <CardContent className="p-3 pt-0">
-                                                        <p className="text-base font-bold text-[#5c3d1e]">
-                                                            {appointment.rescheduleRequest.appointmentTime}
-                                                        </p>
-                                                    </CardContent>
-                                                </Card>
-                                            </div>
-
-                                            <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+                                        {normalized.displayStatus}
+                                    </span>
+                                    <p className="text-sm font-semibold text-gray-800">
+                                        Consultation Fees: ₹{normalized.consultationFees}
+                                    </p>
+                                    <div className="flex justify-end gap-2 mt-3">
+                                        {normalized.isUpcoming && (
+                                            <div className="flex gap-2">
                                                 <Button
-                                                    onClick={() => handleAcceptReschedule(id!)}
-                                                    className="flex-1 h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-sm hover:shadow-emerald-100 gap-2 transition-all active:scale-[0.98] text-xs"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setRescheduleOpen(true)}
+                                                    className="border-[#00A1B0] text-[#00A1B0] hover:bg-[#00A1B0]/10"
                                                 >
-                                                    <FaCheck size={12} /> Accept & Update
+                                                    <FaCalendarAlt className="mr-1" size={14} />
+                                                    Reschedule
                                                 </Button>
                                                 <Button
                                                     variant="outline"
-                                                    onClick={() => handleRejectRescheduleClick(id!)}
-                                                    className="flex-1 h-10 bg-white text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 font-bold rounded-lg shadow-none gap-2 transition-all active:scale-[0.98] text-xs"
+                                                    size="sm"
+                                                    onClick={openCancelDialog}
+                                                    className="border-red-200 text-red-600 hover:bg-red-50"
                                                 >
-                                                    <FaTimes size={12} /> Reject Proposal
+                                                    <FaTimes className="text-red-600" size={14} />
+                                                    Cancel
                                                 </Button>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
-                            )}
+                            </div>
+                        </div>
+                    </div>
 
-                            {/* Rejection Reason Section */}
-                            {appointment?.status === 'rejected' && appointment?.rejectionReason && (
-                                <div className="px-6 py-4 bg-red-50 border-t border-red-200">
+                    {/* Reschedule Request Section */}
+                    {normalized.status === 'reschedule_requested' && appointment?.rescheduleRequest && (
+                        <div className="px-5 py-3 bg-amber-50/50 border-t border-amber-100">
+                            <button
+                                onClick={() => setShowRescheduleDetail(!showRescheduleDetail)}
+                                className="w-full flex items-center justify-between text-left hover:bg-amber-100/50 rounded-lg p-1.5 -m-1.5 transition-colors"
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div className="flex-shrink-0 w-5 h-5 text-amber-600 mt-0.5">
+                                        <FaExclamationTriangle className="w-full h-full" />
+                                    </div>
+
+                                    <div>
+                                        <h6 className="text-sm font-semibold text-amber-900">
+                                            Action Required: New Time Proposed
+                                        </h6>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-amber-700 font-medium">
+                                        {showRescheduleDetail ? 'Show Less' : 'Show More'}
+                                    </span>
+                                    {showRescheduleDetail ? (
+                                        <FaChevronUp size={14} className="text-amber-600" />
+                                    ) : (
+                                        <FaChevronDown size={14} className="text-amber-600" />
+                                    )}
+                                </div>
+                            </button>
+
+                            <div
+                                className={`overflow-hidden transition-all duration-300 ease-in-out ${showRescheduleDetail ? 'max-h-[500px] opacity-100 mt-3' : 'max-h-0 opacity-0'
+                                    }`}
+                            >
+                                <div className="pl-0 md:pl-8 space-y-3.5">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <Card className="border-amber-200/50 bg-white shadow-none hover:border-amber-300 transition-colors">
+                                            <CardHeader className="p-3 pb-1">
+                                                <CardTitle className="text-[9px] font-black text-amber-600/80 uppercase tracking-widest flex items-center gap-2">
+                                                    <FaCalendarAlt size={10} className="opacity-60" />
+                                                    Proposed Date
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="p-3 pt-0">
+                                                <p className="text-base font-bold text-[#5c3d1e]">
+                                                    {new Date(appointment.rescheduleRequest.appointmentDate).toLocaleDateString('en-US', {
+                                                        day: 'numeric',
+                                                        month: 'long',
+                                                        year: 'numeric'
+                                                    })}
+                                                </p>
+                                            </CardContent>
+                                        </Card>
+
+                                        <Card className="border-amber-200/50 bg-white shadow-none hover:border-amber-300 transition-colors">
+                                            <CardHeader className="p-3 pb-1">
+                                                <CardTitle className="text-[9px] font-black text-amber-600/80 uppercase tracking-widest flex items-center gap-2">
+                                                    <FaClock size={10} className="opacity-60" />
+                                                    Proposed Time
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="p-3 pt-0">
+                                                <p className="text-base font-bold text-[#5c3d1e]">
+                                                    {appointment.rescheduleRequest.appointmentTime}
+                                                </p>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+
+                                    <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+                                        <Button
+                                            onClick={() => handleAcceptReschedule(id!)}
+                                            className="flex-1 h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-sm hover:shadow-emerald-100 gap-2 transition-all active:scale-[0.98] text-xs"
+                                        >
+                                            <FaCheck size={12} /> Accept & Update
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => handleRejectRescheduleClick(id!)}
+                                            className="flex-1 h-10 bg-white text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 font-bold rounded-lg shadow-none gap-2 transition-all active:scale-[0.98] text-xs"
+                                        >
+                                            <FaTimes size={12} /> Reject Proposal
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Rejection Reason Section */}
+                    {appointment?.status === 'rejected' && appointment?.rejectionReason && (
+                        <div className="px-6 py-4 bg-red-50 border-t border-red-200">
+                            <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0 w-5 h-5 text-red-600 mt-0.5">
+                                    <svg
+                                        className="w-full h-full"
+                                        fill="currentColor"
+                                        viewBox="0 0 20 20"
+                                    >
+                                        <path
+                                            fillRule="evenodd"
+                                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                            clipRule="evenodd"
+                                        />
+                                    </svg>
+                                </div>
+                                <div className="flex-1">
+                                    <h6 className="text-sm font-semibold text-red-800 mb-1">
+                                        Rejection Reason
+                                    </h6>
+                                    <p className="text-sm text-red-700">
+                                        {appointment.rejectionReason}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Cancellation Reason Section */}
+                    {/* Cancellation Reason Section */}
+                    {appointment?.status === 'cancelled' &&
+                        (appointment?.cancellationReason || appointment?.reason) &&
+                        (appointment?.cancelledBy === 'doctor' || appointment?.cancelledBy === 'admin') && (
+                            <div className="px-6 py-4 bg-red-50 border-t border-red-100">
+                                <button
+                                    onClick={() => setShowCancelReason(!showCancelReason)}
+                                    className="w-full flex items-center justify-between text-left hover:bg-red-100/50 rounded-lg p-2 -m-2 transition-colors"
+                                >
                                     <div className="flex items-start gap-3">
-                                        <div className="flex-shrink-0 w-5 h-5 text-red-600 mt-0.5">
+                                        <div className="flex-shrink-0 w-5 h-5 text-red-500 mt-0.5">
                                             <svg
                                                 className="w-full h-full"
                                                 fill="currentColor"
@@ -700,271 +728,233 @@ const AppointmentDetails: React.FC = () => {
                                             >
                                                 <path
                                                     fillRule="evenodd"
-                                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
                                                     clipRule="evenodd"
                                                 />
                                             </svg>
                                         </div>
-                                        <div className="flex-1">
-                                            <h6 className="text-sm font-semibold text-red-800 mb-1">
-                                                Rejection Reason
+
+                                        <div>
+                                            <h6 className="text-sm font-semibold text-red-800">
+                                                Cancellation Reason ({appointment?.cancelledBy})
                                             </h6>
-                                            <p className="text-sm text-red-700">
-                                                {appointment.rejectionReason}
-                                            </p>
                                         </div>
                                     </div>
-                                </div>
-                            )}
 
-                            {/* Cancellation Reason Section */}
-                            {/* Cancellation Reason Section */}
-                            {appointment?.status === 'cancelled' &&
-                                (appointment?.cancellationReason || appointment?.reason) &&
-                                (appointment?.cancelledBy === 'doctor' || appointment?.cancelledBy === 'admin') && (
-                                    <div className="px-6 py-4 bg-red-50 border-t border-red-100">
-                                        <button
-                                            onClick={() => setShowCancelReason(!showCancelReason)}
-                                            className="w-full flex items-center justify-between text-left hover:bg-red-100/50 rounded-lg p-2 -m-2 transition-colors"
-                                        >
-                                            <div className="flex items-start gap-3">
-                                                <div className="flex-shrink-0 w-5 h-5 text-red-500 mt-0.5">
-                                                    <svg
-                                                        className="w-full h-full"
-                                                        fill="currentColor"
-                                                        viewBox="0 0 20 20"
-                                                    >
-                                                        <path
-                                                            fillRule="evenodd"
-                                                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                                                            clipRule="evenodd"
-                                                        />
-                                                    </svg>
-                                                </div>
-
-                                                <div>
-                                                    <h6 className="text-sm font-semibold text-red-800">
-                                                        Cancellation Reason ({appointment?.cancelledBy})
-                                                    </h6>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm text-red-600 font-medium">
-                                                    {showCancelReason ? 'Show Less' : 'Show More'}
-                                                </span>
-                                                {showCancelReason ? (
-                                                    <FaChevronUp size={14} className="text-red-600" />
-                                                ) : (
-                                                    <FaChevronDown size={14} className="text-red-600" />
-                                                )}
-                                            </div>
-                                        </button>
-
-                                        <div
-                                            className={`overflow-hidden transition-all duration-300 ease-in-out ${showCancelReason ? 'max-h-96 opacity-100 mt-3' : 'max-h-0 opacity-0'
-                                                }`}
-                                        >
-                                            <div className="pl-8">
-                                                <p className="text-sm text-red-700 leading-relaxed">
-                                                    {appointment.cancellationReason || appointment.reason}
-                                                </p>
-
-                                                {appointment.cancelledAt && (
-                                                    <p className="text-xs text-red-600 mt-2">
-                                                        Cancelled on{' '}
-                                                        {new Date(appointment.cancelledAt).toLocaleDateString('en-US', {
-                                                            day: 'numeric',
-                                                            month: 'short',
-                                                            year: 'numeric',
-                                                            hour: '2-digit',
-                                                            minute: '2-digit',
-                                                        })}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-red-600 font-medium">
+                                            {showCancelReason ? 'Show Less' : 'Show More'}
+                                        </span>
+                                        {showCancelReason ? (
+                                            <FaChevronUp size={14} className="text-red-600" />
+                                        ) : (
+                                            <FaChevronDown size={14} className="text-red-600" />
+                                        )}
                                     </div>
-                                )}
+                                </button>
 
+                                <div
+                                    className={`overflow-hidden transition-all duration-300 ease-in-out ${showCancelReason ? 'max-h-96 opacity-100 mt-3' : 'max-h-0 opacity-0'
+                                        }`}
+                                >
+                                    <div className="pl-8">
+                                        <p className="text-sm text-red-700 leading-relaxed">
+                                            {appointment.cancellationReason || appointment.reason}
+                                        </p>
 
-                            {/* Bottom Details Section */}
-                            <div className="bg-gray-50 px-6 py-4 border-t border-gray-100">
-                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                    <div>
-                                        <h6 className="text-xs font-semibold text-gray-500 mb-1">
-                                            Appointment Date & Time
-                                        </h6>
-                                        <p className="text-sm font-medium text-gray-800">
-                                            {normalized.hasValidDate
-                                                ? new Date(normalized.date).toLocaleDateString('en-US', {
+                                        {appointment.cancelledAt && (
+                                            <p className="text-xs text-red-600 mt-2">
+                                                Cancelled on{' '}
+                                                {new Date(appointment.cancelledAt).toLocaleDateString('en-US', {
                                                     day: 'numeric',
                                                     month: 'short',
                                                     year: 'numeric',
-                                                })
-                                                : 'N/A'}{' '}
-                                            - {normalized.time || 'N/A'}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <h6 className="text-xs font-semibold text-gray-500 mb-1">Reason</h6>
-                                        <p className="text-sm font-medium text-gray-800">{normalized.reason || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <h6 className="text-xs font-semibold text-gray-500 mb-1">Payment Status</h6>
-                                        <p className="text-sm font-medium text-gray-800">{appointment?.paymentStatus || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <h6 className="text-xs font-semibold text-gray-500 mb-1">Appointment Type</h6>
-                                        <p className="text-sm font-medium text-gray-800">
-                                            {normalized.appointmentType === 'video' ? 'Video Call' : 'Chat'}
-                                        </p>
-                                    </div>
-                                    <div className="col-span-2 md:col-span-4 lg:col-span-1 flex items-end">
-                                        {normalized.isUpcoming && normalized.status === 'confirmed' && (
-                                            normalized.isSessionReady ? (
-                                                <button
-                                                    onClick={() => navigate(`/patient/${normalized.appointmentType === 'video' ? 'call' : 'chat'}/${appointment?._id || appointment?.id}`)}
-                                                    className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors shadow-sm"
-                                                >
-                                                    Start Session
-                                                </button>
-                                            ) : (
-                                                <div className="w-full px-4 py-3 bg-gray-50 text-gray-500 font-medium rounded-xl border border-dashed border-gray-300 text-center text-sm">
-                                                    Starts at {normalized.time.split(' - ')[0]}
-                                                </div>
-                                            )
-                                        )}
-                                        {normalized.status === 'completed' && (
-                                            <div className="flex flex-col gap-2 w-full">
-                                                <button
-                                                    onClick={handleOpenReview}
-                                                    className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-                                                >
-                                                    <FaStar /> Rate Doctor
-                                                </button>
-                                                <button
-                                                    onClick={() => setPrescriptionViewOpen(true)}
-                                                    className="w-full px-3 py-2.5 bg-white border-2 border-[#00A1B0] text-[#00A1B0] hover:bg-[#00A1B0]/10 font-bold rounded-lg transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95 whitespace-nowrap text-sm"
-                                                >
-                                                    <FaStethoscope className="text-lg" /> View Prescription
-                                                </button>
-                                            </div>
-                                        )}
-                                        {/* Pending Payment Action */}
-                                        {normalized.status === 'pending' && (appointment?.paymentStatus === 'pending' || appointment?.paymentStatus === 'failed') && (
-                                            <button
-                                                onClick={handleRetryPayment}
-                                                className="w-full px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-                                            >
-                                                <FaCreditCard /> Complete Payment
-                                            </button>
+                                                    hour: '2-digit',
+                                                    minute: '2-digit',
+                                                })}
+                                            </p>
                                         )}
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
-                        {/* Recent Appointments Section */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                                <h5 className="text-lg font-bold text-gray-800">Recent Appointments</h5>
+
+                    {/* Bottom Details Section */}
+                    <div className="bg-gray-50 px-6 py-4 border-t border-gray-100">
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            <div>
+                                <h6 className="text-xs font-semibold text-gray-500 mb-1">
+                                    Appointment Date & Time
+                                </h6>
+                                <p className="text-sm font-medium text-gray-800">
+                                    {normalized.hasValidDate
+                                        ? new Date(normalized.date).toLocaleDateString('en-US', {
+                                            day: 'numeric',
+                                            month: 'short',
+                                            year: 'numeric',
+                                        })
+                                        : 'N/A'}{' '}
+                                    - {normalized.time || 'N/A'}
+                                </p>
                             </div>
-                            {recentAppointments.length > 0 ? (
-                                <>
-                                    {/* Desktop Table View */}
-                                    <div className="hidden md:block overflow-x-auto">
-                                        <table className="w-full text-sm text-left">
-                                            <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
-                                                <tr>
-                                                    <th className="px-6 py-3">Date & Time</th>
-                                                    <th className="px-6 py-3">Type</th>
-                                                    <th className="px-6 py-3">Status</th>
-                                                    <th className="px-6 py-3 text-right">Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-gray-100">
-                                                {recentAppointments.map((apt) => (
-                                                    <tr key={apt._id} className="hover:bg-gray-50/50 transition-colors">
-                                                        <td className="px-6 py-4 font-medium text-gray-900">
-                                                            {new Date(apt.appointmentDate).toLocaleDateString()}
-                                                            <span className="text-gray-400 mx-2">•</span>
-                                                            {apt.appointmentTime}
-                                                        </td>
-                                                        <td className="px-6 py-4 text-gray-600 capitalize">
-                                                            <div className="flex items-center gap-2">
-                                                                {apt.appointmentType === 'video' ? <FaVideo className="text-blue-500" /> : <FaComments className="text-[#00A1B0]" />}
-                                                                {apt.appointmentType}
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${getStatusColor(apt.status)}`}>
-                                                                {apt.status}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-4 text-right">
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleViewRecentDetails(apt._id)}
-                                                                className="h-8 text-xs border-gray-200 hover:bg-gray-100 hover:text-gray-900"
-                                                            >
-                                                                View Details
-                                                            </Button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                            <div>
+                                <h6 className="text-xs font-semibold text-gray-500 mb-1">Reason</h6>
+                                <p className="text-sm font-medium text-gray-800">{normalized.reason || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <h6 className="text-xs font-semibold text-gray-500 mb-1">Payment Status</h6>
+                                <p className="text-sm font-medium text-gray-800">{appointment?.paymentStatus || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <h6 className="text-xs font-semibold text-gray-500 mb-1">Appointment Type</h6>
+                                <p className="text-sm font-medium text-gray-800">
+                                    {normalized.appointmentType === 'video' ? 'Video Call' : 'Chat'}
+                                </p>
+                            </div>
+                            <div className="col-span-2 md:col-span-4 lg:col-span-1 flex items-end">
+                                {normalized.isUpcoming && normalized.status === 'confirmed' && (
+                                    normalized.isSessionReady ? (
+                                        <button
+                                            onClick={() => navigate(`/patient/${normalized.appointmentType === 'video' ? 'call' : 'chat'}/${appointment?._id || appointment?.id}`)}
+                                            className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors shadow-sm"
+                                        >
+                                            Start Session
+                                        </button>
+                                    ) : (
+                                        <div className="w-full px-4 py-3 bg-gray-50 text-gray-500 font-medium rounded-xl border border-dashed border-gray-300 text-center text-sm">
+                                            Starts at {normalized.time.split(' - ')[0]}
+                                        </div>
+                                    )
+                                )}
+                                {normalized.status === 'completed' && (
+                                    <div className="flex flex-col gap-2 w-full">
+                                        <button
+                                            onClick={handleOpenReview}
+                                            className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <FaStar /> Rate Doctor
+                                        </button>
+                                        <button
+                                            onClick={() => setPrescriptionViewOpen(true)}
+                                            className="w-full px-3 py-2.5 bg-white border-2 border-[#00A1B0] text-[#00A1B0] hover:bg-[#00A1B0]/10 font-bold rounded-lg transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95 whitespace-nowrap text-sm"
+                                        >
+                                            <FaStethoscope className="text-lg" /> View Prescription
+                                        </button>
                                     </div>
+                                )}
+                                {/* Pending Payment Action */}
+                                {normalized.status === 'pending' && (appointment?.paymentStatus === 'pending' || appointment?.paymentStatus === 'failed') && (
+                                    <button
+                                        onClick={handleRetryPayment}
+                                        className="w-full px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <FaCreditCard /> Complete Payment
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                                    {/* Mobile Card View */}
-                                    <div className="md:hidden flex flex-col divide-y divide-gray-100">
+                {/* Recent Appointments Section */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                        <h5 className="text-lg font-bold text-gray-800">Recent Appointments</h5>
+                    </div>
+                    {recentAppointments.length > 0 ? (
+                        <>
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-100">
+                                        <tr>
+                                            <th className="px-6 py-3">Date & Time</th>
+                                            <th className="px-6 py-3">Type</th>
+                                            <th className="px-6 py-3">Status</th>
+                                            <th className="px-6 py-3 text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
                                         {recentAppointments.map((apt) => (
-                                            <div key={apt._id} className="p-4 flex flex-col gap-3">
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <p className="font-semibold text-gray-900 text-sm">
-                                                            {new Date(apt.appointmentDate).toLocaleDateString()}
-                                                        </p>
-                                                        <p className="text-xs text-gray-500 mt-0.5">{apt.appointmentTime}</p>
+                                            <tr key={apt._id} className="hover:bg-gray-50/50 transition-colors">
+                                                <td className="px-6 py-4 font-medium text-gray-900">
+                                                    {new Date(apt.appointmentDate).toLocaleDateString()}
+                                                    <span className="text-gray-400 mx-2">•</span>
+                                                    {apt.appointmentTime}
+                                                </td>
+                                                <td className="px-6 py-4 text-gray-600 capitalize">
+                                                    <div className="flex items-center gap-2">
+                                                        {apt.appointmentType === 'video' ? <FaVideo className="text-blue-500" /> : <FaComments className="text-[#00A1B0]" />}
+                                                        {apt.appointmentType}
                                                     </div>
-                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${getStatusColor(apt.status)}`}>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${getStatusColor(apt.status)}`}>
                                                         {apt.status}
                                                     </span>
-                                                </div>
-
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2 text-xs text-gray-600 capitalize">
-                                                        {apt.appointmentType === 'video' ? <FaVideo className="text-blue-500" /> : <FaComments className="text-[#00A1B0]" />}
-                                                        {apt.appointmentType} Consultation
-                                                    </div>
-
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
                                                     <Button
-                                                        variant="ghost"
+                                                        variant="outline"
                                                         size="sm"
                                                         onClick={() => handleViewRecentDetails(apt._id)}
-                                                        className="h-7 text-xs text-[#00A1B0] hover:text-[#008f9c] hover:bg-[#00A1B0]/10 px-2"
+                                                        className="h-8 text-xs border-gray-200 hover:bg-gray-100 hover:text-gray-900"
                                                     >
-                                                        Details & Prescription &rarr;
+                                                        View Details
                                                     </Button>
-                                                </div>
-                                            </div>
+                                                </td>
+                                            </tr>
                                         ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Mobile Card View */}
+                            <div className="md:hidden flex flex-col divide-y divide-gray-100">
+                                {recentAppointments.map((apt) => (
+                                    <div key={apt._id} className="p-4 flex flex-col gap-3">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <p className="font-semibold text-gray-900 text-sm">
+                                                    {new Date(apt.appointmentDate).toLocaleDateString()}
+                                                </p>
+                                                <p className="text-xs text-gray-500 mt-0.5">{apt.appointmentTime}</p>
+                                            </div>
+                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${getStatusColor(apt.status)}`}>
+                                                {apt.status}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 text-xs text-gray-600 capitalize">
+                                                {apt.appointmentType === 'video' ? <FaVideo className="text-blue-500" /> : <FaComments className="text-[#00A1B0]" />}
+                                                {apt.appointmentType} Consultation
+                                            </div>
+
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleViewRecentDetails(apt._id)}
+                                                className="h-7 text-xs text-[#00A1B0] hover:text-[#008f9c] hover:bg-[#00A1B0]/10 px-2"
+                                            >
+                                                Details & Prescription &rarr;
+                                            </Button>
+                                        </div>
                                     </div>
-                                </>
-                            ) : (
-                                <div className="p-8 text-center text-gray-500">
-                                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                        <ClipboardList className="w-6 h-6 text-gray-400" />
-                                    </div>
-                                    <p className="font-medium">No recent appointments found</p>
-                                </div>
-                            )}
+                                ))}
+                            </div>
+                        </>
+                    ) : (
+                        <div className="p-8 text-center text-gray-500">
+                            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <ClipboardList className="w-6 h-6 text-gray-400" />
+                            </div>
+                            <p className="font-medium">No recent appointments found</p>
                         </div>
-                    </div >
-                </div >
-            </main >
+                    )}
+                </div>
+            </PatientLayout>
 
             {cancelOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
