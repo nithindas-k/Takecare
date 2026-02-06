@@ -12,7 +12,7 @@ export const env = {
   },
 
   get CLIENT_URL() {
-    return process.env.CLIENT_URL
+    return process.env.CLIENT_URL || process.env.CLIENT_URL_2 || process.env.CLIENT_URL_1 || "";
   },
   get CLIENT_URL_1() {
     return process.env.CLIENT_URL_1
