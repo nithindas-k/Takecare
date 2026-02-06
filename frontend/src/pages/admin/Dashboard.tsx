@@ -174,7 +174,7 @@ const Dashboard = () => {
       const tableRows = appointments.map((appt: any) => [
         format(new Date(appt.createdAt), "dd/MM/yyyy"),
         appt.customId || "-",
-        appt.doctor?.userId?.name || "Unknown Doctor",
+        appt.doctorId?.userId?.name || appt.doctor?.name || "Unknown Doctor",
         appt.patientId?.name || "Unknown Patient",
         appt.status,
         appt.paymentStatus,
