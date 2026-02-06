@@ -312,10 +312,6 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
             matchDateQuery.createdAt = {};
             if (startDate) matchDateQuery.createdAt.$gte = startDate;
             if (endDate) matchDateQuery.createdAt.$lte = endDate;
-        } else {
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-            matchDateQuery.createdAt = { $gte: sevenDaysAgo };
         }
 
 
@@ -415,23 +411,19 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
             status: { $in: ['pending', 'confirmed'] }
         });
 
-        const matchDateQuery: { createdAt?: { $gte?: Date; $lte?: Date } } = {};
+        const matchDateQuery: { appointmentDate?: { $gte?: Date; $lte?: Date } } = {};
 
         if (startDate || endDate) {
-            matchDateQuery.createdAt = {};
-            if (startDate) matchDateQuery.createdAt.$gte = startDate;
-            if (endDate) matchDateQuery.createdAt.$lte = endDate;
-        } else {
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-            matchDateQuery.createdAt = { $gte: sevenDaysAgo };
+            matchDateQuery.appointmentDate = {};
+            if (startDate) matchDateQuery.appointmentDate.$gte = startDate;
+            if (endDate) matchDateQuery.appointmentDate.$lte = endDate;
         }
 
         const revenueGraph = await this.model.aggregate([
             { $match: { doctorId: docId, ...matchDateQuery, status: 'completed' } },
             {
                 $group: {
-                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$appointmentDate" } },
                     amount: { $sum: "$doctorEarnings" }
                 }
             },
