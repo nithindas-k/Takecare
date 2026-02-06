@@ -47,16 +47,7 @@ const corsOptions = {
 
     if (!requestOrigin) return callback(null, true);
 
-    const allowedOrigins = [
-      "https://takecare.nithin.site",
-      "https://www.takecare.nithin.site",
-      "http://localhost:5173",
-      "http://localhost:3000",
-      "http://127.0.0.1:5173",
-      "http://127.0.0.1:3000",
-      "http://localhost:5174",
-      "http://127.0.0.1:5174"
-    ];
+    const allowedOrigins = [env.CLIENT_URL,env.CLIENT_URL_1,env.CLIENT_URL_2];
 
     if (allowedOrigins.includes(requestOrigin)) {
       return callback(null, true);

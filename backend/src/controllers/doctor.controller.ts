@@ -20,11 +20,7 @@ export class DoctorController implements IDoctorController {
         throw new AppError(MESSAGES.UNAUTHORIZED, STATUS.UNAUTHORIZED);
       }
 
-      console.log("=== CONTROLLER DEBUG ===");
-      console.log("req.files:", req.files);
-      console.log("req.files type:", typeof req.files);
-      console.log("Is Array:", Array.isArray(req.files));
-
+   
       const dto: SubmitVerificationDTO = {
         degree: String(req.body.degree || ""),
         experience: Number.parseInt(String(req.body.experience || "0"), 10),
@@ -37,18 +33,11 @@ export class DoctorController implements IDoctorController {
 
       const files = (req.files as Express.Multer.File[]) || [];
 
-      console.log("Parsed files length:", files.length);
-      if (files.length > 0) {
-        console.log("File paths:", files.map(f => f.path));
-      }
 
       const hasExistingDocuments = req.body.hasExistingDocuments === 'true';
       const existingDocuments = req.body.existingDocuments
         ? JSON.parse(req.body.existingDocuments)
         : [];
-
-      console.log("hasExistingDocuments:", hasExistingDocuments);
-      console.log("existingDocuments:", existingDocuments);
 
       if (!files.length && !hasExistingDocuments) {
         throw new AppError(MESSAGES.DOCTOR_MISSING_DOCUMENTS, STATUS.BAD_REQUEST);
