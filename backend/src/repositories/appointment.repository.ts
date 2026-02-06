@@ -4,6 +4,7 @@ import AppointmentModel from "../models/appointment.model";
 import { Types, ClientSession, PipelineStage } from "mongoose";
 import { BaseRepository } from "./base.repository";
 import { DashboardStats, DoctorDashboardStats } from "../types/appointment.type";
+import { APPOINTMENT_STATUS } from "../constants/constants";
 
 type AppointmentListQuery = {
     status?: string;
@@ -458,6 +459,50 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
             revenueGraph: revenueGraph.map(g => ({ date: g._id, amount: g.amount })),
             nextAppointment
         };
+    }
+    async getStatusCounts(
+        filter: { doctorId?: string; patientId?: string }
+    ): Promise<{ upcoming: number; completed: number; cancelled: number }> {
+        const match: Record<string, unknown> = {};
+        if (filter.doctorId) match.doctorId = new Types.ObjectId(filter.doctorId);
+        if (filter.patientId) match.patientId = new Types.ObjectId(filter.patientId);
+
+        const counts = await this.model.aggregate([
+            { $match: match },
+            {
+                $group: {
+                    _id: null,
+                    upcoming: {
+                        $sum: {
+                            $cond: [{
+                                $in: ["$status", [
+                                    APPOINTMENT_STATUS.PENDING,
+                                    APPOINTMENT_STATUS.CONFIRMED,
+                                    APPOINTMENT_STATUS.RESCHEDULE_REQUESTED
+                                ]]
+                            }, 1, 0]
+                        }
+                    },
+                    completed: {
+                        $sum: {
+                            $cond: [{ $eq: ["$status", APPOINTMENT_STATUS.COMPLETED] }, 1, 0]
+                        }
+                    },
+                    cancelled: {
+                        $sum: {
+                            $cond: [{
+                                $in: ["$status", [
+                                    APPOINTMENT_STATUS.CANCELLED,
+                                    APPOINTMENT_STATUS.REJECTED
+                                ]]
+                            }, 1, 0]
+                        }
+                    }
+                }
+            }
+        ]);
+
+        return counts[0] || { upcoming: 0, completed: 0, cancelled: 0 };
     }
 }
 

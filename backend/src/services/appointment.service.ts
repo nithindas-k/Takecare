@@ -246,6 +246,7 @@ export class AppointmentService implements IAppointmentService {
         page: number;
         limit: number;
         totalPages: number;
+        counts?: { upcoming: number; completed: number; cancelled: number };
     }> {
         const page = filters.page || 1;
         const limit = filters.limit || 10;
@@ -275,12 +276,20 @@ export class AppointmentService implements IAppointmentService {
 
         const result = await this._appointmentRepository.findAll(repoFilters, skip, limit);
 
+        let counts;
+        if (userRole === ROLES.PATIENT) {
+            counts = await this._appointmentRepository.getStatusCounts({ patientId: userId });
+        } else if (userRole === ROLES.DOCTOR && repoFilters.doctorId) {
+            counts = await this._appointmentRepository.getStatusCounts({ doctorId: repoFilters.doctorId.toString() });
+        }
+
         return {
             appointments: result.appointments.map(AppointmentMapper.toResponseDTO),
             total: result.total,
             page,
             limit,
             totalPages: Math.ceil(result.total / limit),
+            counts
         };
     }
 

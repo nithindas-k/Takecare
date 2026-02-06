@@ -121,6 +121,7 @@ const Appointments: React.FC = () => {
     const [error, setError] = useState<string>('');
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState<number | null>(null);
+    const [counts, setCounts] = useState<{ upcoming: number; completed: number; cancelled: number }>({ upcoming: 0, completed: 0, cancelled: 0 });
 
 
     const limit = 12;
@@ -204,6 +205,9 @@ const Appointments: React.FC = () => {
             // append strictly if page > 1, else replace
             setAppointments((prev) => (page === 1 ? nextAppointments : [...prev, ...nextAppointments]));
             setTotal(nextTotal);
+            if (payload.counts) {
+                setCounts(payload.counts);
+            }
             lastFetchedPage.current = page;
         } catch (e: unknown) {
             if (!isMounted) return;
@@ -241,7 +245,7 @@ const Appointments: React.FC = () => {
     const filteredAppointments = normalizedAppointments;
 
     const getTabCount = (status: 'upcoming' | 'cancelled' | 'completed') => {
-        return normalizedAppointments.filter((apt) => apt.tab === status).length;
+        return counts[status] || 0;
     };
 
     const hasMore = total !== null ? normalizedAppointments.length < total : filteredAppointments.length >= limit;

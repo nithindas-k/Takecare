@@ -41,4 +41,7 @@ export interface IAppointmentRepository extends IBaseRepository<IAppointmentDocu
     findOne(filter: Record<string, unknown>, session?: ClientSession | undefined): Promise<IAppointmentDocument | null>;
     getAdminDashboardStats(startDate?: Date, endDate?: Date): Promise<DashboardStats>;
     getDoctorDashboardStats(doctorId: string, startDate?: Date, endDate?: Date): Promise<DoctorDashboardStats>;
+    getStatusCounts(
+        filter: { doctorId?: string; patientId?: string }
+    ): Promise<{ upcoming: number; completed: number; cancelled: number }>;
 }

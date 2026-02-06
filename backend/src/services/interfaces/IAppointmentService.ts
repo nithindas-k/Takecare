@@ -9,6 +9,7 @@ export interface IAppointmentService {
         page: number;
         limit: number;
         totalPages: number;
+        counts?: { upcoming: number; completed: number; cancelled: number };
     }>;
     getPatientHistory(patientId: string, ...args: any[]): Promise<any[]>;
     getAppointmentById(appointmentId: string, userId: string, userRole: string): Promise<any>;
