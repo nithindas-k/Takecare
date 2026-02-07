@@ -1,3 +1,4 @@
+import { Types } from "mongoose";
 import UserModel from "../models/user.model";
 import { IUserDocument } from "../types/user.type";
 import { BaseRepository } from "./base.repository";
@@ -66,5 +67,14 @@ export class UserRepository extends BaseRepository<IUserDocument> implements IUs
 
   async countActivePatients(): Promise<number> {
     return await this.model.countDocuments({ role: ROLES.PATIENT, isActive: true });
+  }
+
+  async findByIdPopulatedFavorites(id: string | Types.ObjectId): Promise<IUserDocument | null> {
+    return await this.model.findById(id).populate({
+      path: 'favorites',
+      populate: {
+        path: 'userId',
+      }
+    });
   }
 }

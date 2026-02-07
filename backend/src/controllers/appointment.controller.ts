@@ -5,7 +5,7 @@ import { sendSuccess } from "../utils/response.util";
 import { AppError } from "../errors/AppError";
 import { MESSAGES, HttpStatus, PAGINATION, ROLES, APPOINTMENT_STATUS } from "../constants/constants";
 
-import { LoggerService } from "../services/logger.service";
+
 
 import { ILoggerService } from "../services/interfaces/ILogger.service";
 
@@ -526,7 +526,7 @@ export class AppointmentController implements IAppointmentController {
             const appointmentId = req.params.id;
             const { notes } = req.body;
 
-            console.log("Controller: updateDoctorNotes", { userId, userRole, appointmentId, notes });
+
 
             if (!userId || userRole !== ROLES.DOCTOR) {
                 throw new AppError(MESSAGES.DOCTOR_ONLY, HttpStatus.FORBIDDEN);

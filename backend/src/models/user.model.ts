@@ -2,7 +2,7 @@
 import mongoose, { Schema, Model } from "mongoose";
 import type { IUserDocument } from "../types/user.type";
 import type { JsonTransformReturnType } from "../types/common";
-import { IDGenerator, IDPrefix } from "../utils/idGenerator.util";
+import { IDGenerator } from "../utils/idGenerator.util";
 import { ROLES, GENDER } from "../constants/constants";
 
 const UserSchema = new Schema<IUserDocument>(
@@ -75,6 +75,7 @@ const UserSchema = new Schema<IUserDocument>(
     toJSON: {
       virtuals: true,
       transform: function (_doc, ret: Record<string, unknown>): JsonTransformReturnType {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { _id, __v, passwordHash, ...cleanedRet } = ret;
         return {
           ...cleanedRet,

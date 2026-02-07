@@ -43,7 +43,7 @@ export class UserController {
         try {
           dto.information = JSON.parse(req.body.information);
         } catch {
-
+          // ignore error
         }
       }
 
@@ -51,7 +51,7 @@ export class UserController {
         try {
           dto.additionalInformation = JSON.parse(req.body.additionalInformation);
         } catch {
-
+          // ignore error
         }
       }
 

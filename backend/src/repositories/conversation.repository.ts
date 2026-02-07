@@ -1,5 +1,5 @@
 import { IConversationRepository } from "./interfaces/IConversationRepository";
-import { Conversation, IConversationDocument } from "../models/conversation.model";
+import { Conversation, IConversationDocument, IConversationPopulated } from "../models/conversation.model";
 import { BaseRepository } from "./base.repository";
 import { Types } from "mongoose";
 
@@ -33,14 +33,14 @@ export class ConversationRepository extends BaseRepository<IConversationDocument
         return conv;
     }
 
-    async findAllForUser(userId: string): Promise<IConversationDocument[]> {
+    async findAllForUser(userId: string): Promise<IConversationPopulated[]> {
         const id = new Types.ObjectId(userId);
         return await this.model.find({
             participants: id
         })
             .populate('lastMessage')
             .sort({ updatedAt: -1 })
-            .exec();
+            .exec() as unknown as IConversationPopulated[];
     }
 
     async updateLastMessage(conversationId: string, messageId: string): Promise<void> {

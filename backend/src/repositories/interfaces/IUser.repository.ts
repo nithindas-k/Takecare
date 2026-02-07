@@ -15,4 +15,5 @@ export interface IUserRepository extends IBaseRepository<IUserDocument> {
   updateById(id: string | Types.ObjectId, update: Partial<IUserDocument>): Promise<IUserDocument | null>;
   getAllPatients(skip: number, limit: number, filter?: { search?: string; isActive?: boolean }): Promise<{ patients: IUserDocument[]; total: number }>;
   countActivePatients(): Promise<number>;
+  findByIdPopulatedFavorites(id: string | Types.ObjectId): Promise<IUserDocument | null>;
 }

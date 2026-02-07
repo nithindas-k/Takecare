@@ -20,7 +20,7 @@ export class DoctorController implements IDoctorController {
         throw new AppError(MESSAGES.UNAUTHORIZED, STATUS.UNAUTHORIZED);
       }
 
-   
+
       const dto: SubmitVerificationDTO = {
         degree: String(req.body.degree || ""),
         experience: Number.parseInt(String(req.body.experience || "0"), 10),
@@ -56,7 +56,7 @@ export class DoctorController implements IDoctorController {
         documents: result.verificationDocuments,
       }, result.message || MESSAGES.VERIFICATION_SUBMITTED, STATUS.OK);
     } catch (error: unknown) {
-      console.error("=== CONTROLLER ERROR ===", error);
+      // console.error("=== CONTROLLER ERROR ===", error);
       return next(error);
     }
   };
@@ -103,8 +103,8 @@ export class DoctorController implements IDoctorController {
         try {
           const info = JSON.parse(req.body.information);
           bodyData = { ...bodyData, ...info };
-        } catch (e) {
-          console.error("Error parsing information:", e);
+        } catch (_e) {
+          // console.error("Error parsing information:", e);
         }
       }
 
@@ -112,8 +112,8 @@ export class DoctorController implements IDoctorController {
         try {
           const additionalInfo = JSON.parse(req.body.additionalInformation);
           bodyData = { ...bodyData, ...additionalInfo };
-        } catch (e) {
-          console.error("Error parsing additionalInformation:", e);
+        } catch (_e) {
+          // console.error("Error parsing additionalInformation:", e);
         }
       }
 
@@ -194,7 +194,7 @@ export class DoctorController implements IDoctorController {
   getDashboardStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = this.getUserIdFromReq(req);
-      console.log("DoctorController.getDashboardStats userId:", userId);
+      // console.log("DoctorController.getDashboardStats userId:", userId);
       if (!userId) {
         throw new AppError(MESSAGES.UNAUTHORIZED, STATUS.UNAUTHORIZED);
       }
@@ -202,7 +202,7 @@ export class DoctorController implements IDoctorController {
       const startDate = req.query.startDate as string;
       const endDate = req.query.endDate as string;
       const stats = await this._doctorService.getDashboardStats(userId, startDate, endDate);
-      console.log("DoctorController.getDashboardStats stats:", stats);
+      // console.log("DoctorController.getDashboardStats stats:", stats);
       sendSuccess(res, stats);
     } catch (error: unknown) {
       return next(error);

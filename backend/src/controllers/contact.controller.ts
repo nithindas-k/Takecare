@@ -33,7 +33,7 @@ export class ContactController {
                 message: 'Thank you for contacting us! We will get back to you soon.'
             });
         } catch (error: unknown) {
-            console.error('Error submitting contact form:', error);
+ 
             const message =
                 error instanceof Error
                     ? error.message
@@ -54,7 +54,7 @@ export class ContactController {
                 data: stats
             });
         } catch (error: unknown) {
-            console.error('Error fetching stats:', error);
+            // console.error('Error fetching stats:', error);
             const message =
                 error instanceof Error
                     ? error.message

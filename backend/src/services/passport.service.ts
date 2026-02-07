@@ -1,5 +1,5 @@
 import passport from "passport";
-import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import { Strategy as GoogleStrategy, Profile } from "passport-google-oauth20";
 import { googleOAuthConfig } from "../configs/googleOAuth.config";
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
@@ -26,8 +26,9 @@ export class PassportService {
           req: Request,
           accessToken: string,
           refreshToken: string,
-          profile: import("passport-google-oauth20").Profile,
-          done: (error: any, user?: any, info?: any) => void
+          profile: Profile,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          done: any
         ) => {
           try {
             const email = profile.emails?.[0]?.value;
@@ -72,7 +73,8 @@ export class PassportService {
               }
             }
 
-            return done(null, user);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return done(null, user as any);
           } catch (error) {
             return done(error as Error);
           }
@@ -80,11 +82,13 @@ export class PassportService {
       )
     );
 
-    passport.serializeUser((user: any, done: (err: any, id?: string) => void) =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    passport.serializeUser((user: any, done: any) =>
       done(null, (user as IUserDocument)._id.toString())
     );
 
-    passport.deserializeUser(async (id: string, done: (err: any, user?: any) => void) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    passport.deserializeUser(async (id: string, done: any) => {
       const user = await this._userRepository.findById(id);
       done(null, user);
     });

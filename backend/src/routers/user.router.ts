@@ -32,7 +32,7 @@ router.put(
     userController.updateProfile
 );
 
-console.log(`Registering toggle favorite route: ${USER_ROUTES.TOGGLE_FAVORITE}`);
+
 router.post(
     USER_ROUTES.TOGGLE_FAVORITE,
     authMiddleware,

@@ -3,7 +3,7 @@ import { IReviewRepository } from "../repositories/interfaces/IReview.repository
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
 import { IReview } from "../models/review.model";
 import { AppError } from "../errors/AppError";
-import { HttpStatus, MESSAGES, NOTIFICATION_TYPES } from "../constants/constants";
+import { HttpStatus, NOTIFICATION_TYPES } from "../constants/constants";
 import { INotificationService } from "./notification.service";
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
 
@@ -28,10 +28,11 @@ export class ReviewService implements IReviewService {
             throw new AppError("You have already reviewed this appointment", HttpStatus.BAD_REQUEST);
         }
 
-        const review = await this._reviewRepository.create(data as any);
+
+        const review = await this._reviewRepository.create(data as unknown as Partial<IReview>);
         await this._updateDoctorStats(data.doctorId);
 
-        // Notify doctor
+
         const doctor = await this._doctorRepository.findById(data.doctorId);
         if (doctor) {
             const patient = await this._userRepository.findById(data.patientId);
@@ -123,7 +124,7 @@ export class ReviewService implements IReviewService {
         await this._doctorRepository.updateById(doctorId, {
             ratingAvg: stats.averageRating,
             ratingCount: stats.reviewCount
-        } as any);
+        });
     }
 
     async respondToReview(reviewId: string, userId: string, response: string): Promise<IReview> {

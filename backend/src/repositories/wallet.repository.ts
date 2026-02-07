@@ -1,6 +1,6 @@
 import WalletModel from "../models/wallet.model";
 import TransactionModel from "../models/transaction.model";
-import { IWalletRepository } from "./interfaces/IWalletRepository";
+import { IWalletRepository, EarningStat } from "./interfaces/IWalletRepository";
 import { IWalletDocument, ITransactionDocument } from "../types/wallet.type";
 import { Types, ClientSession } from "mongoose";
 
@@ -121,7 +121,7 @@ export class WalletRepository implements IWalletRepository {
         return result[0]?.total || 0;
     }
 
-    async getDoctorEarningsStats(): Promise<any[]> {
+    async getDoctorEarningsStats(): Promise<EarningStat[]> {
         return await WalletModel.aggregate([
             {
                 $lookup: {
@@ -162,6 +162,6 @@ export class WalletRepository implements IWalletRepository {
             {
                 $sort: { balance: -1 }
             }
-        ]);
+        ]) as unknown as EarningStat[];
     }
 }

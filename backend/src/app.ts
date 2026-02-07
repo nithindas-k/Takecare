@@ -47,12 +47,12 @@ const corsOptions = {
 
     if (!requestOrigin) return callback(null, true);
 
-    const allowedOrigins = [env.CLIENT_URL,env.CLIENT_URL_1,env.CLIENT_URL_2];
+    const allowedOrigins = [env.CLIENT_URL, env.CLIENT_URL_1, env.CLIENT_URL_2];
 
     if (allowedOrigins.includes(requestOrigin)) {
       return callback(null, true);
     } else {
-      console.log(`[API CORS] Blocked Origin: ${requestOrigin}`);
+      // console.log(`[API CORS] Blocked Origin: ${requestOrigin}`);
       return callback(new Error("Not allowed by CORS"));
     }
   },
@@ -161,14 +161,14 @@ const PORT = Number(env.PORT);
 const httpServer = createServer(app);
 socketService.init(httpServer);
 
-console.log("NEW TEST WORKING1");
+
 const startServer = async () => {
   try {
     await connectDB();
     httpServer.listen(PORT, () => {
       logger.info(`Server running on http://localhost:${PORT}`);
       logger.info(`API Base: http://localhost:${PORT}/api`);
-      console.log("NEW TEST WORKING2");
+
     });
   } catch (error) {
     logger.error("Server startup failed", error);

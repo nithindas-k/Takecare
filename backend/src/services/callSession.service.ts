@@ -19,7 +19,7 @@ export class CallSessionService implements ICallSessionService {
         this._logger.info("Starting call session", { appointmentId, doctorId, patientId });
 
         return await runInTransaction(async (session) => {
-           
+
             const existingCall = await this._callSessionRepository.findActiveByAppointmentId(appointmentId, session);
             if (existingCall) {
                 this._logger.info("Active call already exists", { sessionId: existingCall._id });
@@ -36,10 +36,11 @@ export class CallSessionService implements ICallSessionService {
                 startedAt: new Date(),
                 lastActiveAt: new Date(),
                 reconnectionAttempts: 0,
-            } as any, session);
+
+            }, session);
 
             const rejoinExpiry = new Date();
-            rejoinExpiry.setMinutes(rejoinExpiry.getMinutes() + 5); 
+            rejoinExpiry.setMinutes(rejoinExpiry.getMinutes() + 5);
 
             await this._appointmentRepository.updateById(appointmentId, {
                 activeCall: {
@@ -47,7 +48,7 @@ export class CallSessionService implements ICallSessionService {
                     status: 'ACTIVE',
                     canRejoinUntil: rejoinExpiry,
                 },
-            } as any, session);
+            }, session);
 
             this._logger.info("Call session created", { sessionId: callSession._id });
             return callSession;
@@ -72,7 +73,7 @@ export class CallSessionService implements ICallSessionService {
                     canRejoinUntil: null,
                 },
                 sessionEndTime: new Date(),
-            } as any, session);
+            }, session);
 
             this._logger.info("Call session ended", { sessionId });
         });
@@ -141,12 +142,12 @@ export class CallSessionService implements ICallSessionService {
             return { canRejoin: false, session: null };
         }
 
-       
+
         if (callSession.callStatus === 'ACTIVE' || callSession.callStatus === 'INITIATING') {
             return { canRejoin: true, session: callSession };
         }
 
-       
+
         if (callSession.canRejoinUntil && new Date(callSession.canRejoinUntil) > new Date()) {
             return { canRejoin: true, session: callSession };
         }
@@ -177,7 +178,7 @@ export class CallSessionService implements ICallSessionService {
             await this._callSessionRepository.updateById(callSession._id.toString(), {
                 reconnectionAttempts: 0,
                 canRejoinUntil: null,
-            } as any, session);
+            }, session);
 
             this._logger.info("Successfully rejoined call", { sessionId: callSession._id });
             return updated;

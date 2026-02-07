@@ -161,8 +161,12 @@ export class AuthController implements IAuthController {
     try {
       const dto: ChangePasswordDTO = req.body;
 
-      const user = req.user as any;
-      const userId = user.userId || user.id || user._id;
+      const user = req.user as { userId?: string; id?: string; _id?: string };
+      const userId = user?.userId || user?.id || user?._id;
+
+      if (!userId) {
+        throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
+      }
 
       await this._authService.changePassword({ ...dto, userId });
       sendSuccess(res, undefined, "Password changed successfully", HttpStatus.OK);

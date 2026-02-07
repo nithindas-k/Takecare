@@ -1,10 +1,9 @@
-import { Types } from "mongoose";
 import { IPrescriptionService, CreatePrescriptionData, PrescriptionResponseDTO } from "./interfaces/IPrescriptionService";
 import { IPrescriptionRepository } from "../repositories/interfaces/IPrescription.repository";
 import { IAppointmentRepository } from "../repositories/interfaces/IAppointmentRepository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
-import { IPrescription } from "../types/prescription.type";
-import { PrescriptionMapper } from "../mappers/prescription.mapper";
+
+import { PrescriptionMapper, IPrescriptionPopulated } from "../mappers/prescription.mapper";
 import { AppError } from "../errors/AppError";
 import { HttpStatus, MESSAGES, ROLES, APPOINTMENT_STATUS } from "../constants/constants";
 
@@ -56,7 +55,7 @@ export class PrescriptionService implements IPrescriptionService {
             doctorSignature: data.doctorSignature
         };
 
-        const created = await this._prescriptionRepository.create(prescriptionData);
+        await this._prescriptionRepository.create(prescriptionData);
 
         if (data.prescriptionPdfUrl) {
             await this._appointmentRepository.updateById(appointment._id.toString(), {
@@ -69,7 +68,8 @@ export class PrescriptionService implements IPrescriptionService {
             throw new AppError("Failed to retrieve created prescription", HttpStatus.INTERNAL_ERROR);
         }
 
-        return PrescriptionMapper.toResponseDTO(savedPrescription) as PrescriptionResponseDTO;
+
+        return PrescriptionMapper.toResponseDTO(savedPrescription as unknown as IPrescriptionPopulated) as PrescriptionResponseDTO;
     }
 
     async getPrescriptionByAppointment(userId: string, role: string, appointmentId: string): Promise<PrescriptionResponseDTO> {
@@ -81,23 +81,21 @@ export class PrescriptionService implements IPrescriptionService {
 
         if (role === ROLES.PATIENT) {
 
-            const patientIdStr = (prescription as unknown as PopulatedPrescription).patientId._id.toString();
+
+            const patientIdStr = (prescription as unknown as IPrescriptionPopulated).patientId._id.toString();
             if (patientIdStr !== userId) {
                 throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
             }
         } else if (role === ROLES.DOCTOR) {
             const doctor = await this._doctorRepository.findByUserId(userId);
-            const doctorIdStr = (prescription as unknown as PopulatedPrescription).doctorId._id.toString();
+
+            const doctorIdStr = (prescription as unknown as IPrescriptionPopulated).doctorId._id.toString();
             if (!doctor || doctorIdStr !== doctor._id.toString()) {
                 throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
             }
         }
 
-        return PrescriptionMapper.toResponseDTO(prescription) as PrescriptionResponseDTO;
-    }
-}
 
-interface PopulatedPrescription extends Omit<IPrescription, 'patientId' | 'doctorId'> {
-    patientId: { _id: Types.ObjectId; name: string; email: string;[key: string]: any };
-    doctorId: { _id: Types.ObjectId; userId: { _id: Types.ObjectId; name: string };[key: string]: any };
+        return PrescriptionMapper.toResponseDTO(prescription as unknown as IPrescriptionPopulated) as PrescriptionResponseDTO;
+    }
 }

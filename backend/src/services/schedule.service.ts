@@ -12,10 +12,9 @@ import {
 import { RecurringSlotsDTO, RecurringSlotsResponseDTO } from "../dtos/schedule.dtos/recurringSlots.dto";
 import { ScheduleValidator } from "../validators/schedule.validator";
 import { NotFoundError, AppError } from "../errors/AppError";
-import { LoggerService } from "./logger.service";
 import { MESSAGES, HttpStatus, SCHEDULE_DEFAULTS } from "../constants/constants";
-import { Types } from "mongoose";
-import { DayOfWeek } from "../types/schedule.type";
+
+import { DayOfWeek, IDoctorSchedule, IDoctorScheduleDocument } from "../types/schedule.type";
 import { IDGenerator } from "../utils/idGenerator.util";
 
 import { ILoggerService } from "./interfaces/ILogger.service";
@@ -69,7 +68,7 @@ export class ScheduleService implements IScheduleService {
             ...day,
             slots: day.slots ? day.slots.map(slot => ({
                 ...slot,
-                customId: (slot as any).customId || IDGenerator.generateSlotId()
+                customId: slot.customId || IDGenerator.generateSlotId()
             })) : []
         }));
 
@@ -144,7 +143,7 @@ export class ScheduleService implements IScheduleService {
         ScheduleValidator.validateUpdateSchedule(data);
 
 
-        const updateData: any = {};
+        const updateData: Partial<IDoctorSchedule> = {};
         if (data.weeklySchedule) {
 
             updateData.weeklySchedule = data.weeklySchedule.map(day => ({
@@ -152,7 +151,7 @@ export class ScheduleService implements IScheduleService {
                 ...day,
                 slots: day.slots ? day.slots.map(slot => ({
                     ...slot,
-                    customId: (slot as any).customId || IDGenerator.generateSlotId()
+                    customId: slot.customId || IDGenerator.generateSlotId()
                 })) : []
             }));
         }
@@ -385,7 +384,7 @@ export class ScheduleService implements IScheduleService {
 
             let bookedCount = 0;
             for (const apt of appointmentsForDate) {
-                const aptSlotId = (apt as any).slotId;
+                const aptSlotId = (apt as { slotId?: string }).slotId;
                 let match = false;
 
                 if (slot.customId && aptSlotId && aptSlotId === slot.customId) {
@@ -699,18 +698,18 @@ export class ScheduleService implements IScheduleService {
         return this._mapToResponseDTO(updatedSchedule);
     }
 
-    private _mapToResponseDTO(schedule: any): ScheduleResponseDTO {
+    private _mapToResponseDTO(schedule: IDoctorScheduleDocument): ScheduleResponseDTO {
         return {
-            id: schedule._id?.toString() || schedule.id,
-            doctorId: schedule.doctorId?.toString() || schedule.doctorId,
+            id: schedule._id.toString(),
+            doctorId: schedule.doctorId.toString(),
             weeklySchedule: schedule.weeklySchedule,
             blockedDates: schedule.blockedDates || [],
             defaultSlotDuration: schedule.defaultSlotDuration,
             bufferTime: schedule.bufferTime,
             maxPatientsPerSlot: schedule.maxPatientsPerSlot,
             isActive: schedule.isActive,
-            createdAt: schedule.createdAt,
-            updatedAt: schedule.updatedAt,
+            createdAt: schedule.createdAt!,
+            updatedAt: schedule.updatedAt!,
         };
     }
 

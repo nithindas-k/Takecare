@@ -31,7 +31,7 @@ export const validateSpecialtyCreation = (req: Request, res: Response, next: Nex
     }
 
     next();
-  } catch (error) {
+  } catch (_error) {
     res.status(STATUS.INTERNAL_ERROR).json({
       success: false,
       message: "Validation error occurred"
@@ -78,7 +78,7 @@ export const validateSpecialtyUpdate = (req: Request, res: Response, next: NextF
     }
 
     next();
-  } catch (error) {
+  } catch (_error) {
     res.status(STATUS.INTERNAL_ERROR).json({
       success: false,
       message: "Validation error occurred"

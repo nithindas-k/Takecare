@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
 import { IBaseRepository } from "./IBase.repository";
 import { IDoctorDocument, DoctorRequestItem, DoctorRequestDetail } from "../../types/doctor.type";
-import { VerificationStatus } from "../../dtos/doctor.dtos/doctor.dto";
+
 
 export interface IDoctorRepository extends IBaseRepository<IDoctorDocument> {
 

@@ -73,7 +73,7 @@ export class DoctorMapper {
 
     static toListDTO(doctor: IDoctorDocument, user: IUserDocument) {
         return {
-            id: doctor._id,
+            id: doctor._id.toString(),
             name: user?.name || DOCTOR_PUBLIC_DEFAULTS.NAME,
             image: user?.profileImage || DOCTOR_PUBLIC_DEFAULTS.PROFILE_IMAGE,
             speciality: doctor.specialty || DOCTOR_PUBLIC_DEFAULTS.SPECIALTY,

@@ -1,4 +1,5 @@
-import { Types } from "mongoose";
+import { Types, UpdateQuery } from "mongoose";
+import { IAppointmentDocument, AppointmentStatus } from "../types/appointment.type";
 import { runInTransaction } from "../utils/transaction.util";
 import { IAppointmentService } from "./interfaces/IAppointmentService";
 import { IAppointmentRepository } from "../repositories/interfaces/IAppointmentRepository";
@@ -6,11 +7,14 @@ import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
 import { IScheduleRepository } from "../repositories/interfaces/ISchedule.repository";
 import { AppError } from "../errors/AppError";
-import { LoggerService } from "./logger.service";
+
 import { APPOINTMENT_STATUS, MESSAGES, HttpStatus, PAYMENT_STATUS, PAYMENT_COMMISSION, CANCELLATION_RULES, ROLES, APPOINTMENT_LOCKS, APPOINTMENT_RULES, NOTIFICATION_TYPES } from "../constants/constants";
 import { AppointmentMapper } from "../mappers/appointment.mapper";
 import { IWalletService } from "./interfaces/IWalletService";
+
+import { CreateAppointmentDTO, AppointmentResponseDTO, RescheduleAppointmentDTO } from "../dtos/appointment.dtos/appointment.dto";
 import { IChatService } from "./interfaces/IChatService";
+
 import { INotificationService } from "./notification.service";
 import { socketService } from "./socket.service";
 import { SESSION_STATUS, SessionStatus } from "../utils/sessionStatus.util";
@@ -42,8 +46,8 @@ export class AppointmentService implements IAppointmentService {
 
     async createAppointment(
         patientId: string,
-        appointmentData: any
-    ): Promise<any> {
+        appointmentData: CreateAppointmentDTO
+    ): Promise<AppointmentResponseDTO> {
         this._logger.info("Service: createAppointment attempt", {
             patientId,
             doctorId: appointmentData.doctorId,
@@ -98,7 +102,7 @@ export class AppointmentService implements IAppointmentService {
                         try {
                             pId = typeof patientId === 'string' ? new Types.ObjectId(patientId) : patientId;
                             dId = typeof appointmentData.doctorId === 'string' ? new Types.ObjectId(appointmentData.doctorId) : appointmentData.doctorId;
-                        } catch (err) {
+                        } catch (_err) {
                             this._logger.error("Error converting IDs for search", { patientId, doctorId: appointmentData.doctorId });
                             throw new AppError(MESSAGES.INVALID_ID_FORMAT, HttpStatus.BAD_REQUEST);
                         }
@@ -110,8 +114,8 @@ export class AppointmentService implements IAppointmentService {
                             throw new AppError("Invalid appointment date", HttpStatus.BAD_REQUEST);
                         }
 
-                    
-                        const HOUR_IN_MS = 60 * 60 * 1000;
+
+
                         const startDate = new Date(searchDate);
                         startDate.setHours(startDate.getHours() - APPOINTMENT_LOCKS.DUPLICATE_DETECTION_HOURS);
                         const endDate = new Date(searchDate);
@@ -220,7 +224,7 @@ export class AppointmentService implements IAppointmentService {
                 }
             }
 
-            const appointment = await this._appointmentRepository.create(appointmentToCreate as any, session);
+            const appointment = await this._appointmentRepository.create(appointmentToCreate as unknown as Partial<IAppointmentDocument>, session);
 
             if (this._notificationService) {
                 await this._notificationService.notify(doctor.userId.toString(), {
@@ -241,7 +245,7 @@ export class AppointmentService implements IAppointmentService {
         userRole: string,
         filters: import("../dtos/admin.dtos/admin.dto").AppointmentFilterDTO
     ): Promise<{
-        appointments: any[];
+        appointments: AppointmentResponseDTO[];
         total: number;
         page: number;
         limit: number;
@@ -252,7 +256,7 @@ export class AppointmentService implements IAppointmentService {
         const limit = filters.limit || 10;
         const skip = (page - 1) * limit;
 
-        const repoFilters: any = {
+        const repoFilters: Record<string, unknown> = {
             status: filters.status,
             search: filters.search,
             startDate: filters.startDate ? new Date(filters.startDate) : undefined,
@@ -293,7 +297,8 @@ export class AppointmentService implements IAppointmentService {
         };
     }
 
-    async getPatientHistory(patientId: string, ...args: any[]): Promise<any[]> {
+
+    async getPatientHistory(patientId: string): Promise<AppointmentResponseDTO[]> {
         const result = await this.listAppointments(patientId, ROLES.PATIENT, {
             page: 1,
             limit: 1000,
@@ -305,25 +310,27 @@ export class AppointmentService implements IAppointmentService {
         appointmentId: string,
         userId: string,
         userRole: string
-    ): Promise<any> {
+    ): Promise<AppointmentResponseDTO> {
         const appointment = await this._appointmentRepository.findByIdPopulated(appointmentId);
 
         if (!appointment) {
             throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
         }
 
-        const getIdString = (value: any): string | null => {
+        const getIdString = (value: unknown): string | null => {
             if (!value) return null;
             if (typeof value === "string") return value;
-            if (typeof value === "object") {
-                if (value._id) return value._id.toString();
-                if (value.id) return value.id.toString();
+            if (value instanceof Types.ObjectId) return value.toString();
+            if (typeof value === "object" && value !== null) {
+                const v = value as { _id?: unknown, id?: unknown };
+                if (v._id) return String(v._id);
+                if (v.id) return String(v.id);
             }
             return null;
         };
 
-        const appointmentPatientId = getIdString((appointment as any).patientId || (appointment as any).patient);
-        const appointmentDoctorId = getIdString((appointment as any).doctorId || (appointment as any).doctor);
+        const appointmentPatientId = getIdString(appointment.patientId);
+        const appointmentDoctorId = getIdString(appointment.doctorId);
 
         const isPatient = appointmentPatientId === userId;
         let isDoctor = false;
@@ -337,6 +344,7 @@ export class AppointmentService implements IAppointmentService {
             throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
         }
 
+
         return AppointmentMapper.toResponseDTO(appointment);
     }
 
@@ -345,7 +353,7 @@ export class AppointmentService implements IAppointmentService {
         userId: string,
         userRole: string,
         cancellationReason: string
-    ): Promise<any> {
+    ): Promise<AppointmentResponseDTO> {
         this._logger.info("cancelAppointment started", { appointmentId, userId, userRole });
 
         return runInTransaction(async (session) => {
@@ -365,12 +373,14 @@ export class AppointmentService implements IAppointmentService {
                 throw new AppError("Cannot cancel an appointment that has already been rejected", HttpStatus.BAD_REQUEST);
             }
 
-            const getIdString = (value: any): string | null => {
+            const getIdString = (value: unknown): string | null => {
                 if (!value) return null;
                 if (typeof value === "string") return value;
-                if (typeof value === "object") {
-                    if (value._id) return value._id.toString();
-                    if (value.id) return value.id.toString();
+                if (value instanceof Types.ObjectId) return value.toString();
+                if (typeof value === "object" && value !== null) {
+                    const v = value as { _id?: unknown, id?: unknown };
+                    if (v._id) return String(v._id);
+                    if (v.id) return String(v.id);
                 }
                 return null;
             };
@@ -483,7 +493,12 @@ export class AppointmentService implements IAppointmentService {
                 }
             }
 
-            return updatedAppointment;
+            if (!updatedAppointment) {
+                throw new AppError("Failed to update appointment", HttpStatus.INTERNAL_ERROR);
+            }
+
+            const populatedAppointment = await this._appointmentRepository.findByIdPopulated(appointmentId, session);
+            return AppointmentMapper.toResponseDTO(populatedAppointment);
         });
     }
 
@@ -491,12 +506,8 @@ export class AppointmentService implements IAppointmentService {
         appointmentId: string,
         userId: string,
         userRole: string,
-        rescheduleData: {
-            appointmentDate: Date | string,
-            appointmentTime: string,
-            slotId?: string
-        }
-    ): Promise<any> {
+        rescheduleData: RescheduleAppointmentDTO
+    ): Promise<AppointmentResponseDTO> {
         this._logger.info("rescheduleAppointment started", { appointmentId, userId, userRole });
 
         return runInTransaction(async (session) => {
@@ -521,8 +532,8 @@ export class AppointmentService implements IAppointmentService {
                 throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
             }
 
-            const allowedStatuses = [APPOINTMENT_STATUS.PENDING, APPOINTMENT_STATUS.CONFIRMED, APPOINTMENT_STATUS.UPCOMING, APPOINTMENT_STATUS.RESCHEDULE_REQUESTED];
-            if (!allowedStatuses.includes(appointment.status as any)) {
+            const allowedStatuses: AppointmentStatus[] = [APPOINTMENT_STATUS.PENDING, APPOINTMENT_STATUS.CONFIRMED, APPOINTMENT_STATUS.UPCOMING, APPOINTMENT_STATUS.RESCHEDULE_REQUESTED];
+            if (!allowedStatuses.includes(appointment.status)) {
                 throw new AppError(MESSAGES.APPOINTMENT_CANNOT_MODIFY, HttpStatus.BAD_REQUEST);
             }
 
@@ -567,7 +578,7 @@ export class AppointmentService implements IAppointmentService {
                     );
                 }
 
-                const updatedAppointment = await this._appointmentRepository.updateById(appointmentId, {
+                await this._appointmentRepository.updateById(appointmentId, {
                     status: APPOINTMENT_STATUS.RESCHEDULE_REQUESTED,
                     rescheduleRequest: {
                         appointmentDate: new Date(rescheduleData.appointmentDate),
@@ -618,7 +629,7 @@ export class AppointmentService implements IAppointmentService {
                     }
                 }
 
-                const updatedAppointment = await this._appointmentRepository.updateById(appointmentId, {
+                await this._appointmentRepository.updateById(appointmentId, {
                     appointmentDate: new Date(rescheduleData.appointmentDate),
                     appointmentTime: rescheduleData.appointmentTime,
                     slotId: rescheduleData.slotId || null,
@@ -838,12 +849,15 @@ export class AppointmentService implements IAppointmentService {
 
             if (appointment.slotId) {
                 const startTime = parseAppointmentTime(appointment.appointmentTime);
-                const getIdString = (value: any): string | null => {
+
+                const getIdString = (value: unknown): string | null => {
                     if (!value) return null;
                     if (typeof value === "string") return value;
+                    if (value instanceof Types.ObjectId) return value.toString();
                     if (typeof value === "object") {
-                        if (value._id) return value._id.toString();
-                        if (value.id) return value.id.toString();
+                        const v = value as { _id?: unknown; id?: unknown };
+                        if (v._id) return String(v._id);
+                        if (v.id && typeof v.id === 'string') return v.id;
                     }
                     return null;
                 };
@@ -891,7 +905,7 @@ export class AppointmentService implements IAppointmentService {
             throw new AppError(MESSAGES.APPOINTMENT_NOT_CONFIRMED, HttpStatus.BAD_REQUEST);
         }
 
-        const updateData: any = {
+        const updateData: UpdateQuery<IAppointmentDocument> = {
             status: APPOINTMENT_STATUS.COMPLETED,
             prescriptionUrl: prescriptionUrl || null,
             sessionEndTime: new Date(),
@@ -974,7 +988,7 @@ export class AppointmentService implements IAppointmentService {
             throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
         }
 
-        const updateData: any = {
+        const updateData: UpdateQuery<IAppointmentDocument> = {
             sessionStatus: status
         };
 
@@ -1003,9 +1017,16 @@ export class AppointmentService implements IAppointmentService {
 
         await this._appointmentRepository.updateById(appointmentId, updateData);
 
-        const populatedApt = await this._appointmentRepository.findByIdPopulated(appointmentId);
-        const pUserId = (populatedApt?.patientId as any)?._id?.toString() || (populatedApt?.patientId as any)?.toString();
-        const dUserId = (populatedApt?.doctorId as any)?.userId?._id?.toString() || (populatedApt?.doctorId as any)?.userId?.toString();
+        // Fetch populated data for socket emission
+        const populatedAppointment = await this._appointmentRepository.findByIdPopulated(appointmentId);
+
+        const patientIdStr = populatedAppointment && populatedAppointment.patientId && typeof populatedAppointment.patientId === 'object' && '_id' in populatedAppointment.patientId
+            ? populatedAppointment.patientId._id.toString()
+            : null;
+
+        const doctorUserIdStr = populatedAppointment && populatedAppointment.doctorId && typeof populatedAppointment.doctorId === 'object' && 'userId' in populatedAppointment.doctorId && populatedAppointment.doctorId.userId
+            ? (populatedAppointment.doctorId.userId._id ? populatedAppointment.doctorId.userId._id.toString() : populatedAppointment.doctorId.userId.toString())
+            : null;
 
         const statusData = {
             appointmentId,
@@ -1013,16 +1034,14 @@ export class AppointmentService implements IAppointmentService {
             extensionCount: updateData.extensionCount || appointment.extensionCount
         };
 
-        if (pUserId) socketService.emitToUser(pUserId, "session-status-updated", statusData);
-        if (dUserId) socketService.emitToUser(dUserId, "session-status-updated", statusData);
-
+        if (patientIdStr) socketService.emitToUser(patientIdStr, "session-status-updated", statusData);
+        if (doctorUserIdStr) socketService.emitToUser(doctorUserIdStr, "session-status-updated", statusData);
         socketService.emitToRoom(appointmentId, "session-status-updated", statusData);
-
 
         if (updateData.sessionStatus === SESSION_STATUS.ENDED) {
             const endData = { appointmentId };
-            if (pUserId) socketService.emitToUser(pUserId, "session-ended", endData);
-            if (dUserId) socketService.emitToUser(dUserId, "session-ended", endData);
+            if (patientIdStr) socketService.emitToUser(patientIdStr, "session-ended", endData);
+            if (doctorUserIdStr) socketService.emitToUser(doctorUserIdStr, "session-ended", endData);
             socketService.emitToRoom(appointmentId, "session-ended", endData);
         }
     }
@@ -1034,7 +1053,10 @@ export class AppointmentService implements IAppointmentService {
         }
 
         const doctorId = await this._requireDoctorIdByUserId(doctorUserId);
-        const apptDoctorId = (appointment.doctorId as any)?._id?.toString() || (appointment.doctorId as any)?.toString();
+        const apptDoctorId = appointment.doctorId && typeof appointment.doctorId === 'object' && '_id' in appointment.doctorId
+            ? appointment.doctorId._id.toString()
+            : null;
+        if (!apptDoctorId) throw new AppError(MESSAGES.DOCTOR_NOT_FOUND, HttpStatus.NOT_FOUND);
 
         if (apptDoctorId !== doctorId) {
             throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
@@ -1057,7 +1079,11 @@ export class AppointmentService implements IAppointmentService {
         });
 
         if (this._chatService) {
-            const patient = await this._userRepository.findById((appointment.patientId as any)?._id?.toString() || (appointment.patientId as any)?.toString());
+            const patientId = appointment.patientId && typeof appointment.patientId === 'object' && '_id' in appointment.patientId
+                ? appointment.patientId._id.toString()
+                : null;
+
+            const patient = patientId ? await this._userRepository.findById(patientId) : null;
             const patientName = patient?.name || 'Patient';
             const messageContent = `Hello ${patientName}, you have 24 hours to proceed with your test results. The chat is now open for you.`;
 
@@ -1076,14 +1102,18 @@ export class AppointmentService implements IAppointmentService {
             }
         };
 
-        const patientData = appointment.patientId as any;
-        const doctorData = appointment.doctorId as any;
-        const pUserId = patientData?.userId?._id?.toString() || patientData?.userId?.toString() || patientData?._id?.toString() || patientData?.toString();
-        const dUserId = doctorData?.userId?._id?.toString() || doctorData?.userId?.toString() || doctorData?._id?.toString() || doctorData?.toString();
 
-        socketService.emitToRoom(appointmentId, "session-status-updated", statusUpdate);
-        if (pUserId) socketService.emitToUser(pUserId, "session-status-updated", statusUpdate);
-        if (dUserId) socketService.emitToUser(dUserId, "session-status-updated", statusUpdate);
+
+        const patientIdStr = appointment.patientId && typeof appointment.patientId === 'object' && '_id' in appointment.patientId
+            ? appointment.patientId._id.toString()
+            : null;
+
+        const doctorUserIdStr = appointment.doctorId && typeof appointment.doctorId === 'object' && 'userId' in appointment.doctorId && appointment.doctorId.userId
+            ? (appointment.doctorId.userId._id ? appointment.doctorId.userId._id.toString() : appointment.doctorId.userId.toString())
+            : null;
+
+        if (patientIdStr) socketService.emitToUser(patientIdStr, "session-status-updated", statusUpdate);
+        if (doctorUserIdStr) socketService.emitToUser(doctorUserIdStr, "session-status-updated", statusUpdate);
     }
 
     async disablePostConsultationChat(appointmentId: string, doctorUserId: string): Promise<void> {
@@ -1093,7 +1123,9 @@ export class AppointmentService implements IAppointmentService {
         }
 
         const doctorId = await this._requireDoctorIdByUserId(doctorUserId);
-        const apptDoctorId = (appointment.doctorId as any)?._id?.toString() || (appointment.doctorId as any)?.toString();
+        const apptDoctorId = appointment.doctorId && typeof appointment.doctorId === 'object' && '_id' in appointment.doctorId
+            ? appointment.doctorId._id.toString()
+            : null;
 
         if (apptDoctorId !== doctorId) {
             throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
@@ -1109,7 +1141,7 @@ export class AppointmentService implements IAppointmentService {
         });
 
         if (this._chatService) {
-            const messageContent = `The doctor has concluded the follow-up chat session.`;
+            const messageContent = 'The doctor has concluded the follow-up chat session.';
             await this._chatService.sendSystemMessage(appointmentId, messageContent);
         }
 
@@ -1123,19 +1155,22 @@ export class AppointmentService implements IAppointmentService {
             }
         };
 
-        const patientData = appointment.patientId as any;
-        const doctorData = appointment.doctorId as any;
-        const pUserId = patientData?.userId?._id?.toString() || patientData?.userId?.toString() || patientData?._id?.toString() || patientData?.toString();
-        const dUserId = doctorData?.userId?._id?.toString() || doctorData?.userId?.toString() || doctorData?._id?.toString() || doctorData?.toString();
+        const patientIdStr = appointment.patientId && typeof appointment.patientId === 'object' && '_id' in appointment.patientId
+            ? appointment.patientId._id.toString()
+            : null;
+
+        const doctorUserIdStr = appointment.doctorId && typeof appointment.doctorId === 'object' && 'userId' in appointment.doctorId && appointment.doctorId.userId
+            ? (appointment.doctorId.userId._id ? appointment.doctorId.userId._id.toString() : appointment.doctorId.userId.toString())
+            : null;
 
         socketService.emitToRoom(appointmentId, "session-status-updated", statusUpdate);
-        if (pUserId) socketService.emitToUser(pUserId, "session-status-updated", statusUpdate);
-        if (dUserId) socketService.emitToUser(dUserId, "session-status-updated", statusUpdate);
+        if (patientIdStr) socketService.emitToUser(patientIdStr, "session-status-updated", statusUpdate);
+        if (doctorUserIdStr) socketService.emitToUser(doctorUserIdStr, "session-status-updated", statusUpdate);
 
         socketService.emitToRoom(appointmentId, "session-ended", { appointmentId });
     }
 
-    async updateDoctorNotes(appointmentId: string, doctorUserId: string, note: any): Promise<void> {
+    async updateDoctorNotes(appointmentId: string, doctorUserId: string, note: string): Promise<void> {
         this._logger.info("Updating doctor notes", { appointmentId, doctorUserId, note });
 
         const appointment = await this._appointmentRepository.findById(appointmentId);
@@ -1150,6 +1185,6 @@ export class AppointmentService implements IAppointmentService {
 
         await this._appointmentRepository.updateById(appointmentId, {
             $push: { doctorNotes: note }
-        } as any);
+        });
     }
 }

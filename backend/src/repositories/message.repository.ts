@@ -14,7 +14,7 @@ export class MessageRepository extends BaseRepository<IMessage> implements IMess
 
     async findByConversationId(conversationId: string, legacyAppointmentIds?: string[]): Promise<IMessage[]> {
         const conversationObjectId = new Types.ObjectId(conversationId);
-        let query: any = { conversationId: conversationObjectId };
+        let query: Record<string, unknown> = { conversationId: conversationObjectId };
 
         if (legacyAppointmentIds && legacyAppointmentIds.length > 0) {
             const legacyObjectIds = legacyAppointmentIds.map(id => new Types.ObjectId(id));

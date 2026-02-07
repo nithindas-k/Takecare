@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { ERROR_CODES, HttpStatus, MESSAGES } from "../constants/constants";
+import { HttpStatus, MESSAGES } from "../constants/constants";
 import { LoggerService } from "../services/logger.service";
 
 const logger = new LoggerService("CheckUserBlocked");
@@ -10,7 +10,7 @@ export const checkUserBlocked = async (
     next: NextFunction
 ): Promise<void> => {
     try {
-      
+
         const userId = req.user?.userId;
         const userRole = req.user?.role;
 
@@ -23,7 +23,7 @@ export const checkUserBlocked = async (
         }
 
 
-        
+
         next();
     } catch (error) {
         logger.error("Check user blocked error", error);

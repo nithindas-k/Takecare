@@ -1,19 +1,23 @@
-import cron from "node-cron";
+import cron, { ScheduledTask } from "node-cron";
 import { IAppointmentRepository } from "../repositories/interfaces/IAppointmentRepository";
 import { IScheduleRepository } from "../repositories/interfaces/ISchedule.repository";
 import { NotificationService } from "./notification.service";
 import { socketService } from "./socket.service";
 import { ILoggerService } from "./interfaces/ILogger.service";
-import { APPOINTMENT_STATUS, PAYMENT_STATUS, NOTIFICATION_TYPES } from "../constants/constants";
+import { APPOINTMENT_STATUS, NOTIFICATION_TYPES } from "../constants/constants";
 import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import { differenceInMinutes, startOfDay, endOfDay } from "date-fns";
 import { parseAppointmentTime } from "../utils/time.util";
+import { IAppointmentPopulated } from "../types/appointment.type";
+import { IUserDocument } from "../types/user.type";
 
 export class AppointmentReminderService {
     private _appointmentRepository: IAppointmentRepository;
     private _scheduleRepository: IScheduleRepository;
     private _notificationService: NotificationService;
-    private _cronJob: any = null;
+
+
+    private _cronJob: ScheduledTask | null = null;
     private readonly _timezone = "Asia/Kolkata";
 
     constructor(
@@ -50,11 +54,11 @@ export class AppointmentReminderService {
         try {
             const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
 
-            const pendingAppointments = await this._appointmentRepository.find({
+            const { appointments: pendingAppointments } = await this._appointmentRepository.findAll({
                 status: APPOINTMENT_STATUS.PENDING,
-                paymentStatus: PAYMENT_STATUS.PENDING,
-                createdAt: { $lt: fiveMinutesAgo }
-            });
+                startDate: undefined,
+                endDate: fiveMinutesAgo
+            }, 0, 1000);
 
             if (pendingAppointments.length > 0) {
                 this._logger.info(`Found ${pendingAppointments.length} abandoned pending appointments causing slot blockage. Cleaning up...`);
@@ -65,7 +69,7 @@ export class AppointmentReminderService {
                     if (appt.slotId && appt.doctorId) {
                         const startTime = parseAppointmentTime(appt.appointmentTime);
                         await this._scheduleRepository.updateSlotBookedStatus(
-                            appt.doctorId.toString(),
+                            appt.doctorId?._id?.toString() || appt.doctorId?.toString() || '',
                             appt.slotId,
                             false,
                             new Date(appt.appointmentDate),
@@ -104,7 +108,7 @@ export class AppointmentReminderService {
                     { reminderSent: { $ne: true } },
                     { startNotificationSent: { $ne: true } }
                 ]
-            }, "doctorId");
+            }, "doctorId") as unknown as IAppointmentPopulated[];
 
             this._logger.debug(`Found ${appointments.length} confirmed appointments for today to check in ${this._timezone}.`);
 
@@ -115,10 +119,10 @@ export class AppointmentReminderService {
                 const startTimeStr = timeParts[0].trim();
                 const [hours, minutes] = startTimeStr.split(":").map(Number);
 
-                
+
                 const appDateInIST = toZonedTime(new Date(appointment.appointmentDate), this._timezone);
 
-                
+
                 const appStartInIST = new Date(
                     appDateInIST.getFullYear(),
                     appDateInIST.getMonth(),
@@ -129,7 +133,7 @@ export class AppointmentReminderService {
                     0
                 );
 
-                
+
                 const minutesDiff = differenceInMinutes(appStartInIST, nowInIST);
 
                 this._logger.debug(`Checking appointment ${appointment.customId}:`, {
@@ -138,7 +142,7 @@ export class AppointmentReminderService {
                     minutesUntilStart: minutesDiff
                 });
 
-                
+
                 if (minutesDiff > 4 && minutesDiff <= 6 && !appointment.reminderSent) {
                     await this._sendNotification(appointment, NOTIFICATION_TYPES.WARNING, {
                         title: "Appointment Starting Soon!",
@@ -147,9 +151,9 @@ export class AppointmentReminderService {
                     await this._appointmentRepository.updateById(appointment._id.toString(), { reminderSent: true });
 
 
-                    const doctorDoc = appointment.doctorId as any;
-                    const doctorUserId = doctorDoc?.userId?.toString();
-                    const patientId = appointment.patientId.toString();
+                    const doctorDoc = appointment.doctorId;
+                    const doctorUserId = doctorDoc?.userId ? (typeof doctorDoc.userId === 'object' ? (doctorDoc.userId as IUserDocument)._id?.toString() || doctorDoc.userId.toString() : String(doctorDoc.userId)) : undefined;
+                    const patientId = (typeof appointment.patientId === 'object' && appointment.patientId !== null ? appointment.patientId._id.toString() : String(appointment.patientId || '')) || '';
 
                     const reminderPayload = {
                         appointmentId: appointment._id.toString(),
@@ -168,7 +172,7 @@ export class AppointmentReminderService {
                     this._logger.info(`5-minute reminder modal triggered via socket for appointment ${appointment.customId}`);
                 }
 
-                
+
                 if (minutesDiff <= 0 && minutesDiff >= -2 && !appointment.startNotificationSent) {
                     await this._sendNotification(appointment, NOTIFICATION_TYPES.SUCCESS, {
                         title: "Consultation Ready!",
@@ -177,10 +181,10 @@ export class AppointmentReminderService {
                     });
                     await this._appointmentRepository.updateById(appointment._id.toString(), { startNotificationSent: true });
 
-                    
-                    const doctorDoc = appointment.doctorId as any;
-                    const doctorUserId = doctorDoc?.userId?.toString();
-                    const patientId = appointment.patientId.toString();
+
+                    const doctorDoc = appointment.doctorId;
+                    const doctorUserId = doctorDoc?.userId ? (typeof doctorDoc.userId === 'object' ? (doctorDoc.userId as IUserDocument)._id?.toString() || doctorDoc.userId.toString() : String(doctorDoc.userId)) : undefined;
+                    const patientId = (typeof appointment.patientId === 'object' && appointment.patientId !== null ? appointment.patientId._id.toString() : String(appointment.patientId || '')) || '';
 
                     const readyPayload = {
                         appointmentId: appointment._id.toString(),
@@ -205,17 +209,17 @@ export class AppointmentReminderService {
         }
     }
 
-    private async _sendNotification(appointment: any, type: "warning" | "success" | "info" | "error", data: any) {
+    private async _sendNotification(appointment: IAppointmentPopulated, type: "warning" | "success" | "info" | "error", data: { title: string; message: string; type?: string }) {
         const reminderData = {
             ...data,
             appointmentId: appointment._id.toString(),
             customId: appointment.customId,
-            type: data.type || type
+            type: (data.type || type) as "warning" | "success" | "info" | "error"
         };
 
-        const doctorDoc = appointment.doctorId as any;
-        const doctorUserId = doctorDoc?.userId?.toString();
-        const patientId = appointment.patientId.toString();
+        const doctorDoc = appointment.doctorId;
+        const doctorUserId = doctorDoc?.userId ? (typeof doctorDoc.userId === 'object' ? (doctorDoc.userId as IUserDocument)._id?.toString() || doctorDoc.userId.toString() : String(doctorDoc.userId)) : undefined;
+        const patientId = (typeof appointment.patientId === 'object' && appointment.patientId !== null ? appointment.patientId._id.toString() : String(appointment.patientId || '')) || '';
 
         if (doctorUserId) {
 

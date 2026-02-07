@@ -68,7 +68,7 @@ export class CallSessionRepository extends BaseRepository<ICallSession> implemen
         status: 'INITIATING' | 'ACTIVE' | 'RECONNECTING' | 'ENDED',
         session?: ClientSession
     ): Promise<ICallSession | null> {
-        const update: any = {
+        const update: Record<string, unknown> = {
             callStatus: status,
             lastActiveAt: new Date()
         };

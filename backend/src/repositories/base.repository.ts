@@ -1,4 +1,4 @@
-import { Document, Model, Types, ClientSession } from "mongoose";
+import { Document, Model, Types, ClientSession, UpdateQuery } from "mongoose";
 import { IBaseRepository } from "./interfaces/IBase.repository";
 
 export class BaseRepository<T extends Document> implements IBaseRepository<T> {
@@ -19,7 +19,7 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
 
   async updateById(
     id: string | Types.ObjectId,
-    update: Partial<T>,
+    update: UpdateQuery<T>,
     session?: ClientSession | undefined
   ): Promise<T | null> {
     return await this.model.findByIdAndUpdate(id, update, { new: true, session: session || undefined }).exec();

@@ -1,13 +1,12 @@
 import type {
   LoginAdminDTO,
-  AdminResponseDTO,
   AuthResponseDTO as AdminAuthResponseDTO,
   DoctorRequestDTO,
   DoctorRequestDetailDTO,
   UserFilterDTO,
   DoctorFilterDTO,
 } from "../../dtos/admin.dtos/admin.dto";
-import type { Address, PatientListItem, DoctorListItem, UserListItem } from "../../types/common";
+import type { PatientListItem, DoctorListItem, UserListItem } from "../../types/common";
 import type { DashboardStats } from "../../types/appointment.type";
 
 export interface IAdminService {
@@ -25,5 +24,5 @@ export interface IAdminService {
   getAllPatients(filters: UserFilterDTO): Promise<{ patients: PatientListItem[]; total: number; page: number; limit: number; totalPages: number }>;
   getPatientById(patientId: string): Promise<PatientListItem | null>;
   getDashboardStats(startDate?: string, endDate?: string): Promise<DashboardStats>;
-  getReportData(startDate?: string, endDate?: string): Promise<any>;
+  getReportData(startDate?: string, endDate?: string): Promise<unknown>;
 }

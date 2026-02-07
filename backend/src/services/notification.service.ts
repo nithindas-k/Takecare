@@ -2,10 +2,7 @@ import { INotificationRepository } from "../repositories/interfaces/INotificatio
 import { socketService } from "./socket.service";
 import { NotificationType } from "../constants/constants";
 
-import { Document } from "mongoose";
-import { INotification } from "../types/notification.type";
 
-import { INotificationDocument } from "../models/notification.model";
 
 export interface NotificationData {
     title: string;
@@ -14,9 +11,11 @@ export interface NotificationData {
     appointmentId?: string;
 }
 
+import { INotificationDocument } from "../models/notification.model";
+
 export interface INotificationService {
     notify(userId: string, data: NotificationData): Promise<void>;
-    getNotifications(userId: string): Promise<any[]>;
+    getNotifications(userId: string): Promise<INotificationDocument[]>;
     markAsRead(id: string): Promise<void>;
     markAllAsRead(userId: string): Promise<void>;
     clearAll(userId: string): Promise<void>;
@@ -37,7 +36,7 @@ export class NotificationService implements INotificationService {
         socketService.notify(userId, notificationObj);
     }
 
-    async getNotifications(userId: string) {
+    async getNotifications(userId: string): Promise<INotificationDocument[]> {
         return await this._notificationRepository.findByUserId(userId);
     }
 

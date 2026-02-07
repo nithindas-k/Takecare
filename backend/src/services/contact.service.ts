@@ -1,6 +1,7 @@
 import { ILoggerService } from './interfaces/ILogger.service';
 import { IContactRepository } from '../repositories/interfaces/IContact.repository';
 import { IDoctorRepository } from '../repositories/interfaces/IDoctor.repository';
+import { IDoctorDocument } from '../types/doctor.type';
 import { IUserRepository } from '../repositories/interfaces/IUser.repository';
 import { IAppointmentRepository } from '../repositories/interfaces/IAppointmentRepository';
 import { IContactService } from './interfaces/IContactService';
@@ -17,7 +18,8 @@ export class ContactService implements IContactService {
         private _emailService: IEmailService
     ) { }
 
-    async createContactSubmission(data: any) {
+
+    async createContactSubmission(data: { name: string; email: string; phone: string; subject: string; message: string }) {
         const contact = await this._contactRepository.create({
             name: data.name,
             email: data.email,
@@ -58,7 +60,7 @@ export class ContactService implements IContactService {
             });
 
             const avgExperience = doctors.length > 0
-                ? Math.round(doctors.reduce((sum: number, doc: any) => sum + (doc.experienceYears || 0), 0) / doctors.length)
+                ? Math.round(doctors.reduce((sum: number, doc: IDoctorDocument) => sum + (doc.experienceYears || 0), 0) / doctors.length)
                 : 0;
 
             return {
@@ -98,7 +100,7 @@ export class ContactService implements IContactService {
             );
 
 
-            return await this._contactRepository.updateById(contactId, { status: 'responded' as any });
+            return await this._contactRepository.updateById(contactId, { status: 'responded' });
         } catch (error) {
             this._logger.error('Error replying to contact:', error);
             throw error;

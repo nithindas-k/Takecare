@@ -1,4 +1,5 @@
 import { IMessage } from "../../models/message.model";
+import { PatientListItem, DoctorListItem } from "../../types/common";
 
 
 export interface ConversationItem {
@@ -8,12 +9,12 @@ export interface ConversationItem {
     customId: string;
     appointmentType: string;
     status: string;
-    patient: any;
-    doctor: any;
+    patient: Partial<PatientListItem>;
+    doctor: Partial<DoctorListItem>;
     lastMessage: {
         content: string;
         createdAt: Date;
-        type: string;
+        type: 'text' | 'image' | 'file' | 'system';
     } | null;
     unreadCount: number;
     isOnline: boolean;
@@ -45,9 +46,9 @@ export interface IChatService {
 
     getConversations(userId: string, userRole: string): Promise<ConversationItem[]>;
 
-    getConversation(id: string): Promise<any>;
+    getConversation(id: string): Promise<ConversationItem>;
 
-    getConversationByDoctorId(patientId: string, doctorId: string): Promise<any>;
+    getConversationByDoctorId(patientId: string, doctorId: string): Promise<ConversationItem>;
 
     editMessage(messageId: string, content: string, userId: string): Promise<IMessage>;
 

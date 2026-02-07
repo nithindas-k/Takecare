@@ -10,6 +10,7 @@ export type AppointmentStatus =
     | "completed"
     | "rejected"
     | "cancelled"
+    | "upcoming"
     | "reschedule_requested";
 
 export type PaymentStatus = "pending" | "paid" | "refunded" | "failed";

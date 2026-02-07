@@ -108,25 +108,30 @@ export class AuthService implements IAuthService {
 
   async forgotPassword(data: ForgotPasswordDTO & { role: "patient" | "doctor" | "admin" }): Promise<void> {
     const normalizedEmail = data.email.toLowerCase().trim();
-    console.log(`[ForgotPassword] Request for: ${normalizedEmail}, role: ${data.role}`);
+  
+    this._logger.info(`[ForgotPassword] Request for: ${normalizedEmail}, role: ${data.role}`);
 
     const user = await this._userRepository.findByEmailIncludingInactive(normalizedEmail);
 
     if (!user) {
-      console.log(`[ForgotPassword] User not found (including inactive): ${normalizedEmail}`);
+     
+      this._logger.warn(`[ForgotPassword] User not found (including inactive): ${normalizedEmail}`);
       throw new NotFoundError(MESSAGES.NO_ACCOUNT_FOUND);
     }
 
-    console.log(`[ForgotPassword] Found user: ${user.email}, role: ${user.role}, active: ${user.isActive}`);
+    
+    this._logger.info(`[ForgotPassword] Found user: ${user.email}, role: ${user.role}, active: ${user.isActive}`);
 
     if (!user.isActive) {
-      console.log(`[ForgotPassword] User is not active.`);
+      
+      this._logger.warn(`[ForgotPassword] User is not active.`);
       throw new ForbiddenError(MESSAGES.USER_NOT_ACTIVE);
     }
 
     if (data.role && user.role !== data.role) {
-      console.log(`[ForgotPassword] Role mismatch. Expected: ${data.role}, Actual: ${user.role}`);
-      // For debugging clarity, throw a distinct error if in dev, but same error for production for security
+      
+      this._logger.warn(`[ForgotPassword] Role mismatch. Expected: ${data.role}, Actual: ${user.role}`);
+      
       if (process.env.NODE_ENV !== "production") {
 
         throw new NotFoundError(`Account found but it is a ${user.role} account, not ${data.role}.`);

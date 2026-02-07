@@ -1,6 +1,6 @@
 import { ISpecialtyRepository } from "./interfaces/ISpecialtyRepository";
 import { Specialty, CreateSpecialtyDTO, UpdateSpecialtyDTO } from "../types/specialty.type";
-import SpecialtyModel, { ISpecialtyDocument } from "../models/specialty.model";
+import SpecialtyModel from "../models/specialty.model";
 
 export class SpecialtyRepository implements ISpecialtyRepository {
   private model = SpecialtyModel;

@@ -11,7 +11,7 @@ import type { IWalletService } from "./interfaces/IWalletService";
 
 import type { INotificationService } from "./notification.service";
 import type { CreateRazorpayOrderDTO, VerifyRazorpayPaymentDTO } from "../dtos/payment.dtos/razorpay.dto";
-import { LoggerService } from "./logger.service";
+
 
 import { ILoggerService } from "./interfaces/ILogger.service";
 
@@ -86,12 +86,12 @@ export class PaymentService implements IPaymentService {
             };
         }
 
-        
+
         const conflictingAppointment = await this._appointmentRepository.findOne({
             doctorId: appointment.doctorId,
             appointmentDate: appointment.appointmentDate,
             appointmentTime: appointment.appointmentTime,
-            _id: { $ne: appointment._id }, 
+            _id: { $ne: appointment._id },
             $or: [
                 { paymentStatus: PAYMENT_STATUS.PAID },
                 { status: APPOINTMENT_STATUS.CONFIRMED },
@@ -107,12 +107,12 @@ export class PaymentService implements IPaymentService {
             throw new AppError(MESSAGES.SLOT_CONFLICT, HttpStatus.CONFLICT);
         }
 
-        
+
         const lockDuration = APPOINTMENT_LOCKS.PAYMENT_LOCK_MINUTES * 60 * 1000;
         await this._appointmentRepository.updateById(appointmentId, {
             checkoutLockUntil: new Date(Date.now() + lockDuration)
-        } as any);
-        
+        });
+
 
         const amountInPaise = Math.round(Number(amount) * PAYMENT_DEFAULTS.PAISE_MULTIPLIER);
 
@@ -125,10 +125,10 @@ export class PaymentService implements IPaymentService {
             },
         });
 
-        
+
         await this._appointmentRepository.updateById(appointmentId, {
             razorpayOrderId: order.id
-        } as any);
+        });
 
         this._logger.info("Razorpay order created", {
             appointmentId,
@@ -148,10 +148,10 @@ export class PaymentService implements IPaymentService {
         this._ensureKeys();
         if (!appointmentId) return;
 
-        
+
         await this._appointmentRepository.updateById(appointmentId, {
             checkoutLockUntil: null
-        } as any);
+        });
 
         this._logger.info("Slot unlocked manually", { appointmentId });
     }
@@ -193,7 +193,7 @@ export class PaymentService implements IPaymentService {
                 razorpay_payment_id,
             });
 
-            await this._appointmentRepository.updateById(appointmentId, { checkoutLockUntil: null } as any);
+            await this._appointmentRepository.updateById(appointmentId, { checkoutLockUntil: null });
             throw new AppError(MESSAGES.PAYMENT_VERIFICATION_FAILED, HttpStatus.BAD_REQUEST);
         }
 
@@ -201,7 +201,7 @@ export class PaymentService implements IPaymentService {
             paymentStatus: PAYMENT_STATUS.PAID,
             paymentId: razorpay_payment_id,
             checkoutLockUntil: null
-        } as any);
+        });
 
         if (this._notificationService) {
             await this._notificationService.notify(patientId, {

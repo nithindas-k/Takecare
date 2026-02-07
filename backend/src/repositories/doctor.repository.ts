@@ -29,7 +29,7 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
     try {
       const userIdObjectId = new Types.ObjectId(userId);
       return await this.model.findOne({ userId: userIdObjectId }).exec();
-    } catch (error) {
+    } catch {
       return null;
     }
   }

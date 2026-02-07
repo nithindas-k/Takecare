@@ -1,6 +1,7 @@
 
 import { Types, Document } from "mongoose";
 import { VerificationStatus } from "../dtos/doctor.dtos/doctor.dto";
+import { IUserDocument } from "./user.type";
 
 export interface IDoctor {
   userId: Types.ObjectId;
@@ -25,6 +26,14 @@ export type IDoctorDocument = IDoctor & Document & {
   createdAt: Date;
   updatedAt: Date;
   customId: string
+}
+
+export interface IDoctorPopulated extends Omit<IDoctor, "userId"> {
+  _id: Types.ObjectId;
+  userId: IUserDocument;
+  createdAt: Date;
+  updatedAt: Date;
+  customId: string;
 }
 
 export interface DoctorRegistrationData {

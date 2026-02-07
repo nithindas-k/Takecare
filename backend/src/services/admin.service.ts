@@ -169,6 +169,7 @@ export class AdminService implements IAdminService {
         if (!user) {
           return null;
         }
+
         return DoctorMapper.toDoctorListItem(doc, user);
       })
       .filter((doc): doc is DoctorListItem => doc !== null);
@@ -198,7 +199,8 @@ export class AdminService implements IAdminService {
     return await this._appointmentRepository.getAdminDashboardStats(start, end);
   }
 
-  async getReportData(startDate?: string, endDate?: string): Promise<any> {
+
+  async getReportData(startDate?: string, endDate?: string): Promise<unknown> {
     const start = startDate ? new Date(startDate) : undefined;
     const end = endDate ? new Date(endDate) : undefined;
     return await this._appointmentRepository.getReportData(start, end);

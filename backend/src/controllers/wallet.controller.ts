@@ -1,7 +1,7 @@
 import { Response, NextFunction } from "express";
 import { IWalletService } from "../services/interfaces/IWalletService";
 import { HttpStatus, MESSAGES, PAGINATION } from "../constants/constants";
-import { LoggerService } from "../services/logger.service";
+
 import { sendSuccess } from "../utils/response.util";
 import { AppError } from "../errors/AppError";
 

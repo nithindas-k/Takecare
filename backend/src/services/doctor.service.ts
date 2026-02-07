@@ -1,13 +1,16 @@
-import { IDoctorService } from "./interfaces/IDoctorService";
+import { IDoctorService, DoctorListDTO, DoctorPublicDTO, DoctorProfileDTO } from "./interfaces/IDoctorService";
+import { UpdateQuery } from "mongoose";
 import { SubmitVerificationDTO, VerificationStatus, UpdateDoctorProfileDTO, VerificationResponseDTO, VerificationFormDataDTO } from "../dtos/doctor.dtos/doctor.dto";
 import { MESSAGES, PAGINATION, ROLES, STATUS } from "../constants/constants";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
 import { IAppointmentRepository } from "../repositories/interfaces/IAppointmentRepository";
 import { DoctorDashboardStats } from "../types/appointment.type";
+import { IUserDocument } from "../types/user.type";
+import { IDoctorDocument } from "../types/doctor.type";
 import { DoctorValidator } from "../validators/doctor.validator";
 import { AppError, NotFoundError, UnauthorizedError } from "../errors/AppError";
-import { LoggerService } from "./logger.service";
+
 import { DoctorMapper } from "../mappers/doctor.mapper";
 
 import { ILoggerService } from "./interfaces/ILogger.service";
@@ -92,7 +95,7 @@ export class DoctorService implements IDoctorService {
     return DoctorMapper.toVerificationFormData(doctor);
   }
 
-  async getProfile(userId: string): Promise<any> {
+  async getProfile(userId: string): Promise<DoctorProfileDTO> {
     const doctor = await this._doctorRepository.findByUserId(userId);
     if (!doctor) {
       throw new NotFoundError(MESSAGES.DOCTOR_PROFILE_NOT_FOUND);
@@ -111,7 +114,7 @@ export class DoctorService implements IDoctorService {
     data: UpdateDoctorProfileDTO,
     profileImage?: Express.Multer.File,
     removeProfileImage?: boolean
-  ): Promise<any> {
+  ): Promise<DoctorProfileDTO> {
     DoctorValidator.validateProfileUpdate(data);
 
     const doctor = await this._doctorRepository.findByUserId(userId);
@@ -124,7 +127,7 @@ export class DoctorService implements IDoctorService {
       throw new NotFoundError(MESSAGES.USER_NOT_FOUND);
     }
 
-    const userUpdates: any = {};
+    const userUpdates: UpdateQuery<IUserDocument> = {};
     if (data.name) userUpdates.name = data.name;
     if (data.phone) userUpdates.phone = data.phone;
     if (data.gender) userUpdates.gender = data.gender;
@@ -140,7 +143,7 @@ export class DoctorService implements IDoctorService {
       await this._userRepository.updateById(userId, userUpdates);
     }
 
-    const doctorUpdates: any = {};
+    const doctorUpdates: UpdateQuery<IDoctorDocument> = {};
     if (data.specialty) doctorUpdates.specialty = data.specialty;
     if (data.qualifications) doctorUpdates.qualifications = data.qualifications;
     if (data.experienceYears !== undefined) doctorUpdates.experienceYears = data.experienceYears;
@@ -157,7 +160,7 @@ export class DoctorService implements IDoctorService {
     return this.getProfile(userId);
   }
 
-  async getDoctorById(doctorId: string): Promise<any> {
+  async getDoctorById(doctorId: string): Promise<DoctorPublicDTO> {
     const doctor = await this._doctorRepository.findById(doctorId);
     if (!doctor) {
       throw new NotFoundError(MESSAGES.DOCTOR_NOT_FOUND);
@@ -175,6 +178,7 @@ export class DoctorService implements IDoctorService {
     return DoctorMapper.toPublicDTO(doctor, user);
   }
 
+
   async getVerifiedDoctors(
     query?: string,
     specialty?: string,
@@ -183,10 +187,10 @@ export class DoctorService implements IDoctorService {
     sort?: string,
     experience?: number,
     rating?: number
-  ): Promise<{ doctors: any[]; total: number; page: number; totalPages: number }> {
+  ): Promise<{ doctors: DoctorListDTO[]; total: number; page: number; totalPages: number }> {
     const skip = (page - 1) * limit;
 
-    let sortOptions: any = { createdAt: -1 };
+    let sortOptions: Record<string, 1 | -1> = { createdAt: -1 };
     if (sort === "price_asc") sortOptions = { VideoFees: 1 };
     else if (sort === "price_desc") sortOptions = { VideoFees: -1 };
 
@@ -201,7 +205,7 @@ export class DoctorService implements IDoctorService {
     });
 
     const mappedDoctors = result.doctors.map(doc =>
-      DoctorMapper.toListDTO(doc, doc.userId as any)
+      DoctorMapper.toListDTO(doc, doc.userId as unknown as IUserDocument)
     );
 
     return {
@@ -212,7 +216,7 @@ export class DoctorService implements IDoctorService {
     };
   }
 
-  async getRelatedDoctors(doctorId: string): Promise<any[]> {
+  async getRelatedDoctors(doctorId: string): Promise<DoctorListDTO[]> {
     const currentDoctor = await this._doctorRepository.findById(doctorId);
     if (!currentDoctor) {
       throw new NotFoundError(MESSAGES.DOCTOR_NOT_FOUND);
@@ -226,21 +230,21 @@ export class DoctorService implements IDoctorService {
     const relatedDocs = await this._doctorRepository.findRelatedDoctors(currentDoctor.specialty, doctorId, 4);
 
     return relatedDocs.map(doc => {
-      const user = doc.userId as any;
+      const user = doc.userId as unknown as IUserDocument;
       return DoctorMapper.toListDTO(doc, user);
     });
   }
 
   async getDashboardStats(userId: string, startDate?: string, endDate?: string): Promise<DoctorDashboardStats> {
     const doctor = await this._doctorRepository.findByUserId(userId);
-    console.log("DoctorService.getDashboardStats doctor:", doctor?._id);
+    // console.log("DoctorService.getDashboardStats doctor:", doctor?._id);
     if (!doctor) {
       throw new NotFoundError(MESSAGES.DOCTOR_PROFILE_NOT_FOUND);
     }
     const start = startDate ? new Date(startDate) : undefined;
     const end = endDate ? new Date(endDate) : undefined;
     const result = await this._appointmentRepository.getDoctorDashboardStats(doctor._id.toString(), start, end);
-    console.log("DoctorService.getDashboardStats result:", result);
+    // console.log("DoctorService.getDashboardStats result:", result);
     return result;
   }
 
@@ -252,7 +256,7 @@ export class DoctorService implements IDoctorService {
 
     const { total: patientCount } = await this._userRepository.getAllPatients(0, 1, { isActive: true });
 
-  
+
     const completedAppointments = await this._appointmentRepository.countByStatus('completed');
 
     return {

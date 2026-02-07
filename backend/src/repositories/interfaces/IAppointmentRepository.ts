@@ -1,4 +1,4 @@
-import { Types, ClientSession } from "mongoose";
+import { ClientSession, UpdateQuery } from "mongoose";
 import { IAppointmentDocument, DashboardStats, DoctorDashboardStats, IAppointmentPopulated } from "../../types/appointment.type";
 import { IBaseRepository } from "./IBase.repository";
 
@@ -28,12 +28,13 @@ export interface IAppointmentRepository extends IBaseRepository<IAppointmentDocu
             endDate?: Date;
             doctorId?: string;
             patientId?: string;
+            sessionStatus?: string | { $in: string[] };
         },
         skip?: number,
         limit?: number,
         session?: ClientSession | undefined
     ): Promise<{ appointments: IAppointmentPopulated[]; total: number }>;
-    updateById(appointmentId: string, updateData: Partial<IAppointmentDocument>, session?: ClientSession | undefined): Promise<IAppointmentDocument | null>;
+    updateById(appointmentId: string, updateData: UpdateQuery<IAppointmentDocument>, session?: ClientSession | undefined): Promise<IAppointmentDocument | null>;
     deleteById(appointmentId: string, session?: ClientSession | undefined): Promise<IAppointmentDocument | null>;
     countByStatus(status: string): Promise<number>;
     countByDoctorId(doctorId: string, status?: string): Promise<number>;

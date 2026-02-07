@@ -1,6 +1,5 @@
 import mongoose, { ClientSession } from "mongoose";
-import { AppError } from "../errors/AppError";
-import { HttpStatus } from "../constants/constants";
+
 
 /**
  * Executes a callback within a MongoDB transaction.
@@ -36,8 +35,9 @@ export const runInTransaction = async <T>(
                 err.code === 20 ||
                 err.codeName === "IllegalOperation")
         ) {
+            // eslint-disable-next-line no-console
             console.warn("MongoDB Transaction failed (likely standalone instance). Retrying without transaction.");
-          
+
             return await callback(undefined);
         }
 

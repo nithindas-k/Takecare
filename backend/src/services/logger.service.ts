@@ -1,3 +1,5 @@
+
+/* eslint-disable no-console */
 import fs from "fs";
 import path from "path";
 import type { ILoggerService } from "./interfaces/ILogger.service";

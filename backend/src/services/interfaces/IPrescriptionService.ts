@@ -1,4 +1,4 @@
-import { IPrescriptionDocument } from "../../types/prescription.type";
+
 
 export interface CreatePrescriptionData {
     appointmentId: string;

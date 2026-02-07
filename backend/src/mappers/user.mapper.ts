@@ -49,7 +49,18 @@ export class UserMapper {
     }
 
 
-    static toPatientListItem(user: IUserDocument): any {
+    static toPatientListItem(user: IUserDocument): {
+        id: string;
+        name: string;
+        email: string;
+        phone?: string;
+        profileImage: string | null;
+        gender?: string;
+        dob?: Date;
+        createdAt: Date;
+        updatedAt: Date;
+        isActive: boolean;
+    } {
         return {
             id: user._id.toString(),
             name: user.name,

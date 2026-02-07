@@ -3,6 +3,8 @@ import { SESSION_STATUS, SessionStatus } from "../utils/sessionStatus.util";
 import { SessionState, SessionTimerCheckResult } from "../types/session.types";
 import { socketService } from "./socket.service";
 import { ILoggerService } from "./interfaces/ILogger.service";
+import { IAppointmentDocument } from "../types/appointment.type";
+import { IUserDocument } from "../types/user.type";
 
 export class SessionTimerService {
     private checkInterval: ReturnType<typeof setInterval> | null = null;
@@ -44,13 +46,13 @@ export class SessionTimerService {
             const activeAppointments = await this._appointmentRepository.findAll({
                 status: 'confirmed',
                 sessionStatus: { $in: [SESSION_STATUS.ACTIVE, SESSION_STATUS.CONTINUED_BY_DOCTOR] }
-            } as any, 0, 1000);
+            }, 0, 1000);
 
             const now = new Date();
             const results: SessionTimerCheckResult[] = [];
 
             for (const appointment of activeAppointments.appointments) {
-                const result = await this.checkSingleSession(appointment, now);
+                const result = await this.checkSingleSession(appointment as unknown as IAppointmentDocument, now);
                 if (result.statusChanged) {
                     results.push(result);
                     await this.emitSessionUpdate(result);
@@ -65,7 +67,7 @@ export class SessionTimerService {
         }
     }
 
-    private async checkSingleSession(appointment: any, now: Date): Promise<SessionTimerCheckResult> {
+    private async checkSingleSession(appointment: IAppointmentDocument, now: Date): Promise<SessionTimerCheckResult> {
         const previousStatus = appointment.sessionStatus as SessionStatus;
         let newStatus = previousStatus;
         let statusChanged = false;
@@ -107,7 +109,7 @@ export class SessionTimerService {
         };
     }
 
-    private calculateSessionEndTime(appointment: any): Date {
+    private calculateSessionEndTime(appointment: IAppointmentDocument): Date {
         const appointmentDate = new Date(appointment.appointmentDate);
         const timeStr = appointment.appointmentTime;
 
@@ -129,8 +131,8 @@ export class SessionTimerService {
         return sessionEnd;
     }
 
-    private buildSessionState(appointment: any, now: Date, overrideStatus?: SessionStatus): SessionState {
-        const status = overrideStatus || appointment.sessionStatus;
+    private buildSessionState(appointment: IAppointmentDocument, now: Date, overrideStatus?: SessionStatus): SessionState {
+        const status = overrideStatus || (appointment.sessionStatus as SessionStatus);
         const sessionEnd = this.calculateSessionEndTime(appointment);
         const timeRemaining = sessionEnd.getTime() - now.getTime();
         const isExpired = timeRemaining <= 0;
@@ -162,10 +164,8 @@ export class SessionTimerService {
                 timestamp: new Date().toISOString()
             };
 
-            const patientId = (appointment.patientId as any)?._id?.toString() ||
-                (appointment.patientId as any)?.toString();
-            const doctorUserId = (appointment.doctorId as any)?.userId?._id?.toString() ||
-                (appointment.doctorId as any)?.userId?.toString();
+            const patientId = typeof appointment.patientId === 'object' ? appointment.patientId._id.toString() : String(appointment.patientId || '');
+            const doctorUserId = typeof appointment.doctorId === 'object' && appointment.doctorId !== null ? (appointment.doctorId.userId as IUserDocument)._id?.toString() || appointment.doctorId.userId.toString() : undefined;
 
             if (patientId) {
                 socketService.emitToUser(patientId, "session-status-updated", updateData);

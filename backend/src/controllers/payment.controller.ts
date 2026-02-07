@@ -14,7 +14,6 @@ export class PaymentController implements IPaymentController {
             if (!patientId) {
                 throw new AppError(MESSAGES.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
             }
-            console.log(`[PaymentController] Creating Razorpay order for patient: ${patientId}`, req.body);
             const result = await this._paymentService.createRazorpayOrder(patientId, req.body);
             sendSuccess(res, result, undefined, HttpStatus.CREATED);
         } catch (err: unknown) {
@@ -38,7 +37,7 @@ export class PaymentController implements IPaymentController {
 
     unlockSlot = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
-        
+
             const appointmentId = req.params.appointmentId || req.body.appointmentId;
             if (!appointmentId) throw new AppError("Appointment ID required", HttpStatus.BAD_REQUEST);
 

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { AuthenticatedRequest } from "../types/auth.type";
-import { HttpStatus, MESSAGES } from "../constants/constants";
+import { HttpStatus } from "../constants/constants";
 
 
 export const requireRole = (...allowedRoles: string[]) => {

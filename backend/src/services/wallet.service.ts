@@ -5,8 +5,7 @@ import { ITransactionDocument } from "../types/wallet.type";
 import { IAppointmentRepository } from "../repositories/interfaces/IAppointmentRepository";
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
-import { AppError } from "../errors/AppError";
-import { MESSAGES, HttpStatus, NOTIFICATION_TYPES } from "../constants/constants";
+import { NOTIFICATION_TYPES } from "../constants/constants";
 
 import { INotificationService } from "./notification.service";
 

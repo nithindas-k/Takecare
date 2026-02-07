@@ -1,13 +1,16 @@
 import { IUserService } from "./interfaces/IUserService";
-import { UserResponseDTO, UnifiedUserProfileResponseDTO, UnifiedUpdateProfileDTO } from "../dtos/user.dtos/user.dto";
+import { UnifiedUserProfileResponseDTO, UnifiedUpdateProfileDTO } from "../dtos/user.dtos/user.dto";
 import { UserMapper } from "../mappers/user.mapper";
 import { IUserDocument } from "../types/user.type";
-import { IDoctorDocument } from "../types/doctor.type";
+import { IDoctorDocument, IDoctorPopulated } from "../types/doctor.type";
 import { AppointmentListItem } from "../types/common";
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
 import { NotFoundError, ValidationError } from "../errors/AppError";
 import { MESSAGES, ROLES } from "../constants/constants";
+import { Types } from "mongoose";
+import { DoctorPublicDTO } from "./interfaces/IDoctorService";
+import { DoctorMapper } from "../mappers/doctor.mapper";
 
 export class UserService implements IUserService {
   constructor(
@@ -107,7 +110,8 @@ export class UserService implements IUserService {
     await this._userRepository.updateById(userId, { isActive: false });
   }
 
-  async getUserAppointments(userId: string): Promise<AppointmentListItem[]> {
+
+  async getUserAppointments(_userId: string): Promise<AppointmentListItem[]> {
     return [];
   }
 
@@ -120,7 +124,7 @@ export class UserService implements IUserService {
 
     let isAdded = false;
     if (index === -1) {
-      favorites.push(doctorId as any);
+      favorites.push(new Types.ObjectId(doctorId));
       isAdded = true;
     } else {
       favorites.splice(index, 1);
@@ -131,23 +135,19 @@ export class UserService implements IUserService {
     return isAdded;
   }
 
-  async getFavoriteDoctors(userId: string): Promise<any[]> {
+
+  async getFavoriteDoctors(userId: string): Promise<DoctorPublicDTO[]> {
     const user = await this._userRepository.findById(userId);
     if (!user) throw new NotFoundError(MESSAGES.USER_NOT_FOUND);
 
-    // We need to populate the favorites
-    // If our repository doesn't support populate on findById, we might need a workaround or add it.
-    // Let's assume user.populate exists or use repository.
-    const populatedUser = await (this._userRepository as any).model
-      .findById(userId)
-      .populate({
-        path: 'favorites',
-        populate: {
-          path: 'userId',
-          select: 'name email profileImage'
-        }
-      });
 
-    return populatedUser?.favorites || [];
+    const populatedUser = await this._userRepository.findByIdPopulatedFavorites(userId);
+    if (!populatedUser || !populatedUser.favorites) {
+      return [];
+    }
+
+    return (populatedUser.favorites as unknown as IDoctorPopulated[]).map((doc) => {
+      return DoctorMapper.toPublicDTO(doc as unknown as IDoctorDocument, doc.userId);
+    });
   }
 }

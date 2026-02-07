@@ -1,8 +1,8 @@
 import { ISpecialtyService } from "./interfaces/ISpecialtyService";
 import { Specialty, CreateSpecialtyDTO, UpdateSpecialtyDTO, SpecialtyListResponse } from "../types/specialty.type";
 import { ISpecialtyRepository } from "../repositories/interfaces/ISpecialtyRepository";
-import { MESSAGES, STATUS, PAGINATION } from "../constants/constants";
-import { AppError, NotFoundError, ConflictError } from "../errors/AppError";
+import { PAGINATION } from "../constants/constants";
+import { NotFoundError, ConflictError } from "../errors/AppError";
 import { ILoggerService } from "./interfaces/ILogger.service";
 
 export class SpecialtyService implements ISpecialtyService {

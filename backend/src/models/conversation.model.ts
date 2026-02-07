@@ -14,6 +14,12 @@ export interface IConversation {
 
 export interface IConversationDocument extends IConversation, Document { }
 
+import { IMessage } from "./message.model"; // Import IMessage
+
+export interface IConversationPopulated extends Omit<IConversationDocument, 'lastMessage'> {
+    lastMessage?: IMessage;
+}
+
 const conversationSchema = new Schema<IConversationDocument>({
     participants: [{
         type: Schema.Types.ObjectId,

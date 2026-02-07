@@ -1,5 +1,5 @@
 import { ClientSession } from "mongoose";
-import { IWalletDocument, ITransactionDocument } from "../../types/wallet.type";
+import { ITransactionDocument } from "../../types/wallet.type";
 
 export interface IWalletService {
     getWalletBalance(userId: string): Promise<number>;

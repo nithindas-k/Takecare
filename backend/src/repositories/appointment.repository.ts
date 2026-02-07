@@ -1,7 +1,7 @@
 import { IAppointmentRepository } from "./interfaces/IAppointmentRepository";
 import { IAppointmentDocument, IAppointmentPopulated } from "../types/appointment.type";
 import AppointmentModel from "../models/appointment.model";
-import { Types, ClientSession, PipelineStage } from "mongoose";
+import { Types, ClientSession, PipelineStage, UpdateQuery } from "mongoose";
 import { BaseRepository } from "./base.repository";
 import { DashboardStats, DoctorDashboardStats } from "../types/appointment.type";
 import { APPOINTMENT_STATUS } from "../constants/constants";
@@ -10,15 +10,16 @@ type AppointmentListQuery = {
     status?: string | { $in: string[] };
     doctorId?: Types.ObjectId;
     patientId?: Types.ObjectId;
+    sessionStatus?: string | { $in: string[] };
     appointmentDate?: {
         $gte?: Date;
         $lte?: Date;
     };
-    $or?: {
+    $or?: (Record<string, unknown> | {
         customId?: RegExp;
         status?: RegExp;
         appointmentTime?: RegExp;
-    }[];
+    })[];
 };
 
 export class AppointmentRepository extends BaseRepository<IAppointmentDocument> implements IAppointmentRepository {
@@ -37,9 +38,7 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
             ? { _id: new Types.ObjectId(appointmentId) }
             : { customId: appointmentId };
 
-        console.log(`[AppointmentRepository] Searching for appointment with query:`, query);
         const result = await this.model.findOne(query).session(session || null).exec();
-        console.log(`[AppointmentRepository] Search result: ${result ? 'Found' : 'NOT FOUND'}`);
         return result;
     }
 
@@ -160,6 +159,7 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
             endDate?: Date;
             doctorId?: string;
             patientId?: string;
+            sessionStatus?: string | { $in: string[] };
         },
         skip: number = 0,
         limit: number = 10
@@ -180,6 +180,10 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
 
         if (filters.patientId) {
             query.patientId = new Types.ObjectId(filters.patientId);
+        }
+
+        if (filters.sessionStatus) {
+            query.sessionStatus = filters.sessionStatus;
         }
 
         if (filters.startDate || filters.endDate) {
@@ -228,17 +232,18 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
 
     async updateById(
         appointmentId: string,
-        updateData: Partial<IAppointmentDocument>,
+        updateData: UpdateQuery<IAppointmentDocument>,
         session?: ClientSession | undefined
     ): Promise<IAppointmentDocument | null> {
-        console.log(`[AppointmentRepository] updateById called for ${appointmentId}`, updateData);
+        // console.log(`[AppointmentRepository] updateById called for ${appointmentId}`, updateData);
 
         if (!Types.ObjectId.isValid(appointmentId)) {
+            // eslint-disable-next-line no-console
             console.warn(`[AppointmentRepository] Invalid ObjectId: ${appointmentId}`);
             return null;
         }
 
-        console.log(`[AppointmentRepository] Updating by _id: ${appointmentId}`);
+        // console.log(`[AppointmentRepository] Updating by _id: ${appointmentId}`);
         const update = Object.keys(updateData).some(key => key.startsWith('$'))
             ? updateData
             : { $set: updateData };
@@ -249,7 +254,7 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
             { new: true, runValidators: true, session: session || undefined }
         ).exec();
 
-        console.log(`[AppointmentRepository] Update by _id result: ${result ? 'Success' : 'Failed'}`);
+        // console.log(`[AppointmentRepository] Update by _id result: ${result ? 'Success' : 'Failed'}`);
         return result;
     }
 

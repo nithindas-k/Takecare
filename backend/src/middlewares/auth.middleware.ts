@@ -8,7 +8,7 @@ declare global {
   namespace Express {
 
     interface User extends JWTPayload {
-      _id?: any;
+      _id?: unknown;
       id?: string;
     }
   }
@@ -34,7 +34,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction):
     req.user = decoded;
     next();
 
-  } catch (error) {
+  } catch {
     res.status(HttpStatus.UNAUTHORIZED).json({
       success: false,
       message: MESSAGES.INVALID_ACCESS_TOKEN,

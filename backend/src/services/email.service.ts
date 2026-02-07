@@ -47,7 +47,7 @@ export class EmailService implements IEmailService {
     try {
       await this._transporter.verify();
       this._logger.info("Email server is ready");
-    } catch (error: any) {
+    } catch (error: unknown) {
       this._logger.error("Email server connection failed", error);
     }
   }
@@ -74,10 +74,11 @@ export class EmailService implements IEmailService {
 
       const info = await this._transporter.sendMail(mailOptions);
       this._logger.info("OTP email sent successfully", { messageId: info.messageId });
-    } catch (error: any) {
+    } catch (error: unknown) {
       this._logger.error("OTP email sending failed", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       throw new AppError(
-        MESSAGES.EMAIL_SEND_FAILED.replace("{error}", String(error?.message || error)),
+        MESSAGES.EMAIL_SEND_FAILED.replace("{error}", errorMessage),
         HttpStatus.INTERNAL_ERROR
       );
     }
@@ -100,10 +101,11 @@ export class EmailService implements IEmailService {
 
       const info = await this._transporter.sendMail(mailOptions);
       this._logger.info("Password reset email sent successfully", { messageId: info.messageId });
-    } catch (error: any) {
+    } catch (error: unknown) {
       this._logger.error("Password reset email sending failed", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       throw new AppError(
-        MESSAGES.EMAIL_SEND_FAILED.replace("{error}", String(error?.message || error)),
+        MESSAGES.EMAIL_SEND_FAILED.replace("{error}", errorMessage),
         HttpStatus.INTERNAL_ERROR
       );
     }
@@ -122,10 +124,11 @@ export class EmailService implements IEmailService {
 
       const info = await this._transporter.sendMail(mailOptions);
       this._logger.info("Welcome email sent successfully", { messageId: info.messageId });
-    } catch (error: any) {
+    } catch (error: unknown) {
       this._logger.error("Welcome email sending failed", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       throw new AppError(
-        MESSAGES.EMAIL_SEND_FAILED.replace("{error}", String(error?.message || error)),
+        MESSAGES.EMAIL_SEND_FAILED.replace("{error}", errorMessage),
         HttpStatus.INTERNAL_ERROR
       );
     }
@@ -148,10 +151,11 @@ export class EmailService implements IEmailService {
 
       const info = await this._transporter.sendMail(mailOptions);
       this._logger.info("Verification email sent successfully", { messageId: info.messageId });
-    } catch (error: any) {
+    } catch (error: unknown) {
       this._logger.error("Verification email sending failed", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       throw new AppError(
-        MESSAGES.EMAIL_SEND_FAILED.replace("{error}", String(error?.message || error)),
+        MESSAGES.EMAIL_SEND_FAILED.replace("{error}", errorMessage),
         HttpStatus.INTERNAL_ERROR
       );
     }
@@ -186,7 +190,7 @@ export class EmailService implements IEmailService {
         html
       });
       this._logger.info("Contact notification email sent");
-    } catch (error: any) {
+    } catch (error: unknown) {
       this._logger.error("Failed to send contact notification email", error);
     }
   }
@@ -234,7 +238,7 @@ export class EmailService implements IEmailService {
         html
       });
       this._logger.info("Reply email sent to user", { userEmail });
-    } catch (error: any) {
+    } catch (error: unknown) {
       this._logger.error("Failed to send contact reply email", error);
       throw new AppError("Failed to send reply email", HttpStatus.INTERNAL_ERROR);
     }
@@ -306,7 +310,7 @@ export class EmailService implements IEmailService {
           </div>
           
           <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
-            ⏱️ This OTP will expire in <strong>1 minute</strong>.
+            ⏱️ This OTP will expire in <strong>${expiryText}</strong>.
           </p>
           
           <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">

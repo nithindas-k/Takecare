@@ -11,7 +11,7 @@ export class SocketService {
             .filter((url): url is string => !!url)
             .map(url => url.trim());
 
-        console.log("ENV origins :- ", envOrigins);
+
 
 
 
@@ -19,6 +19,7 @@ export class SocketService {
         this._io = new Server(httpServer, {
             cors: {
                 origin: [
+                    ...envOrigins,
                     "https://takecare.nithin.site",
                     "https://www.takecare.nithin.site",
                     "http://localhost:5173",
@@ -30,16 +31,16 @@ export class SocketService {
         });
 
         this._io.on("connection", (socket: Socket) => {
-            console.log(`New socket connection: ${socket.id}`);
+            // console.log(`New socket connection: ${socket.id}`);
 
             // WebRTC Events
             socket.on("call-user", ({ userToCall, signalData, from, name, isRejoin }) => {
-                console.log(`Call from ${from} (${name}) to ${userToCall}`);
+                // console.log(`Call from ${from} (${name}) to ${userToCall}`);
                 this._io?.to(userToCall).emit("call-user", { signal: signalData, from, name, isRejoin });
             });
 
             socket.on("answer-call", (data) => {
-                console.log(`Call answered by ${socket.id} for ${data.to}`);
+                // console.log(`Call answered by ${socket.id} for ${data.to}`);
                 this._io?.to(data.to).emit("call-accepted", data.signal);
             });
 
@@ -65,13 +66,13 @@ export class SocketService {
             socket.on("join-chat", (roomId: string) => {
                 const room = String(roomId);
                 socket.join(room);
-                console.log(`Socket [${socket.id}] joined room: ${room}`);
+                // console.log(`Socket [${socket.id}] joined room: ${room}`);
             });
 
             socket.on("leave-chat", (roomId: string) => {
                 const room = String(roomId);
                 socket.leave(room);
-                console.log(`Socket [${socket.id}] left room: ${room}`);
+                // console.log(`Socket [${socket.id}] left room: ${room}`);
             });
 
             socket.on("typing", ({ id, userId }: { id: string, userId: string }) => {
@@ -86,13 +87,13 @@ export class SocketService {
                 socket.to(id).emit("messages-read", { id, userId });
             });
 
-            socket.on("send-message", (data: any) => {
+            socket.on("send-message", (data: Record<string, unknown>) => {
                 const roomId = String(data.conversationId || data.appointmentId || "");
                 if (roomId) {
-                    console.log(`Socket [${socket.id}] sending message to room ${roomId}`);
+                    // console.log(`Socket [${socket.id}] sending message to room ${roomId}`);
 
                 } else {
-                    console.error("Socket error: send-message received without roomId");
+                    // console.error("Socket error: send-message received without roomId");
                 }
             });
 
@@ -117,13 +118,13 @@ export class SocketService {
         return this._onlineUsers.has(userId);
     }
 
-    notify(userId: string, data: any) {
+    notify(userId: string, data: unknown) {
         if (this._io) {
             this._io.to(userId.toString()).emit("notification", data);
         }
     }
 
-    sendReminder(userId: string, data: any) {
+    sendReminder(userId: string, data: unknown) {
         if (this._io) {
             this._io.to(userId.toString()).emit("appointment-reminder", data);
         }
@@ -135,19 +136,19 @@ export class SocketService {
         }
     }
 
-    emitMessage(appointmentId: string, message: any) {
+    emitMessage(appointmentId: string, message: unknown) {
         if (this._io) {
             this._io.to(appointmentId).emit("receive-message", message);
         }
     }
 
-    emitToRoom(roomId: string, event: string, data: any) {
+    emitToRoom(roomId: string, event: string, data: unknown) {
         if (this._io) {
             this._io.to(roomId).emit(event, data);
         }
     }
 
-    emitToUser(userId: string, event: string, data: any) {
+    emitToUser(userId: string, event: string, data: unknown) {
         if (this._io) {
             this._io.to(userId.toString()).emit(event, data);
         }

@@ -13,7 +13,7 @@ export class TimeController {
                     timezone: 'Asia/Kolkata'
                 }
             });
-        } catch (error) {
+        } catch {
             res.status(500).json({
                 success: false,
                 message: 'Failed to get server time'

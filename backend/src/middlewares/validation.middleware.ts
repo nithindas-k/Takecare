@@ -1,13 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 
-/**
- * Middleware adapter for validation functions
- * @param validatorFn - Function that validates data and throws error if invalid
- */
-export const validate = (validatorFn: (data: any) => void) => {
+export const validate = <T>(validatorFn: (data: T) => void) => {
     return (req: Request, res: Response, next: NextFunction) => {
         try {
-            validatorFn(req.body);
+            validatorFn(req.body as T);
             next();
         } catch (error) {
             next(error);
