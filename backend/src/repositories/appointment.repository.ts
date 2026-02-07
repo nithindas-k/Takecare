@@ -7,7 +7,7 @@ import { DashboardStats, DoctorDashboardStats } from "../types/appointment.type"
 import { APPOINTMENT_STATUS } from "../constants/constants";
 
 type AppointmentListQuery = {
-    status?: string;
+    status?: string | { $in: string[] };
     doctorId?: Types.ObjectId;
     patientId?: Types.ObjectId;
     appointmentDate?: {
@@ -167,7 +167,11 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
         const query: AppointmentListQuery = {};
 
         if (filters.status) {
-            query.status = filters.status;
+            if (filters.status.includes(',')) {
+                query.status = { $in: filters.status.split(',').map(s => s.trim()) };
+            } else {
+                query.status = filters.status;
+            }
         }
 
         if (filters.doctorId) {

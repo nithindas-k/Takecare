@@ -192,8 +192,8 @@ const Appointments: React.FC = () => {
         setLoading(true);
         setError('');
         try {
-            const status = activeTab === 'upcoming' ? 'confirmed' : activeTab;
-            // Using debouncedSearch for backend filtering
+            const status = activeTab === 'upcoming' ? 'confirmed,pending,reschedule_requested' : activeTab;
+          
             const response = await appointmentService.getMyAppointments(status, page, limit, debouncedSearch);
             if (!response?.success) {
                 throw new Error(response?.message || 'Failed to fetch appointments');
@@ -202,7 +202,6 @@ const Appointments: React.FC = () => {
             const nextAppointments = payload?.appointments || payload?.items || [];
             const nextTotal = typeof payload?.total === 'number' ? payload.total : null;
             if (!isMounted) return;
-            // append strictly if page > 1, else replace
             setAppointments((prev) => (page === 1 ? nextAppointments : [...prev, ...nextAppointments]));
             setTotal(nextTotal);
             if (payload.counts) {
@@ -220,11 +219,11 @@ const Appointments: React.FC = () => {
         }
     }, [page, limit, debouncedSearch, activeTab]);
 
-    // Debounce Search Effect
+  
     useEffect(() => {
         const handler = setTimeout(() => {
             setDebouncedSearch(searchQuery);
-            setPage(1); // Reset to first page on new search
+            setPage(1); 
         }, 500);
 
         return () => {
