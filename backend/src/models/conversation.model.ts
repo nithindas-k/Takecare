@@ -39,7 +39,7 @@ const conversationSchema = new Schema<IConversationDocument>({
     }
 }, { timestamps: true });
 
-// Index for quick lookup of conversation between two users
+
 conversationSchema.index({ participants: 1 });
 
 export const Conversation = model<IConversationDocument>("Conversation", conversationSchema);

@@ -110,7 +110,7 @@ export class AppointmentService implements IAppointmentService {
                             throw new AppError("Invalid appointment date", HttpStatus.BAD_REQUEST);
                         }
 
-                        // Use configured time window for duplicate detection
+                    
                         const HOUR_IN_MS = 60 * 60 * 1000;
                         const startDate = new Date(searchDate);
                         startDate.setHours(startDate.getHours() - APPOINTMENT_LOCKS.DUPLICATE_DETECTION_HOURS);

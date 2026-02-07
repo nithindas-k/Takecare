@@ -115,12 +115,10 @@ export class AppointmentReminderService {
                 const startTimeStr = timeParts[0].trim();
                 const [hours, minutes] = startTimeStr.split(":").map(Number);
 
-                // 1. Get the proper "Day" in IST from the UTC appointmentDate
-                // Since appointmentDate is stored as 00:00 UTC, we must ensure we get the correct IST date component
+                
                 const appDateInIST = toZonedTime(new Date(appointment.appointmentDate), this._timezone);
 
-                // 2. Construct a Date object that has IST values in its LocalTime fields
-                // This matches the format of nowInIST, allowing for direct comparison
+                
                 const appStartInIST = new Date(
                     appDateInIST.getFullYear(),
                     appDateInIST.getMonth(),
@@ -131,7 +129,7 @@ export class AppointmentReminderService {
                     0
                 );
 
-                // 3. Calculate difference using the "IST-valued" date objects
+                
                 const minutesDiff = differenceInMinutes(appStartInIST, nowInIST);
 
                 this._logger.debug(`Checking appointment ${appointment.customId}:`, {
@@ -140,7 +138,7 @@ export class AppointmentReminderService {
                     minutesUntilStart: minutesDiff
                 });
 
-                // Send 5-minute reminder
+                
                 if (minutesDiff > 4 && minutesDiff <= 6 && !appointment.reminderSent) {
                     await this._sendNotification(appointment, NOTIFICATION_TYPES.WARNING, {
                         title: "Appointment Starting Soon!",
@@ -148,7 +146,7 @@ export class AppointmentReminderService {
                     });
                     await this._appointmentRepository.updateById(appointment._id.toString(), { reminderSent: true });
 
-                    // Emit socket event to show 5-minute reminder modal instantly
+
                     const doctorDoc = appointment.doctorId as any;
                     const doctorUserId = doctorDoc?.userId?.toString();
                     const patientId = appointment.patientId.toString();
@@ -170,7 +168,7 @@ export class AppointmentReminderService {
                     this._logger.info(`5-minute reminder modal triggered via socket for appointment ${appointment.customId}`);
                 }
 
-                // Send "Join Now" notification (0 to 2 minutes window)
+                
                 if (minutesDiff <= 0 && minutesDiff >= -2 && !appointment.startNotificationSent) {
                     await this._sendNotification(appointment, NOTIFICATION_TYPES.SUCCESS, {
                         title: "Consultation Ready!",
@@ -179,7 +177,7 @@ export class AppointmentReminderService {
                     });
                     await this._appointmentRepository.updateById(appointment._id.toString(), { startNotificationSent: true });
 
-                    // Emit socket event to show "Join Now" button/modal instantly
+                    
                     const doctorDoc = appointment.doctorId as any;
                     const doctorUserId = doctorDoc?.userId?.toString();
                     const patientId = appointment.patientId.toString();

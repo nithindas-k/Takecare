@@ -93,13 +93,13 @@ const CallSessionSchema = new Schema<ICallSession>(
     }
 );
 
-// Index for quick lookups
+
 CallSessionSchema.index({ appointmentId: 1, callStatus: 1 });
 CallSessionSchema.index({ 'participants.doctorId': 1, callStatus: 1 });
 CallSessionSchema.index({ 'participants.patientId': 1, callStatus: 1 });
 CallSessionSchema.index({ canRejoinUntil: 1 });
 
-// Auto-update lastActiveAt on save
+
 CallSessionSchema.pre('save', function (next) {
     if (!this.isNew) {
         this.lastActiveAt = new Date();

@@ -86,16 +86,12 @@ export class PaymentService implements IPaymentService {
             };
         }
 
-        // --- DOUBLE BOOKING PREVENTION START ---
-        // Check if ANY other appointment for this slot is effectively "locked"
-        // Locked means:
-        // 1. Payment is PAID/CONFIRMED (obviously)
-        // 2. OR checkoutLockUntil is in the future (another user is paying right now)
+        
         const conflictingAppointment = await this._appointmentRepository.findOne({
             doctorId: appointment.doctorId,
             appointmentDate: appointment.appointmentDate,
             appointmentTime: appointment.appointmentTime,
-            _id: { $ne: appointment._id }, // Exclude self
+            _id: { $ne: appointment._id }, 
             $or: [
                 { paymentStatus: PAYMENT_STATUS.PAID },
                 { status: APPOINTMENT_STATUS.CONFIRMED },
@@ -111,12 +107,12 @@ export class PaymentService implements IPaymentService {
             throw new AppError(MESSAGES.SLOT_CONFLICT, HttpStatus.CONFLICT);
         }
 
-        // Lock THIS appointment for configured duration
+        
         const lockDuration = APPOINTMENT_LOCKS.PAYMENT_LOCK_MINUTES * 60 * 1000;
         await this._appointmentRepository.updateById(appointmentId, {
             checkoutLockUntil: new Date(Date.now() + lockDuration)
         } as any);
-        // --- DOUBLE BOOKING PREVENTION END ---
+        
 
         const amountInPaise = Math.round(Number(amount) * PAYMENT_DEFAULTS.PAISE_MULTIPLIER);
 
@@ -129,7 +125,7 @@ export class PaymentService implements IPaymentService {
             },
         });
 
-        // Save order ID to appointment to prevent duplicate orders
+        
         await this._appointmentRepository.updateById(appointmentId, {
             razorpayOrderId: order.id
         } as any);
@@ -152,7 +148,7 @@ export class PaymentService implements IPaymentService {
         this._ensureKeys();
         if (!appointmentId) return;
 
-        // Clear the lock
+        
         await this._appointmentRepository.updateById(appointmentId, {
             checkoutLockUntil: null
         } as any);
