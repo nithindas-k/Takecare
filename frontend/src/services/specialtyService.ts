@@ -4,7 +4,7 @@ import { SPECIALTY_API_ROUTES } from "../utils/constants";
 
 export const specialtyService = {
   getAllSpecialties: async (page = 1, limit = 10, search?: string) => {
-    const params: any = { page, limit };
+    const params: Record<string, unknown> = { page, limit };
     if (search) params.search = search;
 
     const response = await axiosInstance.get(SPECIALTY_API_ROUTES.LIST, {

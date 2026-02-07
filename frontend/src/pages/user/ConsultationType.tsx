@@ -4,10 +4,24 @@ import { FaCheckCircle, FaArrowLeft, FaCheck, FaVideo, FaComments } from 'react-
 import NavBar from '../../components/common/NavBar';
 import Footer from '../../components/common/Footer';
 
+interface BookingData {
+    doctor: {
+        name: string;
+        image?: string;
+        speciality?: string;
+        videoFees?: number;
+        chatFees?: number;
+        fees?: number;
+    };
+    appointmentDate: string | Date;
+    appointmentTime: string;
+    reason?: string;
+}
+
 const ConsultationType: React.FC = () => {
     const navigate = useNavigate();
     const [selectedType, setSelectedType] = useState<'video' | 'chat'>('video');
-    const [bookingData, setBookingData] = useState<any>(null);
+    const [bookingData, setBookingData] = useState<BookingData | null>(null);
 
     useEffect(() => {
         const stored = sessionStorage.getItem('bookingData');

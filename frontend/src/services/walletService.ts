@@ -4,7 +4,7 @@ import { WALLET_API_ROUTES } from "../utils/constants";
 
 export const walletService = {
     getMyWallet: async (page = 1, limit = 10, search?: string, type?: string, date?: string) => {
-        const params: any = { page, limit };
+        const params: Record<string, unknown> = { page, limit };
         if (search) params.search = search;
         if (type && type !== 'all') params.type = type;
         if (date) params.date = date;
@@ -21,7 +21,7 @@ export const walletService = {
     },
 
     getAdminTransactions: async (page = 1, limit = 10, date?: string) => {
-        const params: any = { page, limit };
+        const params: Record<string, unknown> = { page, limit };
         if (date) params.date = date;
 
         const response = await axiosInstance.get(WALLET_API_ROUTES.ADMIN_TRANSACTIONS, {

@@ -16,12 +16,27 @@ const PatientDetails: React.FC = () => {
         reason: ''
     });
     const [loading, setLoading] = useState(true);
-    const [bookingData, setBookingData] = useState<any>(null);
+    interface BookingData {
+        doctor?: {
+            name?: string;
+            image?: string;
+            speciality?: string;
+        };
+        appointmentDate: string;
+        appointmentTime: string;
+        doctorId: string;
+        slotId: string;
+    }
+    const [bookingData, setBookingData] = useState<BookingData | null>(null);
 
     useEffect(() => {
         const stored = sessionStorage.getItem('bookingData');
         if (stored) {
-            setBookingData(JSON.parse(stored));
+            try {
+                setBookingData(JSON.parse(stored) as BookingData);
+            } catch (err) {
+                console.error("Failed to parse booking data", err);
+            }
         }
 
         fetchUserProfile();
@@ -40,7 +55,7 @@ const PatientDetails: React.FC = () => {
                     reason: ''
                 });
             }
-        } catch (error) {
+        } catch (error: unknown) {
             console.error('Failed to fetch user profile', error);
         } finally {
             setLoading(false);

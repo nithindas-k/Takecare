@@ -49,7 +49,7 @@ export interface PopulatedAppointment {
             profileImage?: string;
         };
     };
-    doctor?: any; // To support legacy/alternative structures
+    doctor?: unknown; // To support legacy/alternative structures
     patientId: {
         _id: string;
         id?: string;
@@ -83,6 +83,7 @@ export interface PopulatedAppointment {
     doctorPhone?: string;
     specialty?: string;
     doctorImage?: string;
+    patientName?: string;
     date?: string;
     time?: string;
     slotId?: string;

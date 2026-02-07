@@ -26,9 +26,10 @@ const PrescriptionViewModal: React.FC<PrescriptionViewModalProps> = ({ isOpen, o
             } else {
                 setError('Prescription not found');
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            setError(err.response?.data?.message || 'Failed to load prescription');
+            const errorMessage = err instanceof Error ? err.message : 'Failed to load prescription';
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }

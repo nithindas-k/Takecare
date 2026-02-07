@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useSelector } from 'react-redux';
@@ -9,6 +8,20 @@ import ReminderModal from '../components/common/ReminderModal';
 interface SocketContextType {
     socket: Socket | null;
     onlineUsers: string[];
+}
+
+interface ReminderData {
+    title: string;
+    message: string;
+    customId: string;
+    type?: string;
+    appointmentId?: string;
+}
+
+interface NotificationData {
+    title: string;
+    message: string;
+    type?: 'success' | 'error' | 'warning' | 'info';
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
@@ -25,11 +38,11 @@ export const useSocket = () => {
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [socket, setSocket] = useState<Socket | null>(null);
     const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
-    const [reminderData, setReminderData] = useState<any>(null);
+    const [reminderData, setReminderData] = useState<ReminderData | null>(null);
     const [isReminderOpen, setIsReminderOpen] = useState(false);
     const user = useSelector(selectCurrentUser);
 
-    const userId = user?.id || (user as any)?._id || (user as any)?.userId;
+    const userId = user?.id || user?._id;
     const userRole = user?.role;
 
     useEffect(() => {
@@ -99,14 +112,14 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 audio.play().catch(err => console.debug("Autoplay prevented or error playing sound:", err));
             };
 
-            newSocket.on('appointment-reminder', (data: any) => {
+            newSocket.on('appointment-reminder', (data: ReminderData) => {
                 playNotificationSound();
                 setReminderData(data);
                 setIsReminderOpen(true);
             });
 
 
-            newSocket.on('notification', (notification: any) => {
+            newSocket.on('notification', (notification: NotificationData) => {
                 const relevantKeywords = [
                     'appointment', 'reschedule', 'consultation', 'payment',
                     'wallet', 'refund', 'earnings', 'confirmed', 'rejected', 'cancelled', 'request'

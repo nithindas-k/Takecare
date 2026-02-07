@@ -16,7 +16,10 @@ interface AvailableSlot {
     bookedCount?: number;
     maxPatients?: number;
     slotId?: string;
-    booked: boolean
+    booked: boolean;
+    customId?: string;
+    _id?: string;
+    id?: string;
 }
 
 const getSlotKey = (slot: AvailableSlot) => {
@@ -66,7 +69,7 @@ const BookingPage: React.FC = () => {
                         isAvailable: slot.isAvailable,
                         bookedCount: slot.bookedCount || 0,
                         maxPatients: slot.maxPatients || 1,
-                        slotId: slot.slotId || (slot as any).customId || (slot as any)._id || (slot as any).id || `${slot.startTime}-${slot.endTime}`,
+                        slotId: slot.slotId || slot.customId || slot._id || slot.id || `${slot.startTime}-${slot.endTime}`,
                         booked: slot.booked
                     }))
                     : [];
@@ -98,11 +101,11 @@ const BookingPage: React.FC = () => {
     }, [doctorId, selectedDay]);
 
     useEffect(() => {
-        
+
         sessionStorage.removeItem('appointmentId');
         sessionStorage.removeItem('bookingData');
         sessionStorage.removeItem('tempAppointmentId');
-        sessionStorage.removeItem('appointmentData'); 
+        sessionStorage.removeItem('appointmentData');
     }, []);
 
     useEffect(() => {

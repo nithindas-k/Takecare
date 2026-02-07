@@ -61,6 +61,10 @@ interface IDoctorNote {
     id: string;
     title: string;
     description: string;
+    category?: string;
+    dosage?: string;
+    frequency?: string;
+    duration?: string;
     createdAt: string;
 }
 
@@ -77,7 +81,7 @@ interface Appointment {
         expiresAt: string;
     };
     doctorNotes?: IDoctorNote[];
-    patient?: any;
+    patient?: Patient;
     customId?: string;
     sessionStatus?: SessionStatus;
     conversationId?: string;
@@ -1043,7 +1047,7 @@ const ChatPage = () => {
         const file = e.target.files?.[0];
         if (!file || !id) return;
 
-      
+
         const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
         if (!validTypes.includes(file.type)) {
             toast.error("Only image files (JPG, PNG, GIF) are allowed");
@@ -2138,7 +2142,7 @@ const ChatPage = () => {
                             {/* Notes List */}
                             <div className="space-y-3 pb-4">
                                 {appointment?.doctorNotes && appointment.doctorNotes.length > 0 ? (
-                                    [...appointment.doctorNotes].reverse().map((note: any, idx: number) => (
+                                    [...appointment.doctorNotes].reverse().map((note: IDoctorNote, idx: number) => (
                                         <div key={note.id || idx} className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm">
                                             <div className="flex items-center gap-2 mb-2">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-[#00A1B0]"></div>
@@ -2318,7 +2322,7 @@ const ChatPage = () => {
                         {/* Notes List */}
                         <div className="space-y-3 mt-4">
                             {appointment?.doctorNotes && appointment.doctorNotes.length > 0 ? (
-                                [...appointment.doctorNotes].reverse().map((note: any, idx: number) => (
+                                [...appointment.doctorNotes].reverse().map((note: IDoctorNote, idx: number) => (
                                     <motion.div
                                         key={note.id || idx}
                                         initial={{ opacity: 0, x: 20 }}
@@ -2477,8 +2481,9 @@ const ChatPage = () => {
                                             } else {
                                                 toast.error(res.message);
                                             }
-                                        } catch (error: any) {
-                                            toast.error(error.response?.data?.message || "Failed to trigger tests needed");
+                                        } catch (error: unknown) {
+                                            const errorMessage = error instanceof Error ? error.message : "Failed to trigger tests needed";
+                                            toast.error(errorMessage);
                                         }
                                     }}
                                     className="w-full bg-amber-500 hover:bg-amber-600 text-white rounded-2xl h-14 font-black uppercase text-xs tracking-widest shadow-lg shadow-amber-500/20"

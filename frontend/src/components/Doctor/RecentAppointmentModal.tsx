@@ -5,6 +5,8 @@ import { Loader2, Calendar, Clock, FileText, Pill, Video, MessageSquare, X, User
 import { appointmentService } from '../../services/appointmentService';
 import { prescriptionService } from '../../services/prescriptionService';
 import { toast } from 'sonner';
+import type { PopulatedAppointment } from '../../types/appointment.types';
+import type { Prescription, Medicine } from '../../types/prescription.types';
 
 interface RecentAppointmentModalProps {
     isOpen: boolean;
@@ -14,8 +16,8 @@ interface RecentAppointmentModalProps {
 }
 
 const RecentAppointmentModal: React.FC<RecentAppointmentModalProps> = ({ isOpen, onClose, appointmentId, role = 'doctor' }) => {
-    const [appointment, setAppointment] = useState<any>(null);
-    const [prescription, setPrescription] = useState<any>(null);
+    const [appointment, setAppointment] = useState<PopulatedAppointment | null>(null);
+    const [prescription, setPrescription] = useState<Prescription | null>(null);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -157,8 +159,8 @@ const RecentAppointmentModal: React.FC<RecentAppointmentModalProps> = ({ isOpen,
                                         <span className="text-gray-500">{role === 'doctor' ? 'Patient:' : 'Doctor:'}</span>
                                         <span className="font-semibold text-gray-800">
                                             {role === 'doctor'
-                                                ? (appointment.patientName || appointment.patientId?.name || "Patient")
-                                                : (appointment.doctorName || appointment.doctorId?.name || "Doctor")}
+                                                ? (appointment.patientName || (typeof appointment.patientId === 'object' ? appointment.patientId?.name : null) || "Patient")
+                                                : (appointment.doctorName || (typeof appointment.doctorId === 'object' ? appointment.doctorId?.name : null) || "Doctor")}
                                         </span>
                                     </div>
                                 </div>
@@ -188,7 +190,7 @@ const RecentAppointmentModal: React.FC<RecentAppointmentModalProps> = ({ isOpen,
                                                             </tr>
                                                         </thead>
                                                         <tbody className="divide-y divide-gray-50">
-                                                            {prescription.medicines.map((med: any, i: number) => (
+                                                            {prescription.medicines.map((med: Medicine, i: number) => (
                                                                 <tr key={i}>
                                                                     <td className="px-4 py-3 font-medium text-gray-800">{med.name}</td>
                                                                     <td className="px-4 py-3 text-gray-600">{med.dosage}</td>

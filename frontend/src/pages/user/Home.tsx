@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+// src/pages/user/Home.tsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import NavBar from '../../components/common/NavBar';
@@ -32,9 +32,31 @@ const whyChoose = [
   { icon: <FaShieldAlt className="w-8 h-8 text-[#00A1B0]" />, title: 'Secure & Private', desc: 'Safe Telemedicine' },
 ];
 
+interface DoctorSummary {
+  id: string;
+  _id?: string;
+  customId?: string;
+  name: string;
+  image?: string;
+  speciality?: string;
+  specialty?: string;
+  rating?: number;
+  ratingAvg?: number;
+  reviews?: number;
+  ratingCount?: number;
+  location?: string;
+  experience?: number;
+  experienceYears?: number;
+  fees?: number;
+  VideoFees?: number;
+  videoFees?: number;
+  ChatFees?: number;
+  chatFees?: number;
+}
+
 const Home: React.FC = () => {
   const navigate = useNavigate();
-  const [latestDoctors, setLatestDoctors] = useState<any[]>([]);
+  const [latestDoctors, setLatestDoctors] = useState<DoctorSummary[]>([]);
   const [totalDoctors, setTotalDoctors] = useState<number>(0);
   const [favorites, setFavorites] = useState<string[]>([]);
   const doctorCountLabel = totalDoctors > 0 ? `${totalDoctors}+` : "—";
@@ -45,9 +67,9 @@ const Home: React.FC = () => {
     try {
       const response = await userService.getFavorites();
       if (response.success && Array.isArray(response.data)) {
-        setFavorites(response.data.map((doc: any) => doc.id || doc._id));
+        setFavorites(response.data.map((doc: { id?: string; _id?: string }) => doc.id || doc._id || ''));
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Failed to fetch favorites", error);
     }
   }, []);
@@ -66,7 +88,7 @@ const Home: React.FC = () => {
       } else {
         toast.error(response.message);
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred");
     }
   };
@@ -80,7 +102,7 @@ const Home: React.FC = () => {
 
       setLatestDoctors(Array.isArray(list) ? list : []);
       setTotalDoctors(Number.isFinite(total) ? total : 0);
-    } catch (err) {
+    } catch (err: unknown) {
       console.warn('Failed to load latest doctors', err);
       setLatestDoctors([]);
       setTotalDoctors(0);
@@ -433,7 +455,7 @@ const Home: React.FC = () => {
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
               {latestDoctors.slice(0, 4).map((doctor) => {
-                const id = (doctor as any)?.id || (doctor as any)?._id || (doctor as any)?.customId;
+                const id = doctor.id || doctor._id || doctor.customId;
                 const rating = Math.round(doctor?.rating ?? doctor?.ratingAvg ?? 0);
                 const reviews = doctor?.reviews ?? doctor?.ratingCount ?? 0;
                 const fees = doctor?.fees ?? doctor?.VideoFees ?? doctor?.videoFees ?? doctor?.ChatFees ?? doctor?.chatFees;
@@ -449,12 +471,14 @@ const Home: React.FC = () => {
                         className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
                         onError={(e) => ((e.target as HTMLImageElement).src = "/doctor.png")}
                       />
-                      <button
-                        className={`absolute top-4 right-4 p-2 rounded-full shadow-sm transition-colors ${favorites.includes(id) ? 'text-[#00A1B0] bg-white' : 'text-gray-400 bg-white/80 hover:text-[#00A1B0] hover:bg-white'}`}
-                        onClick={(e) => handleToggleFavorite(e, id)}
-                      >
-                        <FaHeart className="w-5 h-5" />
-                      </button>
+                      {id && (
+                        <button
+                          className={`absolute top-4 right-4 p-2 rounded-full shadow-sm transition-colors ${favorites.includes(id) ? 'text-[#00A1B0] bg-white' : 'text-gray-400 bg-white/80 hover:text-[#00A1B0] hover:bg-white'}`}
+                          onClick={(e) => handleToggleFavorite(e, id)}
+                        >
+                          <FaHeart className="w-5 h-5" />
+                        </button>
+                      )}
                     </div>
                     <div className="p-3 md:p-5">
                       <h3 className="font-bold text-sm md:text-lg mb-0.5 md:mb-1 truncate">{doctor?.name}</h3>
@@ -485,13 +509,13 @@ const Home: React.FC = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <button
                             className="px-2 py-1.5 border border-[#00A1B0] text-[#00A1B0] rounded-md text-[10px] md:text-xs font-semibold hover:bg-[#00A1B0]/10 transition-colors"
-                            onClick={() => navigate(`/doctors/${id}`)}
+                            onClick={() => id && navigate(`/doctors/${id}`)}
                           >
                             View Profile
                           </button>
                           <button
                             className="px-2 py-1.5 bg-[#00A1B0] text-white rounded-md text-[10px] md:text-xs font-semibold hover:bg-[#008f9c] transition-colors shadow"
-                            onClick={() => navigate(`/booking/${id}`)}
+                            onClick={() => id && navigate(`/booking/${id}`)}
                           >
                             Book Now
                           </button>

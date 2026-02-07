@@ -1,14 +1,7 @@
 import mongoose, { ClientSession } from "mongoose";
 
 
-/**
- * Executes a callback within a MongoDB transaction.
- * If the MongoDB instance does not support transactions (e.g., standalone),
- * it falls back to executing the callback without a transaction.
- * 
- * @param callback The function to execute. Receives a session (or undefined).
- * @returns The result of the callback.
- */
+
 export const runInTransaction = async <T>(
     callback: (session: ClientSession | undefined) => Promise<T>
 ): Promise<T> => {

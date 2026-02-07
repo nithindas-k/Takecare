@@ -9,9 +9,21 @@ import { toast } from 'sonner';
 import { Skeleton } from '../../components/ui/skeleton';
 import PatientLayout from '../../components/Patient/PatientLayout';
 
+interface FavoriteSummary {
+    id: string;
+    name: string;
+    image: string | null;
+    speciality: string;
+    rating: number;
+    experience: number;
+    location: string;
+    fees: number;
+    available: boolean;
+}
+
 const FavoriteDoctors: React.FC = () => {
     const navigate = useNavigate();
-    const [doctors, setDoctors] = useState<any[]>([]);
+    const [doctors, setDoctors] = useState<FavoriteSummary[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchFavorites = useCallback(async () => {
@@ -20,8 +32,24 @@ const FavoriteDoctors: React.FC = () => {
             const response = await userService.getFavorites();
             if (response.success && Array.isArray(response.data)) {
                 // Map the populated favorites
-                const mappedDoctors = response.data.map((fav: any) => ({
-                    id: fav._id || fav.id,
+                const mappedDoctors = response.data.map((fav: {
+                    id?: string;
+                    _id?: string;
+                    userId?: { name?: string; profileImage?: string };
+                    speciality?: string;
+                    specialty?: string;
+                    ratingAvg?: number;
+                    rating?: number;
+                    experienceYears?: number;
+                    experience?: number;
+                    location?: string;
+                    VideoFees?: number;
+                    videoFees?: number;
+                    fees?: number;
+                    isActive?: boolean;
+                    available?: boolean;
+                }): FavoriteSummary => ({
+                    id: fav._id || fav.id || '',
                     name: fav.userId?.name || "Unknown Doctor",
                     image: fav.userId?.profileImage || null,
                     speciality: fav.speciality || fav.specialty || "Specialist",
@@ -35,7 +63,7 @@ const FavoriteDoctors: React.FC = () => {
             } else {
                 setDoctors([]);
             }
-        } catch (error) {
+        } catch (error: unknown) {
             console.error("Failed to fetch favorites", error);
             setDoctors([]);
         } finally {
@@ -57,7 +85,7 @@ const FavoriteDoctors: React.FC = () => {
             } else {
                 toast.error(response.message);
             }
-        } catch (error) {
+        } catch {
             toast.error("An error occurred");
         }
     };

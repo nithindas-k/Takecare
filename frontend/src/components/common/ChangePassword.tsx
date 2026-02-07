@@ -10,6 +10,12 @@ interface ChangePasswordProps {
     role: "user" | "doctor";
 }
 
+interface PasswordFormData {
+    oldPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+}
+
 const ChangePassword: React.FC<ChangePasswordProps> = ({ role }) => {
     const [showOldPassword, setShowOldPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
@@ -22,11 +28,11 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ role }) => {
         formState: { errors, isValid },
         watch,
         reset
-    } = useForm({
+    } = useForm<PasswordFormData>({
         mode: "onChange",
     });
 
-    const onSubmit = async (data: any) => {
+    const onSubmit = async (data: PasswordFormData) => {
         setLoading(true);
         try {
             const response = await authService.changePassword(
@@ -44,8 +50,9 @@ const ChangePassword: React.FC<ChangePasswordProps> = ({ role }) => {
             } else {
                 toast.error(response.message || "Failed to change password");
             }
-        } catch (error: any) {
-            toast.error(error.message || "An unexpected error occurred");
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
+            toast.error(errorMessage);
         } finally {
             setLoading(false);
         }

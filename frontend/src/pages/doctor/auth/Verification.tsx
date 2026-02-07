@@ -206,7 +206,12 @@ const DoctorVerification: React.FC = () => {
         setDocuments([]); setErrors({}); setRejectionReason(null); setCanResubmit(false);
         setTimeout(() => { navigate("/doctor/dashboard"); }, 2000);
       } else { setServerMessage(response.message || "Failed to submit verification. Please try again."); }
-    } catch (err: any) { setServerMessage(err.response?.data?.message || "Failed to submit verification. Please try again."); } finally { setSubmitting(false); }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to submit verification. Please try again.";
+      setServerMessage(errorMessage);
+    } finally {
+      setSubmitting(false);
+    }
   }, [formData, validate, navigate, documents]);
 
   const canAddMore = documents.length < MAX_FILES;

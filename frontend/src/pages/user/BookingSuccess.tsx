@@ -7,10 +7,11 @@ import { API_BASE_URL } from '../../utils/constants';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { CheckCircle2, CalendarDays, ArrowRight, Home } from 'lucide-react';
+import type { PopulatedAppointment } from '../../types/appointment.types';
 
 const BookingSuccess: React.FC = () => {
     const navigate = useNavigate();
-    const [appointment, setAppointment] = useState<any>(null);
+    const [appointment, setAppointment] = useState<PopulatedAppointment | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -103,7 +104,14 @@ const BookingSuccess: React.FC = () => {
         );
     }
 
-    const doctor = appointment.doctor || appointment.doctorId;
+    const doctor = (appointment.doctor || appointment.doctorId) as {
+        name?: string;
+        speciality?: string;
+        specialty?: string;
+        image?: string;
+        profileImage?: string;
+        userId?: { name?: string; profileImage?: string };
+    } | undefined;
     const doctorName = doctor?.name || doctor?.userId?.name || 'Dr. Unknown';
     const doctorSpeciality = doctor?.speciality || doctor?.specialty || 'Doctor';
     const doctorImage = doctor?.image || doctor?.userId?.profileImage || doctor?.profileImage;

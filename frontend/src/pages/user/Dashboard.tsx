@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+// src/pages/user/Dashboard.tsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -23,6 +23,7 @@ import { walletService } from "../../services/walletService";
 import { Skeleton } from "../../components/ui/skeleton";
 import { Button } from "../../components/ui/button";
 import { API_BASE_URL } from "../../utils/constants";
+import type { PopulatedAppointment } from "../../types/appointment.types";
 
 const PatientDashboard: React.FC = () => {
     const navigate = useNavigate();
@@ -32,8 +33,8 @@ const PatientDashboard: React.FC = () => {
         total: 0,
         balance: 0
     });
-    const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
-    const [recentAppointments, setRecentAppointments] = useState<any[]>([]);
+    const [upcomingAppointments, setUpcomingAppointments] = useState<PopulatedAppointment[]>([]);
+    const [recentAppointments, setRecentAppointments] = useState<PopulatedAppointment[]>([]);
     const [loading, setLoading] = useState(true);
 
     const getImageUrl = (imagePath: string | null | undefined) => {
@@ -43,11 +44,20 @@ const PatientDashboard: React.FC = () => {
         return `${API_BASE_URL}/${cleanPath}`;
     };
 
-    const getDoctorInfo = (node: any) => {
+    const getDoctorInfo = (node: PopulatedAppointment) => {
         if (!node) return { name: 'Doctor', image: '/doctor.png', speciality: 'Medical Specialist' };
 
         // Handle cases where node might be 'app' or directly the doctor object
-        const doctor = node.doctor || node.doctorId || (node.userId ? node : null);
+        const doctor = (node.doctor || node.doctorId) as {
+            name?: string;
+            user?: { name?: string; profileImage?: string };
+            userId?: { name?: string; profileImage?: string };
+            profileImage?: string;
+            image?: string;
+            speciality?: string;
+            specialization?: string;
+            specialty?: string;
+        } | undefined;
         const isObj = doctor && typeof doctor === 'object';
 
         let name = '';
@@ -57,7 +67,7 @@ const PatientDashboard: React.FC = () => {
 
         // Fallback to top-level fields
         if (!name) {
-            name = node.doctorName || node.name || 'Doctor';
+            name = node.doctorName || 'Doctor';
         }
 
         let profileImage = '';
@@ -66,16 +76,16 @@ const PatientDashboard: React.FC = () => {
         }
 
         if (!profileImage) {
-            profileImage = node.doctorImage || node.image || '';
+            profileImage = node.doctorImage || '';
         }
 
         let speciality = '';
         if (isObj) {
-            speciality = doctor.speciality || doctor.specialization || '';
+            speciality = doctor.speciality || doctor.specialization || doctor.specialty || '';
         }
 
         if (!speciality) {
-            speciality = node.doctorSpeciality || node.speciality || 'Medical Specialist';
+            speciality = node.specialty || 'Medical Specialist';
         }
 
         return {
@@ -95,7 +105,7 @@ const PatientDashboard: React.FC = () => {
 
                 if (appointmentsRes.success) {
                     const allApps = appointmentsRes.data.appointments || [];
-                    const upcoming = allApps.filter((app: any) =>
+                    const upcoming = allApps.filter((app: PopulatedAppointment) =>
                         ['scheduled', 'pending', 'confirmed', 'TEST_NEEDED'].includes(app.status)
                     );
                     setUpcomingAppointments(upcoming);
@@ -113,7 +123,7 @@ const PatientDashboard: React.FC = () => {
                         balance: walletRes.data.balance || 0
                     }));
                 }
-            } catch (error) {
+            } catch (error: unknown) {
                 console.error("Dashboard data fetch error:", error);
             } finally {
                 setLoading(false);
@@ -281,7 +291,7 @@ const PatientDashboard: React.FC = () => {
                                                     <div>
                                                         <p className="font-semibold text-slate-800 text-sm">Dr. {getDoctorInfo(app).name}</p>
                                                         <p className="text-xs text-slate-400 font-normal">
-                                                            {new Date(app.appointmentDate).toLocaleDateString()} • {app.consultationType || app.appointmentType || 'Consultation'}
+                                                            {new Date(app.appointmentDate).toLocaleDateString()} • {app.appointmentType || 'Consultation'}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -335,14 +345,23 @@ const PatientDashboard: React.FC = () => {
     );
 };
 
-const StatCard = ({ label, value, icon, trend, color, onClick }: any) => {
-    const shadowMap: any = {
+interface StatCardProps {
+    label: string;
+    value: string | number;
+    icon: React.ReactNode;
+    trend: string;
+    color: string;
+    onClick?: () => void;
+}
+
+const StatCard = ({ label, value, icon, trend, color, onClick }: StatCardProps) => {
+    const shadowMap: Record<string, string> = {
         sky: 'hover:shadow-sky-200',
         purple: 'hover:shadow-purple-200',
         teal: 'hover:shadow-teal-200',
     };
 
-    const colorMap: any = {
+    const colorMap: Record<string, string> = {
         sky: 'text-sky-600 bg-sky-100',
         purple: 'text-purple-600 bg-purple-100',
         teal: 'text-[#00A1B0] bg-[#00A1B0]/20',
@@ -367,7 +386,14 @@ const StatCard = ({ label, value, icon, trend, color, onClick }: any) => {
     );
 };
 
-const QuickAction = ({ icon, label, desc, onClick }: any) => (
+interface QuickActionProps {
+    icon: React.ReactNode;
+    label: string;
+    desc: string;
+    onClick: () => void;
+}
+
+const QuickAction = ({ icon, label, desc, onClick }: QuickActionProps) => (
     <button
         onClick={onClick}
         className="bg-white border border-slate-100 p-6 rounded-2xl text-center flex flex-col items-center justify-center gap-3 transition-all hover:border-[#00A1B0]/30 hover:shadow-md group"
@@ -380,7 +406,13 @@ const QuickAction = ({ icon, label, desc, onClick }: any) => (
     </button>
 );
 
-const EmptyState = ({ message, actionLabel, onAction }: any) => (
+interface EmptyStateProps {
+    message: string;
+    actionLabel?: string;
+    onAction?: () => void;
+}
+
+const EmptyState = ({ message, actionLabel, onAction }: EmptyStateProps) => (
     <div className="bg-white border-2 border-dashed border-slate-100 rounded-3xl p-16 text-center space-y-6">
         <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300">
             <FaClipboardList size={30} />

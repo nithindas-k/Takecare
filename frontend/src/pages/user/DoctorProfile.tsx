@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+// src/pages/user/DoctorProfile.tsx
 // src/pages/DoctorProfile.tsx
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -66,10 +66,10 @@ const DoctorProfile: React.FC = () => {
       try {
         const response = await userService.getFavorites();
         if (response.success && Array.isArray(response.data)) {
-          const isFav = response.data.some((doc: any) => (doc.id || doc._id) === doctorId);
+          const isFav = response.data.some((doc: { id?: string; _id?: string }) => (doc.id || doc._id) === doctorId);
           if (mounted) setIsFavorited(isFav);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Failed to check favorite status", error);
       }
     };
@@ -107,9 +107,10 @@ const DoctorProfile: React.FC = () => {
             });
           }
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (mounted) {
-          setErrorMsg(err?.response?.data?.message || err?.message || "Failed to fetch doctor details");
+          const errorMessage = err instanceof Error ? err.message : "Failed to fetch doctor details";
+          setErrorMsg(errorMessage);
           setDoctor(null);
         }
       } finally {
@@ -126,7 +127,33 @@ const DoctorProfile: React.FC = () => {
         } else {
           const relatedData = result?.data ?? result;
           if (mounted && Array.isArray(relatedData)) {
-            const mappedDoctors = relatedData.map((doc: any) => ({
+            const mappedDoctors = relatedData.map((doc: {
+              id?: string;
+              _id?: string;
+              name?: string;
+              email?: string;
+              image?: string;
+              profileImage?: string;
+              speciality?: string;
+              specialty?: string;
+              experience?: number;
+              experienceYears?: number;
+              fees?: number | string;
+              VideoFees?: number | string;
+              videoFees?: number | string;
+              chatFees?: number | string;
+              ChatFees?: number | string;
+              location?: string;
+              rating?: number;
+              ratingAvg?: number;
+              reviews?: number;
+              ratingCount?: number;
+              available?: boolean;
+              isActive?: boolean;
+              qualifications?: string[] | string;
+              languages?: string[] | string;
+              about?: string;
+            }) => ({
               id: doc?.id ?? doc?._id ?? "",
               name: doc?.name ?? "Unknown Doctor",
               email: doc?.email,
@@ -147,8 +174,8 @@ const DoctorProfile: React.FC = () => {
             setRelatedDoctors(mappedDoctors);
           }
         }
-      } catch (err: any) {
-        console.warn("Error fetching related doctors:", err?.message);
+      } catch (err: unknown) {
+        console.warn("Error fetching related doctors:", err instanceof Error ? err.message : String(err));
         if (mounted) setRelatedDoctors([]);
       }
     };
@@ -170,7 +197,7 @@ const DoctorProfile: React.FC = () => {
       } else {
         toast.error(response.message);
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to update favorite status");
     }
   };

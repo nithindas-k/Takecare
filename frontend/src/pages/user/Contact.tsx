@@ -77,9 +77,10 @@ const Contact: React.FC = () => {
             } else {
                 toast.error(response.message || 'Failed to send message. Please try again.');
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error submitting contact form:', error);
-            toast.error(error.response?.data?.message || 'An error occurred. Please try again later.');
+            const errorMessage = error instanceof Error ? error.message : 'An error occurred. Please try again later.';
+            toast.error(errorMessage);
         } finally {
             setIsSubmitting(false);
         }

@@ -13,9 +13,25 @@ import { Button } from '../../components/ui/button';
 
 import { Card, CardContent, CardHeader } from "../../components/ui/card"
 
+interface NormalizedAppointment {
+    raw: PopulatedAppointment;
+    id: string;
+    displayId?: string;
+    doctorName: string;
+    doctorImage: string;
+    appointmentType?: string;
+    date?: string;
+    time?: string;
+    status: string;
+    tab: 'upcoming' | 'cancelled' | 'completed';
+    fees?: number;
+}
 
-
-const AppointmentCard: React.FC<{ appointment: any; handleViewDetails: (id: string) => void; formatDateShort: (date: any) => string }> = ({ appointment, handleViewDetails, formatDateShort }) => {
+const AppointmentCard: React.FC<{
+    appointment: NormalizedAppointment;
+    handleViewDetails: (id: string) => void;
+    formatDateShort: (date: string | Date | undefined) => string
+}> = ({ appointment, handleViewDetails, formatDateShort }) => {
     const [showReason, setShowReason] = useState(false);
     const reason = appointment.raw?.rejectionReason || appointment.raw?.cancellationReason || appointment.raw?.reason;
     const hasReason = !!reason && (appointment.status === 'rejected' || appointment.status === 'cancelled');
@@ -134,7 +150,13 @@ const Appointments: React.FC = () => {
     }, []);
 
     const getDoctorInfo = useCallback((apt: PopulatedAppointment) => {
-        const doctor = apt?.doctor || apt?.doctorId;
+        const doctor = (apt?.doctor || apt?.doctorId) as {
+            name?: string;
+            user?: { name: string; profileImage?: string };
+            userId?: { name: string; profileImage?: string };
+            profileImage?: string;
+            image?: string;
+        } | undefined;
         const name = doctor?.name || doctor?.user?.name || doctor?.userId?.name || apt?.doctorName || 'Doctor';
         const profileImage =
             doctor?.profileImage ||
@@ -156,7 +178,7 @@ const Appointments: React.FC = () => {
         return 'upcoming';
     };
 
-    const formatDateShort = (value: any) => {
+    const formatDateShort = (value: string | Date | undefined) => {
         if (!value) return 'N/A';
         const d = new Date(value);
         if (Number.isNaN(d.getTime())) return 'N/A';
@@ -168,7 +190,7 @@ const Appointments: React.FC = () => {
     };
 
     const normalizedAppointments = useMemo(() => {
-        return appointments.map((apt) => {
+        return appointments.map((apt: PopulatedAppointment): NormalizedAppointment => {
             const id = apt._id;
             const displayId = apt.customId || apt.id;
             const doctorInfo = getDoctorInfo(apt);
@@ -193,7 +215,7 @@ const Appointments: React.FC = () => {
         setError('');
         try {
             const status = activeTab === 'upcoming' ? 'confirmed,pending,reschedule_requested' : activeTab;
-          
+
             const response = await appointmentService.getMyAppointments(status, page, limit, debouncedSearch);
             if (!response?.success) {
                 throw new Error(response?.message || 'Failed to fetch appointments');
@@ -219,11 +241,11 @@ const Appointments: React.FC = () => {
         }
     }, [page, limit, debouncedSearch, activeTab]);
 
-  
+
     useEffect(() => {
         const handler = setTimeout(() => {
             setDebouncedSearch(searchQuery);
-            setPage(1); 
+            setPage(1);
         }, 500);
 
         return () => {

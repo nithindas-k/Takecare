@@ -25,9 +25,22 @@ import {
     SelectValue,
 } from "../../components/ui/select";
 
+interface DoctorSummary {
+    id: string;
+    _id?: string;
+    name: string;
+    image?: string;
+    speciality: string;
+    rating: number;
+    experience: number;
+    location: string;
+    fees: number;
+    available: boolean;
+}
+
 const Doctors: React.FC = () => {
     const navigate = useNavigate();
-    const [doctors, setDoctors] = useState<any[]>([]);
+    const [doctors, setDoctors] = useState<DoctorSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [speciality, setSpeciality] = useState('');
@@ -43,9 +56,9 @@ const Doctors: React.FC = () => {
         try {
             const response = await userService.getFavorites();
             if (response.success && Array.isArray(response.data)) {
-                setFavorites(response.data.map((doc: any) => doc.id || doc._id));
+                setFavorites(response.data.map((doc: { id?: string; _id?: string }) => doc.id || doc._id || ''));
             }
-        } catch (error) {
+        } catch (error: unknown) {
             console.error("Failed to fetch favorites", error);
         }
     }, []);
@@ -64,17 +77,17 @@ const Doctors: React.FC = () => {
             });
 
             if (response && response.success && response.data) {
-                const mappedDoctors = (response.data.doctors || []).map((doc: any) => ({
+                const mappedDoctors = (response.data.doctors || []).map((doc: DoctorSummary) => ({
                     ...doc,
-                    id: doc.id || doc._id
+                    id: doc.id || doc._id || ''
                 }));
                 setDoctors(mappedDoctors);
                 setTotalPages(response.data.totalPages || 1);
                 setTotalDoctors(response.data.total || 0);
             } else if (response && response.data) {
-                const mappedDoctors = (response.data.doctors || []).map((doc: any) => ({
+                const mappedDoctors = (response.data.doctors || []).map((doc: DoctorSummary) => ({
                     ...doc,
-                    id: doc.id || doc._id
+                    id: doc.id || doc._id || ''
                 }));
                 setDoctors(mappedDoctors);
                 setTotalPages(response.data.totalPages || 1);
@@ -82,7 +95,7 @@ const Doctors: React.FC = () => {
             } else {
                 setDoctors([]);
             }
-        } catch (error) {
+        } catch (error: unknown) {
             console.error("Failed to fetch doctors", error);
             setDoctors([]);
         } finally {
@@ -109,7 +122,7 @@ const Doctors: React.FC = () => {
             } else {
                 toast.error(response.message);
             }
-        } catch (error) {
+        } catch {
             toast.error("An error occurred");
         }
     };
@@ -145,7 +158,7 @@ const Doctors: React.FC = () => {
         }
     };
 
-    const getImageUrl = (imagePath: string) => {
+    const getImageUrl = (imagePath: string | undefined) => {
         if (!imagePath) return '/doctor.png';
         if (imagePath.startsWith('http')) return imagePath;
         const cleanPath = imagePath.replace(/\\/g, '/');

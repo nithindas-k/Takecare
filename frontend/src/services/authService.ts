@@ -6,6 +6,7 @@ import {
   AUTH_BASE_URL,
   AUTH_ROUTES,
 } from "../utils/constants";
+import { handleApiError } from "../utils/errorHandle";
 
 import type {
   LoginRequest,
@@ -26,18 +27,7 @@ interface JwtPayload {
   doctorId?: string;
 }
 
-interface ApiErrorResponse {
-  response?: {
-    data?: {
-      message?: string;
-    };
-  };
-}
 
-function getErrorMessage(error: unknown): string {
-  const apiError = error as ApiErrorResponse;
-  return apiError.response?.data?.message || "An error occurred";
-}
 
 class AuthService {
   private getApiRoutes(role: "user" | "doctor") {
@@ -106,10 +96,7 @@ class AuthService {
       );
       return response.data;
     } catch (error: unknown) {
-      return {
-        success: false,
-        message: getErrorMessage(error) || "Registration failed",
-      };
+      return handleApiError(error, "Registration failed");
     }
   }
 
@@ -121,10 +108,7 @@ class AuthService {
       );
       return response.data;
     } catch (error: unknown) {
-      return {
-        success: false,
-        message: getErrorMessage(error) || "OTP verification failed",
-      };
+      return handleApiError(error, "OTP verification failed");
     }
   }
 
@@ -136,10 +120,7 @@ class AuthService {
       });
       return response.data;
     } catch (error: unknown) {
-      return {
-        success: false,
-        message: getErrorMessage(error) || "Failed to resend OTP",
-      };
+      return handleApiError(error, "Failed to resend OTP");
     }
   }
 
@@ -156,10 +137,7 @@ class AuthService {
       }
       return response.data;
     } catch (error: unknown) {
-      return {
-        success: false,
-        message: getErrorMessage(error) || "Login failed",
-      };
+      return handleApiError(error, "Login failed");
     }
   }
 
@@ -175,10 +153,7 @@ class AuthService {
       );
       return response.data;
     } catch (error: unknown) {
-      return {
-        success: false,
-        message: getErrorMessage(error) || "Registration failed",
-      };
+      return handleApiError(error, "Registration failed");
     }
   }
 
@@ -190,10 +165,7 @@ class AuthService {
       );
       return response.data;
     } catch (error: unknown) {
-      return {
-        success: false,
-        message: getErrorMessage(error) || "OTP verification failed",
-      };
+      return handleApiError(error, "OTP verification failed");
     }
   }
 
@@ -204,10 +176,7 @@ class AuthService {
       });
       return response.data;
     } catch (error: unknown) {
-      return {
-        success: false,
-        message: getErrorMessage(error) || "Failed to resend OTP",
-      };
+      return handleApiError(error, "Failed to resend OTP");
     }
   }
 
@@ -224,10 +193,7 @@ class AuthService {
       }
       return response.data;
     } catch (error: unknown) {
-      return {
-        success: false,
-        message: getErrorMessage(error) || "Login failed",
-      };
+      return handleApiError(error, "Login failed");
     }
   }
 
@@ -248,10 +214,7 @@ class AuthService {
       }
       return response.data;
     } catch (error: unknown) {
-      return {
-        success: false,
-        message: getErrorMessage(error) || "Admin login failed",
-      };
+      return handleApiError(error, "Admin login failed");
     }
   }
 
@@ -281,8 +244,8 @@ class AuthService {
   }
 
 
-  saveUser(_user: any): void {
-    console.warn('saveUser is deprecated. User data should not be stored in localStorage.');
+  saveUser(_userdata: unknown): void {
+    console.warn('saveUser is deprecated. User data should not be stored in localStorage.', _userdata);
   }
 
 
@@ -298,10 +261,7 @@ class AuthService {
       });
       return response.data;
     } catch (error: unknown) {
-      return {
-        success: false,
-        message: getErrorMessage(error) || "Failed to send reset link",
-      };
+      return handleApiError(error, "Failed to send reset link");
     }
   }
 
@@ -318,10 +278,7 @@ class AuthService {
       });
       return response.data;
     } catch (error: unknown) {
-      return {
-        success: false,
-        message: getErrorMessage(error) || "OTP verification failed",
-      };
+      return handleApiError(error, "OTP verification failed");
     }
   }
 
@@ -333,10 +290,7 @@ class AuthService {
       });
       return response.data;
     } catch (error: unknown) {
-      return {
-        success: false,
-        message: getErrorMessage(error) || "Failed to resend OTP",
-      };
+      return handleApiError(error, "Failed to resend OTP");
     }
   }
 
@@ -354,10 +308,7 @@ class AuthService {
       const response = await axiosInstance.post(apiRoutes.RESET_PASSWORD, data);
       return response.data;
     } catch (error: unknown) {
-      return {
-        success: false,
-        message: getErrorMessage(error) || "Failed to reset password",
-      };
+      return handleApiError(error, "Failed to reset password");
     }
   }
 
@@ -374,10 +325,7 @@ class AuthService {
       const response = await axiosInstance.post(apiRoutes.CHANGE_PASSWORD, data);
       return response.data;
     } catch (error: unknown) {
-      return {
-        success: false,
-        message: getErrorMessage(error) || "Failed to change password",
-      };
+      return handleApiError(error, "Failed to change password");
     }
   }
 }
