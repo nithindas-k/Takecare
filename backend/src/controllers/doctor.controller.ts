@@ -130,6 +130,8 @@ export class DoctorController implements IDoctorController {
         languages: bodyData.languages && (Array.isArray(bodyData.languages) || String(bodyData.languages).trim()) ? (Array.isArray(bodyData.languages) ? bodyData.languages : JSON.parse(String(bodyData.languages))) : undefined,
         qualifications: bodyData.qualifications && (Array.isArray(bodyData.qualifications) || String(bodyData.qualifications).trim()) ? (Array.isArray(bodyData.qualifications) ? bodyData.qualifications : JSON.parse(String(bodyData.qualifications))) : undefined,
         about: bodyData.about ? String(bodyData.about) : undefined,
+        signature: bodyData.signature ? String(bodyData.signature) : undefined,
+        removeSignature: bodyData.removeSignature === 'true',
       };
 
       const profileImage = req.file;

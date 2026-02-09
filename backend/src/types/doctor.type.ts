@@ -19,6 +19,7 @@ export interface IDoctor {
   ratingAvg: number;
   ratingCount: number;
   isActive: boolean;
+  signature?: string | null;
 }
 
 export type IDoctorDocument = IDoctor & Document & {
@@ -71,6 +72,7 @@ export interface DoctorProfileResponse {
   createdAt: Date;
   updatedAt: Date;
   about?: string;
+  signature?: string | null;
 }
 
 

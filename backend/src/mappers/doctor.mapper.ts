@@ -32,6 +32,7 @@ export class DoctorMapper {
             createdAt: doctor.createdAt,
             updatedAt: doctor.updatedAt,
             about: doctor.about,
+            signature: doctor.signature,
         };
     }
 

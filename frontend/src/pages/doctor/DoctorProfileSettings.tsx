@@ -27,6 +27,7 @@ interface DoctorProfile {
   dob?: string;
   verificationStatus: string;
   about?: string;
+  signature?: string | null;
 }
 
 const MAX_ABOUT_LENGTH = 1000;
@@ -63,6 +64,12 @@ const DoctorProfileSettings: React.FC = () => {
   const [removeImage, setRemoveImage] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
   const [showCropper, setShowCropper] = useState(false);
+
+  // Signature states
+  const [signature, setSignature] = useState<string | null>(null);
+  const [removeSignature, setRemoveSignature] = useState(false);
+  const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
 
 
   useEffect(() => {
@@ -102,6 +109,12 @@ const DoctorProfileSettings: React.FC = () => {
         setQualifications(data.qualifications || []);
         setAbout(data.about || "");
         if (data.profileImage) setPreviewImage(data.profileImage);
+        if (data.signature) {
+          console.log('Signature found in profile data:', data.signature.substring(0, 50) + '...');
+          setSignature(data.signature);
+        } else {
+          console.log('No signature found in profile data');
+        }
       }
     } catch (err) {
       console.error(err);
@@ -110,6 +123,35 @@ const DoctorProfileSettings: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Separate useEffect to load signature onto canvas
+  React.useEffect(() => {
+    if (signature && signatureCanvasRef.current) {
+      const canvas = signatureCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        console.log('Loading signature onto canvas:', signature.substring(0, 50) + '...');
+        const img = new Image();
+        img.onload = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          console.log('Signature loaded successfully');
+        };
+        img.onerror = (error) => {
+          console.error("Failed to load signature image:", error);
+          toast.error("Failed to load signature");
+        };
+        img.src = signature;
+      }
+    } else if (!signature && signatureCanvasRef.current) {
+      // Clear canvas if no signature
+      const canvas = signatureCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+  }, [signature]);
 
 
   const generateLocalAbout = () => {
@@ -212,13 +254,78 @@ const DoctorProfileSettings: React.FC = () => {
     setQualifications(qualifications.filter((q) => q !== qual));
   };
 
+  // Signature drawing functions
+  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    setIsDrawing(true);
+    setRemoveSignature(false);
+    const rect = canvas.getBoundingClientRect();
+    const offsetX = 'touches' in e ? e.touches[0].clientX - rect.left : (e as React.MouseEvent).clientX - rect.left;
+    const offsetY = 'touches' in e ? e.touches[0].clientY - rect.top : (e as React.MouseEvent).clientY - rect.top;
+
+    ctx.beginPath();
+    ctx.moveTo(offsetX, offsetY);
+  };
+
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDrawing) return;
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const offsetX = 'touches' in e ? e.touches[0].clientX - rect.left : (e as React.MouseEvent).clientX - rect.left;
+    const offsetY = 'touches' in e ? e.touches[0].clientY - rect.top : (e as React.MouseEvent).clientY - rect.top;
+
+    ctx.lineTo(offsetX, offsetY);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+    const canvas = signatureCanvasRef.current;
+    if (canvas) {
+      setSignature(canvas.toDataURL());
+    }
+  };
+
+  const clearSignature = () => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setSignature(null);
+    setRemoveSignature(true);
+  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
       const information = { name, phone, gender, dob };
-      const additionalInformation = { specialty, licenseNumber, experienceYears: Number(experienceYears), VideoFees: Number(videoFees), ChatFees: Number(chatFees), languages, qualifications, about };
+      const additionalInformation = {
+        specialty,
+        licenseNumber,
+        experienceYears: Number(experienceYears),
+        VideoFees: Number(videoFees),
+        ChatFees: Number(chatFees),
+        languages,
+        qualifications,
+        about,
+        signature: signature || undefined,
+        removeSignature: removeSignature
+      };
+      console.log('Submitting signature:', signature ? signature.substring(0, 50) + '...' : 'null');
       const formData = new FormData();
       formData.append("information", JSON.stringify(information));
       formData.append("additionalInformation", JSON.stringify(additionalInformation));
@@ -228,10 +335,17 @@ const DoctorProfileSettings: React.FC = () => {
         formData.append("removeProfileImage", "true");
       }
       const response = await doctorService.updateProfile(formData);
+      console.log('Update response:', response);
       if (response?.success && response.data) {
         toast.success("Profile updated successfully");
         dispatch(setUser({ ...response.data, _id: response.data.id || response.data._id }));
         setProfile(response.data);
+        // Verify signature was saved
+        if (response.data.signature) {
+          console.log('Signature saved successfully');
+        } else {
+          console.log('Warning: Signature not found in response');
+        }
       } else {
         toast.error(response?.message || "Update failed");
       }
@@ -345,6 +459,43 @@ const DoctorProfileSettings: React.FC = () => {
             <div className="p-2 border rounded-lg mb-8">
               <div className="flex flex-wrap gap-2 mb-2">{qualifications.map((qual, index) => (<span key={index} className="px-3 py-1 bg-gray-100 rounded-full flex items-center gap-2">{qual}<button type="button" onClick={() => removeQualification(qual)}><FaTimes size={12} className="text-gray-500 hover:text-red-500" /></button></span>))}</div>
               <input type="text" value={qualificationInput} onChange={(e) => setQualificationInput(e.target.value)} onKeyDown={handleAddQualification} placeholder="Type qualification and press Enter" className="w-full px-2 py-1 text-sm outline-none" />
+            </div>
+
+            {/* Signature Section */}
+            <h3 className="text-lg font-semibold mb-3">Digital Signature</h3>
+            <div className="p-6 border rounded-xl mb-8 bg-gray-50">
+              <p className="text-sm text-gray-600 mb-4">
+                Draw your signature below. This will be automatically attached to all your prescriptions.
+              </p>
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-white">
+                  <canvas
+                    ref={signatureCanvasRef}
+                    width={400}
+                    height={150}
+                    className="cursor-crosshair touch-none"
+                    onMouseDown={startDrawing}
+                    onMouseMove={draw}
+                    onMouseUp={stopDrawing}
+                    onMouseLeave={stopDrawing}
+                    onTouchStart={startDrawing}
+                    onTouchMove={draw}
+                    onTouchEnd={stopDrawing}
+                  />
+                  {!signature && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-gray-400 text-sm">
+                      Sign here with your mouse or touch
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={clearSignature}
+                  className="px-4 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                >
+                  Clear Signature
+                </button>
+              </div>
             </div>
 
             <div className="flex justify-end gap-4 pt-4 border-t"><Button type="button" className="px-6 bg-gray-200">Cancel</Button><Button type="submit" disabled={submitting} className="px-6">{submitting ? "Saving..." : "Save Changes"}</Button></div>

@@ -20,6 +20,7 @@ export interface DoctorResponseDTO {
   ratingAvg?: number;
   ratingCount?: number;
   image?: string | null; // Alias
+  signature?: string | null;
 }
 
 

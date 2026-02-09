@@ -41,6 +41,8 @@ export class PrescriptionService implements IPrescriptionService {
             throw new AppError("Prescription already exists for this appointment", HttpStatus.BAD_REQUEST);
         }
 
+        // Use provided signature, or fall back to doctor's saved signature
+        const signatureToUse = data.doctorSignature || doctor.signature || null;
 
         const prescriptionData = {
             appointmentId: appointment._id,
@@ -52,7 +54,7 @@ export class PrescriptionService implements IPrescriptionService {
             instructions: data.instructions,
             followUpDate: data.followUpDate ? new Date(data.followUpDate) : undefined,
             prescriptionPdfUrl: data.prescriptionPdfUrl,
-            doctorSignature: data.doctorSignature
+            doctorSignature: signatureToUse
         };
 
         await this._prescriptionRepository.create(prescriptionData);

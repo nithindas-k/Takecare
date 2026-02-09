@@ -51,6 +51,8 @@ export interface UpdateDoctorProfileDTO {
   gender?: "male" | "female" | "other";
   dob?: string | Date;
   about?: string;
+  signature?: string;
+  removeSignature?: boolean;
 }
 
 export interface VerificationResponseDTO {

@@ -75,6 +75,10 @@ const DoctorSchema = new Schema<IDoctorDocument>(
       type: Boolean,
       default: true,
     },
+    signature: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,

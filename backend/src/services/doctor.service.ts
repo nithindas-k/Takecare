@@ -153,6 +153,13 @@ export class DoctorService implements IDoctorService {
     if (data.licenseNumber) doctorUpdates.licenseNumber = data.licenseNumber;
     if (data.about) doctorUpdates.about = data.about;
 
+    // Handle signature update or removal
+    if (data.signature) {
+      doctorUpdates.signature = data.signature;
+    } else if (data.removeSignature) {
+      doctorUpdates.signature = null;
+    }
+
     if (Object.keys(doctorUpdates).length > 0) {
       await this._doctorRepository.updateById(doctor._id, doctorUpdates);
     }

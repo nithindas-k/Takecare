@@ -56,8 +56,36 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
                 console.error("Failed to fetch appointment for prescription", err);
             }
         };
+
+        const loadDoctorSignature = async () => {
+            try {
+                // Import doctorService dynamically to avoid circular dependencies
+                const { default: doctorService } = await import('../../services/doctorService');
+                const response = await doctorService.getDoctorProfile();
+                if (response?.success && response.data?.signature) {
+                    // Load the saved signature onto the canvas
+                    const canvas = signatureCanvasRef.current;
+                    if (canvas) {
+                        const ctx = canvas.getContext('2d');
+                        if (ctx) {
+                            const img = new Image();
+                            img.onload = () => {
+                                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                setHasSignature(true);
+                            };
+                            img.src = response.data.signature;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load doctor signature", err);
+            }
+        };
+
         if (isOpen && appointmentId) {
             fetchAppointment();
+            loadDoctorSignature();
         }
     }, [isOpen, appointmentId]);
 
@@ -316,9 +344,9 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
                                                 <div key={idx} className="group p-4 bg-white rounded-2xl border border-teal-100 shadow-sm hover:shadow-md transition-all relative">
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <span className={`px-2 py-0.5 rounded-lg text-[7px] font-black uppercase tracking-tighter ${note.category === 'medicine' ? 'bg-amber-100 text-amber-700' :
-                                                                note.category === 'lab_test' ? 'bg-indigo-100 text-indigo-700' :
-                                                                    note.category === 'diagnosis' ? 'bg-red-100 text-red-700' :
-                                                                        'bg-teal-100 text-teal-700'
+                                                            note.category === 'lab_test' ? 'bg-indigo-100 text-indigo-700' :
+                                                                note.category === 'diagnosis' ? 'bg-red-100 text-red-700' :
+                                                                    'bg-teal-100 text-teal-700'
                                                             }`}>
                                                             {note.category || 'observation'}
                                                         </span>
