@@ -117,7 +117,7 @@ const AppointmentDetails: React.FC = () => {
 
     const normalized = useMemo(() => {
         const apt = appointment
-        const doctor = apt?.doctor || apt?.doctorId;
+        const doctor: any = apt?.doctor || apt?.doctorId;
 
         const doctorName = doctor?.name || doctor?.user?.name || doctor?.userId?.name || apt?.doctorName;
         const doctorEmail = doctor?.email || doctor?.user?.email || doctor?.userId?.email || apt?.doctorEmail;
@@ -280,7 +280,8 @@ const AppointmentDetails: React.FC = () => {
         if (!appointment) return;
 
 
-        const docObj = appointment.doctor || appointment.doctorId;
+
+        const docObj: any = appointment.doctor || appointment.doctorId;
         const doctorId = docObj?._id || docObj?.id || (typeof docObj === 'string' ? docObj : null);
 
         if (!doctorId) {
@@ -307,7 +308,7 @@ const AppointmentDetails: React.FC = () => {
     const handleReviewSubmit = async (data: { rating: number; comment: string }) => {
         if (!appointment) return;
         try {
-            const docObj = appointment.doctor || appointment.doctorId;
+            const docObj: any = appointment.doctor || appointment.doctorId;
             const doctorId = docObj?._id || docObj?.id || (typeof docObj === 'string' ? docObj : null);
 
             const appointmentId = appointment._id || appointment.id || '';
@@ -346,9 +347,9 @@ const AppointmentDetails: React.FC = () => {
     const handleRetryPayment = () => {
         if (!appointment) return;
 
-        const doctorObj = appointment.doctorId || appointment.doctor || {};
+        const doctorObj: any = appointment.doctorId || appointment.doctor || {};
 
-        const userObj = doctorObj.userId || doctorObj.user || {};
+        const userObj: any = doctorObj.userId || doctorObj.user || {};
 
 
         const videoFees = doctorObj.VideoFees || doctorObj.videoFees || appointment.consultationFees || 0;

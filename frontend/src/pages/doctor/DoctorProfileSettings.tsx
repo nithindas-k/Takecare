@@ -151,7 +151,7 @@ const DoctorProfileSettings: React.FC = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
     }
-  }, [signature]);
+  }, [signature, loading]);
 
 
   const generateLocalAbout = () => {
