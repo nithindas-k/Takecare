@@ -112,8 +112,8 @@ const DoctorAppointmentDetails: React.FC = () => {
         }
 
         return {
-            id: apt?._id || apt?.id,
-            customId: apt?.customId || apt?._id || apt?.id,
+            id: apt?.id || apt?._id,
+            customId: apt?.customId || apt?.id || apt?._id,
             patientName,
             patientEmail,
             patientPhone,
@@ -417,7 +417,7 @@ const DoctorAppointmentDetails: React.FC = () => {
                                     <div><h6 className="text-xs font-semibold text-gray-500 mb-1">Payment Status</h6><p className="text-sm font-medium text-gray-800">{normalized.paymentStatus}</p></div>
                                     <div><h6 className="text-xs font-semibold text-gray-500 mb-1">Appointment Type</h6><p className="text-sm font-medium text-gray-800">{normalized.appointmentType === 'video' ? 'Video Call' : 'Chat'}</p></div>
                                     <div className="col-span-2 md:col-span-4 lg:col-span-1 flex items-end flex-col gap-2">
-                                        {normalized.isUpcoming && normalized.status === 'confirmed' && (normalized.isSessionReady ? (<button onClick={() => navigate(`/doctor/${normalized.appointmentType === 'video' ? 'call' : 'chat'}/${appointment?._id || appointment?.id}`)} className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors shadow-sm">Start Session</button>) : (<div className="w-full px-4 py-3 bg-gray-50 text-gray-500 font-medium rounded-xl border border-dashed border-gray-300 text-center text-sm">Starts at {normalized.time.split(' - ')[0]}</div>))}
+                                        {normalized.isUpcoming && normalized.status === 'confirmed' && (normalized.isSessionReady ? (<button onClick={() => navigate(`/doctor/${normalized.appointmentType === 'video' ? 'call' : 'chat'}/${appointment?.id || appointment?._id}`)} className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors shadow-sm">Start Session</button>) : (<div className="w-full px-4 py-3 bg-gray-50 text-gray-500 font-medium rounded-xl border border-dashed border-gray-300 text-center text-sm">Starts at {normalized.time.split(' - ')[0]}</div>))}
                                         {normalized.status === 'completed' && (
                                             <div className="w-full flex flex-col gap-3">
                                                 {!appointment?.postConsultationChatWindow?.isActive && !appointment?.TEST_NEEDED ? (
@@ -562,8 +562,8 @@ const DoctorAppointmentDetails: React.FC = () => {
                 </div>
             )}
 
-            <PrescriptionModal isOpen={prescriptionOpen} onClose={() => setPrescriptionOpen(false)} appointmentId={appointment?._id || appointment?.id} patientId={appointment?.patientId?._id || appointment?.patientId} onSuccess={() => { setHasPrescription(true); setPrescriptionOpen(false); }} />
-            <PrescriptionViewModal isOpen={prescriptionViewOpen} onClose={() => setPrescriptionViewOpen(false)} appointmentId={appointment?._id || appointment?.id} />
+            <PrescriptionModal isOpen={prescriptionOpen} onClose={() => setPrescriptionOpen(false)} appointmentId={appointment?.id || appointment?._id} patientId={appointment?.patientId?._id || appointment?.patientId} onSuccess={() => { setHasPrescription(true); setPrescriptionOpen(false); }} />
+            <PrescriptionViewModal isOpen={prescriptionViewOpen} onClose={() => setPrescriptionViewOpen(false)} appointmentId={appointment?.id || appointment?._id} />
 
             <Dialog open={closeChatOpen} onOpenChange={setCloseChatOpen}>
                 <DialogContent className="sm:max-w-md bg-white border border-gray-100 shadow-xl">
