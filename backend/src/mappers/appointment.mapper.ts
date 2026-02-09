@@ -14,6 +14,8 @@ export class AppointmentMapper {
             email: patient.email,
             phone: patient.phone,
             profileImage: patient.profileImage,
+            gender: patient.gender,
+            dob: patient.dob,
         };
 
         const doctorUser = doctor.userId;

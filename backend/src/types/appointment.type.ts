@@ -114,6 +114,8 @@ export interface IAppointmentPopulated extends Omit<IAppointment, "patientId" | 
         phone?: string;
         profileImage?: string;
         userId?: string;
+        gender?: string;
+        dob?: Date;
     };
     doctorId: {
         _id: Types.ObjectId | string;

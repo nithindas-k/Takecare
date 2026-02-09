@@ -40,6 +40,8 @@ export interface AppointmentResponseDTO {
         email: string;
         phone?: string;
         profileImage?: string;
+        gender?: string;
+        dob?: Date;
     };
     doctor: {
         id: string;

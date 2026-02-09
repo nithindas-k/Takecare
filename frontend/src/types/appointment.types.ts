@@ -57,6 +57,8 @@ export interface PopulatedAppointment {
         profileImage?: string;
         email?: string;
         phone?: string;
+        gender?: string;
+        dob?: string;
     };
     appointmentDate: string;
     appointmentTime: string;
