@@ -9,6 +9,7 @@ import { reviewService } from '../../services/reviewService';
 import { appointmentService } from '../../services/appointmentService';
 import { API_BASE_URL } from '../../utils/constants';
 import { Button } from '../../components/ui/button';
+import { Skeleton } from '../../components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
 import { toast } from 'sonner';
 import PrescriptionViewModal from '../../components/Patient/PrescriptionViewModal';
@@ -427,8 +428,73 @@ const AppointmentDetails: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00A1B0]"></div>
+            <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+                <NavBar />
+
+                {/* Breadcrumb Skeleton */}
+                <div className="bg-gradient-to-r from-[#00A1B0] to-[#008f9c] py-10">
+                    <div className="container mx-auto px-4">
+                        <div className="max-w-5xl mx-auto">
+                            <div className="flex items-center gap-2 mb-5">
+                                <Skeleton className="h-4 w-32 bg-white/20" />
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <Skeleton className="h-10 w-10 rounded-lg bg-white/20" />
+                                <div>
+                                    <Skeleton className="h-10 w-64 mb-2 bg-white/20" />
+                                    <Skeleton className="h-5 w-48 bg-white/20" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <PatientLayout>
+                    <div className="space-y-6">
+                        {/* Main Card Skeleton */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div className="p-6 border-b border-gray-100">
+                                <div className="flex items-start gap-4">
+                                    <Skeleton className="w-20 h-20 rounded-full" />
+                                    <div className="flex-1 space-y-3">
+                                        <Skeleton className="h-7 w-48" />
+                                        <Skeleton className="h-4 w-32" />
+                                        <Skeleton className="h-6 w-24 rounded-full" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-6 space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {[1, 2, 3, 4].map((i) => (
+                                        <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                            <Skeleton className="w-10 h-10 rounded-lg" />
+                                            <div className="flex-1 space-y-2">
+                                                <Skeleton className="h-3 w-20" />
+                                                <Skeleton className="h-4 w-32" />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons Skeleton */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Skeleton className="h-12 rounded-xl" />
+                            <Skeleton className="h-12 rounded-xl" />
+                        </div>
+
+                        {/* Additional Info Skeleton */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                            <Skeleton className="h-6 w-40 mb-4" />
+                            <div className="space-y-3">
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-3/4" />
+                            </div>
+                        </div>
+                    </div>
+                </PatientLayout>
             </div>
         );
     }
