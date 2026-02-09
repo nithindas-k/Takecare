@@ -31,8 +31,8 @@ export class AppointmentMapper {
 
         return {
             id: String(apt._id),
-            patient: patientData,
-            doctor: doctorData,
+            patientId: patientData,
+            doctorId: doctorData,
             appointmentType: apt.appointmentType,
             appointmentDate: apt.appointmentDate,
             appointmentTime: apt.appointmentTime,

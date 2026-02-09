@@ -28,7 +28,7 @@ export interface Slot {
 
 export interface PopulatedAppointment {
     _id: string;
-    id?: string;
+    id: string;
     customId?: string;
     doctorId: string | {
         _id: string;
@@ -49,7 +49,7 @@ export interface PopulatedAppointment {
             profileImage?: string;
         };
     };
-    doctor?: unknown; // To support legacy/alternative structures
+    doctor?: unknown;
     patientId: {
         _id: string;
         id?: string;

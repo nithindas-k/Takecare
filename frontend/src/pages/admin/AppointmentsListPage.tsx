@@ -24,12 +24,10 @@ interface PopulatedDoctor {
   id?: string;
   customId?: string;
   specialty?: string;
-  userId?: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    profileImage?: string | null;
-  } | null;
+  name?: string;
+  email?: string;
+  phone?: string;
+  profileImage?: string | null;
 }
 
 interface Appointment {
@@ -243,7 +241,7 @@ const AdminAppointmentsListPage: React.FC = () => {
                       const age = calcAge(patient?.dob);
                       const gender = patient?.gender ? String(patient.gender) : "-";
                       const department = doctor?.specialty || "-";
-                      const doctorName = doctor?.userId?.name || "-";
+                      const doctorName = doctor?.name || "-";
                       const fees = typeof apt.consultationFees === "number" ? `₹${apt.consultationFees}` : "-";
                       const statusLabel = formatStatus(apt.status);
                       const serial = (page - 1) * limit + (idx + 1);
@@ -352,7 +350,7 @@ const AdminAppointmentsListPage: React.FC = () => {
                           const age = calcAge(patient?.dob);
                           const gender = patient?.gender ? String(patient.gender) : "-";
                           const department = doctor?.specialty || "-";
-                          const doctorName = doctor?.userId?.name || "-";
+                          const doctorName = doctor?.name || "-";
                           const fees =
                             typeof apt.consultationFees === "number" ? `₹${apt.consultationFees}` : "-";
                           const statusLabel = formatStatus(apt.status);
@@ -390,9 +388,9 @@ const AdminAppointmentsListPage: React.FC = () => {
 
                               <td className="px-3 py-4">
                                 <div className="flex items-center gap-2">
-                                  {doctor?.userId?.profileImage ? (
+                                  {doctor?.profileImage ? (
                                     <img
-                                      src={doctor.userId.profileImage}
+                                      src={doctor.profileImage}
                                       alt={doctorName}
                                       className="w-8 h-8 rounded-full object-cover border border-gray-200 flex-shrink-0 aspect-square"
                                     />

@@ -255,6 +255,8 @@ export class AppointmentController implements IAppointmentController {
                 { status, patientId, search, page, limit }
             );
 
+            console.log("result :- ", result);
+
             sendSuccess(res, result);
         } catch (err: unknown) {
             next(err);

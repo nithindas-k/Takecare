@@ -34,7 +34,7 @@ export interface RescheduleAppointmentDTO {
 
 export interface AppointmentResponseDTO {
     id: string;
-    patient: {
+    patientId: {
         id: string;
         name: string;
         email: string;
@@ -43,7 +43,7 @@ export interface AppointmentResponseDTO {
         gender?: string;
         dob?: Date;
     };
-    doctor: {
+    doctorId: {
         id: string;
         name: string;
         email: string;

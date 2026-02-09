@@ -90,6 +90,7 @@ const AppointmentCard: React.FC<{
                     </div>
                 )}
 
+
                 {hasReason && (
                     <div className="space-y-2">
                         <button
@@ -114,7 +115,7 @@ const AppointmentCard: React.FC<{
                 )}
 
                 <Button
-                    onClick={() => handleViewDetails(appointment.id)}
+                    onClick={() => handleViewDetails(appointment.raw.id)}
                     className="w-full h-10 bg-[#D2F1F4] hover:bg-[#b8e9ed] text-[#00A1B0] font-bold rounded-xl border-none shadow-none gap-2.5 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center"
                 >
                     <FaEye className="w-4 h-4" />
