@@ -309,7 +309,7 @@ const DoctorAppointments: React.FC = () => {
                                 ) : (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {filteredAppointments.map((appointment) => (
-                                            <Card key={appointment.customId || appointment._id} className="overflow-hidden border-gray-100 hover:shadow-md transition-shadow">
+                                            <Card key={appointment.customId || appointment.id || appointment._id} className="overflow-hidden border-gray-100 hover:shadow-md transition-shadow">
                                                 <CardHeader className="p-4 border-b border-gray-100 space-y-0">
                                                     <div className="flex items-start justify-between gap-3">
                                                         <div className="flex items-start gap-3 flex-1">
@@ -325,7 +325,7 @@ const DoctorAppointments: React.FC = () => {
                                                                 </div>
                                                             </div>
                                                             <div className="flex-1 min-w-0">
-                                                                <p className="text-[10px] text-gray-400 font-medium tracking-wider mb-0.5">{appointment.customId || appointment._id}</p>
+                                                                <p className="text-[10px] text-gray-400 font-medium tracking-wider mb-0.5">{appointment.customId || appointment.id || appointment._id}</p>
                                                                 <h3 className="font-bold text-gray-900 leading-tight truncate">{appointment.patientId?.name || 'Unknown Patient'}</h3>
                                                                 <div className="flex items-center justify-between mt-1">
                                                                     <div className="flex items-center gap-1.5">
@@ -354,7 +354,7 @@ const DoctorAppointments: React.FC = () => {
                                                     </div>
 
                                                     <Button
-                                                        onClick={() => handleViewDetails(appointment._id)}
+                                                        onClick={() => handleViewDetails(appointment.id || appointment._id)}
                                                         className="w-full h-10 bg-[#D2F1F4] hover:bg-[#b8e9ed] text-[#00A1B0] font-bold rounded-xl border-none shadow-none gap-2.5 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center"
                                                     >
                                                         <FaEye className="w-4 h-4" />
