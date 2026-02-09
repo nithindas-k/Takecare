@@ -156,7 +156,7 @@ const DoctorAppointmentDetails: React.FC = () => {
                     // Check for prescription if completed
                     if (response.data.status === 'completed') {
                         try {
-                            const prescResponse = await prescriptionService.getPrescriptionByAppointment(response.data._id);
+                            const prescResponse = await prescriptionService.getPrescriptionByAppointment(response.data.id || response.data._id);
                             if (prescResponse.success && prescResponse.data) {
                                 setHasPrescription(true);
                             }

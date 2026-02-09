@@ -355,7 +355,7 @@ const DoctorAppointments: React.FC = () => {
 
                                                     <Button
                                                         onClick={() => {
-                                                            const id = appointment._id || appointment.id;
+                                                            const id = appointment.id || appointment._id || appointment.customId;
                                                             if (id) handleViewDetails(id);
                                                         }}
                                                         className="w-full h-10 bg-[#D2F1F4] hover:bg-[#b8e9ed] text-[#00A1B0] font-bold rounded-xl border-none shadow-none gap-2.5 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center"
