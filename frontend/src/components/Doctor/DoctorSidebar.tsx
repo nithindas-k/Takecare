@@ -1,6 +1,7 @@
 
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   FaRegCalendarCheck,
   FaMoneyBillWave,
@@ -82,7 +83,7 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
     if (onMobileMenuClose) onMobileMenuClose();
   };
 
-  const SidebarContent = () => (
+  const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <>
       {/* Header */}
       <div className="relative bg-[#00A1B0] h-28 w-full">
@@ -129,10 +130,32 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
 
       {/* Menu */}
       <div className="px-4 pb-6 flex-1 overflow-y-auto">
-        <ul className="space-y-1">
+        <motion.ul
+          className="space-y-1"
+          initial={isMobile ? "hidden" : "visible"}
+          animate="visible"
+          variants={{
+            visible: {
+              transition: {
+                staggerChildren: isMobile ? 0.05 : 0,
+                delayChildren: isMobile ? 0.1 : 0
+              }
+            }
+          }}
+        >
           {sidebarLinks.map((link) => (
-            <li
+            <motion.li
               key={link.path}
+              variants={{
+                hidden: { opacity: 0, x: -30, scale: 0.9 },
+                visible: { opacity: 1, x: 0, scale: 1 }
+              }}
+              transition={{
+                type: "spring",
+                stiffness: 260,
+                damping: 24,
+                mass: 0.9
+              }}
               onClick={() => handleNavigation(link.path)}
               className={`group flex items-center px-4 py-3 rounded-xl gap-3 cursor-pointer transition font-medium
                 ${isActive(link.path)
@@ -163,14 +186,21 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
               {link.badge === "dot" && (
                 <span className="ml-auto h-2 w-2 rounded-full bg-yellow-400"></span>
               )}
-
-
-
-            </li>
+            </motion.li>
           ))}
 
           {/* Logout */}
-          <li
+          <motion.li
+            variants={{
+              hidden: { opacity: 0, x: -30, scale: 0.9 },
+              visible: { opacity: 1, x: 0, scale: 1 }
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 300,
+              damping: 20,
+              mass: 0.8
+            }}
             onClick={handleLogout}
             className="group flex items-center px-4 py-3 rounded-xl text-gray-500 gap-3 hover:bg-red-50 hover:text-red-600 cursor-pointer transition font-medium mt-2"
           >
@@ -178,8 +208,8 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
               <FaSignOutAlt />
             </span>
             <span className="truncate text-sm">Logout</span>
-          </li>
-        </ul>
+          </motion.li>
+        </motion.ul>
       </div>
     </>
   );
@@ -187,28 +217,37 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
 
   const DesktopSidebar = () => (
     <aside className="hidden lg:flex col-span-12 lg:col-span-3 bg-white rounded-3xl shadow flex-col h-fit lg:min-w-[265px] max-w-xs sticky top-4 overflow-hidden">
-      <SidebarContent />
+      <SidebarContent isMobile={false} />
     </aside>
   );
 
   const MobileSidebar = () => (
-    <>
-      {/* Backdrop */}
+    <AnimatePresence>
       {isMobileMenuOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40 transition-opacity"
-          onClick={onMobileMenuClose}
-        />
-      )}
+        <div className="lg:hidden fixed inset-0 z-40">
+          {/* Backdrop with fade animation */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={onMobileMenuClose}
+          />
 
-      {/* Drawer */}
-      <aside
-        className={`lg:hidden fixed top-0 left-0 h-full w-80 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
-      >
-        <SidebarContent />
-      </aside>
-    </>
+          {/* Drawer with slide animation */}
+          <motion.aside
+            initial={{ x: -320 }}
+            animate={{ x: 0 }}
+            exit={{ x: -320 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="absolute top-0 left-0 h-full w-80 bg-white shadow-2xl z-50 flex flex-col"
+          >
+            <SidebarContent isMobile={true} />
+          </motion.aside>
+        </div>
+      )}
+    </AnimatePresence>
   );
 
   return (

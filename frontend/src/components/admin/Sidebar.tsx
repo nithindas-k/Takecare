@@ -1,5 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
   BarChart2,
   Zap,
@@ -70,34 +71,64 @@ const Sidebar: React.FC<SidebarProps> = ({ onMobileClose }) => {
 
       {/* Navigation */}
       <nav className="flex-1 py-4 overflow-y-auto no-scrollbar" data-lenis-prevent>
-        <div className="px-3 space-y-1">
+        <motion.div
+          className="px-3 space-y-1"
+          initial={onMobileClose ? "hidden" : "visible"}
+          animate="visible"
+          variants={{
+            visible: {
+              transition: {
+                staggerChildren: onMobileClose ? 0.05 : 0,
+                delayChildren: onMobileClose ? 0.1 : 0
+              }
+            }
+          }}
+        >
           {sidebarItems.map((item) => (
-            <NavLink
+            <motion.div
               key={item.label}
-              to={item.path}
-              onClick={onMobileClose}
-              className={({ isActive }) => `
-                flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
-                ${isActive
-                  ? "bg-[#00A1B0]/10 text-[#00A1B0] font-semibold"
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}
-              `}
+              variants={{
+                hidden: { opacity: 0, x: -30, scale: 0.9 },
+                visible: { opacity: 1, x: 0, scale: 1 }
+              }}
+              transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 20,
+                mass: 0.8
+              }}
             >
-              <item.icon
-                size={20}
-                className={`transition-colors ${item.hasNotification && !window.location.pathname.includes(item.path) ? 'text-yellow-500' : ''}`}
-              />
-              <span className="text-sm">{item.label}</span>
-              {item.hasNotification && (
-                <span className="ml-auto w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></span>
-              )}
-            </NavLink>
+              <NavLink
+                to={item.path}
+                onClick={onMobileClose}
+                className={({ isActive }) => `
+                  flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
+                  ${isActive
+                    ? "bg-[#00A1B0]/10 text-[#00A1B0] font-semibold"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}
+                `}
+              >
+                <item.icon
+                  size={20}
+                  className={`transition-colors ${item.hasNotification && !window.location.pathname.includes(item.path) ? 'text-yellow-500' : ''}`}
+                />
+                <span className="text-sm">{item.label}</span>
+                {item.hasNotification && (
+                  <span className="ml-auto w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></span>
+                )}
+              </NavLink>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </nav>
 
       {/* Logout at Bottom */}
-      <div className="p-4 border-t border-slate-50">
+      <motion.div
+        className="p-4 border-t border-slate-50"
+        initial={onMobileClose ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, duration: 0.3 }}
+      >
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all duration-200"
@@ -105,7 +136,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onMobileClose }) => {
           <LogOut size={20} />
           <span className="text-sm font-medium">Logout</span>
         </button>
-      </div>
+      </motion.div>
     </div>
   );
 };
