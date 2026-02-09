@@ -53,7 +53,7 @@ const DoctorAppointmentDetails: React.FC = () => {
             appointmentService.getDoctorAppointments(undefined, 1, 5, patientId as string)
                 .then(response => {
                     if (response.success && response.data?.appointments) {
-                        const filtered = response.data.appointments.filter((apt: any) => apt._id !== (appointment._id || appointment.id));
+                        const filtered = response.data.appointments.filter((apt: any) => apt.id !== (appointment.id || appointment._id));
                         setRecentAppointments(filtered);
                     }
                 })
@@ -456,7 +456,7 @@ const DoctorAppointmentDetails: React.FC = () => {
                                             </thead>
                                             <tbody className="divide-y divide-gray-100">
                                                 {recentAppointments.map((apt) => (
-                                                    <tr key={apt._id} className="hover:bg-gray-50/50 transition-colors">
+                                                    <tr key={apt.id} className="hover:bg-gray-50/50 transition-colors">
                                                         <td className="px-6 py-4 font-medium text-gray-900">
                                                             {new Date(apt.appointmentDate).toLocaleDateString()}
                                                             <span className="text-gray-400 mx-2">•</span>
@@ -477,7 +477,7 @@ const DoctorAppointmentDetails: React.FC = () => {
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                onClick={() => handleViewRecentDetails(apt._id)}
+                                                                onClick={() => handleViewRecentDetails(apt.id)}
                                                                 className="h-8 text-xs border-gray-200 hover:bg-gray-100 hover:text-gray-900"
                                                             >
                                                                 View Details
@@ -492,7 +492,7 @@ const DoctorAppointmentDetails: React.FC = () => {
                                     {/* Mobile Card View */}
                                     <div className="md:hidden flex flex-col divide-y divide-gray-100">
                                         {recentAppointments.map((apt) => (
-                                            <div key={apt._id} className="p-4 flex flex-col gap-3">
+                                            <div key={apt.id} className="p-4 flex flex-col gap-3">
                                                 <div className="flex justify-between items-start">
                                                     <div>
                                                         <p className="font-semibold text-gray-900 text-sm">
@@ -514,7 +514,7 @@ const DoctorAppointmentDetails: React.FC = () => {
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        onClick={() => handleViewRecentDetails(apt._id)}
+                                                        onClick={() => handleViewRecentDetails(apt.id)}
                                                         className="h-7 text-xs text-[#00A1B0] hover:text-[#008f9c] hover:bg-[#00A1B0]/10 px-2"
                                                     >
                                                         Details & Prescription &rarr;

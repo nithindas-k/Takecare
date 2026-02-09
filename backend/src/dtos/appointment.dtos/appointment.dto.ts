@@ -33,9 +33,13 @@ export interface RescheduleAppointmentDTO {
 // ==================== RESPONSE DTOs ====================
 
 export interface AppointmentResponseDTO {
+    _id: string;
     id: string;
+    customId?: string;
     patientId: {
+        _id: string;
         id: string;
+        customId?: string;
         name: string;
         email: string;
         phone?: string;
@@ -44,7 +48,9 @@ export interface AppointmentResponseDTO {
         dob?: Date;
     };
     doctorId: {
+        _id: string;
         id: string;
+        customId?: string;
         name: string;
         email: string;
         phone?: string;

@@ -192,7 +192,7 @@ const Appointments: React.FC = () => {
 
     const normalizedAppointments = useMemo(() => {
         return appointments.map((apt: PopulatedAppointment): NormalizedAppointment => {
-            const id = apt._id;
+            const id = apt.id;
             const displayId = apt.customId || apt.id;
             const doctorInfo = getDoctorInfo(apt);
             return {
@@ -453,4 +453,6 @@ const Appointments: React.FC = () => {
 };
 
 export default Appointments;
+
+
 

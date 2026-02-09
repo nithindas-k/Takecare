@@ -9,7 +9,9 @@ export class AppointmentMapper {
         const doctor = apt.doctorId;
 
         const patientData = {
+            _id: String(patient._id),
             id: String(patient.customId || patient._id || (patient as { id?: string }).id),
+            customId: patient.customId,
             name: patient.name,
             email: patient.email,
             phone: patient.phone,
@@ -20,7 +22,9 @@ export class AppointmentMapper {
 
         const doctorUser = doctor.userId;
         const doctorData = {
+            _id: String(doctor._id),
             id: String(doctor.customId || doctor._id || (doctor as { id?: string }).id),
+            customId: doctor.customId,
             name: typeof doctorUser === "object" ? doctorUser.name : "Doctor",
             email: typeof doctorUser === "object" ? doctorUser.email : "",
             phone: typeof doctorUser === "object" ? doctorUser.phone : doctor.userId?.toString(),
@@ -30,7 +34,9 @@ export class AppointmentMapper {
         };
 
         return {
+            _id: String(apt._id),
             id: String(apt._id),
+            customId: apt.customId,
             patientId: patientData,
             doctorId: doctorData,
             appointmentType: apt.appointmentType,

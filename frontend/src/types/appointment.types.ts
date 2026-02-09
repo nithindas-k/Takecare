@@ -32,6 +32,8 @@ export interface PopulatedAppointment {
     customId?: string;
     doctorId: string | {
         _id: string;
+        id: string;
+        customId?: string;
         name: string;
         profileImage?: string;
         specialty?: string;
@@ -52,7 +54,8 @@ export interface PopulatedAppointment {
     doctor?: unknown;
     patientId: {
         _id: string;
-        id?: string;
+        id: string;
+        customId?: string;
         name: string;
         profileImage?: string;
         email?: string;

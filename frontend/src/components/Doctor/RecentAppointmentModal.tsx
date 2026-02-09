@@ -76,7 +76,7 @@ const RecentAppointmentModal: React.FC<RecentAppointmentModalProps> = ({ isOpen,
                         <div>
                             <h2 className="text-xl font-bold">Appointment Details</h2>
                             <p className="text-white/80 text-sm mt-1">
-                                {loading ? 'Loading details...' : `ID: #${appointment?.customId || appointment?._id?.slice(-8)}`}
+                                {loading ? 'Loading details...' : `ID: #${appointment?.customId || appointment?.id?.slice(-8)}`}
                             </p>
                         </div>
                         <Button
