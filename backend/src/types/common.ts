@@ -21,6 +21,7 @@ export interface PaginatedResponse<T> {
 
 export interface PatientListItem {
     id: string;
+    customId?: string;
     name: string;
     email: string;
     phone?: string;
@@ -34,6 +35,7 @@ export interface PatientListItem {
 
 export interface DoctorListItem {
     id: string;
+    customId?: string;
     name: string;
     email: string;
     phone?: string;

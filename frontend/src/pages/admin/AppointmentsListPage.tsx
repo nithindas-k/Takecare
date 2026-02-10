@@ -3,7 +3,15 @@ import { toast } from "sonner";
 import Sidebar from "../../components/admin/Sidebar";
 import TopNav from "../../components/admin/TopNav";
 import { appointmentService } from "../../services/appointmentService";
-import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Search, Check, ChevronDown } from "lucide-react";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -197,29 +205,36 @@ const AdminAppointmentsListPage: React.FC = () => {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    type="text"
-                    placeholder="Search patient, doctor..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full sm:w-64 pl-4 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 focus:outline-none text-sm"
-                  />
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search patient, doctor..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="pl-9 h-10 border-gray-200 focus:border-cyan-400 focus:ring-cyan-400"
+                    />
+                  </div>
 
-                  <select
-                    value={status}
-                    onChange={(e) => {
-                      setStatus(e.target.value);
-                      setPage(1);
-                    }}
-                    className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 focus:outline-none text-sm bg-white"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="w-full sm:w-auto h-10 border-gray-200 text-gray-700 flex justify-between gap-2 px-4 font-normal hover:bg-white hover:border-cyan-400">
+                        {status === "all" ? "All Status" : status.charAt(0).toUpperCase() + status.slice(1)}
+                        <ChevronDown className="h-4 w-4 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-44" align="end">
+                      {["all", "pending", "confirmed", "completed", "cancelled", "rejected"].map((s) => (
+                        <DropdownMenuItem
+                          key={s}
+                          onClick={() => { setStatus(s); setPage(1); }}
+                          className="flex justify-between items-center cursor-pointer"
+                        >
+                          {s === "all" ? "All Status" : s.charAt(0).toUpperCase() + s.slice(1)}
+                          {status === s && <Check className="h-4 w-4 text-cyan-600" />}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </div>

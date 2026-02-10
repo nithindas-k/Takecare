@@ -51,6 +51,7 @@ export class UserMapper {
 
     static toPatientListItem(user: IUserDocument): {
         id: string;
+        customId?: string;
         name: string;
         email: string;
         phone?: string;
@@ -63,6 +64,7 @@ export class UserMapper {
     } {
         return {
             id: user._id.toString(),
+            customId: user.customId || undefined,
             name: user.name,
             email: user.email,
             phone: user.phone || undefined,

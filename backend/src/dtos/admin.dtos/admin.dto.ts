@@ -47,6 +47,7 @@ export interface DoctorRequestDTO {
  */
 export interface DoctorRequestDetailDTO {
     id: string;
+    customId?: string;
     name: string;
     email: string;
     phone: string;

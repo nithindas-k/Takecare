@@ -124,6 +124,7 @@ export class DoctorMapper {
     static toDoctorRequestDetailDTO(doc: DoctorRequestDetail): DoctorRequestDetailDTO {
         return {
             id: doc._id.toString(),
+            customId: doc.customId || undefined,
             name: doc.name,
             email: doc.email,
             phone: doc.phone || "",
@@ -150,6 +151,7 @@ export class DoctorMapper {
     static toDoctorListItem(doc: IDoctorDocument, userId: IUserDocument): DoctorListItem {
         return {
             id: doc._id.toString(),
+            customId: userId.customId || undefined,
             name: userId.name,
             email: userId.email,
             phone: userId.phone,

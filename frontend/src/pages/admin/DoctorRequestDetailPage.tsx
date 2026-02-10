@@ -1,20 +1,34 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, Mail, Phone, MapPin, FileText, CheckCircle, XCircle } from "lucide-react";
 import Sidebar from "../../components/admin/Sidebar";
 import TopNav from "../../components/admin/TopNav";
 import adminService from "../../services/adminService";
 import type { DoctorRequestDetails } from "../../types/admin.types";
 import ImageModal from "../../components/common/ImageModal";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
+import { Textarea } from "../../components/ui/textarea";
+import { Label } from "../../components/ui/label";
 import { Skeleton } from "../../components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 
 const DoctorRequestDetailPage: React.FC = () => {
   const { doctorId } = useParams<{ doctorId: string }>();
   const navigate = useNavigate();
   const [doctor, setDoctor] = useState<DoctorRequestDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalImgSrc, setModalImgSrc] = useState<string | null>(null);
   const [isApproving, setIsApproving] = useState(false);
@@ -25,13 +39,19 @@ const DoctorRequestDetailPage: React.FC = () => {
   useEffect(() => {
     const fetchDoctor = async () => {
       setLoading(true);
-      const res = await adminService.fetchDoctorRequestDetails(doctorId!);
-      if (res.success && res.data) {
-        setDoctor(res.data);
-      } else {
-        setError(res.message || "Doctor not found");
+      try {
+        const res = await adminService.fetchDoctorRequestDetails(doctorId!);
+        if (res.success && res.data) {
+          setDoctor(res.data);
+        } else {
+          toast.error(res.message || "Doctor not found");
+        }
+      } catch (e: unknown) {
+        const error = e as { message?: string };
+        toast.error(error.message || "Error fetching doctor details");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchDoctor();
   }, [doctorId]);
@@ -39,27 +59,28 @@ const DoctorRequestDetailPage: React.FC = () => {
   const handleAccept = async () => {
     if (!doctor || isApproving) return;
 
-
     toast.custom((id) => (
       <div className="flex flex-col gap-3 bg-white p-4 rounded-xl shadow-lg border border-gray-100 w-full max-w-sm">
         <p className="font-semibold text-gray-800">Approve Dr. {doctor.name}?</p>
         <p className="text-sm text-gray-600">This will grant the doctor access to the system.</p>
         <div className="flex gap-2">
-          <button
+          <Button
             onClick={() => {
               toast.dismiss(id);
               proceedWithApproval();
             }}
-            className="bg-[#00A1B0] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#008f9c] transition-colors"
+            className="bg-cyan-600 hover:bg-cyan-700"
+            size="sm"
           >
             Yes, Approve
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => toast.dismiss(id)}
-            className="bg-[#00A1B0] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#008f9c] transition-colors"
+            variant="outline"
+            size="sm"
           >
             Cancel
-          </button>
+          </Button>
         </div>
       </div>
     ), {
@@ -88,7 +109,6 @@ const DoctorRequestDetailPage: React.FC = () => {
     setIsApproving(false);
 
     if (res.success) {
-
       setDoctor({
         ...doctor,
         status: 'approved',
@@ -136,135 +156,409 @@ const DoctorRequestDetailPage: React.FC = () => {
     }
   };
 
-  const dummyAvatar = (name: string) => (
-    <div className="w-20 h-20 flex items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-teal-500 text-2xl text-white font-bold uppercase shadow-lg">
-      {name
-        .split(" ")
-        .map((s) => s[0])
-        .join("")
-        .slice(0, 2)}
-    </div>
-  );
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .filter(Boolean)
+      .map((s) => s[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+  };
+
+  const getStatusBadgeClasses = (status: string) => {
+    const s = status.toLowerCase();
+    if (s === "approved") return "bg-green-100 text-green-700 border-green-200";
+    if (s === "rejected") return "bg-red-100 text-red-700 border-red-200";
+    return "bg-yellow-100 text-yellow-700 border-yellow-200";
+  };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50 no-scrollbar">
+      {/* Sidebar - Desktop */}
+      <div className="hidden lg:block w-64 fixed inset-y-0 left-0 z-50">
+        <Sidebar />
+      </div>
 
-      <Sidebar />
-      <div className="flex-1 flex flex-col">
-        <TopNav />
-        <div className="flex-1 overflow-y-auto">
-          <div className="px-10 py-6">
-            <div className="relative bg-gradient-to-r from-cyan-50 via-teal-50 to-cyan-50 rounded-2xl py-8 text-center mb-8 overflow-hidden border border-cyan-100">
-              <div className="absolute left-0 top-0 w-40 h-40 opacity-10"><svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="#14B8A6" d="M44.7,-76.4C58.8,-69.2,71.8,-59.1,79.6,-45.8C87.4,-32.6,90,-16.3,88.5,-0.9C87,14.6,81.4,29.2,73.1,42.8C64.8,56.4,53.8,69,40.1,76.4C26.4,83.8,10,86,-5.7,85.1C-21.4,84.2,-36.1,80.2,-48.9,72.4C-61.7,64.6,-72.6,53,-79.8,39.4C-87,25.8,-90.5,10.1,-89.3,-5.2C-88.1,-20.5,-82.2,-35.4,-73.1,-48.4C-64,-61.4,-51.7,-72.5,-37.8,-79.8C-23.9,-87.1,-8.4,-90.6,5.4,-89.3C19.2,-88,30.6,-83.6,44.7,-76.4Z" transform="translate(100 100)" /></svg></div>
-              <div className="absolute right-0 bottom-0 w-40 h-40 opacity-10"><svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><path fill="#14B8A6" d="M44.7,-76.4C58.8,-69.2,71.8,-59.1,79.6,-45.8C87.4,-32.6,90,-16.3,88.5,-0.9C87,14.6,81.4,29.2,73.1,42.8C64.8,56.4,53.8,69,40.1,76.4C26.4,83.8,10,86,-5.7,85.1C-21.4,84.2,-36.1,80.2,-48.9,72.4C-61.7,64.6,-72.6,53,-79.8,39.4C-87,25.8,-90.5,10.1,-89.3,-5.2C-88.1,-20.5,-82.2,-35.4,-73.1,-48.4C-64,-61.4,-51.7,-72.5,-37.8,-79.8C-23.9,-87.1,-8.4,-90.6,5.4,-89.3C19.2,-88,30.6,-83.6,44.7,-76.4Z" transform="translate(100 100)" /></svg></div>
-              <h1 className="text-3xl font-bold text-gray-800 relative z-10">Requests Details</h1>
+      {/* Sidebar - Mobile Overlay */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <div className="fixed inset-0 z-[60] lg:hidden">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSidebarOpen(false)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ x: -256 }}
+              animate={{ x: 0 }}
+              exit={{ x: -256 }}
+              transition={{ type: "spring", damping: 30, stiffness: 450 }}
+              className="absolute left-0 top-0 h-full w-64 bg-white shadow-2xl"
+            >
+              <Sidebar onMobileClose={() => setSidebarOpen(false)} />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <div className="flex-1 flex flex-col lg:pl-64 min-w-0">
+        <TopNav onMenuClick={() => setSidebarOpen(true)} />
+
+        <main className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-5 md:py-6">
+          <div className="w-full max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="mb-6">
+              <Button
+                variant="ghost"
+                onClick={() => navigate(-1)}
+                className="text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50 -ml-2 mb-4"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Requests
+              </Button>
+
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h1 className="text-2xl font-bold text-gray-800">Doctor Request Details</h1>
+                <p className="text-sm text-gray-500 mt-1">
+                  Review and manage doctor registration request
+                </p>
+              </div>
             </div>
-
-            <button onClick={() => navigate(-1)} className="text-[#00A1B0] hover:text-[#008f9c] mb-6 flex items-center gap-2 font-medium transition-colors"><span className="text-xl">←</span> Doctor Details</button>
 
             {loading ? (
               <div className="space-y-6">
-                <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
-                  <div className="flex flex-col lg:flex-row items-start gap-8">
-                    <div className="flex items-start gap-5">
+                {/* Doctor Profile Card Skeleton */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+                    {/* Left: Profile Info Skeleton */}
+                    <div className="flex items-start gap-4 flex-1">
                       <Skeleton className="w-20 h-20 rounded-full" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-24" />
+                      <div className="flex-1 space-y-3">
+                        <Skeleton className="h-3 w-32" />
                         <Skeleton className="h-6 w-48" />
-                        <div className="space-y-1 mt-4">
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-64" />
                           <Skeleton className="h-4 w-40" />
-                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-4 w-56" />
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-col items-start lg:items-end gap-3 lg:ml-auto">
-                      <div className="text-left lg:text-right space-y-1">
+
+                    {/* Right: Status & Actions Skeleton */}
+                    <div className="flex flex-col items-start lg:items-end gap-4">
+                      <div className="space-y-2 text-left lg:text-right">
                         <Skeleton className="h-3 w-20" />
                         <Skeleton className="h-6 w-32" />
                       </div>
-                      <Skeleton className="h-8 w-24 rounded-full" />
-                      <div className="flex gap-3 mt-2">
-                        <Skeleton className="h-10 w-28 rounded-lg" />
-                        <Skeleton className="h-10 w-28 rounded-lg" />
-                      </div>
+                      <Skeleton className="h-8 w-32 rounded-full" />
+                      <Skeleton className="h-10 w-40 rounded-lg" />
                     </div>
                   </div>
                 </div>
-                <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
-                  <Skeleton className="h-8 w-40 mb-6" />
+
+                {/* Information Card Skeleton */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                  <Skeleton className="h-6 w-48 mb-6" />
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                    {[1, 2, 3, 4, 5, 6].map(i => (
-                      <div key={i}>
-                        <Skeleton className="h-4 w-24 mb-2" />
-                        <Skeleton className="h-10 w-full rounded-lg" />
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <div key={i} className="space-y-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-10 w-full rounded-md" />
                       </div>
                     ))}
                   </div>
-                  <Skeleton className="h-4 w-24 mb-3" />
-                  <div className="flex gap-4">
-                    <Skeleton className="w-40 h-28 rounded-lg" />
-                    <Skeleton className="w-40 h-28 rounded-lg" />
+
+                  {/* Certificates Section Skeleton */}
+                  <div className="space-y-3">
+                    <Skeleton className="h-4 w-40" />
+                    <div className="flex gap-4">
+                      {[1, 2, 3].map((i) => (
+                        <Skeleton key={i} className="w-40 h-28 rounded-lg flex-shrink-0" />
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-            ) : error || !doctor ? (
-              <div className="text-center py-10 text-red-500">{error || "Doctor not found"}</div>
+            ) : !doctor ? (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+                <p className="text-gray-500">Doctor request not found</p>
+              </div>
             ) : (
-              <>
-                <div className="bg-white rounded-2xl shadow-lg p-8 mb-6 border border-gray-100">
-                  <div className="flex flex-col lg:flex-row items-start gap-8">
-                    <div className="flex items-start gap-5">
-                      {doctor.profileImage ? (
-                        <img src={doctor.profileImage} alt={doctor.name} className="w-20 h-20 rounded-full object-cover border-4 border-cyan-400 shadow-lg" />
-                      ) : (
-                        dummyAvatar(doctor.name)
-                      )}
+              <div className="space-y-6">
+                {/* Doctor Profile Card */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+                    {/* Left: Profile Info */}
+                    <div className="flex items-start gap-4">
+                      <Avatar className="w-20 h-20">
+                        <AvatarImage src={doctor.profileImage || undefined} alt={doctor.name} />
+                        <AvatarFallback className="bg-gradient-to-br from-cyan-400 to-teal-500 text-white text-xl font-bold">
+                          {getInitials(doctor.name)}
+                        </AvatarFallback>
+                      </Avatar>
+
                       <div className="flex-1">
-                        <div className="text-xs text-cyan-500 font-semibold mb-1">#{doctor.id}</div>
-                        <div className="text-xl font-bold text-gray-800 mb-2">Dr {doctor.name}</div>
-                        <div className="space-y-1.5"><div className="text-sm text-gray-600 flex items-center gap-2"><span className="text-base">📧</span><span>{doctor.email}</span></div><div className="text-sm text-gray-600 flex items-center gap-2"><span className="text-base">📞</span><span>{doctor.phone || "Not provided"}</span></div></div>
+                        <p className="text-xs text-gray-500 mb-1">Request ID: {doctor.id}</p>
+                        <h2 className="text-xl font-bold text-gray-800 mb-3">
+                          Dr. {doctor.name}
+                        </h2>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Mail className="h-4 w-4 text-gray-400" />
+                            <span>{doctor.email}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Phone className="h-4 w-4 text-gray-400" />
+                            <span>{doctor.phone || "Not provided"}</span>
+                          </div>
+                          {doctor.address && (
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <MapPin className="h-4 w-4 text-gray-400" />
+                              <span>{doctor.address}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex flex-col items-start lg:items-end gap-3 lg:ml-auto">
-                      <div className="text-left lg:text-right"><div className="text-xs text-gray-500 mb-1">Department</div><div className="text-cyan-600 font-bold text-lg">{doctor.department}</div></div>
-                      <div className="bg-yellow-100 text-yellow-700 px-5 py-1.5 rounded-full text-sm font-semibold shadow-sm">{doctor.experienceYears || 3} Year{doctor.experienceYears !== 1 ? "s" : ""}</div>
-                      <div className="flex gap-3 mt-2">{doctor.status === 'pending' ? (<><button onClick={handleAccept} disabled={isApproving || isRejecting} className={`bg-green-500 text-white px-6 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-2 ${isApproving || isRejecting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-600'}`}>{isApproving ? (<><span className="animate-spin">⏳</span> Approving...</>) : (<><span>✓</span> Accept</>)}</button><button onClick={handleReject} disabled={isApproving || isRejecting} className={`bg-red-500 text-white px-6 py-2 rounded-lg font-medium shadow-md hover:shadow-lg transition-all flex items-center gap-2 ${isApproving || isRejecting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'}`}>{isRejecting ? (<><span className="animate-spin">⏳</span> Rejecting...</>) : (<><span>✗</span> Reject</>)}</button></>) : (<div className={`px-6 py-2 rounded-lg font-medium shadow-sm flex items-center gap-2 ${doctor.status === 'approved' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}><span className="text-xl">{doctor.status === 'approved' ? '✓' : '✗'}</span>{doctor.status.charAt(0).toUpperCase() + doctor.status.slice(1)}</div>)}</div>
+
+                    {/* Right: Status & Actions */}
+                    <div className="flex flex-col items-start lg:items-end gap-4">
+                      <div className="space-y-2 text-left lg:text-right">
+                        <p className="text-xs text-gray-500">Department</p>
+                        <p className="text-lg font-semibold text-cyan-600">
+                          {doctor.department}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                          {doctor.experienceYears || 3} Year{doctor.experienceYears !== 1 ? "s" : ""} Experience
+                        </span>
+                      </div>
+
+                      <div
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold border ${getStatusBadgeClasses(
+                          doctor.status
+                        )}`}
+                      >
+                        {doctor.status === "approved" && <CheckCircle className="inline h-4 w-4 mr-1" />}
+                        {doctor.status === "rejected" && <XCircle className="inline h-4 w-4 mr-1" />}
+                        {doctor.status.charAt(0).toUpperCase() + doctor.status.slice(1)}
+                      </div>
+
+                      {doctor.status === "pending" && (
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={handleAccept}
+                            disabled={isApproving || isRejecting}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            {isApproving ? (
+                              <>
+                                <span className="animate-spin mr-2">⏳</span>
+                                Approving...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Approve
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            onClick={handleReject}
+                            disabled={isApproving || isRejecting}
+                            variant="destructive"
+                          >
+                            {isRejecting ? (
+                              <>
+                                <span className="animate-spin mr-2">⏳</span>
+                                Rejecting...
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Reject
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  {doctor.status === 'rejected' && doctor.rejectionReason && (<div className="mt-6 pt-6 border-t border-gray-200"><div className="bg-red-50 border border-red-200 rounded-lg p-4"><div className="flex items-start gap-3"><span className="text-2xl">⚠️</span><div className="flex-1"><p className="text-sm font-semibold text-red-800 mb-1">Rejection Reason:</p><p className="text-sm text-red-700">{doctor.rejectionReason}</p></div></div></div></div>)}
+
+                  {/* Rejection Reason */}
+                  {doctor.status === "rejected" && doctor.rejectionReason && (
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <XCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-red-800 mb-1">
+                              Rejection Reason:
+                            </p>
+                            <p className="text-sm text-red-700">{doctor.rejectionReason}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
-                  <h2 className="text-xl font-bold text-gray-800 mb-6">Information</h2>
+
+                {/* Information Card */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                  <h3 className="text-lg font-bold text-gray-800 mb-6">Professional Information</h3>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                    <div><label className="block text-gray-600 text-sm font-medium mb-2">Name</label><input type="text" className="border border-gray-300 rounded-lg px-4 py-2.5 w-full bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent" value={doctor.name} readOnly /></div>
-                    <div><label className="block text-gray-600 text-sm font-medium mb-2">Email</label><input type="email" className="border border-gray-300 rounded-lg px-4 py-2.5 w-full bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent" value={doctor.email} readOnly /></div>
-                    <div><label className="block text-gray-600 text-sm font-medium mb-2">Experience</label><input type="text" className="border border-gray-300 rounded-lg px-4 py-2.5 w-full bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent" value={`${doctor.experienceYears || 3} Year`} readOnly /></div>
-                    <div><label className="block text-gray-600 text-sm font-medium mb-2">Speciality</label><input type="text" className="border border-gray-300 rounded-lg px-4 py-2.5 w-full bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent" value={doctor.department || ""} readOnly /></div>
-                    <div><label className="block text-gray-600 text-sm font-medium mb-2">Fees (₹)</label><input type="text" className="border border-gray-300 rounded-lg px-4 py-2.5 w-full bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent" value={`ChatFees : ₹ ${doctor.ChatFees} / VideoFees : ₹ ${doctor.VideoFees}`} readOnly /></div>
-                    <div><label className="block text-gray-600 text-sm font-medium mb-2">Address</label><input type="text" className="border border-gray-300 rounded-lg px-4 py-2.5 w-full bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent" value={doctor.address || "Malappuram kodur 676504"} readOnly /></div>
+                    <div>
+                      <Label className="text-gray-600 mb-2">Full Name</Label>
+                      <Input value={doctor.name} readOnly className="bg-gray-50" />
+                    </div>
+
+                    <div>
+                      <Label className="text-gray-600 mb-2">Email Address</Label>
+                      <Input value={doctor.email} readOnly className="bg-gray-50" />
+                    </div>
+
+                    <div>
+                      <Label className="text-gray-600 mb-2">Experience</Label>
+                      <Input
+                        value={`${doctor.experienceYears || 3} Years`}
+                        readOnly
+                        className="bg-gray-50"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-gray-600 mb-2">Speciality</Label>
+                      <Input value={doctor.department || ""} readOnly className="bg-gray-50" />
+                    </div>
+
+                    <div>
+                      <Label className="text-gray-600 mb-2">Consultation Fees</Label>
+                      <Input
+                        value={`Chat: ₹${doctor.ChatFees} / Video: ₹${doctor.VideoFees}`}
+                        readOnly
+                        className="bg-gray-50"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-gray-600 mb-2">Address</Label>
+                      <Input
+                        value={doctor.address || "Not provided"}
+                        readOnly
+                        className="bg-gray-50"
+                      />
+                    </div>
                   </div>
+
+                  {/* Certificates Section */}
                   <div>
-                    <label className="block text-gray-600 text-sm font-medium mb-3">Certificate</label>
-                    <div className="flex gap-4 overflow-x-auto pb-2">{doctor.documents && doctor.documents.length > 0 ? (doctor.documents.map((url, idx) => { const isPdf = url.toLowerCase().endsWith(".pdf"); return (<div key={idx} className="relative group cursor-pointer" onClick={() => { if (isPdf) { window.open(url, "_blank"); } else { setModalImgSrc(url); setIsModalOpen(true); } }}>{isPdf ? (<div className="w-40 h-28 bg-red-50 border-2 border-red-200 rounded-lg flex flex-col items-center justify-center text-red-500 shadow-sm hover:shadow-md transition-all hover:border-red-400"><span className="text-3xl">📄</span><span className="text-xs font-medium mt-1">PDF Document</span></div>) : (<img src={url} alt={`Certificate ${idx + 1}`} className="w-40 h-28 object-cover border-2 border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all hover:border-cyan-400" />)}<div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center"><span className="text-white opacity-0 group-hover:opacity-100 font-medium text-sm bg-black/50 px-2 py-1 rounded">{isPdf ? "Open PDF" : "View"}</span></div></div>); })) : (<div className="w-40 h-28 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 text-xs gap-2"><span className="text-2xl">📄</span><span>No certificate</span></div>)}</div>
-                    <ImageModal isOpen={isModalOpen} src={modalImgSrc} onClose={() => setIsModalOpen(false)} />
+                    <Label className="text-gray-600 mb-3 flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Certificates & Documents
+                    </Label>
+                    <div className="flex gap-4 overflow-x-auto pb-2">
+                      {doctor.documents && doctor.documents.length > 0 ? (
+                        doctor.documents.map((url, idx) => {
+                          const isPdf = url.toLowerCase().endsWith(".pdf");
+                          return (
+                            <div
+                              key={idx}
+                              className="relative group cursor-pointer flex-shrink-0"
+                              onClick={() => {
+                                if (isPdf) {
+                                  window.open(url, "_blank");
+                                } else {
+                                  setModalImgSrc(url);
+                                  setIsModalOpen(true);
+                                }
+                              }}
+                            >
+                              {isPdf ? (
+                                <div className="w-40 h-28 bg-red-50 border-2 border-red-200 rounded-lg flex flex-col items-center justify-center text-red-600 hover:border-red-400 transition-colors">
+                                  <FileText className="h-8 w-8 mb-2" />
+                                  <span className="text-xs font-medium">PDF Document</span>
+                                </div>
+                              ) : (
+                                <img
+                                  src={url}
+                                  alt={`Certificate ${idx + 1}`}
+                                  className="w-40 h-28 object-cover border-2 border-gray-200 rounded-lg hover:border-cyan-400 transition-colors"
+                                />
+                              )}
+                              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
+                                <span className="text-white opacity-0 group-hover:opacity-100 font-medium text-sm bg-black/50 px-3 py-1 rounded">
+                                  {isPdf ? "Open PDF" : "View"}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="w-40 h-28 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 text-xs gap-2">
+                          <FileText className="h-8 w-8" />
+                          <span>No documents</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </>
+              </div>
             )}
           </div>
-        </div>
+        </main>
       </div>
 
-      {isRejectionModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Reject Doctor Application</h3>
-            <p className="text-gray-600 mb-4">Please provide a reason for rejecting Dr. {doctor?.name}'s application. This will be visible to the doctor.</p>
-            <textarea className="w-full border border-gray-300 rounded-lg p-3 mb-4 focus:outline-none focus:ring-2 focus:ring-red-500 min-h-[100px]" placeholder="Enter rejection reason..." value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} />
-            <div className="flex justify-end gap-3"><button onClick={() => setIsRejectionModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button><button onClick={proceedWithRejection} disabled={!rejectionReason.trim() || isRejecting} className={`px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors ${!rejectionReason.trim() || isRejecting ? "opacity-50 cursor-not-allowed" : ""}`}>{isRejecting ? "Rejecting..." : "Confirm Rejection"}</button></div>
+      {/* Image Modal */}
+      <ImageModal isOpen={isModalOpen} src={modalImgSrc} onClose={() => setIsModalOpen(false)} />
+
+      {/* Rejection Dialog */}
+      <Dialog open={isRejectionModalOpen} onOpenChange={setIsRejectionModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject Doctor Application</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for rejecting Dr. {doctor?.name}'s application. This will be
+              visible to the doctor.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="rejection-reason">Rejection Reason</Label>
+              <Textarea
+                id="rejection-reason"
+                placeholder="Enter rejection reason..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsRejectionModalOpen(false)}
+              disabled={isRejecting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={proceedWithRejection}
+              disabled={!rejectionReason.trim() || isRejecting}
+            >
+              {isRejecting ? "Rejecting..." : "Confirm Rejection"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

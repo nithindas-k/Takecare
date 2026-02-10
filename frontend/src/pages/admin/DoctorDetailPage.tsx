@@ -14,18 +14,26 @@ import {
     User,
     Shield,
     AlertTriangle,
-    CheckCircle,
     Ban,
-    Unlock
+    Unlock,
+    Briefcase,
+    GraduationCap,
+    Stethoscope
 } from "lucide-react";
 import Sidebar from "../../components/admin/Sidebar";
 import TopNav from "../../components/admin/TopNav";
 import adminService from "../../services/adminService";
 import AlertDialog from "../../components/common/AlertDialog";
 import { Skeleton } from "../../components/ui/skeleton";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
+import { Separator } from "../../components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage, AvatarBadge } from "../../components/ui/avatar";
 
 interface DoctorDetail {
     id: string;
+    customId?: string;
     name: string;
     email: string;
     phone: string;
@@ -98,8 +106,18 @@ const DoctorDetailPage: React.FC = () => {
         }
     };
 
+    const getInitials = (name: string) => {
+        return name
+            .split(" ")
+            .filter(Boolean)
+            .map((s) => s[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase();
+    };
+
     return (
-        <div className="flex min-h-screen bg-gray-50 font-sans no-scrollbar">
+        <div className="flex min-h-screen bg-gray-50 no-scrollbar">
             <AlertDialog
                 open={confirmOpen}
                 onOpenChange={setConfirmOpen}
@@ -107,7 +125,7 @@ const DoctorDetailPage: React.FC = () => {
                 description={
                     doctor?.isActive === false
                         ? "This doctor will be unbanned and can access the platform again."
-                        : "This doctor will be banned and won’t be able to access the platform."
+                        : "This doctor will be banned and won't be able to access the platform."
                 }
                 confirmText={doctor?.isActive === false ? "Unban" : "Ban"}
                 cancelText="Cancel"
@@ -147,278 +165,340 @@ const DoctorDetailPage: React.FC = () => {
             <div className="flex-1 flex flex-col lg:pl-64 min-w-0">
                 <TopNav onMenuClick={() => setSidebarOpen(true)} />
 
-                <main className="flex-1 overflow-y-auto px-4 md:px-6 lg:px-8 py-6">
+                <main className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-5 md:py-6">
                     {loading ? (
-                        <div className="max-w-6xl mx-auto">
-                            <Skeleton className="h-6 w-48 mb-6" />
-                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-6 mb-8">
-                                <Skeleton className="w-24 h-24 rounded-2xl" />
-                                <div className="space-y-4 flex-1">
-                                    <Skeleton className="h-8 w-64" />
-                                    <div className="flex gap-3">
-                                        <Skeleton className="h-6 w-32 rounded-md" />
-                                        <Skeleton className="h-6 w-32 rounded-md" />
-                                    </div>
-                                </div>
-                                <Skeleton className="h-10 w-40 rounded-xl" />
-                            </div>
-
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                <div className="lg:col-span-1 space-y-8">
-                                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
-                                        <Skeleton className="h-6 w-32" />
-                                        {[1, 2, 3].map(i => (
-                                            <div key={i} className="flex gap-3">
-                                                <Skeleton className="w-10 h-10 rounded-xl" />
-                                                <div className="space-y-2 flex-1">
-                                                    <Skeleton className="h-3 w-16" />
-                                                    <Skeleton className="h-4 w-full" />
+                        <div className="max-w-7xl mx-auto space-y-6">
+                            {/* Header Skeleton */}
+                            <div className="space-y-4">
+                                <Skeleton className="h-10 w-48" />
+                                <Card>
+                                    <CardContent className="p-6">
+                                        <div className="flex flex-col md:flex-row items-start gap-6">
+                                            <Skeleton className="w-24 h-24 rounded-xl" />
+                                            <div className="flex-1 space-y-3">
+                                                <Skeleton className="h-8 w-64" />
+                                                <div className="flex gap-2">
+                                                    <Skeleton className="h-6 w-32" />
+                                                    <Skeleton className="h-6 w-32" />
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
-                                        <Skeleton className="h-6 w-48" />
-                                        <div className="space-y-4">
-                                            <Skeleton className="h-4 w-24" />
-                                            <div className="flex flex-wrap gap-2">
-                                                <Skeleton className="h-8 w-20 rounded-lg" />
-                                                <Skeleton className="h-8 w-32 rounded-lg" />
-                                            </div>
+                                            <Skeleton className="h-10 w-32" />
                                         </div>
-                                    </div>
-                                </div>
-                                <div className="lg:col-span-2 space-y-8">
-                                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
-                                        <Skeleton className="h-6 w-48" />
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                                            {[1, 2, 3, 4].map(i => (
-                                                <Skeleton key={i} className="h-32 w-full rounded-xl" />
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            {/* Content Skeleton */}
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div className="space-y-6">
+                                    <Card>
+                                        <CardHeader>
+                                            <Skeleton className="h-6 w-32" />
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            {[1, 2, 3].map(i => (
+                                                <div key={i} className="space-y-2">
+                                                    <Skeleton className="h-4 w-20" />
+                                                    <Skeleton className="h-5 w-full" />
+                                                </div>
                                             ))}
-                                        </div>
-                                    </div>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                                <div className="lg:col-span-2 space-y-6">
+                                    <Card>
+                                        <CardHeader>
+                                            <Skeleton className="h-6 w-48" />
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                                {[1, 2, 3, 4].map(i => (
+                                                    <Skeleton key={i} className="h-32 w-full" />
+                                                ))}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
                                 </div>
                             </div>
                         </div>
                     ) : doctor && (
-                        <>
-                            <div className="max-w-6xl mx-auto mb-8">
-                                <button
-                                    onClick={() => navigate("/admin/doctors")}
-                                    className="flex items-center text-gray-500 hover:text-cyan-600 transition-colors mb-6 group"
-                                >
-                                    <ArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" />
-                                    <span className="font-medium">Back to Doctors List</span>
-                                </button>
-                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                                    <div className="flex items-center gap-4 md:gap-6">
-                                        <div className="relative flex-shrink-0">
-                                            {doctor.profileImage ? (
-                                                <img
-                                                    src={doctor.profileImage}
-                                                    alt={doctor.name}
-                                                    className="w-16 h-16 md:w-24 md:h-24 rounded-2xl object-cover shadow-md border-2 border-white ring-2 ring-gray-100"
-                                                />
-                                            ) : (
-                                                <div className="w-16 h-16 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center shadow-md ring-2 ring-gray-100">
-                                                    <span className="text-xl md:text-3xl font-bold text-white">
-                                                        {doctor.name.charAt(0)}
-                                                    </span>
+                        <div className="max-w-7xl mx-auto space-y-6">
+                            {/* Back Button */}
+                            <Button
+                                variant="ghost"
+                                onClick={() => navigate("/admin/doctors")}
+                                className="text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50 -ml-2"
+                            >
+                                <ArrowLeft className="h-4 w-4 mr-2" />
+                                Back to Doctors List
+                            </Button>
+
+                            {/* Doctor Header Card */}
+                            <Card>
+                                <CardContent className="p-6">
+                                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                                        <div className="flex items-center gap-4">
+                                            {/* Profile Image */}
+                                            <Avatar className="w-20 h-20 md:w-24 md:h-24">
+                                                <AvatarImage src={doctor.profileImage || undefined} alt={doctor.name} />
+                                                <AvatarFallback className="bg-gradient-to-br from-cyan-400 to-teal-500 text-white text-2xl md:text-3xl font-bold">
+                                                    {getInitials(doctor.name)}
+                                                </AvatarFallback>
+                                                <AvatarBadge className={doctor.isActive === false ? "bg-red-600" : "bg-green-600"} />
+                                            </Avatar>
+
+                                            {/* Doctor Info */}
+                                            <div>
+                                                <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
+                                                    Dr. {doctor.name}
+                                                </h1>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <Badge variant="secondary" className="bg-cyan-50 text-cyan-700 border-cyan-200">
+                                                        <Award className="w-3 h-3 mr-1" />
+                                                        {doctor.department}
+                                                    </Badge>
+                                                    <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
+                                                        <Calendar className="w-3 h-3 mr-1" />
+                                                        {doctor.experienceYears} Years Exp.
+                                                    </Badge>
+                                                    <Badge
+                                                        variant={doctor.isActive === false ? "destructive" : "default"}
+                                                        className={doctor.isActive === false ? "" : "bg-green-600"}
+                                                    >
+                                                        {doctor.isActive === false ? "Banned" : "Active"}
+                                                    </Badge>
                                                 </div>
-                                            )}
-                                            <div className={`absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 p-1 md:p-1.5 rounded-full border-2 md:border-4 border-white ${doctor.isActive === false ? "bg-red-500" : "bg-green-500"}`}>
-                                                {doctor.isActive === false ? (
-                                                    <Ban className="w-3 h-3 md:w-4 md:h-4 text-white" />
-                                                ) : (
-                                                    <CheckCircle className="w-3 h-3 md:w-4 md:h-4 text-white" />
-                                                )}
                                             </div>
                                         </div>
-                                        <div className="min-w-0">
-                                            <h1 className="text-xl md:text-3xl font-bold text-gray-800 mb-1 truncate">{doctor.name}</h1>
-                                            <div className="flex flex-wrap items-center gap-2 md:gap-3 text-gray-500 text-xs md:text-sm">
-                                                <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-md">
-                                                    <Award className="w-3 h-3 md:w-4 md:h-4 text-cyan-500" />
-                                                    {doctor.department}
-                                                </span>
-                                                <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-md">
-                                                    <Calendar className="w-3 h-3 md:w-4 md:h-4 text-cyan-500" />
-                                                    {doctor.experienceYears} Years Exp.
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="w-full md:w-auto mt-2 md:mt-0">
-                                        <button
+
+                                        {/* Action Button */}
+                                        <Button
                                             onClick={() => setConfirmOpen(true)}
                                             disabled={processing}
-                                            className={`w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm md:text-base text-white shadow-lg transition-all transform hover:scale-105 active:scale-95 ${doctor.isActive === false ? "bg-gradient-to-r from-green-500 to-emerald-600 shadow-green-500/30" : "bg-gradient-to-r from-red-500 to-rose-600 shadow-red-500/30"}`}
+                                            variant={doctor.isActive === false ? "default" : "destructive"}
+                                            className={doctor.isActive === false ? "bg-green-600 hover:bg-green-700" : ""}
                                         >
                                             {processing ? (
-                                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                                             ) : doctor.isActive === false ? (
                                                 <>
-                                                    <Unlock className="w-5 h-5" />
+                                                    <Unlock className="w-4 h-4 mr-2" />
                                                     Unban Doctor
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Ban className="w-5 h-5" />
+                                                    <Ban className="w-4 h-4 mr-2" />
                                                     Ban Doctor
                                                 </>
                                             )}
-                                        </button>
+                                        </Button>
                                     </div>
-                                </div>
-                            </div>
+                                </CardContent>
+                            </Card>
 
-                            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-                                <div className="lg:col-span-1 space-y-6 md:space-y-8">
-                                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                                        <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                            <User className="w-5 h-5 text-cyan-500" />
-                                            Contact Info
-                                        </h3>
-                                        <div className="space-y-4">
-                                            <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
-                                                <Mail className="w-5 h-5 text-gray-400 mt-0.5" />
-                                                <div className="min-w-0">
-                                                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Email</p>
-                                                    <p className="text-gray-700 font-medium break-all">{doctor.email}</p>
+                            {/* Main Content Grid */}
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                {/* Left Column */}
+                                <div className="space-y-6">
+                                    {/* Contact Information */}
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="flex items-center gap-2">
+                                                <User className="w-5 h-5 text-cyan-600" />
+                                                Contact Information
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                    <Mail className="w-4 h-4" />
+                                                    <span className="font-medium">Email</span>
                                                 </div>
+                                                <p className="text-gray-900 pl-6 break-all">{doctor.email}</p>
                                             </div>
-                                            <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
-                                                <Phone className="w-5 h-5 text-gray-400 mt-0.5" />
-                                                <div className="min-w-0">
-                                                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Phone</p>
-                                                    <p className="text-gray-700 font-medium truncate">{doctor.phone}</p>
+                                            <Separator />
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                    <Phone className="w-4 h-4" />
+                                                    <span className="font-medium">Phone</span>
                                                 </div>
+                                                <p className="text-gray-900 pl-6">{doctor.phone}</p>
                                             </div>
-                                            <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
-                                                <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
-                                                <div className="min-w-0">
-                                                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Address</p>
-                                                    <p className="text-gray-700 font-medium">
-                                                        {doctor.address ? (
-                                                            <>
-                                                                {doctor.address.street && <>{doctor.address.street}, </>}
-                                                                {doctor.address.city && <>{doctor.address.city}, </>}
-                                                                {doctor.address.state && <>{doctor.address.state} </>}
-                                                                {doctor.address.zipCode && <>{doctor.address.zipCode}</>}
-                                                            </>
-                                                        ) : "Not provided"}
-                                                    </p>
+                                            <Separator />
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                    <MapPin className="w-4 h-4" />
+                                                    <span className="font-medium">Address</span>
                                                 </div>
+                                                <p className="text-gray-900 pl-6">
+                                                    {doctor.address ? (
+                                                        <>
+                                                            {doctor.address.street && <>{doctor.address.street}, </>}
+                                                            {doctor.address.city && <>{doctor.address.city}, </>}
+                                                            {doctor.address.state && <>{doctor.address.state} </>}
+                                                            {doctor.address.zipCode && <>{doctor.address.zipCode}</>}
+                                                        </>
+                                                    ) : "Not provided"}
+                                                </p>
                                             </div>
-                                        </div>
-                                    </div>
+                                        </CardContent>
+                                    </Card>
 
-                                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                                        <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                            <Award className="w-5 h-5 text-cyan-500" />
-                                            Qualifications & Specialties
-                                        </h3>
-                                        <div className="mb-6">
-                                            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Qualifications</h4>
+                                    {/* Qualifications & Specialties */}
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="flex items-center gap-2">
+                                                <GraduationCap className="w-5 h-5 text-cyan-600" />
+                                                Qualifications
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
                                             <div className="flex flex-wrap gap-2">
                                                 {doctor.qualifications.map((qual, index) => (
-                                                    <span key={index} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium border border-blue-100">
+                                                    <Badge key={index} variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
                                                         {qual}
-                                                    </span>
+                                                    </Badge>
                                                 ))}
                                             </div>
-                                        </div>
-                                        <div>
-                                            <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Specialties</h4>
+                                        </CardContent>
+                                    </Card>
+
+                                    {/* Specialties */}
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="flex items-center gap-2">
+                                                <Stethoscope className="w-5 h-5 text-cyan-600" />
+                                                Specialties
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
                                             <div className="flex flex-wrap gap-2">
                                                 {doctor.specialties?.map((spec, index) => (
-                                                    <span key={index} className="px-3 py-1.5 bg-teal-50 text-teal-700 rounded-lg text-sm font-medium border border-teal-100">
+                                                    <Badge key={index} variant="secondary" className="bg-teal-50 text-teal-700 border-teal-200">
                                                         {spec}
-                                                    </span>
+                                                    </Badge>
                                                 ))}
                                             </div>
-                                        </div>
-                                    </div>
+                                        </CardContent>
+                                    </Card>
 
-                                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                                        <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                            <IndianRupee className="w-5 h-5 text-cyan-500" />
-                                            Consultation Fees
-                                        </h3>
-                                        <div className="overflow-x-auto no-scrollbar">
-                                            <table className="min-w-full divide-y divide-gray-200">
-                                                <thead className="bg-gray-50">
-                                                    <tr>
-                                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fee</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="bg-white divide-y divide-gray-200">
-                                                    <tr>
-                                                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">Video Consultation</td>
-                                                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-bold"><IndianRupee className="inline w-4 h-4 mr-0.5" />{doctor.VideoFees}</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">Chat Consultation</td>
-                                                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 font-bold"><IndianRupee className="inline w-4 h-4 mr-0.5" />{doctor.ChatFees}</td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
+                                    {/* Consultation Fees */}
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="flex items-center gap-2">
+                                                <IndianRupee className="w-5 h-5 text-cyan-600" />
+                                                Consultation Fees
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="space-y-3">
+                                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                                <span className="text-sm font-medium text-gray-700">Video Consultation</span>
+                                                <span className="text-lg font-bold text-gray-900">
+                                                    ₹{doctor.VideoFees}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                                <span className="text-sm font-medium text-gray-700">Chat Consultation</span>
+                                                <span className="text-lg font-bold text-gray-900">
+                                                    ₹{doctor.ChatFees}
+                                                </span>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
                                 </div>
 
-                                <div className="lg:col-span-2 space-y-6 md:space-y-8">
-                                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                                        <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                            <Shield className="w-5 h-5 text-cyan-500" />
-                                            Verification Documents
-                                        </h3>
-                                        {doctor.documents.length > 0 ? (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                                {doctor.documents.map((doc, index) => {
-                                                    const isPdf = doc.toLowerCase().endsWith(".pdf");
-                                                    return (
-                                                        <a
-                                                            key={index}
-                                                            href={doc}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="group relative block"
-                                                        >
-                                                            {isPdf ? (
-                                                                <div className="w-full h-32 bg-red-50 border-2 border-red-100 rounded-xl flex flex-col items-center justify-center text-red-500 hover:border-red-300 hover:bg-red-100 transition-all">
-                                                                    <FileText className="w-8 h-8 mb-2" />
-                                                                    <span className="text-xs font-medium">PDF Document</span>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="w-full h-32 rounded-xl overflow-hidden border-2 border-gray-100 group-hover:border-cyan-400 transition-all relative">
-                                                                    <img
-                                                                        src={doc}
-                                                                        alt={`Document ${index + 1}`}
-                                                                        className="w-full h-full object-cover"
-                                                                    />
-                                                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all flex items-center justify-center">
-                                                                        <span className="text-white opacity-0 group-hover:opacity-100 font-medium text-xs bg-black/50 px-2 py-1 rounded">
-                                                                            View
-                                                                        </span>
+                                {/* Right Column */}
+                                <div className="lg:col-span-2 space-y-6">
+                                    {/* Verification Documents */}
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="flex items-center gap-2">
+                                                <Shield className="w-5 h-5 text-cyan-600" />
+                                                Verification Documents
+                                            </CardTitle>
+                                            <CardDescription>
+                                                Professional certificates and identification documents
+                                            </CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            {doctor.documents.length > 0 ? (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                    {doctor.documents.map((doc, index) => {
+                                                        const isPdf = doc.toLowerCase().endsWith(".pdf");
+                                                        return (
+                                                            <a
+                                                                key={index}
+                                                                href={doc}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="group relative block"
+                                                            >
+                                                                {isPdf ? (
+                                                                    <div className="w-full h-40 bg-red-50 border-2 border-red-200 rounded-xl flex flex-col items-center justify-center text-red-600 hover:border-red-400 hover:bg-red-100 transition-all">
+                                                                        <FileText className="w-10 h-10 mb-2" />
+                                                                        <span className="text-sm font-medium">PDF Document</span>
+                                                                        <span className="text-xs text-red-500 mt-1">Click to view</span>
                                                                     </div>
-                                                                </div>
-                                                            )}
-                                                        </a>
-                                                    );
-                                                })}
+                                                                ) : (
+                                                                    <div className="w-full h-40 rounded-xl overflow-hidden border-2 border-gray-200 group-hover:border-cyan-400 transition-all relative">
+                                                                        <img
+                                                                            src={doc}
+                                                                            alt={`Document ${index + 1}`}
+                                                                            className="w-full h-full object-cover"
+                                                                        />
+                                                                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all flex items-center justify-center">
+                                                                            <span className="text-white opacity-0 group-hover:opacity-100 font-medium text-sm bg-black/60 px-3 py-1.5 rounded-lg">
+                                                                                View Full Size
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </a>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+                                                    <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                                                    <p className="text-gray-500 font-medium">No documents available</p>
+                                                    <p className="text-sm text-gray-400 mt-1">No verification documents have been uploaded</p>
+                                                </div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+
+                                    {/* Biography Section (if available) */}
+                                    {doctor.biography && (
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle className="flex items-center gap-2">
+                                                    <Briefcase className="w-5 h-5 text-cyan-600" />
+                                                    Biography
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <p className="text-gray-700 leading-relaxed">{doctor.biography}</p>
+                                            </CardContent>
+                                        </Card>
+                                    )}
+
+                                    {/* Doctor ID Card */}
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="flex items-center gap-2">
+                                                <User className="w-5 h-5 text-cyan-600" />
+                                                Doctor ID
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm text-gray-700">
+                                                {doctor.customId || "Not assigned"}
                                             </div>
-                                        ) : (
-                                            <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                                                <AlertTriangle className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                                                <p className="text-gray-500">No documents available</p>
-                                            </div>
-                                        )}
-                                    </div>
+                                        </CardContent>
+                                    </Card>
                                 </div>
                             </div>
-                        </>
+                        </div>
                     )}
                 </main>
             </div>
@@ -427,4 +507,3 @@ const DoctorDetailPage: React.FC = () => {
 };
 
 export default DoctorDetailPage;
-

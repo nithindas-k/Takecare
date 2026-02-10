@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   Mail,
@@ -8,16 +9,27 @@ import {
   Calendar,
   User,
   UserCircle,
-  X,
+  Shield,
+  Clock,
+  CheckCircle,
+  Ban,
+  Unlock,
+  Activity,
 } from "lucide-react";
 import Sidebar from "../../components/admin/Sidebar";
 import TopNav from "../../components/admin/TopNav";
 import adminService from "../../services/adminService";
 import AlertDialog from "../../components/common/AlertDialog";
 import { Skeleton } from "../../components/ui/skeleton";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
+import { Separator } from "../../components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage, AvatarBadge } from "../../components/ui/avatar";
 
 interface PatientDetail {
   id: string;
+  customId?: string;
   name: string;
   email: string;
   phone: string;
@@ -73,15 +85,37 @@ const PatientDetailPage: React.FC = () => {
     setProcessing(false);
   };
 
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .filter(Boolean)
+      .map((s) => s[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+  };
+
+  const calculateAge = (dob: string | null) => {
+    if (!dob) return null;
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50 no-scrollbar">
       <AlertDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         title={patient?.isActive ? "Block patient?" : "Unblock patient?"}
         description={
           patient?.isActive
-            ? "This patient will be blocked and won’t be able to access the app."
+            ? "This patient will be blocked and won't be able to access the app."
             : "This patient will be unblocked and will be able to access the app again."
         }
         confirmText={patient?.isActive ? "Block" : "Unblock"}
@@ -90,189 +124,309 @@ const PatientDetailPage: React.FC = () => {
         onConfirm={handleBlockToggle}
       />
 
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:block">
+      {/* Sidebar - Desktop */}
+      <div className="hidden lg:block w-64 fixed inset-y-0 left-0 z-50">
         <Sidebar />
       </div>
 
-      {/* Mobile Sidebar */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setSidebarOpen(false)}
-          />
-          <div className="absolute left-0 top-0 h-full w-72 bg-white shadow-2xl">
-            <div className="flex justify-end p-3">
-              <button
-                onClick={() => setSidebarOpen(false)}
-                className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <Sidebar />
+      {/* Sidebar - Mobile Overlay */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <div className="fixed inset-0 z-[60] lg:hidden">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSidebarOpen(false)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ x: -256 }}
+              animate={{ x: 0 }}
+              exit={{ x: -256 }}
+              transition={{ type: "spring", damping: 30, stiffness: 450 }}
+              className="absolute left-0 top-0 h-full w-64 bg-white shadow-2xl"
+            >
+              <Sidebar onMobileClose={() => setSidebarOpen(false)} />
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col lg:pl-64 min-w-0">
         <TopNav onMenuClick={() => setSidebarOpen(true)} />
 
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
-          <div className="max-w-6xl mx-auto">
-            <button
-              onClick={() => navigate("/admin/patients")}
-              className="flex items-center text-gray-500 hover:text-cyan-600 mb-6"
-            >
-              <ArrowLeft className="w-5 h-5 mr-2" />
-              Back to Patients
-            </button>
-
-            {loading ? (
-              <div className="space-y-6">
-                <div className="bg-white rounded-2xl p-6 shadow-sm border">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                    <div className="flex items-center gap-5">
-                      <Skeleton className="w-20 h-20 rounded-xl" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-8 w-48" />
-                        <Skeleton className="h-4 w-32" />
-                      </div>
-                    </div>
-                    <Skeleton className="h-12 w-40 rounded-xl" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <Skeleton className="h-64 w-full rounded-2xl shadow-sm border" />
-                  <Skeleton className="h-64 w-full rounded-2xl shadow-sm border" />
-                </div>
-              </div>
-            ) : patient ? (
-              <>
-                {/* Header Card */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm border mb-8">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                    <div className="flex items-center gap-5">
-                      {patient.profileImage ? (
-                        <img
-                          src={patient.profileImage}
-                          alt={patient.name}
-                          className="w-20 h-20 rounded-xl object-cover"
-                        />
-                      ) : (
-                        <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-cyan-400 to-teal-500 flex items-center justify-center text-white text-2xl font-bold">
-                          {patient.name.charAt(0)}
+        <main className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-5 md:py-6">
+          {loading ? (
+            <div className="max-w-7xl mx-auto space-y-6">
+              {/* Header Skeleton */}
+              <div className="space-y-4">
+                <Skeleton className="h-10 w-48" />
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex flex-col md:flex-row items-start gap-6">
+                      <Skeleton className="w-24 h-24 rounded-full" />
+                      <div className="flex-1 space-y-3">
+                        <Skeleton className="h-8 w-64" />
+                        <div className="flex gap-2">
+                          <Skeleton className="h-6 w-24" />
+                          <Skeleton className="h-6 w-24" />
                         </div>
-                      )}
+                      </div>
+                      <Skeleton className="h-10 w-32" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Content Skeleton */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-32" />
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="space-y-2">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-5 w-full" />
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-32" />
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="space-y-2">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-5 w-full" />
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          ) : patient ? (
+            <div className="max-w-7xl mx-auto space-y-6">
+              {/* Back Button */}
+              <Button
+                variant="ghost"
+                onClick={() => navigate("/admin/patients")}
+                className="text-cyan-600 hover:text-cyan-700 hover:bg-cyan-50 -ml-2"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Patients List
+              </Button>
+
+              {/* Patient Header Card */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                    <div className="flex items-center gap-4">
+                      {/* Avatar with Badge */}
+                      <Avatar className="w-20 h-20 md:w-24 md:h-24">
+                        <AvatarImage src={patient.profileImage || undefined} alt={patient.name} />
+                        <AvatarFallback className="bg-gradient-to-br from-cyan-400 to-teal-500 text-white text-2xl md:text-3xl font-bold">
+                          {getInitials(patient.name)}
+                        </AvatarFallback>
+                        <AvatarBadge className={patient.isActive ? "bg-green-600" : "bg-red-600"} />
+                      </Avatar>
+
+                      {/* Patient Info */}
                       <div>
-                        <h1 className="text-2xl font-bold text-gray-800">
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
                           {patient.name}
                         </h1>
-                        <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
-                          <UserCircle className="w-4 h-4 text-cyan-500" />
-                          Patient · {patient.gender}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="secondary" className="bg-purple-50 text-purple-700 border-purple-200">
+                            <UserCircle className="w-3 h-3 mr-1" />
+                            Patient
+                          </Badge>
+                          <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
+                            {patient.gender}
+                          </Badge>
+                          {patient.dob && calculateAge(patient.dob) && (
+                            <Badge variant="secondary" className="bg-cyan-50 text-cyan-700 border-cyan-200">
+                              <Calendar className="w-3 h-3 mr-1" />
+                              {calculateAge(patient.dob)} years old
+                            </Badge>
+                          )}
+                          <Badge
+                            variant={patient.isActive ? "default" : "destructive"}
+                            className={patient.isActive ? "bg-green-600" : ""}
+                          >
+                            {patient.isActive ? (
+                              <>
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                Active
+                              </>
+                            ) : (
+                              <>
+                                <Ban className="w-3 h-3 mr-1" />
+                                Blocked
+                              </>
+                            )}
+                          </Badge>
                         </div>
                       </div>
                     </div>
 
-                    <button
+                    {/* Action Button */}
+                    <Button
                       onClick={() => setConfirmOpen(true)}
                       disabled={processing}
-                      className={`w-full md:w-auto px-6 py-3 rounded-xl font-semibold text-white transition ${patient.isActive
-                        ? "bg-red-500 hover:bg-red-600"
-                        : "bg-green-500 hover:bg-green-600"
-                        }`}
+                      variant={patient.isActive ? "destructive" : "default"}
+                      className={!patient.isActive ? "bg-green-600 hover:bg-green-700" : ""}
                     >
-                      {processing
-                        ? "Processing..."
-                        : patient.isActive
-                          ? "Block Patient"
-                          : "Unblock Patient"}
-                    </button>
+                      {processing ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      ) : patient.isActive ? (
+                        <>
+                          <Ban className="w-4 h-4 mr-2" />
+                          Block Patient
+                        </>
+                      ) : (
+                        <>
+                          <Unlock className="w-4 h-4 mr-2" />
+                          Unblock Patient
+                        </>
+                      )}
+                    </Button>
                   </div>
-                </div>
+                </CardContent>
+              </Card>
 
-                {/* Info Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-                  {/* Contact Info */}
-                  <div className="bg-white rounded-2xl p-6 shadow-sm border">
-                    <h3 className="font-bold text-gray-800 mb-5 flex items-center gap-2">
-                      <User className="w-5 h-5 text-cyan-500" />
+              {/* Main Content Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Contact Information */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <User className="w-5 h-5 text-cyan-600" />
                       Contact Information
-                    </h3>
-
-                    <div className="space-y-4">
-                      <div className="flex gap-3">
-                        <Mail className="text-gray-400 mt-1" />
-                        <div>
-                          <p className="text-xs text-gray-500">Email</p>
-                          <p className="font-medium break-all">{patient.email}</p>
-                        </div>
+                    </CardTitle>
+                    <CardDescription>Personal contact details</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Mail className="w-4 h-4" />
+                        <span className="font-medium">Email Address</span>
                       </div>
-
-                      <div className="flex gap-3">
-                        <Phone className="text-gray-400 mt-1" />
-                        <div>
-                          <p className="text-xs text-gray-500">Phone</p>
-                          <p className="font-medium">{patient.phone}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-3">
-                        <Calendar className="text-gray-400 mt-1" />
-                        <div>
-                          <p className="text-xs text-gray-500">Date of Birth</p>
-                          <p className="font-medium">
-                            {patient.dob
-                              ? new Date(patient.dob).toLocaleDateString()
-                              : "Not provided"}
-                          </p>
-                        </div>
-                      </div>
+                      <p className="text-gray-900 pl-6 break-all">{patient.email}</p>
                     </div>
-                  </div>
+                    <Separator />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Phone className="w-4 h-4" />
+                        <span className="font-medium">Phone Number</span>
+                      </div>
+                      <p className="text-gray-900 pl-6">{patient.phone}</p>
+                    </div>
+                    <Separator />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Calendar className="w-4 h-4" />
+                        <span className="font-medium">Date of Birth</span>
+                      </div>
+                      <p className="text-gray-900 pl-6">
+                        {patient.dob
+                          ? new Date(patient.dob).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })
+                          : "Not provided"}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  {/* Account Info */}
-                  <div className="bg-white rounded-2xl p-6 shadow-sm border">
-                    <h3 className="font-bold text-gray-800 mb-5 flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-cyan-500" />
+                {/* Account Information */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Activity className="w-5 h-5 text-cyan-600" />
                       Account Information
-                    </h3>
-
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-xs text-gray-500">Joined</p>
-                        <p className="font-medium">
-                          {new Date(patient.createdAt).toLocaleDateString()}
-                        </p>
+                    </CardTitle>
+                    <CardDescription>Account status and activity</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Clock className="w-4 h-4" />
+                        <span className="font-medium">Member Since</span>
                       </div>
-
-                      <div>
-                        <p className="text-xs text-gray-500">Last Updated</p>
-                        <p className="font-medium">
-                          {new Date(patient.updatedAt).toLocaleDateString()}
-                        </p>
+                      <p className="text-gray-900 pl-6">
+                        {new Date(patient.createdAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                    <Separator />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Calendar className="w-4 h-4" />
+                        <span className="font-medium">Last Updated</span>
                       </div>
-
-                      <div>
-                        <p className="text-xs text-gray-500">Status</p>
-                        <p
-                          className={`font-bold ${patient.isActive
-                            ? "text-green-600"
-                            : "text-red-600"
-                            }`}
+                      <p className="text-gray-900 pl-6">
+                        {new Date(patient.updatedAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                    <Separator />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Shield className="w-4 h-4" />
+                        <span className="font-medium">Account Status</span>
+                      </div>
+                      <div className="pl-6">
+                        <Badge
+                          variant={patient.isActive ? "default" : "destructive"}
+                          className={patient.isActive ? "bg-green-600" : ""}
                         >
-                          {patient.isActive ? "Active" : "Blocked"}
-                        </p>
+                          {patient.isActive ? (
+                            <>
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              Active & Accessible
+                            </>
+                          ) : (
+                            <>
+                              <Ban className="w-3 h-3 mr-1" />
+                              Blocked
+                            </>
+                          )}
+                        </Badge>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Additional Info Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserCircle className="w-5 h-5 text-cyan-600" />
+                    Patient ID
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm text-gray-700">
+                    {patient.customId || "Not assigned"}
                   </div>
-                </div>
-              </>
-            ) : null}
-          </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : null}
         </main>
       </div>
     </div>

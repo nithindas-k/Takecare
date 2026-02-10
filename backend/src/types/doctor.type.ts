@@ -92,6 +92,7 @@ export interface DoctorRequestItem {
 
 
 export interface DoctorRequestDetail extends DoctorRequestItem {
+  customId?: string;
   qualifications: string[];
   VideoFees?: number | null;
   ChatFees?: number | null;

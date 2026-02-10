@@ -149,6 +149,7 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
     return {
       _id: doc._id,
       userId: user._id,
+      customId: user.customId,
       name: user.name,
       email: user.email,
       phone: user.phone,
