@@ -117,6 +117,7 @@ app.use(BASE_ROUTES.SPECIALTIES, specialtyRouter);
 app.use(BASE_ROUTES.CONTACT, contactRouter);
 app.use(BASE_ROUTES.CALL, callRouter);
 app.use(BASE_ROUTES.AI, aiRouter);
+app.use("/api" + BASE_ROUTES.AI, aiRouter);
 app.use("/api/time", timeRouter);
 
 

@@ -36,7 +36,7 @@ export interface AIChatResponse {
     requiresAction: boolean;
 }
 
-const AI_API_URL = "/ai";
+const AI_API_URL = "/api/ai";
 
 export const aiService = {
 
