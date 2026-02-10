@@ -27,6 +27,7 @@ import specialtyRouter from "./routers/specialty.router";
 import contactRouter from "./routes/contact.routes";
 import callRouter from "./routers/call.router";
 import timeRouter from "./routers/time.router";
+import aiRouter from "./routers/ai.router";
 
 
 import { errorHandler } from "./middlewares/error-handler.middleware";
@@ -115,6 +116,7 @@ app.use(BASE_ROUTES.PRESCRIPTIONS, prescriptionRouter);
 app.use(BASE_ROUTES.SPECIALTIES, specialtyRouter);
 app.use(BASE_ROUTES.CONTACT, contactRouter);
 app.use(BASE_ROUTES.CALL, callRouter);
+app.use(BASE_ROUTES.AI, aiRouter);
 app.use("/api/time", timeRouter);
 
 

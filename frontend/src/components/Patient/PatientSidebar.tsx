@@ -12,7 +12,8 @@ import {
     FaSignOutAlt,
     FaCheckCircle,
     FaTimes,
-    FaLock
+    FaLock,
+    FaBrain
 } from "react-icons/fa";
 import type { AppDispatch } from "../../redux/store";
 import {
@@ -35,6 +36,7 @@ const sidebarLinks: SidebarLink[] = [
     { label: "Favorites", icon: <FaHeart />, path: "/patient/favorites" },
     { label: "Wallet", icon: <FaWallet />, path: "/patient/wallet" },
     { label: "Message", icon: <FaComments />, path: "/patient/chat/default", badge: "dot" },
+    { label: "AI Matcher", icon: <FaBrain />, path: "/patient/ai-matcher" },
     { label: "Settings", icon: <FaCog />, path: "/patient/profile-settings" },
     { label: "Change Password", icon: <FaLock />, path: "/patient/change-password" },
 ];

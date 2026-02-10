@@ -198,6 +198,14 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
   async countApprovedDoctors(): Promise<number> {
     return await this.model.countDocuments({ verificationStatus: VerificationStatus.Approved });
   }
+
+  async searchDoctors(criteria: Record<string, any>): Promise<IDoctorDocument[]> {
+    return await this.model.find(criteria).populate("userId").exec();
+  }
+
+  async getAvailableSpecialties(): Promise<string[]> {
+    return await this.model.distinct("specialty", { verificationStatus: VerificationStatus.Approved, isActive: true });
+  }
 }
 
 type PopulatedDoctorRequest = IDoctor & {

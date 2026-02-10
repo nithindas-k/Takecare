@@ -47,6 +47,7 @@ import About from "./pages/user/About";
 import Contact from "./pages/user/Contact";
 import PatientDashboard from "./pages/user/Dashboard";
 import FavoriteDoctors from "./pages/user/FavoriteDoctors";
+import AIMatchingPage from "./pages/user/AIMatchingPage";
 
 import DoctorChangePassword from "./pages/doctor/DoctorChangePassword";
 
@@ -426,6 +427,14 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute role="patient">
                 <FavoriteDoctors />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="ai-matcher"
+            element={
+              <ProtectedRoute role="patient">
+                <AIMatchingPage />
               </ProtectedRoute>
             }
           />

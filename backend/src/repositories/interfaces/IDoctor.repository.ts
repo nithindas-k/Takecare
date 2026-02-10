@@ -18,4 +18,6 @@ export interface IDoctorRepository extends IBaseRepository<IDoctorDocument> {
   getAllDoctors(skip: number, limit: number, filter?: { specialty?: string; search?: string; verificationStatus?: string; isActive?: boolean; sort?: Record<string, 1 | -1>; minExperience?: number; minRating?: number }): Promise<{ doctors: IDoctorDocument[]; total: number }>;
   findRelatedDoctors(specialty: string, currentDoctorId: string, limit: number): Promise<IDoctorDocument[]>;
   countApprovedDoctors(): Promise<number>;
+  searchDoctors(criteria: Record<string, any>): Promise<IDoctorDocument[]>;
+  getAvailableSpecialties(): Promise<string[]>;
 }

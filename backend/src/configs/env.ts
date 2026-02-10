@@ -109,6 +109,10 @@ export const env = {
 
   get SESSION_MAX_AGE() {
     return Number(process.env.SESSION_MAX_AGE) || 24 * 60 * 60 * 1000;
+  },
+
+  get GROQ_API_KEY() {
+    return process.env.GROQ_API_KEY || "";
   }
 };
 

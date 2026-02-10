@@ -23,6 +23,9 @@ export const AI_ROUTES = {
     SUMMARY: "/patient-summary",
     CHAT_SUMMARY: "/chat-summary",
     ADMIN_QUERY: "/admin-query",
+    MATCH_DOCTOR: "/match-doctor",
+    MATCH_HISTORY: "/match-history",
+    MATCH_RESET: "/match-reset",
 } as const;
 
 
