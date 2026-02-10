@@ -151,7 +151,7 @@ const AdminSpecialties: React.FC = () => {
         {sidebarOpen && (
           <div className="fixed inset-0 z-[60] lg:hidden">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSidebarOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
-            <motion.div initial={{ x: -256 }} animate={{ x: 0 }} exit={{ x: -256 }} transition={{ type: "spring", damping: 25, stiffness: 200 }} className="absolute left-0 top-0 h-full w-64 bg-white shadow-2xl">
+            <motion.div initial={{ x: -256 }} animate={{ x: 0 }} exit={{ x: -256 }} transition={{ type: "spring", damping: 30, stiffness: 450 }} className="absolute left-0 top-0 h-full w-64 bg-white shadow-2xl">
               <Sidebar onMobileClose={() => setSidebarOpen(false)} />
             </motion.div>
           </div>

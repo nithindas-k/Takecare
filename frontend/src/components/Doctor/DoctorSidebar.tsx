@@ -83,10 +83,11 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
     if (onMobileMenuClose) onMobileMenuClose();
   };
 
-  const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
-    <>
+
+  const SidebarContent = (
+    <div className="flex flex-col h-full bg-white">
       {/* Header */}
-      <div className="relative bg-[#00A1B0] h-28 w-full">
+      <div className="relative bg-[#00A1B0] h-28 w-full flex-shrink-0">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
 
         {/* Mobile Close Button */}
@@ -101,7 +102,7 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
       </div>
 
       {/* Profile */}
-      <div className="flex flex-col items-center px-6 -mt-14 mb-6">
+      <div className="flex flex-col items-center px-6 -mt-14 mb-6 flex-shrink-0">
         <div className="relative">
           <img
             src={getImageUrl(doctor?.profileImage)}
@@ -128,17 +129,17 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
         )}
       </div>
 
-      {/* Menu */}
-      <div className="px-4 pb-6 flex-1 overflow-y-auto">
+      {/* Menu Options Scrollable Area */}
+      <div className="px-4 pb-6 flex-1 overflow-y-auto no-scrollbar">
         <motion.ul
           className="space-y-1"
-          initial={isMobile ? "hidden" : "visible"}
+          initial={onMobileMenuClose ? "hidden" : "visible"}
           animate="visible"
           variants={{
             visible: {
               transition: {
-                staggerChildren: isMobile ? 0.05 : 0,
-                delayChildren: isMobile ? 0.1 : 0
+                staggerChildren: onMobileMenuClose ? 0.03 : 0,
+                delayChildren: 0
               }
             }
           }}
@@ -152,12 +153,12 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
               }}
               transition={{
                 type: "spring",
-                stiffness: 260,
-                damping: 24,
-                mass: 0.9
+                stiffness: 500,
+                damping: 30,
+                mass: 0.5
               }}
               onClick={() => handleNavigation(link.path)}
-              className={`group flex items-center px-4 py-3 rounded-xl gap-3 cursor-pointer transition font-medium
+              className={`group flex items-center px-4 py-3 rounded-xl gap-3 cursor-pointer transition-all duration-200 font-medium
                 ${isActive(link.path)
                   ? "bg-[#00A1B0] text-white"
                   : "text-gray-500 hover:bg-gray-50 hover:text-[#00A1B0]"
@@ -188,72 +189,63 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
               )}
             </motion.li>
           ))}
-
-          {/* Logout */}
-          <motion.li
-            variants={{
-              hidden: { opacity: 0, x: -30, scale: 0.9 },
-              visible: { opacity: 1, x: 0, scale: 1 }
-            }}
-            transition={{
-              type: "spring",
-              stiffness: 300,
-              damping: 20,
-              mass: 0.8
-            }}
-            onClick={handleLogout}
-            className="group flex items-center px-4 py-3 rounded-xl text-gray-500 gap-3 hover:bg-red-50 hover:text-red-600 cursor-pointer transition font-medium mt-2"
-          >
-            <span className="text-lg text-gray-400 group-hover:text-red-500">
-              <FaSignOutAlt />
-            </span>
-            <span className="truncate text-sm">Logout</span>
-          </motion.li>
         </motion.ul>
       </div>
-    </>
-  );
 
-
-  const DesktopSidebar = () => (
-    <aside className="hidden lg:flex col-span-12 lg:col-span-3 bg-white rounded-3xl shadow flex-col h-fit lg:min-w-[265px] max-w-xs sticky top-4 overflow-hidden">
-      <SidebarContent isMobile={false} />
-    </aside>
-  );
-
-  const MobileSidebar = () => (
-    <AnimatePresence>
-      {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-40">
-          {/* Backdrop with fade animation */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={onMobileMenuClose}
-          />
-
-          {/* Drawer with slide animation */}
-          <motion.aside
-            initial={{ x: -320 }}
-            animate={{ x: 0 }}
-            exit={{ x: -320 }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="absolute top-0 left-0 h-full w-80 bg-white shadow-2xl z-50 flex flex-col"
-          >
-            <SidebarContent isMobile={true} />
-          </motion.aside>
-        </div>
-      )}
-    </AnimatePresence>
+      {/* Logout at Bottom (Same as Admin) */}
+      <motion.div
+        className="p-4 border-t border-slate-50 flex-shrink-0"
+        initial={onMobileMenuClose ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.3 }}
+      >
+        <button
+          onClick={handleLogout}
+          className="group flex items-center px-4 py-3 rounded-xl text-gray-500 gap-3 hover:bg-red-50 hover:text-red-600 w-full cursor-pointer transition-all duration-200 font-medium"
+        >
+          <span className="text-lg text-gray-400 group-hover:text-red-500 transition-colors">
+            <FaSignOutAlt />
+          </span>
+          <span className="truncate text-sm">Logout</span>
+        </button>
+      </motion.div>
+    </div>
   );
 
   return (
     <>
-      <DesktopSidebar />
-      <MobileSidebar />
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex col-span-12 lg:col-span-3 bg-white rounded-3xl shadow flex-col h-fit lg:min-w-[265px] max-w-xs sticky top-4 overflow-hidden">
+        {SidebarContent}
+      </aside>
+
+      {/* Mobile Sidebar */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <div className="lg:hidden fixed inset-0 z-40">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={onMobileMenuClose}
+            />
+
+            {/* Drawer */}
+            <motion.aside
+              initial={{ x: -320 }}
+              animate={{ x: 0 }}
+              exit={{ x: -320 }}
+              transition={{ type: "spring", damping: 30, stiffness: 450 }}
+              className="absolute top-0 left-0 h-full w-80 bg-white shadow-2xl z-50 flex flex-col"
+            >
+              {SidebarContent}
+            </motion.aside>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

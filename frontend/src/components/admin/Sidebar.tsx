@@ -78,8 +78,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onMobileClose }) => {
           variants={{
             visible: {
               transition: {
-                staggerChildren: onMobileClose ? 0.05 : 0,
-                delayChildren: onMobileClose ? 0.1 : 0
+                staggerChildren: onMobileClose ? 0.03 : 0,
+                delayChildren: 0
               }
             }
           }}
@@ -93,9 +93,9 @@ const Sidebar: React.FC<SidebarProps> = ({ onMobileClose }) => {
               }}
               transition={{
                 type: "spring",
-                stiffness: 300,
-                damping: 20,
-                mass: 0.8
+                stiffness: 500,
+                damping: 30,
+                mass: 0.5
               }}
             >
               <NavLink

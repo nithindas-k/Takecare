@@ -121,7 +121,7 @@ const ReviewsPage: React.FC = () => {
                             initial={{ x: -256 }}
                             animate={{ x: 0 }}
                             exit={{ x: -256 }}
-                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            transition={{ type: "spring", damping: 30, stiffness: 450 }}
                             className="absolute left-0 top-0 h-full w-64 bg-white shadow-2xl"
                         >
                             <Sidebar onMobileClose={() => setSidebarOpen(false)} />
