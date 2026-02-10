@@ -4,8 +4,16 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "../../components/admin/Sidebar";
 import TopNav from "../../components/admin/TopNav";
-import { Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Eye, ChevronLeft, ChevronRight, Search, ChevronDown, Check } from "lucide-react";
 import adminService from "../../services/adminService";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu";
 
 interface Doctor {
   id: string;
@@ -135,35 +143,46 @@ const DoctorsListPage: React.FC = () => {
                   <p className="text-sm text-gray-500">Manage all registered doctors ({totalDoctors})</p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-                  <input
-                    type="text"
-                    placeholder="Search name, email..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full sm:w-64 pl-4 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 focus:outline-none text-sm"
-                  />
+                <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3">
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search name, email..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="pl-9 h-10"
+                    />
+                  </div>
 
-                  <input
-                    type="text"
+                  <Input
                     placeholder="Specialty..."
                     value={specialty}
                     onChange={(e) => setSpecialty(e.target.value)}
-                    className="w-full sm:w-40 pl-4 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 focus:outline-none text-sm"
+                    className="w-full sm:w-40 h-10"
                   />
 
-                  <select
-                    value={isActive}
-                    onChange={(e) => {
-                      setIsActive(e.target.value);
-                      setPage(1);
-                    }}
-                    className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 focus:outline-none text-sm bg-white"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="true">Active</option>
-                    <option value="false">Blocked</option>
-                  </select>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="w-full sm:w-auto h-10 border-cyan-400 text-gray-700 flex justify-between gap-2 px-4 font-normal">
+                        {isActive === "all" ? "All Status" : isActive === "true" ? "Active" : "Blocked"}
+                        <ChevronDown className="h-4 w-4 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-40" align="end">
+                      <DropdownMenuItem onClick={() => { setIsActive("all"); setPage(1); }} className="flex justify-between items-center cursor-pointer">
+                        All Status
+                        {isActive === "all" && <Check className="h-4 w-4 text-cyan-600" />}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setIsActive("true"); setPage(1); }} className="flex justify-between items-center cursor-pointer">
+                        Active
+                        {isActive === "true" && <Check className="h-4 w-4 text-cyan-600" />}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setIsActive("false"); setPage(1); }} className="flex justify-between items-center cursor-pointer">
+                        Blocked
+                        {isActive === "false" && <Check className="h-4 w-4 text-cyan-600" />}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </div>

@@ -30,6 +30,9 @@ import {
 } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
 import { Skeleton } from "../../components/ui/skeleton";
+import { Progress } from "../../components/ui/progress";
+import { Field, FieldLabel } from "../../components/ui/field";
+import { Card, CardContent } from "../../components/ui/card";
 
 const getInitials = (name: string) =>
   name
@@ -284,230 +287,280 @@ const AdminAppointmentDetailsPage: React.FC = () => {
                 </div>
               </div>
             ) : appointment ? (
-              <div className="mt-5 sm:mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-12">
-                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="p-5 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[#00A1B0]/10 text-[#00A1B0] flex items-center justify-center font-bold flex-shrink-0">
-                          #
+              <div className="mt-5 sm:mt-6">
+                {/* Progress Tracker - Ultra Compact */}
+                <Card className="mb-3 border-none shadow-sm transition-all duration-500 overflow-hidden bg-white group hover:shadow-md">
+                  <CardContent className="p-2 md:p-3">
+                    <Field className="w-full">
+                      <FieldLabel className="mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${appointment?.status === 'completed' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' :
+                            appointment?.status === 'active' ? 'bg-[#00A1B0] shadow-[0_0_8px_rgba(0,161,176,0.4)]' :
+                              appointment?.status === 'cancelled' || appointment?.status === 'rejected' ? 'bg-rose-500' : 'bg-amber-500'}`} />
+                          <span className="text-[10px] font-black tracking-[0.1em] uppercase text-gray-500">System Status Trace</span>
                         </div>
-                        <div className="min-w-0">
-                          <div className="text-sm text-gray-500">Appointment ID</div>
-                          <div className="font-semibold text-gray-900 truncate font-mono">{appointmentDisplayId}</div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-black tracking-tight uppercase px-2 py-0.5 rounded-md ${appointment?.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :
+                            appointment?.status === 'active' ? 'bg-[#00A1B0]/10 text-[#00A1B0]' :
+                              appointment?.status === 'cancelled' || appointment?.status === 'rejected' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
+                            {appointment?.status === 'completed' ? '100% COMPLETED' :
+                              appointment?.status === 'active' ? '75% ACTIVE' :
+                                appointment?.status === 'confirmed' ? '50% READY' :
+                                  appointment?.status === 'pending' ? '25% PENDING' :
+                                    appointment?.status === 'reschedule_requested' ? '35% ON HOLD' : appointment?.status?.toUpperCase() || '0%'}
+                          </span>
+                        </div>
+                      </FieldLabel>
+                      <Progress
+                        value={appointment?.status === 'completed' ? 100 :
+                          appointment?.status === 'active' ? 75 :
+                            appointment?.status === 'confirmed' ? 50 :
+                              appointment?.status === 'pending' ? 25 :
+                                appointment?.status === 'reschedule_requested' ? 35 : 0}
+                        className="h-1.5 bg-gray-50 border border-gray-100"
+                      />
+                      <div className="flex justify-between mt-1.5 px-0.5">
+                        {['Booked', 'Confirmed', 'Active', 'Completed'].map((step, idx) => {
+                          const steps = ['pending', 'confirmed', 'active', 'completed'];
+                          const currentStatus = String(appointment?.status || "").toLowerCase();
+                          const currentIdx = steps.indexOf(currentStatus);
+                          const isActive = idx <= currentIdx;
+                          return (
+                            <span key={step} className={`text-[10px] font-black uppercase tracking-tight transition-colors duration-500 ${isActive ? 'text-[#00A1B0]' : 'text-gray-400'}`}>
+                              {step}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </Field>
+                  </CardContent>
+                </Card>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  <div className="lg:col-span-12">
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                      <div className="p-5 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-[#00A1B0]/10 text-[#00A1B0] flex items-center justify-center font-bold flex-shrink-0">
+                            #
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-sm text-gray-500">Appointment ID</div>
+                            <div className="font-semibold text-gray-900 truncate font-mono">{appointmentDisplayId}</div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusStyles(
+                              appointment?.status
+                            )}`}
+                          >
+                            {formatStatus(appointment?.status)}
+                          </span>
+                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#00A1B0]/10 text-[#00A1B0]">
+                            {String(appointment?.appointmentType || appointment?.type || "").toLowerCase() === "video" ? "Video call" : "Chat"}
+                          </span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusStyles(
-                            appointment?.status
-                          )}`}
-                        >
-                          {formatStatus(appointment?.status)}
-                        </span>
-                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#00A1B0]/10 text-[#00A1B0]">
-                          {String(appointment?.appointmentType || appointment?.type || "").toLowerCase() === "video" ? "Video call" : "Chat"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="p-5 sm:p-6">
-                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-                        <div className="lg:col-span-4">
-                          <div className="rounded-2xl border border-gray-100 p-4 sm:p-5 h-full">
-                            <div className="flex items-center justify-between mb-4">
-                              <div className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                                <Stethoscope size={16} className="text-[#00A1B0]" />
-                                Doctor
+                      <div className="p-5 sm:p-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                          <div className="lg:col-span-4">
+                            <div className="rounded-2xl border border-gray-100 p-4 sm:p-5 h-full">
+                              <div className="flex items-center justify-between mb-4">
+                                <div className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                  <Stethoscope size={16} className="text-[#00A1B0]" />
+                                  Doctor
+                                </div>
+                                <span className="text-xs font-semibold text-gray-400">#{doctor?.customId}</span>
                               </div>
-                              <span className="text-xs font-semibold text-gray-400">#{doctor?.customId}</span>
-                            </div>
 
-                            <div className="flex items-center gap-4">
-                              {doctorUser?.profileImage ? (
-                                <img
-                                  src={doctorUser.profileImage}
-                                  alt={doctorUser?.name || "Doctor"}
-                                  className="w-14 h-14 rounded-full aspect-square object-cover border border-gray-200 flex-shrink-0"
-                                />
-                              ) : (
-                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-teal-500 text-white flex items-center justify-center font-bold">
-                                  {getInitials(doctorUser?.name || "-")}
-                                </div>
-                              )}
+                              <div className="flex items-center gap-4">
+                                {doctorUser?.profileImage ? (
+                                  <img
+                                    src={doctorUser.profileImage}
+                                    alt={doctorUser?.name || "Doctor"}
+                                    className="w-14 h-14 rounded-full aspect-square object-cover border border-gray-200 flex-shrink-0"
+                                  />
+                                ) : (
+                                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-teal-500 text-white flex items-center justify-center font-bold">
+                                    {getInitials(doctorUser?.name || "-")}
+                                  </div>
+                                )}
 
-                              <div className="min-w-0">
-                                <div className="font-semibold text-gray-900 truncate">
-                                  {doctorUser?.name || "-"}
+                                <div className="min-w-0">
+                                  <div className="font-semibold text-gray-900 truncate">
+                                    {doctorUser?.name || "-"}
+                                  </div>
+                                  <div className="text-xs text-gray-500 truncate">
+                                    {doctor?.specialty || doctorUser?.specialty || "Doctor"}
+                                  </div>
                                 </div>
-                                <div className="text-xs text-gray-500 truncate">
-                                  {doctor?.specialty || doctorUser?.specialty || "Doctor"}
+                              </div>
+
+                              <div className="mt-4 space-y-2 text-sm">
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <Mail size={14} className="text-gray-400" />
+                                  <span className="truncate">{doctorUser?.email || "-"}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <Phone size={14} className="text-gray-400" />
+                                  <span className="truncate">{doctorUser?.phone || "-"}</span>
                                 </div>
                               </div>
                             </div>
+                          </div>
 
-                            <div className="mt-4 space-y-2 text-sm">
-                              <div className="flex items-center gap-2 text-gray-600">
-                                <Mail size={14} className="text-gray-400" />
-                                <span className="truncate">{doctorUser?.email || "-"}</span>
+                          <div className="lg:col-span-4">
+                            <div className="rounded-2xl border border-gray-100 p-4 sm:p-5 h-full">
+                              <div className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                <ShieldCheck size={16} className="text-[#00A1B0]" />
+                                Appointment Info
                               </div>
-                              <div className="flex items-center gap-2 text-gray-600">
-                                <Phone size={14} className="text-gray-400" />
-                                <span className="truncate">{doctorUser?.phone || "-"}</span>
+
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                                  <div className="text-xs text-gray-500 mb-1 flex items-center gap-2">
+                                    <Calendar size={14} className="text-gray-400" />
+                                    Date
+                                  </div>
+                                  <div className="font-semibold text-gray-900">
+                                    {appointment?.appointmentDate
+                                      ? new Date(appointment.appointmentDate).toLocaleDateString(undefined, {
+                                        day: "2-digit",
+                                        month: "short",
+                                        year: "numeric",
+                                      })
+                                      : "-"}
+                                  </div>
+                                </div>
+
+                                <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                                  <div className="text-xs text-gray-500 mb-1 flex items-center gap-2">
+                                    <Clock size={14} className="text-gray-400" />
+                                    Time
+                                  </div>
+                                  <div className="font-semibold text-gray-900">{appointment?.appointmentTime || appointment?.time || "-"}</div>
+                                </div>
+
+                                <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                                  <div className="text-xs text-gray-500 mb-1">Department</div>
+                                  <div className="font-semibold text-gray-900">{doctor?.specialty}</div>
+                                </div>
+
+                                <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                                  <div className="text-xs text-gray-500 mb-1">Visit Type</div>
+                                  <div className="font-semibold text-gray-900">{appointment?.appointmentType || "-"}</div>
+                                </div>
+
+                                <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                                  <div className="text-xs text-gray-500 mb-1 flex items-center gap-2">
+                                    <BadgeIndianRupee size={14} className="text-gray-400" />
+                                    Price
+                                  </div>
+                                  <div className="font-semibold text-gray-900">₹{appointment?.consultationFees ?? appointment?.fees ?? 0}</div>
+                                </div>
+
+                                <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                                  <div className="text-xs text-gray-500 mb-1 flex items-center gap-2">
+                                    <CreditCard size={14} className="text-gray-400" />
+                                    Payment
+                                  </div>
+                                  <div className="font-semibold text-gray-900 capitalize">
+                                    {appointment?.paymentStatus || appointment?.payment?.status || "-"}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="mt-4">
+                                <Button
+                                  type="button"
+                                  onClick={() => {
+                                    setCancelReason("");
+                                    setCancelDialogOpen(true);
+                                  }}
+                                  disabled={!canCancel}
+                                  className="w-full bg-red-500 text-white hover:bg-red-600"
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="lg:col-span-4">
+                            <div className="rounded-2xl border border-gray-100 p-4 sm:p-5 h-full">
+                              <div className="flex items-center justify-between mb-4">
+                                <div className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                  <User size={16} className="text-[#00A1B0]" />
+                                  Patient
+                                </div>
+                                <span className="text-xs font-semibold text-gray-400">#{patient?.customId || patient?.id || patient?._id || "-"}</span>
+                              </div>
+
+                              <div className="flex items-center gap-4">
+                                {patientUser?.profileImage ? (
+                                  <img
+                                    src={patientUser.profileImage}
+                                    alt={patientUser?.name || "Patient"}
+                                    className="w-14 h-14 rounded-full aspect-square object-cover border border-gray-200 flex-shrink-0"
+                                  />
+                                ) : (
+                                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 text-white flex items-center justify-center font-bold">
+                                    {getInitials(patientUser?.name || "-")}
+                                  </div>
+                                )}
+
+                                <div className="min-w-0">
+                                  <div className="font-semibold text-gray-900 truncate">
+                                    {patientUser?.name || "-"}
+                                  </div>
+                                  <div className="text-xs text-gray-500 truncate">
+                                    {"Patient"}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="mt-4 space-y-2 text-sm">
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <Mail size={14} className="text-gray-400" />
+                                  <span className="truncate">{patientUser?.email || "-"}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <Phone size={14} className="text-gray-400" />
+                                  <span className="truncate">{patientUser?.phone || "-"}</span>
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
 
-                        <div className="lg:col-span-4">
-                          <div className="rounded-2xl border border-gray-100 p-4 sm:p-5 h-full">
-                            <div className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                              <ShieldCheck size={16} className="text-[#00A1B0]" />
-                              Appointment Info
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3 text-sm">
-                              <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
-                                <div className="text-xs text-gray-500 mb-1 flex items-center gap-2">
-                                  <Calendar size={14} className="text-gray-400" />
-                                  Date
-                                </div>
-                                <div className="font-semibold text-gray-900">
-                                  {appointment?.appointmentDate
-                                    ? new Date(appointment.appointmentDate).toLocaleDateString(undefined, {
-                                      day: "2-digit",
-                                      month: "short",
-                                      year: "numeric",
-                                    })
-                                    : "-"}
-                                </div>
-                              </div>
-
-                              <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
-                                <div className="text-xs text-gray-500 mb-1 flex items-center gap-2">
-                                  <Clock size={14} className="text-gray-400" />
-                                  Time
-                                </div>
-                                <div className="font-semibold text-gray-900">{appointment?.appointmentTime || appointment?.time || "-"}</div>
-                              </div>
-
-                              <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
-                                <div className="text-xs text-gray-500 mb-1">Department</div>
-                                <div className="font-semibold text-gray-900">{doctor?.specialty}</div>
-                              </div>
-
-                              <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
-                                <div className="text-xs text-gray-500 mb-1">Visit Type</div>
-                                <div className="font-semibold text-gray-900">{appointment?.appointmentType || "-"}</div>
-                              </div>
-
-                              <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
-                                <div className="text-xs text-gray-500 mb-1 flex items-center gap-2">
-                                  <BadgeIndianRupee size={14} className="text-gray-400" />
-                                  Price
-                                </div>
-                                <div className="font-semibold text-gray-900">₹{appointment?.consultationFees ?? appointment?.fees ?? 0}</div>
-                              </div>
-
-                              <div className="rounded-xl bg-gray-50 border border-gray-100 p-3">
-                                <div className="text-xs text-gray-500 mb-1 flex items-center gap-2">
-                                  <CreditCard size={14} className="text-gray-400" />
-                                  Payment
-                                </div>
-                                <div className="font-semibold text-gray-900 capitalize">
-                                  {appointment?.paymentStatus || appointment?.payment?.status || "-"}
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="mt-4">
-                              <Button
-                                type="button"
-                                onClick={() => {
-                                  setCancelReason("");
-                                  setCancelDialogOpen(true);
-                                }}
-                                disabled={!canCancel}
-                                className="w-full bg-red-500 text-white hover:bg-red-600"
-                              >
-                                Cancel
-                              </Button>
+                        <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                            <div className="text-xs text-gray-500 mb-1">Appointment Date & Time</div>
+                            <div className="font-semibold text-gray-900">
+                              {appointment?.appointmentDate
+                                ? new Date(appointment.appointmentDate).toLocaleDateString(undefined, {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                })
+                                : "-"}
+                              {" · "}
+                              {appointment?.appointmentTime || appointment?.time || "-"}
                             </div>
                           </div>
-                        </div>
-
-                        <div className="lg:col-span-4">
-                          <div className="rounded-2xl border border-gray-100 p-4 sm:p-5 h-full">
-                            <div className="flex items-center justify-between mb-4">
-                              <div className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                                <User size={16} className="text-[#00A1B0]" />
-                                Patient
-                              </div>
-                              <span className="text-xs font-semibold text-gray-400">#{patient?.customId || patient?.id || patient?._id || "-"}</span>
-                            </div>
-
-                            <div className="flex items-center gap-4">
-                              {patientUser?.profileImage ? (
-                                <img
-                                  src={patientUser.profileImage}
-                                  alt={patientUser?.name || "Patient"}
-                                  className="w-14 h-14 rounded-full aspect-square object-cover border border-gray-200 flex-shrink-0"
-                                />
-                              ) : (
-                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 text-white flex items-center justify-center font-bold">
-                                  {getInitials(patientUser?.name || "-")}
-                                </div>
-                              )}
-
-                              <div className="min-w-0">
-                                <div className="font-semibold text-gray-900 truncate">
-                                  {patientUser?.name || "-"}
-                                </div>
-                                <div className="text-xs text-gray-500 truncate">
-                                  {"Patient"}
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="mt-4 space-y-2 text-sm">
-                              <div className="flex items-center gap-2 text-gray-600">
-                                <Mail size={14} className="text-gray-400" />
-                                <span className="truncate">{patientUser?.email || "-"}</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-gray-600">
-                                <Phone size={14} className="text-gray-400" />
-                                <span className="truncate">{patientUser?.phone || "-"}</span>
-                              </div>
+                          <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                            <div className="text-xs text-gray-500 mb-1">Type of Appointment</div>
+                            <div className="font-semibold text-gray-900 capitalize">
+                              {appointment?.appointmentType || appointment?.type || "-"}
                             </div>
                           </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                          <div className="text-xs text-gray-500 mb-1">Appointment Date & Time</div>
-                          <div className="font-semibold text-gray-900">
-                            {appointment?.appointmentDate
-                              ? new Date(appointment.appointmentDate).toLocaleDateString(undefined, {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                              })
-                              : "-"}
-                            {" · "}
-                            {appointment?.appointmentTime || appointment?.time || "-"}
+                          <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                            <div className="text-xs text-gray-500 mb-1">Department</div>
+                            <div className="font-semibold text-gray-900">{doctor?.specialty || appointment?.department || "-"}</div>
                           </div>
-                        </div>
-                        <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                          <div className="text-xs text-gray-500 mb-1">Type of Appointment</div>
-                          <div className="font-semibold text-gray-900 capitalize">
-                            {appointment?.appointmentType || appointment?.type || "-"}
-                          </div>
-                        </div>
-                        <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
-                          <div className="text-xs text-gray-500 mb-1">Department</div>
-                          <div className="font-semibold text-gray-900">{doctor?.specialty || appointment?.department || "-"}</div>
                         </div>
                       </div>
                     </div>
@@ -515,7 +568,9 @@ const AdminAppointmentDetailsPage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="mt-6 text-center text-gray-500">No appointment details found.</div>
+              <div className="mt-6 text-center text-gray-500">
+                No appointment details found.
+              </div>
             )}
           </div>
         </main>
@@ -525,4 +580,3 @@ const AdminAppointmentDetailsPage: React.FC = () => {
 };
 
 export default AdminAppointmentDetailsPage;
-

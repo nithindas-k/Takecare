@@ -38,6 +38,8 @@ const sidebarItems = [
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ onMobileClose }) => {
+  const isAnimated = !!onMobileClose; // Animate only if mobile close handler is present
+
   const handleLogout = async () => {
     try {
       await authService.logout();
@@ -73,12 +75,12 @@ const Sidebar: React.FC<SidebarProps> = ({ onMobileClose }) => {
       <nav className="flex-1 py-4 overflow-y-auto no-scrollbar" data-lenis-prevent>
         <motion.div
           className="px-3 space-y-1"
-          initial={onMobileClose ? "hidden" : "visible"}
+          initial={isAnimated ? "hidden" : "visible"}
           animate="visible"
           variants={{
             visible: {
               transition: {
-                staggerChildren: onMobileClose ? 0.03 : 0,
+                staggerChildren: isAnimated ? 0.03 : 0,
                 delayChildren: 0
               }
             }
@@ -87,16 +89,16 @@ const Sidebar: React.FC<SidebarProps> = ({ onMobileClose }) => {
           {sidebarItems.map((item) => (
             <motion.div
               key={item.label}
-              variants={{
+              variants={isAnimated ? {
                 hidden: { opacity: 0, x: -30, scale: 0.9 },
                 visible: { opacity: 1, x: 0, scale: 1 }
-              }}
-              transition={{
+              } : {}}
+              transition={isAnimated ? {
                 type: "spring",
                 stiffness: 500,
                 damping: 30,
                 mass: 0.5
-              }}
+              } : { duration: 0 }}
             >
               <NavLink
                 to={item.path}
@@ -125,9 +127,9 @@ const Sidebar: React.FC<SidebarProps> = ({ onMobileClose }) => {
       {/* Logout at Bottom */}
       <motion.div
         className="p-4 border-t border-slate-50"
-        initial={onMobileClose ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
+        initial={isAnimated ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5, duration: 0.3 }}
+        transition={isAnimated ? { delay: 0.5, duration: 0.3 } : { duration: 0 }}
       >
         <button
           onClick={handleLogout}

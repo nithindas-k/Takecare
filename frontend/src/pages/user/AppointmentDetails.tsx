@@ -18,6 +18,8 @@ import { Textarea } from '../../components/ui/textarea';
 import type { PopulatedAppointment, Slot } from '../../types/appointment.types';
 import RescheduleModal from '../../components/common/RescheduleModal';
 import { ClipboardList } from 'lucide-react';
+import { Progress } from '../../components/ui/progress';
+import { Field, FieldLabel } from '../../components/ui/field';
 
 
 const AppointmentDetails: React.FC = () => {
@@ -438,7 +440,7 @@ const AppointmentDetails: React.FC = () => {
             <NavBar />
 
             {/* Breadcrumb - Smooth Minimal Design */}
-            <div className="bg-gradient-to-r from-[#00A1B0] to-[#008f9c] py-10">
+            <div className="bg-gradient-to-r from-[#00A1B0] to-[#008f9c] py-6">
                 <div className="container mx-auto px-4">
                     <div className="max-w-5xl mx-auto">
                         {/* Breadcrumb Navigation */}
@@ -473,6 +475,55 @@ const AppointmentDetails: React.FC = () => {
 
             {/* Main Content */}
             <PatientLayout>
+                {/* Progress Tracker - Ultra Compact */}
+                <Card className="mb-3 border-none shadow-sm transition-all duration-500 overflow-hidden bg-white group hover:shadow-md">
+                    <CardContent className="p-2 md:p-3">
+                        <Field className="w-full">
+                            <FieldLabel className="mb-2">
+                                <div className="flex items-center gap-1.5">
+                                    <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${normalized.status === 'completed' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' :
+                                        normalized.status === 'active' ? 'bg-[#00A1B0] shadow-[0_0_8px_rgba(0,161,176,0.4)]' :
+                                            normalized.status === 'cancelled' || normalized.status === 'rejected' ? 'bg-rose-500' : 'bg-amber-500'}`} />
+                                    <span className="text-[10px] font-black tracking-[0.1em] uppercase text-gray-500">Status Trace</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className={`text-[10px] font-black tracking-tight uppercase px-2 py-0.5 rounded-md ${normalized.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :
+                                        normalized.status === 'active' ? 'bg-[#00A1B0]/10 text-[#00A1B0]' :
+                                            normalized.status === 'cancelled' || normalized.status === 'rejected' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
+                                        {normalized.status === 'completed' ? '100% COMPLETED' :
+                                            normalized.status === 'active' ? '75% ACTIVE' :
+                                                normalized.status === 'confirmed' ? '50% READY' :
+                                                    normalized.status === 'pending' ? '25% PENDING' :
+                                                        normalized.status === 'reschedule_requested' ? '35% ON HOLD' : '0%'}
+                                    </span>
+                                </div>
+                            </FieldLabel>
+                            <Progress
+                                value={normalized.status === 'completed' ? 100 :
+                                    normalized.status === 'active' ? 75 :
+                                        normalized.status === 'confirmed' ? 50 :
+                                            normalized.status === 'pending' ? 25 :
+                                                normalized.status === 'reschedule_requested' ? 35 : 0}
+                                className="h-1.5 bg-gray-50 border border-gray-100"
+                            />
+                            <div className="flex justify-between mt-1.5 px-0.5">
+                                {['Booking', 'Confirmed', 'Consultation', 'Completed'].map((step, idx) => {
+                                    const steps = ['pending', 'confirmed', 'active', 'completed'];
+                                    const currentIdx = steps.indexOf(normalized.status);
+                                    const isActive = idx <= currentIdx;
+                                    return (
+                                        <div key={step} className="flex flex-col items-center">
+                                            <span className={`text-[10px] font-black uppercase tracking-tight transition-all duration-500 ${isActive ? 'text-[#00A1B0] opacity-100' : 'text-gray-400 opacity-60'}`}>
+                                                {step}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </Field>
+                    </CardContent>
+                </Card>
+
                 {error && (
                     <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 mb-6">
                         {error}
@@ -496,7 +547,7 @@ const AppointmentDetails: React.FC = () => {
                     )
                 }
                 {/* Appointment Detail Card */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-4">
                     {/* Main Appointment Info */}
                     <div className="p-6">
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

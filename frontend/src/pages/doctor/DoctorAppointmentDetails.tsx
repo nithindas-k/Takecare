@@ -24,6 +24,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from "../../components/ui/dialog";
+import { Progress } from '../../components/ui/progress';
+import { Field, FieldLabel } from '../../components/ui/field';
 
 const DoctorAppointmentDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -130,6 +132,7 @@ const DoctorAppointmentDetails: React.FC = () => {
             paymentStatus: apt?.paymentStatus || 'N/A',
             isUpcoming,
             isSessionReady,
+            patientId: patient?._id || apt?.patientId?._id || apt?.patientId || '',
         };
     }, [appointment]);
 
@@ -342,11 +345,58 @@ const DoctorAppointmentDetails: React.FC = () => {
                         <Skeleton className="h-32 w-full rounded-xl" />
                     </div>
                 ) : error ? (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">{error}</div>
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">{error}</div>
                 ) : appointment && (
                     <>
+                        {/* Progress Tracker - Ultra Compact */}
+                        <Card className="mb-3 border-none shadow-sm transition-all duration-500 overflow-hidden bg-white group hover:shadow-md">
+                            <CardContent className="p-2 md:p-3">
+                                <Field className="w-full">
+                                    <FieldLabel className="mb-2">
+                                        <div className="flex items-center gap-1.5">
+                                            <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${normalized.status === 'completed' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' :
+                                                normalized.status === 'active' ? 'bg-[#00A1B0] shadow-[0_0_8px_rgba(0,161,176,0.4)]' :
+                                                    normalized.status === 'cancelled' || normalized.status === 'rejected' ? 'bg-rose-500' : 'bg-amber-500'}`} />
+                                            <span className="text-[10px] font-black tracking-[0.1em] uppercase text-gray-500">Consultation Progress</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-[10px] font-black tracking-tight uppercase px-2 py-0.5 rounded-md ${normalized.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :
+                                                normalized.status === 'active' ? 'bg-[#00A1B0]/10 text-[#00A1B0]' :
+                                                    normalized.status === 'cancelled' || normalized.status === 'rejected' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
+                                                {normalized.status === 'completed' ? '100% COMPLETE' :
+                                                    normalized.status === 'active' ? '75% ACTIVE' :
+                                                        normalized.status === 'confirmed' ? '50% READY' :
+                                                            normalized.status === 'pending' ? '25% PENDING' :
+                                                                normalized.status === 'reschedule_requested' ? '35% ON HOLD' : '0%'}
+                                            </span>
+                                        </div>
+                                    </FieldLabel>
+                                    <Progress
+                                        value={normalized.status === 'completed' ? 100 :
+                                            normalized.status === 'active' ? 75 :
+                                                normalized.status === 'confirmed' ? 50 :
+                                                    normalized.status === 'pending' ? 25 :
+                                                        normalized.status === 'reschedule_requested' ? 35 : 0}
+                                        className="h-1.5 bg-gray-50 border border-gray-100"
+                                    />
+                                    <div className="flex justify-between mt-1.5 px-0.5">
+                                        {['Booked', 'Confirmed', 'Active', 'Completed'].map((step, idx) => {
+                                            const steps = ['pending', 'confirmed', 'active', 'completed'];
+                                            const currentIdx = steps.indexOf(normalized.status);
+                                            const isActive = idx <= currentIdx;
+                                            return (
+                                                <span key={step} className={`text-[10px] font-black uppercase tracking-tight transition-colors duration-500 ${isActive ? 'text-[#00A1B0]' : 'text-gray-400'}`}>
+                                                    {step}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                </Field>
+                            </CardContent>
+                        </Card>
+
                         {/* MAIN CARD */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-4">
                             <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
                                 <div className="lg:col-span-5 flex gap-4">
                                     <img src={normalized.patientImage} alt="Patient" className="w-20 h-20 rounded-full aspect-square object-cover border-2 border-gray-200 flex-shrink-0" onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/100x100?text=Patient'; }} />
@@ -562,8 +612,8 @@ const DoctorAppointmentDetails: React.FC = () => {
                 </div>
             )}
 
-            <PrescriptionModal isOpen={prescriptionOpen} onClose={() => setPrescriptionOpen(false)} appointmentId={appointment?.id || appointment?._id} patientId={appointment?.patientId?._id || appointment?.patientId} onSuccess={() => { setHasPrescription(true); setPrescriptionOpen(false); }} />
-            <PrescriptionViewModal isOpen={prescriptionViewOpen} onClose={() => setPrescriptionViewOpen(false)} appointmentId={appointment?.id || appointment?._id} />
+            <PrescriptionModal isOpen={prescriptionOpen} onClose={() => setPrescriptionOpen(false)} appointmentId={normalized.id || ""} patientId={normalized.patientId} onSuccess={() => { setHasPrescription(true); setPrescriptionOpen(false); }} />
+            <PrescriptionViewModal isOpen={prescriptionViewOpen} onClose={() => setPrescriptionViewOpen(false)} appointmentId={normalized.id || ""} />
 
             <Dialog open={closeChatOpen} onOpenChange={setCloseChatOpen}>
                 <DialogContent className="sm:max-w-md bg-white border border-gray-100 shadow-xl">

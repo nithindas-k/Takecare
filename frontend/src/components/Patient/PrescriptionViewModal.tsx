@@ -249,7 +249,7 @@ const PrescriptionViewModal: React.FC<PrescriptionViewModalProps> = ({ isOpen, o
                                             <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 inline-block">
                                                 <p className="text-[10px] text-white/60 font-black uppercase tracking-[0.2em] mb-0.5 leading-none">Record ID</p>
                                                 <p className="text-lg font-black text-white leading-none">
-                                                    #{prescription.appointmentCustomId || prescription.id?.slice(-8).toUpperCase()}
+                                                    #{prescription.appointmentCustomId || (typeof prescription.id === 'string' ? prescription.id.slice(-8).toUpperCase() : 'N/A')}
                                                 </p>
                                             </div>
                                         </div>

@@ -268,11 +268,11 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
                             <div className="bg-gray-50 px-8 py-4 border-b border-gray-100 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                                 <div>
                                     <span className="text-gray-400 block uppercase mb-0.5">Patient ID</span>
-                                    <span className="font-bold text-gray-700">{patientId.slice(-8).toUpperCase()}</span>
+                                    <span className="font-bold text-gray-700">{typeof patientId === 'string' ? patientId.slice(-8).toUpperCase() : 'N/A'}</span>
                                 </div>
                                 <div>
                                     <span className="text-gray-400 block uppercase mb-0.5">Appt ID</span>
-                                    <span className="font-bold text-gray-700">{appointmentId.slice(-8).toUpperCase()}</span>
+                                    <span className="font-bold text-gray-700">{typeof appointmentId === 'string' ? appointmentId.slice(-8).toUpperCase() : 'N/A'}</span>
                                 </div>
                                 <div>
                                     <span className="text-gray-400 block uppercase mb-0.5">Date</span>
@@ -340,44 +340,45 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            {appointment.doctorNotes.map((note: any, idx: number) => (
+                                            {Array.isArray(appointment?.doctorNotes) && appointment.doctorNotes.map((note: any, idx: number) => (
                                                 <div key={idx} className="group p-4 bg-white rounded-2xl border border-teal-100 shadow-sm hover:shadow-md transition-all relative">
                                                     <div className="flex items-center gap-2 mb-2">
-                                                        <span className={`px-2 py-0.5 rounded-lg text-[7px] font-black uppercase tracking-tighter ${note.category === 'medicine' ? 'bg-amber-100 text-amber-700' :
-                                                            note.category === 'lab_test' ? 'bg-indigo-100 text-indigo-700' :
-                                                                note.category === 'diagnosis' ? 'bg-red-100 text-red-700' :
+                                                        <span className={`px-2 py-0.5 rounded-lg text-[7px] font-black uppercase tracking-tighter ${note?.category === 'medicine' ? 'bg-amber-100 text-amber-700' :
+                                                            note?.category === 'lab_test' ? 'bg-indigo-100 text-indigo-700' :
+                                                                note?.category === 'diagnosis' ? 'bg-red-100 text-red-700' :
                                                                     'bg-teal-100 text-teal-700'
                                                             }`}>
-                                                            {note.category || 'observation'}
+                                                            {note?.category || 'observation'}
                                                         </span>
                                                         <span className="text-[8px] text-gray-400 font-bold ml-auto">
-                                                            {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            {note?.createdAt ? new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                                                         </span>
                                                     </div>
                                                     <h4 className="text-[11px] font-bold text-gray-800 mb-1 truncate">
-                                                        {typeof note.title === 'string' ? note.title : JSON.stringify(note.title)}
+                                                        {typeof note?.title === 'string' ? note.title : JSON.stringify(note?.title || "")}
                                                     </h4>
-                                                    {note.category === 'medicine' ? (
+                                                    {note?.category === 'medicine' ? (
                                                         <div className="flex flex-wrap gap-1 mt-2">
                                                             <div className="bg-teal-50 text-[8px] font-black text-teal-600 px-1.5 py-0.5 rounded border border-teal-100">
-                                                                {note.dosage}
+                                                                {note?.dosage}
                                                             </div>
                                                             <div className="bg-teal-50 text-[8px] font-black text-teal-600 px-1.5 py-0.5 rounded border border-teal-100">
-                                                                {note.frequency}
+                                                                {note?.frequency}
                                                             </div>
                                                             <div className="bg-teal-50 text-[8px] font-black text-teal-600 px-1.5 py-0.5 rounded border border-teal-100">
-                                                                {note.duration}
+                                                                {note?.duration}
                                                             </div>
                                                         </div>
                                                     ) : (
                                                         <p className="text-[11px] text-gray-500 line-clamp-2 font-medium leading-relaxed">
-                                                            {typeof note.description === 'string' ? note.description : (note.description?.text || note.description?.content || JSON.stringify(note.description))}
+                                                            {typeof note?.description === 'string' ? note.description : (note?.description?.text || note?.description?.content || JSON.stringify(note?.description || ""))}
                                                         </p>
                                                     )}
 
                                                     {/* Contextual Copy Button */}
                                                     <button
                                                         onClick={() => {
+                                                            if (!note) return;
                                                             if (note.category === 'medicine') {
                                                                 const existingEmpty = medicines.length === 1 && !medicines[0].name;
                                                                 const newMed = {
@@ -624,7 +625,7 @@ const PrescriptionModal: React.FC<PrescriptionModalProps> = ({ isOpen, onClose, 
                                     </div>
                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Verified by TakeCare</span>
                                 </div>
-                                <span className="text-[10px] text-gray-400">Electronic Record ID: APP-{appointmentId.slice(-6).toUpperCase()}</span>
+                                <span className="text-[10px] text-gray-400">Electronic Record ID: APP-{typeof appointmentId === 'string' ? appointmentId.slice(-6).toUpperCase() : 'N/A'}</span>
                             </div>
                         </div>
                     </div>

@@ -5,7 +5,13 @@ const ScrollToTop = () => {
     const { pathname } = useLocation();
 
     useEffect(() => {
-        window.scrollTo(0, 0);
+   
+        const dashboardRoutes = ['/doctor', '/patient', '/admin'];
+        const isDashboardRoute = dashboardRoutes.some(route => pathname.startsWith(route));
+
+        if (!isDashboardRoute) {
+            window.scrollTo(0, 0);
+        }
     }, [pathname]);
 
     return null;

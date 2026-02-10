@@ -84,7 +84,7 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
   };
 
 
-  const SidebarContent = (
+  const SidebarContent = (isAnimated: boolean) => (
     <div className="flex flex-col h-full bg-white">
       {/* Header */}
       <div className="relative bg-[#00A1B0] h-28 w-full flex-shrink-0">
@@ -133,12 +133,12 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
       <div className="px-4 pb-6 flex-1 overflow-y-auto no-scrollbar">
         <motion.ul
           className="space-y-1"
-          initial={onMobileMenuClose ? "hidden" : "visible"}
+          initial={isAnimated ? "hidden" : "visible"}
           animate="visible"
           variants={{
             visible: {
               transition: {
-                staggerChildren: onMobileMenuClose ? 0.03 : 0,
+                staggerChildren: isAnimated ? 0.03 : 0,
                 delayChildren: 0
               }
             }
@@ -147,16 +147,16 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
           {sidebarLinks.map((link) => (
             <motion.li
               key={link.path}
-              variants={{
+              variants={isAnimated ? {
                 hidden: { opacity: 0, x: -30, scale: 0.9 },
                 visible: { opacity: 1, x: 0, scale: 1 }
-              }}
-              transition={{
+              } : {}}
+              transition={isAnimated ? {
                 type: "spring",
                 stiffness: 500,
                 damping: 30,
                 mass: 0.5
-              }}
+              } : { duration: 0 }}
               onClick={() => handleNavigation(link.path)}
               className={`group flex items-center px-4 py-3 rounded-xl gap-3 cursor-pointer transition-all duration-200 font-medium
                 ${isActive(link.path)
@@ -195,9 +195,9 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
       {/* Logout at Bottom (Same as Admin) */}
       <motion.div
         className="p-4 border-t border-slate-50 flex-shrink-0"
-        initial={onMobileMenuClose ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
+        initial={isAnimated ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.3 }}
+        transition={isAnimated ? { delay: 0.2, duration: 0.3 } : { duration: 0 }}
       >
         <button
           onClick={handleLogout}
@@ -216,7 +216,7 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
     <>
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex col-span-12 lg:col-span-3 bg-white rounded-3xl shadow flex-col h-fit lg:min-w-[265px] max-w-xs sticky top-4 overflow-hidden">
-        {SidebarContent}
+        {SidebarContent(false)}
       </aside>
 
       {/* Mobile Sidebar */}
@@ -241,7 +241,7 @@ const DoctorSidebar: React.FC<DoctorSidebarProps> = ({
               transition={{ type: "spring", damping: 30, stiffness: 450 }}
               className="absolute top-0 left-0 h-full w-80 bg-white shadow-2xl z-50 flex flex-col"
             >
-              {SidebarContent}
+              {SidebarContent(true)}
             </motion.aside>
           </div>
         )}
