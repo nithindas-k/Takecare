@@ -20,6 +20,8 @@ import RescheduleModal from '../../components/common/RescheduleModal';
 import { ClipboardList } from 'lucide-react';
 import { Progress } from '../../components/ui/progress';
 import { Field, FieldLabel } from '../../components/ui/field';
+import { Skeleton } from '../../components/ui/skeleton';
+import { Spinner } from '../../components/ui/spinner';
 
 
 const AppointmentDetails: React.FC = () => {
@@ -29,6 +31,7 @@ const AppointmentDetails: React.FC = () => {
 
     const [appointment, setAppointment] = useState<PopulatedAppointment | null>(null);
     const [loading, setLoading] = useState(true);
+    const [recentLoading, setRecentLoading] = useState(true);
     const [error, setError] = useState<string>('');
 
     const [cancelOpen, setCancelOpen] = useState(false);
@@ -88,6 +91,7 @@ const AppointmentDetails: React.FC = () => {
         };
 
         const fetchRecentAppointments = async () => {
+            setRecentLoading(true);
             try {
                 const response = await appointmentService.getMyAppointments(undefined, 1, 5);
                 if (response.success && response.data?.appointments && isMounted) {
@@ -97,6 +101,8 @@ const AppointmentDetails: React.FC = () => {
                 }
             } catch (error) {
                 console.error("Failed to fetch recent appointments", error);
+            } finally {
+                if (isMounted) setRecentLoading(false);
             }
         };
 
@@ -429,8 +435,94 @@ const AppointmentDetails: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00A1B0]"></div>
+            <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+                <NavBar />
+                <div className="bg-gradient-to-r from-[#00A1B0] to-[#008f9c] py-6">
+                    <div className="container mx-auto px-4">
+                        <div className="max-w-5xl mx-auto">
+                            <Skeleton className="h-4 w-48 mb-5 bg-white/20" />
+                            <div className="flex items-center gap-4">
+                                <Skeleton className="h-10 w-10 rounded-lg bg-white/20" />
+                                <div>
+                                    <Skeleton className="h-8 w-64 mb-2 bg-white/20" />
+                                    <Skeleton className="h-5 w-48 bg-white/20" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <PatientLayout>
+                    <div className="space-y-6">
+                        {/* Progress Tracker Skeleton */}
+                        <Card className="border-none shadow-sm bg-white">
+                            <CardContent className="p-3">
+                                <Skeleton className="h-4 w-32 mb-4" />
+                                <Skeleton className="h-2.5 w-full mb-2 animate-glow-sweep" />
+                                <div className="flex justify-between">
+                                    <Skeleton className="h-3 w-16" />
+                                    <Skeleton className="h-3 w-16" />
+                                    <Skeleton className="h-3 w-16" />
+                                    <Skeleton className="h-3 w-16" />
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Main Details Skeleton */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                <div className="lg:col-span-5 flex gap-4">
+                                    <Skeleton className="w-20 h-20 rounded-full flex-shrink-0" />
+                                    <div className="flex-1 space-y-2">
+                                        <Skeleton className="h-4 w-24" />
+                                        <Skeleton className="h-6 w-48" />
+                                        <Skeleton className="h-6 w-32 rounded-full" />
+                                    </div>
+                                </div>
+                                <div className="lg:col-span-4 space-y-2">
+                                    <Skeleton className="h-4 w-32" />
+                                    <Skeleton className="h-10 w-40 rounded-lg" />
+                                </div>
+                                <div className="lg:col-span-3 flex flex-col items-end gap-3">
+                                    <Skeleton className="h-6 w-24 rounded-full" />
+                                    <Skeleton className="h-4 w-32" />
+                                    <div className="flex gap-2 mt-2">
+                                        <Skeleton className="h-9 w-24 rounded-md" />
+                                        <Skeleton className="h-9 w-24 rounded-md" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Recent Appointments Skeleton */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative">
+                            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                                <Skeleton className="h-6 w-48" />
+                            </div>
+                            <div className="p-6 space-y-4">
+                                {[1, 2, 3].map((i) => (
+                                    <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 opacity-40">
+                                        <div className="space-y-2">
+                                            <Skeleton className="h-4 w-40" />
+                                            <Skeleton className="h-3 w-32" />
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <Skeleton className="h-6 w-20 rounded-full" />
+                                            <Skeleton className="h-8 w-24 rounded-md" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            {/* Overlay Spinner */}
+                            <div className="absolute inset-0 flex items-center justify-center pt-10">
+                                <div className="flex flex-col items-center gap-2">
+                                    <Spinner size="lg" />
+                                    <span className="text-xs font-medium text-gray-400">Loading history...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </PatientLayout>
             </div>
         );
     }
@@ -504,7 +596,7 @@ const AppointmentDetails: React.FC = () => {
                                         normalized.status === 'confirmed' ? 50 :
                                             normalized.status === 'pending' ? 25 :
                                                 normalized.status === 'reschedule_requested' ? 35 : 0}
-                                className="h-1.5 bg-gray-50 border border-gray-100"
+                                className="h-2 bg-gray-50 border border-gray-100 animate-glow-sweep shadow-[0_0_15px_rgba(0,161,176,0.2)]"
                             />
                             <div className="flex justify-between mt-1.5 px-0.5">
                                 {['Booking', 'Confirmed', 'Consultation', 'Completed'].map((step, idx) => {
@@ -914,7 +1006,31 @@ const AppointmentDetails: React.FC = () => {
                     <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                         <h5 className="text-lg font-bold text-gray-800">Recent Appointments</h5>
                     </div>
-                    {recentAppointments.length > 0 ? (
+                    {recentLoading ? (
+                        <div className="relative min-h-[240px]">
+                            <div className="p-6 space-y-4">
+                                {[1, 2, 3].map((i) => (
+                                    <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 opacity-40">
+                                        <div className="space-y-2">
+                                            <Skeleton className="h-4 w-40" />
+                                            <Skeleton className="h-3 w-32" />
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <Skeleton className="h-6 w-20 rounded-full" />
+                                            <Skeleton className="h-8 w-24 rounded-md" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            {/* Overlay Spinner */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="flex flex-col items-center gap-2">
+                                    <Spinner size="lg" />
+                                    <span className="text-xs font-medium text-gray-400">Loading history...</span>
+                                </div>
+                            </div>
+                        </div>
+                    ) : recentAppointments.length > 0 ? (
                         <>
                             {/* Desktop Table View */}
                             <div className="hidden md:block overflow-x-auto">

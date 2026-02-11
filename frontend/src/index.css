@@ -198,6 +198,39 @@ html.lenis body {
     transform-origin: top right;
 }
 
+@keyframes glow-sweep {
+    0% {
+        left: -100%;
+    }
+
+    50% {
+        left: 100%;
+    }
+
+    100% {
+        left: 100%;
+    }
+}
+
+.animate-glow-sweep {
+    position: relative;
+    overflow: hidden;
+}
+
+.animate-glow-sweep::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(to right,
+            transparent,
+            rgba(255, 255, 255, 0.4),
+            transparent);
+    animation: glow-sweep 2s infinite linear;
+}
+
 @media (max-width: 640px) {
     .animate-dropdown-bounce {
         transform-origin: top center;

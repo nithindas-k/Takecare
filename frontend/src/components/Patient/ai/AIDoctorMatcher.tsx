@@ -103,7 +103,7 @@ const AIDoctorMatcher: React.FC = () => {
     return (
         <div className="flex flex-col h-[calc(100vh-8rem)] sm:h-[700px] max-w-5xl mx-auto bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
             {/* Header */}
-            <div className="bg-cyan-600 p-4 sm:p-5 flex justify-between items-center text-white border-b border-cyan-700">
+            <div className="bg-[#00A1B0] p-4 sm:p-5 flex justify-between items-center text-white border-b border-[#008f9c]">
                 <div className="flex items-center gap-3">
                     <div className="bg-white/10 p-2.5 rounded-lg">
                         <Sparkles className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -111,7 +111,7 @@ const AIDoctorMatcher: React.FC = () => {
                     <div>
                         <h2 className="font-bold text-base sm:text-lg">MediMatch AI</h2>
                         <p className="text-[10px] sm:text-xs text-white/90 flex items-center gap-1.5">
-                            <span className="w-2 h-2 bg-cyan-300 rounded-full animate-pulse"></span>
+                            <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
                             AI Health Assistant
                         </p>
                     </div>
@@ -139,7 +139,7 @@ const AIDoctorMatcher: React.FC = () => {
                             {/* AI Avatar on Left */}
                             {msg.role === "assistant" && (
                                 <Avatar className="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0">
-                                    <AvatarFallback className="bg-teal-600 text-white">
+                                    <AvatarFallback className="bg-[#00A1B0] text-white">
                                         <Bot className="w-5 h-5" />
                                     </AvatarFallback>
                                 </Avatar>
@@ -158,7 +158,7 @@ const AIDoctorMatcher: React.FC = () => {
                             {/* User Avatar on Right */}
                             {msg.role === "user" && (
                                 <Avatar className="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0">
-                                    <AvatarFallback className="bg-cyan-600 text-white">
+                                    <AvatarFallback className="bg-[#00A1B0] text-white">
                                         <User className="w-5 h-5" />
                                     </AvatarFallback>
                                 </Avatar>
@@ -170,7 +170,7 @@ const AIDoctorMatcher: React.FC = () => {
                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-3 duration-500">
                                 <div className="flex items-center gap-3">
                                     <Separator className="flex-1" />
-                                    <Badge variant="outline" className="text-xs sm:text-sm text-cyan-700 border-cyan-200 bg-cyan-50 px-3 py-1">
+                                    <Badge variant="outline" className="text-xs sm:text-sm text-[#00A1B0] border-[#00A1B0]/20 bg-[#00A1B0]/10 px-3 py-1">
                                         Recommended Doctors
                                     </Badge>
                                     <Separator className="flex-1" />
@@ -184,9 +184,9 @@ const AIDoctorMatcher: React.FC = () => {
                                         >
                                             <CardContent className="p-4">
                                                 <div className="flex items-start gap-3 mb-3">
-                                                    <Avatar className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-gray-100 group-hover:border-cyan-200 transition-colors">
+                                                    <Avatar className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-gray-100 group-hover:border-[#00A1B0]/30 transition-colors">
                                                         <AvatarImage src={match.profileImage} alt={match.name} />
-                                                        <AvatarFallback className="bg-cyan-100 text-cyan-700 text-lg font-bold">
+                                                        <AvatarFallback className="bg-[#00A1B0]/10 text-[#00A1B0] text-lg font-bold">
                                                             {match.name?.charAt(0) || "D"}
                                                         </AvatarFallback>
                                                     </Avatar>
@@ -194,7 +194,7 @@ const AIDoctorMatcher: React.FC = () => {
                                                         <h4 className="font-bold text-sm sm:text-base text-gray-900 truncate mb-1">
                                                             {match.name || "Doctor"}
                                                         </h4>
-                                                        <p className="text-xs sm:text-sm text-cyan-600 font-medium mb-2">
+                                                        <p className="text-xs sm:text-sm text-[#00A1B0] font-medium mb-2">
                                                             {match.specialty}
                                                         </p>
                                                         <Badge
@@ -207,7 +207,7 @@ const AIDoctorMatcher: React.FC = () => {
                                                 </div>
                                                 <Button
                                                     size="sm"
-                                                    className="w-full text-xs sm:text-sm h-8 sm:h-9 bg-cyan-600 hover:bg-cyan-700 transition-colors"
+                                                    className="w-full text-xs sm:text-sm h-8 sm:h-9 bg-[#00A1B0] hover:bg-[#008f9c] transition-colors"
                                                     onClick={() => navigate(`/doctors/${match.doctorId}`)}
                                                 >
                                                     View Profile
@@ -236,7 +236,7 @@ const AIDoctorMatcher: React.FC = () => {
                 {isLoading && (
                     <div className="flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
                         <Avatar className="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0">
-                            <AvatarFallback className="bg-teal-600 text-white">
+                            <AvatarFallback className="bg-[#00A1B0] text-white">
                                 <Bot className="w-5 h-5" />
                             </AvatarFallback>
                         </Avatar>
@@ -256,14 +256,14 @@ const AIDoctorMatcher: React.FC = () => {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyPress={(e) => e.key === "Enter" && !isLoading && input.trim() && handleSend()}
-                        className="w-full bg-white border-2 border-gray-300 focus:border-cyan-500 focus:ring-0 text-sm sm:text-base h-12 sm:h-14 rounded-full pl-4 sm:pl-6 pr-14 sm:pr-16 transition-all shadow-sm"
+                        className="w-full bg-white border-2 border-gray-300 focus:border-[#00A1B0] focus:ring-0 text-sm sm:text-base h-12 sm:h-14 rounded-full pl-4 sm:pl-6 pr-14 sm:pr-16 transition-all shadow-sm"
                         disabled={isLoading}
                     />
                     <Button
                         onClick={handleSend}
                         disabled={isLoading || !input.trim()}
                         size="icon"
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-cyan-500 hover:bg-cyan-600 transition-colors rounded-full w-9 h-9 sm:w-11 sm:h-11 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-[#00A1B0] hover:bg-[#008f9c] transition-colors rounded-full w-9 h-9 sm:w-11 sm:h-11 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
                     >
                         {isLoading ? (
                             <LoaderIcon className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-white" />
