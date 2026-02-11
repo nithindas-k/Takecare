@@ -125,8 +125,8 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({
                     variants={{
                         visible: {
                             transition: {
-                                staggerChildren: isAnimated ? 0.03 : 0,
-                                delayChildren: 0
+                                staggerChildren: isAnimated ? 0.05 : 0,
+                                delayChildren: 0.1
                             }
                         }
                     }}
@@ -135,24 +135,20 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({
                         <motion.li
                             key={link.path}
                             variants={isAnimated ? {
-                                hidden: { opacity: 0, x: -30, scale: 0.9 },
-                                visible: { opacity: 1, x: 0, scale: 1 }
+                                hidden: { opacity: 0, x: -20 },
+                                visible: { opacity: 1, x: 0 }
                             } : {}}
-                            transition={isAnimated ? {
-                                type: "spring",
-                                stiffness: 500,
-                                damping: 30,
-                                mass: 0.5
-                            } : { duration: 0 }}
+                            whileHover={{ x: 5 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 24 }}
                             onClick={() => handleNavigation(link.path)}
-                            className={`group flex items-center px-4 py-3 rounded-xl gap-3 cursor-pointer transition-all duration-200 font-medium ${isActive(link.path)
+                            className={`group flex items-center px-4 py-3 rounded-xl gap-3 cursor-pointer transition-colors duration-200 font-medium ${isActive(link.path)
                                 ? "bg-[#00A1B0] text-white font-bold shadow-md shadow-[#00A1B0]/20"
                                 : "text-gray-500 hover:bg-gray-50 hover:text-[#00A1B0]"
                                 }`}
                         >
                             {link.icon && (
                                 <span
-                                    className={`text-lg ${isActive(link.path) ? "text-white" : "text-gray-400 group-hover:text-[#00A1B0] transition-colors"
+                                    className={`text-lg transition-transform duration-200 group-hover:scale-110 ${isActive(link.path) ? "text-white" : "text-gray-400 group-hover:text-[#00A1B0]"
                                         }`}
                                 >
                                     {link.icon}
@@ -178,7 +174,7 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({
                 className="p-4 border-t border-slate-50 flex-shrink-0"
                 initial={isAnimated ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={isAnimated ? { delay: 0.2, duration: 0.3 } : { duration: 0 }}
+                transition={isAnimated ? { delay: 0.4, duration: 0.4 } : { duration: 0 }}
             >
                 <button
                     onClick={handleLogout}
@@ -209,16 +205,17 @@ const PatientSidebar: React.FC<PatientSidebarProps> = ({
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
                             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
                             onClick={onMobileMenuClose}
                         />
 
                         {/* Drawer */}
                         <motion.aside
-                            initial={{ x: -320 }}
+                            initial={{ x: "-100%" }}
                             animate={{ x: 0 }}
-                            exit={{ x: -320 }}
-                            transition={{ type: "spring", damping: 30, stiffness: 450 }}
+                            exit={{ x: "-100%" }}
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
                             className="absolute top-0 left-0 h-full w-80 bg-white shadow-2xl z-[70] flex flex-col"
                         >
                             {SidebarContent(true)}
