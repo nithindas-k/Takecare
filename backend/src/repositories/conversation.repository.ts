@@ -18,7 +18,7 @@ export class ConversationRepository extends BaseRepository<IConversationDocument
     async findOrCreate(participantIds: string[], participantModels: ('User' | 'Doctor')[]): Promise<IConversationDocument> {
         const sortedIds = participantIds.map(id => new Types.ObjectId(id)).sort();
 
-        // Match models to sorted IDs (mapping based on original index)
+
         const idModelMap = participantIds.map((id, index) => ({ id, model: participantModels[index] }));
         const sortedModels = sortedIds.map(sid => idModelMap.find(m => m.id === sid.toString())!.model);
 

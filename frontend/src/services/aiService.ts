@@ -1,4 +1,5 @@
 import axiosInstance from "../api/axiosInstance";
+import { AI_API_ROUTES } from "../utils/constants";
 
 export interface ChatMessage {
     role: "user" | "assistant" | "system";
@@ -36,23 +37,19 @@ export interface AIChatResponse {
     requiresAction: boolean;
 }
 
-const AI_API_URL = "/api/ai";
-
 export const aiService = {
-
-    sendMessage: async (message: string): Promise<AIChatResponse> => {
-        const response = await axiosInstance.post(`${AI_API_URL}/match-doctor`, { message });
-        return response.data.data;
+    sendMessage: async (message: string) => {
+        const response = await axiosInstance.post(AI_API_ROUTES.MATCH_DOCTOR, { message });
+        return response.data;
     },
 
-
-    getHistory: async (): Promise<ChatMessage[]> => {
-        const response = await axiosInstance.get(`${AI_API_URL}/match-history`);
-        return response.data.data;
+    getHistory: async () => {
+        const response = await axiosInstance.get(AI_API_ROUTES.MATCH_HISTORY);
+        return response.data;
     },
 
-
-    resetConversation: async (): Promise<void> => {
-        await axiosInstance.post(`${AI_API_URL}/match-reset`);
+    resetConversation: async () => {
+        const response = await axiosInstance.post(AI_API_ROUTES.MATCH_RESET);
+        return response.data;
     },
 };

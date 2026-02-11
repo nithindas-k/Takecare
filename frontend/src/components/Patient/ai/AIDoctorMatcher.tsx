@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { aiService } from "@/services/aiService";
-import type { ChatMessage, AIChatResponse } from "@/services/aiService";
+import type { ChatMessage } from "@/services/aiService";
 import { useNavigate } from "react-router-dom";
 
 const AIDoctorMatcher: React.FC = () => {
@@ -29,16 +29,18 @@ const AIDoctorMatcher: React.FC = () => {
 
     const loadHistory = async () => {
         try {
-            const history = await aiService.getHistory();
-            if (history.length === 0) {
-                setMessages([
-                    {
-                        role: "assistant",
-                        content: "Hello! I'm MediMatch AI, your personal health assistant. I can help you find the most suitable doctors based on your symptoms and preferences. How can I help you today?",
-                    },
-                ]);
-            } else {
-                setMessages(history);
+            const response = await aiService.getHistory();
+            if (response.success && response.data) {
+                if (response.data.length === 0) {
+                    setMessages([
+                        {
+                            role: "assistant",
+                            content: "Hello! I'm MediMatch AI, your personal health assistant. I can help you find the most suitable doctors based on your symptoms and preferences. How can I help you today?",
+                        },
+                    ]);
+                } else {
+                    setMessages(response.data);
+                }
             }
         } catch (error) {
             console.error("Error loading history:", error);
@@ -54,15 +56,17 @@ const AIDoctorMatcher: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const response: AIChatResponse = await aiService.sendMessage(userMessage.content);
+            const response = await aiService.sendMessage(userMessage.content);
 
-            const assistantMessage: ChatMessage = {
-                role: "assistant",
-                content: response.message,
-                recommendations: response.recommendations
-            };
+            if (response.success && response.data) {
+                const assistantMessage: ChatMessage = {
+                    role: "assistant",
+                    content: response.data.message,
+                    recommendations: response.data.recommendations
+                };
 
-            setMessages((prev) => [...prev, assistantMessage]);
+                setMessages((prev) => [...prev, assistantMessage]);
+            }
         } catch (error) {
             console.error("Error sending message:", error);
             setMessages((prev) => [
@@ -80,13 +84,15 @@ const AIDoctorMatcher: React.FC = () => {
     const handleReset = async () => {
         setIsLoading(true);
         try {
-            await aiService.resetConversation();
-            setMessages([
-                {
-                    role: "assistant",
-                    content: "Conversation has been reset. How can I help you find the right doctor today?",
-                },
-            ]);
+            const response = await aiService.resetConversation();
+            if (response.success) {
+                setMessages([
+                    {
+                        role: "assistant",
+                        content: "Conversation has been reset. How can I help you find the right doctor today?",
+                    },
+                ]);
+            }
         } catch (error) {
             console.error("Error resetting conversation:", error);
         } finally {

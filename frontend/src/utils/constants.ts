@@ -202,6 +202,12 @@ export const CALL_API_ROUTES = {
   ACTIVE: (appointmentId: string): string => `/call/${appointmentId}/active`,
 } as const;
 
+export const AI_API_ROUTES = {
+  MATCH_DOCTOR: "/ai/match-doctor",
+  MATCH_HISTORY: "/ai/match-history",
+  MATCH_RESET: "/ai/match-reset",
+} as const;
+
 
 export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
 export type HttpStatus = (typeof HTTP_STATUS)[keyof typeof HTTP_STATUS];
