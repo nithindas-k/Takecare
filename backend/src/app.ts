@@ -99,9 +99,6 @@ app.get("/", (req, res) => {
 
 
 app.use(BASE_ROUTES.USERS, userRouter);
-
-
-
 app.use(BASE_ROUTES.AUTH, authRouter);
 app.use(BASE_ROUTES.DOCTORS, doctorRouter);
 app.use(BASE_ROUTES.ADMIN, adminRouter);
@@ -110,7 +107,6 @@ app.use(BASE_ROUTES.PAYMENTS, paymentRouter);
 app.use(BASE_ROUTES.WALLET, walletRouter);
 app.use(BASE_ROUTES.NOTIFICATIONS, notificationRouter);
 app.use(BASE_ROUTES.CHAT, chatRouter);
-
 app.use(BASE_ROUTES.REVIEWS, reviewRouter);
 app.use(BASE_ROUTES.PRESCRIPTIONS, prescriptionRouter);
 app.use(BASE_ROUTES.SPECIALTIES, specialtyRouter);
@@ -118,10 +114,8 @@ app.use(BASE_ROUTES.CONTACT, contactRouter);
 app.use(BASE_ROUTES.CALL, callRouter);
 app.use(BASE_ROUTES.AI, aiRouter);
 app.use("/api" + BASE_ROUTES.AI, aiRouter);
+app.use("/time", timeRouter);
 app.use("/api/time", timeRouter);
-
-
-
 
 
 app.use((req, res) => {
