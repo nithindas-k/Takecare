@@ -119,7 +119,7 @@ app.use("/api/time", timeRouter);
 
 
 app.use((req, res) => {
-  res.status(HttpStatus.NOT_FOUND).json({ //=
+  res.status(HttpStatus.NOT_FOUND).json({ 
     success: false,
     message: MESSAGES.ROUTE_NOT_FOUND,
     path: req.originalUrl,

@@ -136,12 +136,83 @@ html.lenis body {
     perspective: 1000px;
 }
 
+@keyframes bell-shake {
+    0% {
+        transform: rotate(0);
+    }
+
+    15% {
+        transform: rotate(5deg);
+    }
+
+    30% {
+        transform: rotate(-5deg);
+    }
+
+    45% {
+        transform: rotate(3deg);
+    }
+
+    60% {
+        transform: rotate(-3deg);
+    }
+
+    75% {
+        transform: rotate(2deg);
+    }
+
+    85% {
+        transform: rotate(-2deg);
+    }
+
+    100% {
+        transform: rotate(0);
+    }
+}
+
+.animate-bell-shake {
+    transform-origin: top center;
+    animation: bell-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+
+@keyframes dropdown-bounce {
+    0% {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+
+    70% {
+        transform: scale(1.02);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.animate-dropdown-bounce {
+    animation: dropdown-bounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    transform-origin: top right;
+}
+
+@media (max-width: 640px) {
+    .animate-dropdown-bounce {
+        transform-origin: top center;
+    }
+}
+
 
 /* Landing Page Animations */
 @keyframes gradient {
-    0%, 100% {
+
+    0%,
+    100% {
         background-position: 0% 50%;
     }
+
     50% {
         background-position: 100% 50%;
     }
@@ -153,9 +224,12 @@ html.lenis body {
 }
 
 @keyframes bounce-slow {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: translateY(0);
     }
+
     50% {
         transform: translateY(-10px);
     }
@@ -166,9 +240,12 @@ html.lenis body {
 }
 
 @keyframes pulse-slow {
-    0%, 100% {
+
+    0%,
+    100% {
         opacity: 1;
     }
+
     50% {
         opacity: 0.5;
     }

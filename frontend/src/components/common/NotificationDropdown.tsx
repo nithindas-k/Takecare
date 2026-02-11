@@ -22,6 +22,7 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ color = 'te
     const [isOpen, setIsOpen] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
+    const [isShaking, setIsShaking] = useState(false);
     const { socket } = useSocket();
 
     const fetchNotifications = useCallback(async () => {
@@ -41,6 +42,9 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ color = 'te
         if (socket) {
             const handleNotification = (notification: Notification) => {
                 setNotifications((prev) => [notification, ...prev]);
+                // Also shake when new notification arrives
+                setIsShaking(true);
+                setTimeout(() => setIsShaking(false), 500);
             };
 
             const handleClearNotifications = () => {
@@ -56,6 +60,13 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ color = 'te
             };
         }
     }, [socket]);
+
+    // Trigger shake animation on open/close
+    useEffect(() => {
+        setIsShaking(true);
+        const timer = setTimeout(() => setIsShaking(false), 500);
+        return () => clearTimeout(timer);
+    }, [isOpen]);
 
     const markAllAsRead = async () => {
         try {
@@ -109,7 +120,7 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ color = 'te
                 onClick={() => setIsOpen(!isOpen)}
                 className={`relative p-2.5 ${color} ${color.includes('white') ? 'hover:bg-white/10' : 'hover:bg-slate-50'} rounded-full transition-all duration-300 active:scale-95`}
             >
-                <FaBell size={20} className={unreadCount > 0 ? "animate-pulse" : ""} />
+                <FaBell size={20} className={`${isShaking ? "animate-bell-shake" : (unreadCount > 0 ? "animate-pulse" : "")}`} />
                 {unreadCount > 0 && (
                     <span className="absolute top-1 right-1 flex h-4 w-4">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -123,7 +134,7 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ color = 'te
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
-                    <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-gray-100 z-50 overflow-hidden transform origin-top-right transition-all animate-in fade-in zoom-in duration-200">
+                    <div className="fixed inset-x-4 top-20 sm:absolute sm:inset-auto sm:right-0 sm:mt-3 sm:w-96 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-gray-100 z-50 overflow-hidden animate-dropdown-bounce">
                         <div className="px-5 py-4 border-b border-gray-50 bg-gray-50/50 backdrop-blur-sm">
                             <div className="flex items-center justify-between mb-2">
                                 <h3 className="font-bold text-gray-800 text-lg">Notifications</h3>
@@ -154,7 +165,7 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ color = 'te
                             </div>
                         </div>
 
-                        <div className="max-h-[450px] overflow-y-auto custom-scrollbar">
+                        <div className="max-h-[60vh] sm:max-h-[450px] overflow-y-auto custom-scrollbar">
                             {notifications.length === 0 ? (
                                 <div className="py-20 text-center text-gray-400">
                                     <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
