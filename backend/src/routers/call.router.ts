@@ -8,7 +8,7 @@ import { LoggerService } from "../services/logger.service";
 
 const callRouter = Router();
 
-// Initialize dependencies
+
 const callSessionRepository = new CallSessionRepository();
 const appointmentRepository = new AppointmentRepository();
 const callLogger = new LoggerService("CallSessionService");
@@ -21,7 +21,6 @@ const callSessionService = new CallSessionService(
 
 const callController = new CallController(callSessionService);
 
-// Routes
 callRouter.post(
     "/:appointmentId/start",
     authMiddleware,

@@ -36,13 +36,6 @@ const scheduleService = new ScheduleService(
 const scheduleController = new ScheduleController(scheduleService);
 
 
-// router.post(
-//   "/submit-verification",
-//   authMiddleware,
-//   requireDoctor,
-//   upload.array("certificates", 5),
-//   doctorController.submitVerification
-// );
 
 router.post(
   "/submit-verification",
