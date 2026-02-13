@@ -24,6 +24,7 @@ interface VideoCallContextType {
     toggleCam: () => void;
     incomingCall: any;
     connectionState: RTCIceConnectionState;
+    remoteStream: MediaStream | null;
 }
 
 const VideoCallContext = createContext<VideoCallContextType | undefined>(undefined);
@@ -72,6 +73,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const [isMuted, setIsMuted] = useState(false);
     const [isCamOff, setIsCamOff] = useState(false);
     const [connectionState, setConnectionState] = useState<RTCIceConnectionState>('new');
+    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
 
     const myVideo = useRef<HTMLVideoElement>(null);
     const userVideo = useRef<HTMLVideoElement>(null);
@@ -130,9 +132,21 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
 
         peer.ontrack = (event) => {
-            console.log("Received remote track:", event.streams[0].id);
-            if (userVideo.current) {
-                userVideo.current.srcObject = event.streams[0];
+            console.log("Received remote track:", event.track.kind, "from stream:", event.streams[0]?.id);
+
+            if (event.streams && event.streams[0]) {
+                setRemoteStream(event.streams[0]);
+                if (userVideo.current) {
+                    userVideo.current.srcObject = event.streams[0];
+                }
+            } else {
+                // Fallback for cases where streams are not provided in the event
+                console.log("No stream in ontrack event, creating/updating one manually");
+                setRemoteStream(prev => {
+                    const s = prev || new MediaStream();
+                    s.addTrack(event.track);
+                    return s;
+                });
             }
         };
 
@@ -233,6 +247,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             connectionRef.current.close();
             connectionRef.current = null;
         }
+        setRemoteStream(null);
 
         const tId = incomingCall?.from || targetUserId;
         console.log("leaveCall: Emitting end-call to:", tId);
@@ -301,6 +316,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 connectionRef.current.close();
             }
             connectionRef.current = null;
+            setRemoteStream(null);
             toast.info("Call ended");
         });
 
@@ -337,7 +353,8 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             toggleMute,
             toggleCam,
             incomingCall,
-            connectionState
+            connectionState,
+            remoteStream
         }}>
             {children}
         </VideoCallContext.Provider>

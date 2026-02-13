@@ -56,9 +56,22 @@ const VideoCallContent: React.FC = () => {
         toggleCam,
         incomingCall,
         connectionState,
+        remoteStream,
         stream
     } = useVideoCall();
     const user = useSelector(selectCurrentUser) as any;
+
+    // Fix for remote video/audio attachment
+    useEffect(() => {
+        if (userVideo.current && remoteStream) {
+            console.log("[VIDEO_CALL] Attaching remoteStream to video element", remoteStream.getTracks().length, "tracks");
+            userVideo.current.srcObject = remoteStream;
+
+            // Explicitly call play to handle some browser auto-play restrictions
+            userVideo.current.play().catch(e => console.warn("[VIDEO_CALL] Auto-play prevented:", e));
+        }
+    }, [remoteStream, userVideo]);
+
     const { socket } = useSocket();
     const isDoctor = user?.role === 'doctor';
 
