@@ -2,13 +2,14 @@
 import React, { useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    FaMicrophone, FaMicrophoneSlash,
-    FaVideo, FaVideoSlash,
-    FaPhoneSlash,
-    FaUser, FaChevronLeft,
-    FaExpand, FaCompress,
-    FaEllipsisV
-} from 'react-icons/fa';
+    Mic, MicOff,
+    Video, VideoOff,
+    PhoneOff,
+    User, ChevronLeft,
+    Maximize, Minimize,
+    MoreVertical,
+    Lock, ClipboardList, Clock, StickyNote, Plus, BookOpen, X
+} from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { VideoCallProvider, useVideoCall } from '../../context/VideoCallContext';
 import { useSelector } from 'react-redux';
@@ -27,7 +28,6 @@ import {
 } from "../../components/ui/dialog";
 import { useSocket } from '../../context/SocketContext';
 import { toast } from 'sonner';
-import { Lock, ClipboardList, Clock, StickyNote, Plus, BookOpen, X } from 'lucide-react';
 import { SESSION_STATUS } from '../../utils/constants';
 import { useCallRejoin } from '../../hooks/useCallRejoin';
 import { useAutoSaveNotes } from '../../hooks/useAutoSaveNotes';
@@ -453,7 +453,7 @@ const VideoCallContent: React.FC = () => {
                 <DialogContent className="sm:max-w-[400px] bg-[#1C1F24] border-gray-800 p-0 overflow-hidden gap-0">
                     <div className="flex flex-col items-center justify-center p-8 bg-[#1C1F24]">
                         <div className="h-24 w-24 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6">
-                            <FaVideo size={32} className="text-emerald-500" />
+                            <Video size={32} className="text-emerald-500" />
                         </div>
                         <DialogHeader className="mb-2 space-y-2">
                             <DialogTitle className="text-center text-xl text-white font-semibold">Incoming Call</DialogTitle>
@@ -502,7 +502,7 @@ const VideoCallContent: React.FC = () => {
                                 }}
                                 className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-[#1C1F24]/80 backdrop-blur-lg flex items-center justify-center text-white hover:bg-[#2A2F32] transition-colors"
                             >
-                                <FaChevronLeft size={18} />
+                                <ChevronLeft size={20} />
                             </button>
 
                             <div className="flex flex-col items-center">
@@ -549,7 +549,7 @@ const VideoCallContent: React.FC = () => {
                                     </Button>
                                 )}
                                 <button className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-[#1C1F24]/80 backdrop-blur-lg flex items-center justify-center text-white hover:bg-[#2A2F32] transition-colors">
-                                    <FaEllipsisV size={16} />
+                                    <MoreVertical size={20} />
                                 </button>
                             </div>
                         </div>
@@ -803,7 +803,7 @@ const VideoCallContent: React.FC = () => {
                     {isCamOff && (
                         <div className="w-full h-full flex items-center justify-center bg-[#1C1F24]">
                             <div className={`rounded-full bg-[#2A2F32] flex items-center justify-center ${!callAccepted ? 'w-32 h-32' : 'w-12 h-12'}`}>
-                                <FaUser className="text-[#8696A0]" size={!callAccepted ? 48 : 20} />
+                                <User className="text-[#8696A0]" size={!callAccepted ? 48 : 20} />
                             </div>
                         </div>
                     )}
@@ -826,13 +826,13 @@ const VideoCallContent: React.FC = () => {
                                     onClick={toggleMute}
                                     className={`p-4 rounded-full transition-colors ${isMuted ? 'bg-[#DC3545] text-white' : 'bg-[#2A2F32] text-white hover:bg-[#32383c]'}`}
                                 >
-                                    {isMuted ? <FaMicrophoneSlash size={20} /> : <FaMicrophone size={20} />}
+                                    {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
                                 </button>
                                 <button
                                     onClick={toggleCam}
                                     className={`p-4 rounded-full transition-colors ${isCamOff ? 'bg-[#DC3545] text-white' : 'bg-[#2A2F32] text-white hover:bg-[#32383c]'}`}
                                 >
-                                    {isCamOff ? <FaVideoSlash size={20} /> : <FaVideo size={20} />}
+                                    {isCamOff ? <VideoOff size={20} /> : <Video size={20} />}
                                 </button>
                             </div>
 
@@ -878,7 +878,7 @@ const VideoCallContent: React.FC = () => {
                 {/* PIP Muted Indicator (Only in Call) */}
                 {isMuted && callAccepted && !callEnded && (
                     <div className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-[#DC3545] flex items-center justify-center">
-                        <FaMicrophoneSlash className="text-white" size={11} />
+                        <MicOff className="text-white" size={11} />
                     </div>
                 )}
             </motion.div>
@@ -908,9 +908,9 @@ const VideoCallContent: React.FC = () => {
                                         : 'bg-[#2A2F32] group-hover:bg-[#3A3F42] text-white'
                                         }`}>
                                         {isCamOff ? (
-                                            <FaVideoSlash size={isMobile ? 20 : 24} />
+                                            <VideoOff size={isMobile ? 20 : 24} />
                                         ) : (
-                                            <FaVideo size={isMobile ? 20 : 24} />
+                                            <Video size={isMobile ? 20 : 24} />
                                         )}
                                     </div>
                                     <span className="text-[#8696A0] text-[10px] md:text-xs font-medium">Camera</span>
@@ -928,9 +928,9 @@ const VideoCallContent: React.FC = () => {
                                         : 'bg-[#2A2F32] group-hover:bg-[#3A3F42] text-white'
                                         }`}>
                                         {isMuted ? (
-                                            <FaMicrophoneSlash size={isMobile ? 20 : 24} />
+                                            <MicOff size={isMobile ? 20 : 24} />
                                         ) : (
-                                            <FaMicrophone size={isMobile ? 20 : 24} />
+                                            <Mic size={isMobile ? 20 : 24} />
                                         )}
                                     </div>
                                     <span className="text-[#8696A0] text-[10px] md:text-xs font-medium">Mic</span>
@@ -951,7 +951,7 @@ const VideoCallContent: React.FC = () => {
                                     className="flex flex-col items-center gap-2 mx-2 md:mx-4"
                                 >
                                     <div className="w-16 h-16 md:w-20 md:h-20 rounded-3xl bg-[#DC3545] hover:bg-[#C82333] flex items-center justify-center shadow-lg transition-all">
-                                        <FaPhoneSlash size={isMobile ? 28 : 32} className="text-white transform rotate-0" />
+                                        <PhoneOff size={isMobile ? 28 : 32} className="text-white transform rotate-0" />
                                     </div>
                                     <span className="text-[#DC3545] text-[10px] md:text-xs font-bold uppercase mt-1">End Call</span>
                                 </motion.button>
@@ -965,9 +965,9 @@ const VideoCallContent: React.FC = () => {
                                 >
                                     <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-[#2A2F32] flex items-center justify-center border border-white/5 group-hover:bg-[#3A3F42] transition-all">
                                         {isFullscreen ? (
-                                            <FaCompress size={20} className="text-white" />
+                                            <Minimize size={20} className="text-white" />
                                         ) : (
-                                            <FaExpand size={20} className="text-white" />
+                                            <Maximize size={20} className="text-white" />
                                         )}
                                     </div>
                                     <span className="text-[#8696A0] text-xs font-medium">Screen</span>
