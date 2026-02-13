@@ -1,4 +1,4 @@
-﻿/* eslint-disable @typescript-eslint/no-explicit-any */
+﻿
 import React, { useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -7,8 +7,8 @@ import {
     PhoneOff,
     User, ChevronLeft,
     Maximize, Minimize,
-    MoreVertical,
-    Lock, ClipboardList, Clock, StickyNote, Plus, BookOpen, X
+    Settings,
+    ClipboardList, Clock, StickyNote, Plus, BookOpen, X
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { VideoCallProvider, useVideoCall } from '../../context/VideoCallContext';
@@ -17,7 +17,6 @@ import { selectCurrentUser } from '../../redux/user/userSlice';
 import { appointmentService } from '../../services/appointmentService';
 import callService from '../../services/callService';
 import { Button } from '../../components/ui/button';
-
 import {
     Dialog,
     DialogContent,
@@ -26,6 +25,11 @@ import {
     DialogHeader,
     DialogTitle,
 } from "../../components/ui/dialog";
+import { Badge } from "../../components/ui/badge";
+import { Card } from "../../components/ui/card";
+import { Input } from "../../components/ui/input";
+import { Textarea } from "../../components/ui/textarea";
+
 import { useSocket } from '../../context/SocketContext';
 import { toast } from 'sonner';
 import { SESSION_STATUS } from '../../utils/constants';
@@ -450,34 +454,43 @@ const VideoCallContent: React.FC = () => {
 
             {/* Incoming Call Dialog */}
             <Dialog open={!!(incomingCall?.isReceivingCall)} onOpenChange={() => { }}>
-                <DialogContent className="sm:max-w-[400px] bg-[#1C1F24] border-gray-800 p-0 overflow-hidden gap-0">
-                    <div className="flex flex-col items-center justify-center p-8 bg-[#1C1F24]">
-                        <div className="h-24 w-24 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6">
-                            <Video size={32} className="text-emerald-500" />
+                <DialogContent className="sm:max-w-md bg-[#111418]/95 backdrop-blur-3xl border-white/5 p-8 rounded-[2.5rem] shadow-2xl">
+                    <div className="flex flex-col items-center text-center">
+                        <div className="relative mb-8">
+                            <div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full animate-pulse"></div>
+                            <div className="relative h-24 w-24 rounded-[2rem] bg-emerald-500/10 border-2 border-emerald-500/20 flex items-center justify-center">
+                                <Video size={40} className="text-emerald-500 animate-bounce" />
+                            </div>
                         </div>
-                        <DialogHeader className="mb-2 space-y-2">
-                            <DialogTitle className="text-center text-xl text-white font-semibold">Incoming Call</DialogTitle>
-                            <DialogDescription className="text-center text-gray-400 text-base">
-                                <span className="font-medium text-white">{incomingCall?.name || 'Someone'}</span> is requesting a video consultation.
-                            </DialogDescription>
-                        </DialogHeader>
-                    </div>
-                    <div className="grid grid-cols-2 gap-px bg-gray-800 border-t border-gray-800">
-                        <button
-                            onClick={() => {
-                                leaveCall();
-                                navigate(-1);
-                            }}
-                            className="flex items-center justify-center p-4 hover:bg-gray-800/50 transition-colors text-red-500 font-medium bg-[#1C1F24]"
-                        >
-                            Decline
-                        </button>
-                        <button
-                            onClick={() => answerCall()}
-                            className="flex items-center justify-center p-4 hover:bg-gray-800/50 transition-colors text-emerald-500 font-bold bg-[#1C1F24]"
-                        >
-                            Accept
-                        </button>
+
+                        <div className="space-y-3 mb-10">
+                            <Badge className="bg-emerald-500/10 text-emerald-500 border-none text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1">
+                                Secure Encryption Active
+                            </Badge>
+                            <h2 className="text-3xl font-black text-white tracking-tight">Incoming Session</h2>
+                            <p className="text-gray-400 font-medium">
+                                <span className="text-[#00A1B0] font-bold">{incomingCall?.name || 'Authorized Patient'}</span> is ready to begin the consultation.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 w-full">
+                            <Button
+                                variant="ghost"
+                                onClick={() => {
+                                    leaveCall();
+                                    navigate(-1);
+                                }}
+                                className="h-16 rounded-2xl bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-500 font-black uppercase tracking-widest text-xs transition-all"
+                            >
+                                Decline
+                            </Button>
+                            <Button
+                                onClick={() => answerCall()}
+                                className="h-16 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest text-xs shadow-xl shadow-emerald-600/20 transition-all active:scale-95"
+                            >
+                                Accept Call
+                            </Button>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -495,46 +508,53 @@ const VideoCallContent: React.FC = () => {
                         className="absolute top-0 left-0 right-0 z-50 px-4 md:px-6 py-4 md:py-6"
                     >
                         <div className="flex items-center justify-between">
-                            <button
+                            <Button
+                                variant="ghost"
+                                size="icon"
                                 onClick={() => {
                                     leaveCall();
                                     navigate(-1);
                                 }}
-                                className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-[#1C1F24]/80 backdrop-blur-lg flex items-center justify-center text-white hover:bg-[#2A2F32] transition-colors"
+                                className="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/5 text-white hover:bg-white/10 transition-all shadow-xl"
                             >
                                 <ChevronLeft size={20} />
-                            </button>
+                            </Button>
 
                             <div className="flex flex-col items-center">
-                                <h2 className="text-white font-medium text-base md:text-lg mb-1">
-                                    {user?.role === 'doctor' ? 'Patient' : 'Doctor'}
-                                </h2>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <Badge variant="secondary" className="bg-[#00A1B0]/10 text-[#00A1B0] border-[#00A1B0]/20 px-2 py-0.5 font-black uppercase tracking-[0.2em] text-[9px]">
+                                        {user?.role === 'doctor' ? 'Patient' : 'Doctor'}
+                                    </Badge>
+                                </div>
                                 {callAccepted && !callEnded ? (
-                                    <div className="flex items-center gap-2 text-[#8696A0] text-sm">
-                                        <div className="w-2 h-2 rounded-full bg-[#25D366]"></div>
-                                        <span>{formatDuration(callDuration)}</span>
+                                    <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-white/5 backdrop-blur-md border border-white/5">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                        <span className="text-white font-mono text-sm tracking-widest">{formatDuration(callDuration)}</span>
                                     </div>
                                 ) : (
-                                    <span className="text-[#8696A0] text-sm">
-                                        {incomingCall?.isReceivingCall ? 'Ringing...' : 'Connecting...'}
-                                    </span>
+                                    <div className="flex items-center gap-2 text-gray-400">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-white/20"></div>
+                                        <span className="text-[11px] font-black uppercase tracking-widest">
+                                            {incomingCall?.isReceivingCall ? 'Ringing...' : 'Initializing Session'}
+                                        </span>
+                                    </div>
                                 )}
                             </div>
 
-                            <div className="flex gap-2">
+                            <div className="flex items-center gap-3">
                                 {isDoctor && sessionStatus === SESSION_STATUS.ENDED && (
                                     <div className="flex items-center gap-2">
                                         {!isPostConsultationWindowOpen ? (
                                             <Button
                                                 onClick={handleEnablePostChat}
                                                 size="sm"
-                                                className="hidden md:flex items-center gap-2 rounded-xl px-4 h-9 bg-amber-600 hover:bg-amber-700 text-white font-bold uppercase text-[10px] tracking-widest"
+                                                className="hidden md:flex items-center gap-2 rounded-xl px-4 h-10 bg-amber-500 hover:bg-amber-600 text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-amber-500/20"
                                             >
                                                 <ClipboardList className="h-4 w-4" />
-                                                Request Test Result
+                                                Request Test
                                             </Button>
                                         ) : (
-                                            <div className="hidden md:flex items-center gap-2 px-4 h-9 bg-amber-500/10 text-amber-500 rounded-xl text-[10px] font-bold uppercase tracking-widest border border-amber-500/20">
+                                            <div className="hidden md:flex items-center gap-2 px-4 h-10 bg-amber-500/10 text-amber-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-500/20 backdrop-blur-sm">
                                                 <Clock className="h-3.5 w-3.5" /> Follow-up Open
                                             </div>
                                         )}
@@ -543,14 +563,18 @@ const VideoCallContent: React.FC = () => {
                                 {isDoctor && sessionStatus !== SESSION_STATUS.ENDED && (
                                     <Button
                                         onClick={() => setEndSessionDialogOpen(true)}
-                                        className="h-9 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold uppercase text-[10px] tracking-widest rounded-xl transition-all"
+                                        className="h-10 px-5 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 font-black uppercase text-[10px] tracking-widest rounded-xl transition-all backdrop-blur-sm"
                                     >
                                         Wind Up
                                     </Button>
                                 )}
-                                <button className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-[#1C1F24]/80 backdrop-blur-lg flex items-center justify-center text-white hover:bg-[#2A2F32] transition-colors">
-                                    <MoreVertical size={20} />
-                                </button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/5 text-white hover:bg-white/10 transition-all shadow-xl"
+                                >
+                                    <Settings size={20} />
+                                </Button>
                             </div>
                         </div>
                     </motion.div>
@@ -688,7 +712,7 @@ const VideoCallContent: React.FC = () => {
                             </div>
 
                             <div className="space-y-3">
-                                <input
+                                <Input
                                     type="text"
                                     placeholder={
                                         noteCategory === 'medicine' ? "Medicine Name (e.g. Paracetamol)" :
@@ -697,35 +721,35 @@ const VideoCallContent: React.FC = () => {
                                     }
                                     value={noteTitle}
                                     onChange={(e) => setNoteTitle(e.target.value)}
-                                    className="w-full bg-[#0B1014] border border-white/5 rounded-xl px-4 py-3 text-xs text-white placeholder:text-gray-600 focus:border-[#00A1B0]/50 outline-none font-bold tracking-widest transition-all"
+                                    className="w-full bg-[#0B1014] border-white/5 rounded-xl px-4 py-3 text-xs text-white placeholder:text-gray-600 focus:border-[#00A1B0]/50 outline-none font-bold tracking-widest transition-all"
                                 />
 
                                 {noteCategory === 'medicine' ? (
                                     <div className="grid grid-cols-3 gap-2">
-                                        <input
+                                        <Input
                                             type="text"
                                             placeholder="Dosage"
                                             value={noteDosage}
                                             onChange={(e) => setNoteDosage(e.target.value)}
-                                            className="bg-[#0B1014] border border-white/5 rounded-xl px-4 py-3 text-[10px] text-white placeholder:text-gray-600 focus:border-[#00A1B0]/50 outline-none font-bold transition-all"
+                                            className="bg-[#0B1014] border-white/5 rounded-xl px-4 py-3 text-[10px] text-white placeholder:text-gray-600 focus:border-[#00A1B0]/50 outline-none font-bold transition-all"
                                         />
-                                        <input
+                                        <Input
                                             type="text"
                                             placeholder="Freq"
                                             value={noteFrequency}
                                             onChange={(e) => setNoteFrequency(e.target.value)}
-                                            className="bg-[#0B1014] border border-white/5 rounded-xl px-4 py-3 text-[10px] text-white placeholder:text-gray-600 focus:border-[#00A1B0]/50 outline-none font-bold transition-all"
+                                            className="bg-[#0B1014] border-white/5 rounded-xl px-4 py-3 text-[10px] text-white placeholder:text-gray-600 focus:border-[#00A1B0]/50 outline-none font-bold transition-all"
                                         />
-                                        <input
+                                        <Input
                                             type="text"
                                             placeholder="Dur"
                                             value={noteDuration}
                                             onChange={(e) => setNoteDuration(e.target.value)}
-                                            className="bg-[#0B1014] border border-white/5 rounded-xl px-4 py-3 text-[10px] text-white placeholder:text-gray-600 focus:border-[#00A1B0]/50 outline-none font-bold transition-all"
+                                            className="bg-[#0B1014] border-white/5 rounded-xl px-4 py-3 text-[10px] text-white placeholder:text-gray-600 focus:border-[#00A1B0]/50 outline-none font-bold transition-all"
                                         />
                                     </div>
                                 ) : (
-                                    <textarea
+                                    <Textarea
                                         placeholder={
                                             noteCategory === 'lab_test' ? "Reason for test / Details" :
                                                 "Observations / Description"
@@ -733,7 +757,7 @@ const VideoCallContent: React.FC = () => {
                                         value={noteDescription}
                                         onChange={(e) => setNoteDescription(e.target.value)}
                                         rows={3}
-                                        className="w-full bg-[#0B1014] border border-white/5 rounded-xl px-4 py-3 text-xs text-white placeholder:text-gray-600 focus:border-[#00A1B0]/50 outline-none font-medium leading-relaxed resize-none transition-all"
+                                        className="w-full bg-[#0B1014] border-white/5 rounded-xl px-4 py-3 text-xs text-white placeholder:text-gray-600 focus:border-[#00A1B0]/50 outline-none font-medium leading-relaxed resize-none transition-all"
                                     />
                                 )}
                             </div>
@@ -977,28 +1001,31 @@ const VideoCallContent: React.FC = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-            {/* Time Over Modal for Patient */}
+            {/* Premium Time Over Modal for Patient */}
             <AnimatePresence>
                 {isTimeOver && !isDoctor && sessionStatus !== SESSION_STATUS.CONTINUED_BY_DOCTOR && sessionStatus !== SESSION_STATUS.ENDED && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+                        className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6"
                     >
-                        <div className="w-full max-w-sm bg-[#1C1F24] border border-gray-800 rounded-lg shadow-xl overflow-hidden">
-                            <div className="p-6 flex flex-col items-center text-center">
-                                <div className="h-12 w-12 bg-amber-500/10 rounded-full flex items-center justify-center mb-4">
-                                    <Lock className="h-6 w-6 text-amber-500" />
+                        <Card className="w-full max-w-md bg-[#111418]/95 border-white/5 shadow-2xl rounded-[2.5rem] overflow-hidden">
+                            <div className="p-10 flex flex-col items-center text-center">
+                                <div className="relative mb-8">
+                                    <div className="absolute inset-0 bg-amber-500/20 blur-3xl rounded-full animate-pulse"></div>
+                                    <div className="relative h-20 w-20 bg-amber-500/10 border border-amber-500/20 rounded-3xl flex items-center justify-center">
+                                        <Clock className="h-10 w-10 text-amber-500" />
+                                    </div>
                                 </div>
-                                <h2 className="text-lg font-semibold text-white mb-2">Session Time Over</h2>
-                                <p className="text-sm text-gray-400 mb-6">
-                                    Your appointment time is over. Please wait for the doctor's response.
+                                <h2 className="text-2xl font-black text-white tracking-tight mb-3">Session Limit Reached</h2>
+                                <p className="text-gray-400 font-medium text-base mb-8 max-w-[280px]">
+                                    The scheduled consultation time has concluded. Please wait while the doctor finalizes your records.
                                 </p>
 
-                                <div className="flex items-center gap-2 mb-6 px-3 py-1.5 bg-gray-800/50 rounded-full">
+                                <div className="flex items-center gap-3 mb-10 px-6 py-2.5 bg-white/5 border border-white/5 rounded-2xl backdrop-blur-sm">
                                     <span className="block h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    <span className="text-xs font-medium text-gray-300">Waiting for Doctor...</span>
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-300">Awaiting Doctor's Protocol</span>
                                 </div>
 
                                 <Button
@@ -1006,13 +1033,12 @@ const VideoCallContent: React.FC = () => {
                                         leaveCall();
                                         navigate(-1);
                                     }}
-                                    variant="secondary"
-                                    className="w-full"
+                                    className="w-full h-16 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-black uppercase tracking-widest text-xs border border-white/5 transition-all"
                                 >
-                                    Back to Dashboard
+                                    Exit to Dashboard
                                 </Button>
                             </div>
-                        </div>
+                        </Card>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -1023,72 +1049,157 @@ const VideoCallContent: React.FC = () => {
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+                        className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-xl flex items-center justify-center p-6"
                     >
-                        <div className="w-full max-w-md bg-[#1C1F24] border border-gray-800 rounded-lg shadow-xl overflow-hidden">
-                            <div className="p-6">
-                                <div className="flex items-start gap-4 mb-6">
-                                    <div className="h-10 w-10 bg-amber-500/10 rounded-full flex items-center justify-center shrink-0">
-                                        <Clock className="h-5 w-5 text-amber-500" />
+                        <Card className="w-full max-w-md bg-[#111418]/95 border-white/5 shadow-2xl rounded-[2.5rem] overflow-hidden">
+                            <div className="p-8">
+                                <div className="flex flex-col items-center text-center mb-10">
+                                    <div className="h-16 w-16 bg-amber-500/10 border border-amber-500/20 rounded-3xl flex items-center justify-center mb-6">
+                                        <Clock className="h-8 w-8 text-amber-500" />
                                     </div>
-                                    <div>
-                                        <h2 className="text-lg font-semibold text-white">Session Completed</h2>
-                                        <p className="text-sm text-gray-400">The appointment time has ended. The patient is waiting for you to extend or end the session.</p>
-                                    </div>
+                                    <h2 className="text-2xl font-black text-white tracking-tight mb-2">Maximum Time Reached</h2>
+                                    <p className="text-gray-400 font-medium max-w-[280px]">The scheduled session time has ended. How would you like to proceed?</p>
                                 </div>
 
-                                <div className="flex gap-3">
+                                <div className="grid grid-cols-1 gap-4">
                                     <Button
                                         onClick={() => updateSessionStatus(SESSION_STATUS.CONTINUED_BY_DOCTOR)}
-                                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                        className="h-16 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-black uppercase tracking-widest text-xs rounded-2xl shadow-lg shadow-[#00A1B0]/20"
                                     >
-                                        Extend Session
+                                        <Plus className="mr-2 h-4 w-4" /> Extend Consultation
                                     </Button>
                                     <Button
                                         onClick={() => updateSessionStatus(SESSION_STATUS.ENDED)}
-                                        variant="destructive"
-                                        className="flex-1"
+                                        className="h-16 bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-500 border-white/5 font-black uppercase tracking-widest text-xs rounded-2xl transition-all"
                                     >
-                                        End Session
+                                        Conclude Session
                                     </Button>
                                 </div>
 
                                 {extensionCount > 0 && (
-                                    <p className="mt-4 text-center text-xs text-gray-500">
-                                        Previously extended {extensionCount} times
-                                    </p>
+                                    <div className="mt-8 pt-6 border-t border-white/5 text-center">
+                                        <Badge variant="outline" className="bg-white/5 text-white/30 border-white/5 px-3 py-1 font-black uppercase tracking-widest text-[8px]">
+                                            Session previously extended {extensionCount}x
+                                        </Badge>
+                                    </div>
                                 )}
+                            </div>
+                        </Card>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            {/* Top Header */}
+            <AnimatePresence>
+                {(showControls || !callAccepted) && (
+                    <motion.div
+                        initial={{ y: -100, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: -100, opacity: 0 }}
+                        className="absolute top-0 left-0 right-0 z-50 px-4 md:px-6 py-4 md:py-6"
+                    >
+                        <div className="flex items-center justify-between">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                    leaveCall();
+                                    navigate(-1);
+                                }}
+                                className="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/5 text-white hover:bg-white/10 transition-all shadow-xl"
+                            >
+                                <ChevronLeft size={20} />
+                            </Button>
+
+                            <div className="flex flex-col items-center">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <Badge variant="secondary" className="bg-[#00A1B0]/10 text-[#00A1B0] border-[#00A1B0]/20 px-2 py-0.5 font-black uppercase tracking-[0.2em] text-[9px]">
+                                        {user?.role === 'doctor' ? 'Patient' : 'Doctor'}
+                                    </Badge>
+                                </div>
+                                {callAccepted && !callEnded ? (
+                                    <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-white/5 backdrop-blur-md border border-white/5">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                        <span className="text-white font-mono text-sm tracking-widest">{formatDuration(callDuration)}</span>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2 text-gray-400">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-white/20"></div>
+                                        <span className="text-[11px] font-black uppercase tracking-widest">
+                                            {incomingCall?.isReceivingCall ? 'Ringing...' : 'Initializing Session'}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                {isDoctor && sessionStatus === SESSION_STATUS.ENDED && (
+                                    <div className="flex items-center gap-2">
+                                        {!isPostConsultationWindowOpen ? (
+                                            <Button
+                                                onClick={handleEnablePostChat}
+                                                size="sm"
+                                                className="hidden md:flex items-center gap-2 rounded-xl px-4 h-10 bg-amber-500 hover:bg-amber-600 text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-amber-500/20"
+                                            >
+                                                <ClipboardList className="h-4 w-4" />
+                                                Request Test
+                                            </Button>
+                                        ) : (
+                                            <div className="hidden md:flex items-center gap-2 px-4 h-10 bg-amber-500/10 text-amber-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-500/20 backdrop-blur-sm">
+                                                <Clock className="h-3.5 w-3.5" /> Follow-up Open
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                {isDoctor && sessionStatus !== SESSION_STATUS.ENDED && (
+                                    <Button
+                                        onClick={() => setEndSessionDialogOpen(true)}
+                                        className="h-10 px-5 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 font-black uppercase text-[10px] tracking-widest rounded-xl transition-all backdrop-blur-sm"
+                                    >
+                                        Wind Up
+                                    </Button>
+                                )}
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/5 text-white hover:bg-white/10 transition-all shadow-xl"
+                                >
+                                    <Settings size={20} />
+                                </Button>
                             </div>
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
+
             {/* End Session Confirmation Dialog for Doctor */}
             <Dialog open={endSessionDialogOpen} onOpenChange={setEndSessionDialogOpen}>
-                <DialogContent className="sm:max-w-[400px] bg-[#1C1F24] border-gray-800 p-6">
-                    <DialogHeader>
-                        <DialogTitle className="text-lg font-semibold text-white">End Consultation?</DialogTitle>
-                        <DialogDescription className="text-gray-400">
-                            This will end the video call for everyone. You can still access notes and prescriptions later.
+                <DialogContent className="sm:max-w-md bg-[#111418]/95 backdrop-blur-xl border-white/5 p-8 rounded-[2.5rem] shadow-2xl">
+                    <DialogHeader className="mb-8 text-center">
+                        <div className="mx-auto h-16 w-16 bg-red-500/10 border border-red-500/20 rounded-3xl flex items-center justify-center mb-6">
+                            <PhoneOff className="h-8 w-8 text-red-500" />
+                        </div>
+                        <DialogTitle className="text-2xl font-black text-white tracking-tight">End Session?</DialogTitle>
+                        <DialogDescription className="text-gray-400 font-medium text-base mt-2">
+                            This action will terminate the consultation for both parties. Your notes and prescriptions will be safely archived.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <DialogFooter className="flex gap-3 sm:justify-end mt-4">
+                    <DialogFooter className="flex flex-col gap-3 sm:flex-row sm:justify-center">
                         <Button
                             variant="ghost"
                             onClick={() => setEndSessionDialogOpen(false)}
-                            className="text-gray-400 hover:text-white hover:bg-white/10"
+                            className="h-14 rounded-2xl text-gray-400 hover:text-white hover:bg-white/5 font-black uppercase tracking-widest text-xs px-8"
                         >
-                            Cancel
+                            Return To Call
                         </Button>
                         <Button
                             onClick={() => {
                                 updateSessionStatus(SESSION_STATUS.ENDED);
                                 setEndSessionDialogOpen(false);
                             }}
-                            variant="destructive"
+                            className="h-14 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-black uppercase tracking-widest text-xs px-10 shadow-xl shadow-red-500/20"
                         >
-                            End Consultation
+                            Conclude Session
                         </Button>
                     </DialogFooter>
                 </DialogContent>
