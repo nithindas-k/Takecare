@@ -298,29 +298,25 @@ const VideoCallContent: React.FC = () => {
 
                     if (isDoctor) {
                         setTargetUserId(patientId);
-                        console.log("I am Doctor, calling Patient:", patientId);
-
+                        console.log("[VIDEO_CALL] I am Doctor, signaling to Patient (User ID):", patientId);
 
                         if (!apt.sessionStartTime && apt.status !== 'completed' && apt.sessionStatus !== 'ENDED') {
                             try {
                                 await appointmentService.updateSessionStatus(id, "ACTIVE");
-
-                                // Start the persistent call session
                                 const doctorIdStr = getSafeId(apt.doctor) || getSafeId(apt.doctorId);
                                 const patientIdStr = getSafeId(apt.patient) || getSafeId(apt.patientId);
-
                                 if (doctorIdStr && patientIdStr) {
+                                    console.log("[VIDEO_CALL] Initializing call session on backend...");
                                     await callService.startCall(id, doctorIdStr, patientIdStr);
                                     toast.success("Call session verified");
                                 }
                             } catch (e) {
-                                console.warn("Failed to auto-start session (might already be active)", e);
+                                console.warn("[VIDEO_CALL] Failed to auto-start session:", e);
                             }
                         }
                     } else {
-                        // Patient logic
                         setTargetUserId(doctorUserId);
-                        console.log("I am Patient, calling Doctor (User ID):", doctorUserId);
+                        console.log("[VIDEO_CALL] I am Patient, signaling to Doctor (User ID):", doctorUserId);
                     }
                 }
             } catch (error) {
@@ -1088,88 +1084,7 @@ const VideoCallContent: React.FC = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-            {/* Top Header */}
-            <AnimatePresence>
-                {(showControls || !callAccepted) && (
-                    <motion.div
-                        initial={{ y: -100, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: -100, opacity: 0 }}
-                        className="absolute top-0 left-0 right-0 z-50 px-4 md:px-6 py-4 md:py-6"
-                    >
-                        <div className="flex items-center justify-between">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                    leaveCall();
-                                    navigate(-1);
-                                }}
-                                className="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/5 text-white hover:bg-white/10 transition-all shadow-xl"
-                            >
-                                <ChevronLeft size={20} />
-                            </Button>
 
-                            <div className="flex flex-col items-center">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Badge variant="secondary" className="bg-[#00A1B0]/10 text-[#00A1B0] border-[#00A1B0]/20 px-2 py-0.5 font-black uppercase tracking-[0.2em] text-[9px]">
-                                        {user?.role === 'doctor' ? 'Patient' : 'Doctor'}
-                                    </Badge>
-                                </div>
-                                {callAccepted && !callEnded ? (
-                                    <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-white/5 backdrop-blur-md border border-white/5">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                                        <span className="text-white font-mono text-sm tracking-widest">{formatDuration(callDuration)}</span>
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center gap-2 text-gray-400">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-white/20"></div>
-                                        <span className="text-[11px] font-black uppercase tracking-widest">
-                                            {incomingCall?.isReceivingCall ? 'Ringing...' : 'Initializing Session'}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                {isDoctor && sessionStatus === SESSION_STATUS.ENDED && (
-                                    <div className="flex items-center gap-2">
-                                        {!isPostConsultationWindowOpen ? (
-                                            <Button
-                                                onClick={handleEnablePostChat}
-                                                size="sm"
-                                                className="hidden md:flex items-center gap-2 rounded-xl px-4 h-10 bg-amber-500 hover:bg-amber-600 text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-amber-500/20"
-                                            >
-                                                <ClipboardList className="h-4 w-4" />
-                                                Request Test
-                                            </Button>
-                                        ) : (
-                                            <div className="hidden md:flex items-center gap-2 px-4 h-10 bg-amber-500/10 text-amber-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-500/20 backdrop-blur-sm">
-                                                <Clock className="h-3.5 w-3.5" /> Follow-up Open
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                {isDoctor && sessionStatus !== SESSION_STATUS.ENDED && (
-                                    <Button
-                                        onClick={() => setEndSessionDialogOpen(true)}
-                                        className="h-10 px-5 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 font-black uppercase text-[10px] tracking-widest rounded-xl transition-all backdrop-blur-sm"
-                                    >
-                                        Wind Up
-                                    </Button>
-                                )}
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/5 text-white hover:bg-white/10 transition-all shadow-xl"
-                                >
-                                    <Settings size={20} />
-                                </Button>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
             {/* End Session Confirmation Dialog for Doctor */}
             <Dialog open={endSessionDialogOpen} onOpenChange={setEndSessionDialogOpen}>
