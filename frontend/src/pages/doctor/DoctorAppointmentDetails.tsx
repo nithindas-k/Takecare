@@ -377,7 +377,7 @@ const DoctorAppointmentDetails: React.FC = () => {
                                                 normalized.status === 'confirmed' ? 50 :
                                                     normalized.status === 'pending' ? 25 :
                                                         normalized.status === 'reschedule_requested' ? 35 : 0}
-                                        className="h-1.5 bg-gray-50 border border-gray-100"
+                                        className="h-2 bg-gray-50 border border-gray-100 animate-glow-sweep shadow-[0_0_15px_rgba(0,161,176,0.2)]"
                                     />
                                     <div className="flex justify-between mt-1.5 px-0.5">
                                         {['Booked', 'Confirmed', 'Active', 'Completed'].map((step, idx) => {
