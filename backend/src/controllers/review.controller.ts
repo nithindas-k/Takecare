@@ -129,4 +129,14 @@ export class ReviewController {
             next(error);
         }
     };
+
+    getReviewByAppointmentId = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { appointmentId } = req.params;
+            const review = await this._reviewService.getReviewByAppointmentId(appointmentId);
+            sendSuccess(res, review);
+        } catch (error) {
+            next(error);
+        }
+    };
 }

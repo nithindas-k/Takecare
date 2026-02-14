@@ -33,5 +33,6 @@ reviewRouter.put("/:reviewId", authMiddleware, reviewController.updateReview);
 reviewRouter.delete("/:reviewId", authMiddleware, reviewController.deleteReview);
 reviewRouter.get("/patient-doctor/:doctorId", authMiddleware, reviewController.getReviewByPatientAndDoctor);
 reviewRouter.put("/respond/:reviewId", authMiddleware, reviewController.respondToReview);
+reviewRouter.get("/appointment/:appointmentId", authMiddleware, reviewController.getReviewByAppointmentId);
 
 export default reviewRouter;

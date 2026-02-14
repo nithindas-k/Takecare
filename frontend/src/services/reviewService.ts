@@ -37,5 +37,10 @@ export const reviewService = {
     getDoctorStats: async (doctorId: string) => {
         const response = await axiosInstance.get(REVIEW_API_ROUTES.GET_DOCTOR_STATS(doctorId));
         return response.data.data;
+    },
+
+    getReviewByAppointmentId: async (appointmentId: string) => {
+        const response = await axiosInstance.get(REVIEW_API_ROUTES.GET_BY_APPOINTMENT(appointmentId));
+        return response.data.data;
     }
 };

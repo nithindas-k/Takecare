@@ -140,7 +140,6 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                     userVideo.current.srcObject = event.streams[0];
                 }
             } else {
-                // Fallback for cases where streams are not provided in the event
                 console.log("No stream in ontrack event, creating/updating one manually");
                 setRemoteStream(prev => {
                     const s = prev || new MediaStream();

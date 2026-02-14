@@ -166,6 +166,7 @@ export const REVIEW_API_ROUTES = {
   GET_DOCTOR_STATS: (doctorId: string): string => `/reviews/doctor/${doctorId}/stats`,
   GET_PATIENT_DOCTOR_REVIEW: (doctorId: string): string => `/reviews/patient-doctor/${doctorId}`,
   RESPOND: (reviewId: string): string => `/reviews/respond/${reviewId}`,
+  GET_BY_APPOINTMENT: (appointmentId: string): string => `/reviews/appointment/${appointmentId}`,
   ADMIN_DELETE: (reviewId: string): string => `/reviews/admin/${reviewId}`,
 } as const;
 

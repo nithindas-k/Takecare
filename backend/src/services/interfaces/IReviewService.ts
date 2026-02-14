@@ -25,4 +25,5 @@ export interface IReviewService {
     getReviewByPatientAndDoctorId(patientId: string, doctorId: string): Promise<IReview | null>;
     respondToReview(reviewId: string, userId: string, response: string): Promise<IReview>;
     getMyReviews(userId: string): Promise<IReview[]>;
+    getReviewByAppointmentId(appointmentId: string): Promise<IReview | null>;
 }

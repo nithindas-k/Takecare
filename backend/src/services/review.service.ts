@@ -142,6 +142,8 @@ export class ReviewService implements IReviewService {
             throw new AppError("Unauthorized to respond to this review", HttpStatus.FORBIDDEN);
         }
 
+        const isUpdate = !!review.response;
+
         const updatedReview = await this._reviewRepository.updateById(reviewId, {
             response,
             responseDate: new Date()
@@ -153,10 +155,16 @@ export class ReviewService implements IReviewService {
 
         // Notify patient
         const doctorUser = await this._userRepository.findById(userId);
+        const title = isUpdate ? "Doctor Updated Response to Review" : "Doctor Responded to Your Review";
+        const message = isUpdate
+            ? `Dr. ${doctorUser?.name || "Your doctor"} has updated their response to your review.`
+            : `Dr. ${doctorUser?.name || "Your doctor"} has responded to your review.`;
+
         await this._notificationService.notify(review.patientId.toString(), {
-            title: "Doctor Responded to Your Review",
-            message: `Dr. ${doctorUser?.name || "Your doctor"} has responded to your review.`,
-            type: NOTIFICATION_TYPES.INFO
+            title,
+            message,
+            type: NOTIFICATION_TYPES.INFO,
+            appointmentId: review.appointmentId.toString()
         });
 
         return updatedReview;
@@ -164,9 +172,13 @@ export class ReviewService implements IReviewService {
 
     async getMyReviews(userId: string): Promise<IReview[]> {
         const doctorDoc = await this._doctorRepository.findByUserId(userId);
-        if (!doctorDoc) {
-            throw new AppError("Doctor profile not found", HttpStatus.NOT_FOUND);
+        if (doctorDoc) {
+            return await this._reviewRepository.findByDoctorId(doctorDoc._id.toString());
         }
-        return await this._reviewRepository.findByDoctorId(doctorDoc._id.toString());
+        return await this._reviewRepository.findByPatientId(userId);
+    }
+
+    async getReviewByAppointmentId(appointmentId: string): Promise<IReview | null> {
+        return await this._reviewRepository.findByAppointmentId(appointmentId);
     }
 }

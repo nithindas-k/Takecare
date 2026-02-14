@@ -61,7 +61,7 @@ const DoctorReviews: React.FC = () => {
 
     const handleReplyClick = (review: Review) => {
         setSelectedReview(review);
-        setReplyText("");
+        setReplyText(review.response || "");
         setReplyModalOpen(true);
     };
 
@@ -174,14 +174,12 @@ const DoctorReviews: React.FC = () => {
                                             {review.response ? 'Responded' : 'Pending'}
                                         </span>
 
-                                        {!review.response && (
-                                            <button
-                                                onClick={() => handleReplyClick(review)}
-                                                className="px-4 py-1.5 bg-[#00A1B0] text-white rounded-lg font-bold hover:bg-teal-600 transition-all shadow-lg shadow-teal-500/10 text-xs active:scale-95"
-                                            >
-                                                Reply
-                                            </button>
-                                        )}
+                                        <button
+                                            onClick={() => handleReplyClick(review)}
+                                            className="px-4 py-1.5 bg-[#00A1B0] text-white rounded-lg font-bold hover:bg-teal-600 transition-all shadow-lg shadow-teal-500/10 text-xs active:scale-95"
+                                        >
+                                            {review.response ? 'Edit Reply' : 'Reply'}
+                                        </button>
                                     </div>
                                 </motion.div>
                             ))}

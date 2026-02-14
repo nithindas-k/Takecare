@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FaBell, FaCircle } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 import { useSocket } from '../../context/SocketContext';
 import { notificationService } from '../../services/notificationService';
 import { formatDistanceToNow } from 'date-fns';
@@ -12,6 +13,7 @@ interface Notification {
     isRead: boolean;
     type: string;
     title: string;
+    appointmentId?: string;
 }
 
 interface NotificationDropdownProps {
@@ -101,6 +103,8 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ color = 'te
         }
     };
 
+    const navigate = useNavigate();
+
     const handleNotificationClick = async (notif: Notification) => {
         if (!notif.isRead) {
             try {
@@ -109,6 +113,11 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ color = 'te
             } catch (error) {
                 console.error('Failed to mark as read:', error);
             }
+        }
+
+        if (notif.appointmentId) {
+            navigate(`/patient/appointments/${notif.appointmentId}`);
+            setIsOpen(false);
         }
     };
 

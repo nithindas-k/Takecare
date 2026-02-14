@@ -114,8 +114,6 @@ const AppointmentDetails: React.FC = () => {
         };
     }, [id, appointment]); // appointment dependency might cause loops if not careful, but looks ok as we check lastFetchedId. Ideally remove appointment from dep if possible.
 
-
-
     const getImageUrl = (imagePath: string | null | undefined) => {
         if (!imagePath) return '/doctor.png';
         if (imagePath.startsWith('http')) return imagePath;
@@ -178,6 +176,22 @@ const AppointmentDetails: React.FC = () => {
             isSessionReady,
         };
     }, [appointment]);
+
+    useEffect(() => {
+        const fetchReview = async () => {
+            if (id && normalized.status === 'completed') {
+                try {
+                    const review = await reviewService.getReviewByAppointmentId(id);
+                    if (review) {
+                        setExistingReview(review);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch review for appointment:", error);
+                }
+            }
+        };
+        fetchReview();
+    }, [id, normalized.status]);
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -287,28 +301,24 @@ const AppointmentDetails: React.FC = () => {
     const handleOpenReview = async () => {
         if (!appointment) return;
 
-
-
-        const docObj: any = appointment.doctor || appointment.doctorId;
-        const doctorId = docObj?._id || docObj?.id || (typeof docObj === 'string' ? docObj : null);
-
-        if (!doctorId) {
-            setReviewFormOpen(true);
+        const appointmentId = id || appointment._id || appointment.id;
+        if (!appointmentId) {
+            toast.error("Appointment ID missing");
             return;
         }
 
         setReviewFormOpen(true);
 
         try {
-            const response = await reviewService.getMyReview(doctorId);
-            if (response.success && response.data) {
-                setExistingReview(response.data);
+            // Fetch review specifically for this appointment
+            const response = await reviewService.getReviewByAppointmentId(appointmentId);
+            if (response) {
+                setExistingReview(response);
             } else {
                 setExistingReview(null);
             }
         } catch (error) {
             console.error("Failed to fetch existing review:", error);
-
             setExistingReview(null);
         }
     };
@@ -924,6 +934,55 @@ const AppointmentDetails: React.FC = () => {
                         )}
 
 
+                    {/* Review & Doctor Response Section */}
+                    {normalized.status === 'completed' && existingReview && (
+                        <div className="px-6 py-5 bg-emerald-50/30 border-t border-emerald-100/50">
+                            <div className="flex items-center gap-2 mb-4">
+                                <h6 className="text-sm font-bold text-emerald-900 flex items-center gap-2">
+                                    <FaStar className="text-amber-400" /> Your Review
+                                </h6>
+                                <div className="flex items-center gap-1">
+                                    {[...Array(5)].map((_, i) => (
+                                        <FaStar key={i} size={14} className={i < existingReview.rating ? "text-amber-400" : "text-gray-200"} />
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="pl-6 border-l-2 border-emerald-100 ml-1.5 space-y-4">
+                                <div>
+                                    <p className="text-sm text-gray-700 italic leading-relaxed">"{existingReview.comment}"</p>
+                                    <p className="text-[10px] text-gray-400 mt-1 uppercase font-bold tracking-wider">
+                                        Submitted {new Date(existingReview.createdAt).toLocaleDateString()}
+                                    </p>
+                                </div>
+
+                                {existingReview.response && (
+                                    <div className="bg-white/80 rounded-xl p-4 border border-emerald-100 shadow-sm relative mt-4">
+                                        <div className="absolute -top-3 left-4 bg-emerald-100 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter border border-emerald-200">
+                                            Doctor's Response
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 font-bold text-xs border border-emerald-100">
+                                                DR
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-gray-800 font-medium leading-relaxed">
+                                                    {existingReview.response}
+                                                </p>
+                                                {existingReview.responseDate && (
+                                                    <p className="text-[10px] text-gray-400 mt-1 uppercase font-bold tracking-wider">
+                                                        Responded {new Date(existingReview.responseDate).toLocaleDateString()}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+
                     {/* Bottom Details Section */}
                     <div className="bg-gray-50 px-6 py-4 border-t border-gray-100">
                         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -973,12 +1032,21 @@ const AppointmentDetails: React.FC = () => {
                                 )}
                                 {normalized.status === 'completed' && (
                                     <div className="flex flex-col gap-2 w-full">
-                                        <button
-                                            onClick={handleOpenReview}
-                                            className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-                                        >
-                                            <FaStar /> Rate Doctor
-                                        </button>
+                                        {!existingReview ? (
+                                            <button
+                                                onClick={handleOpenReview}
+                                                className="w-full px-6 py-2.5 bg-[#00A1B0] hover:bg-[#008f9c] text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                <FaStar /> Rate Doctor
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={handleOpenReview}
+                                                className="w-full px-6 py-2.5 bg-emerald-50 border-2 border-emerald-500 text-emerald-700 hover:bg-emerald-100 font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                <FaStar className="text-emerald-500" /> Update Review
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => setPrescriptionViewOpen(true)}
                                             className="w-full px-3 py-2.5 bg-white border-2 border-[#00A1B0] text-[#00A1B0] hover:bg-[#00A1B0]/10 font-bold rounded-lg transition-all shadow-sm flex items-center justify-center gap-2 active:scale-95 whitespace-nowrap text-sm"
