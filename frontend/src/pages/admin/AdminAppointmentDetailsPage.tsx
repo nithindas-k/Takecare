@@ -317,7 +317,9 @@ const AdminAppointmentDetailsPage: React.FC = () => {
                             appointment?.status === 'confirmed' ? 50 :
                               appointment?.status === 'pending' ? 25 :
                                 appointment?.status === 'reschedule_requested' ? 35 : 0}
-                        className="h-1.5 bg-gray-50 border border-gray-100"
+                        className={`h-2 bg-gray-50 border border-gray-100 animate-glow-sweep ${appointment?.status === 'completed' ? 'shadow-[0_0_15px_rgba(16,185,129,0.2)]' :
+                          appointment?.status === 'active' ? 'shadow-[0_0_15px_rgba(0,161,176,0.2)]' :
+                            appointment?.status === 'cancelled' || appointment?.status === 'rejected' ? 'shadow-[0_0_15px_rgba(244,63,94,0.2)]' : 'shadow-[0_0_15px_rgba(245,158,11,0.2)]'}`}
                       />
                       <div className="flex justify-between mt-1.5 px-0.5">
                         {['Booked', 'Confirmed', 'Active', 'Completed'].map((step, idx) => {
