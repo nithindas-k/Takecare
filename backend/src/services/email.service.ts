@@ -185,7 +185,7 @@ export class EmailService implements IEmailService {
 
       await this._transporter.sendMail({
         from: this._fromAddress,
-        to: env.SMTP_USER, // Send to the admin (self)
+        to: env.SMTP_USER, 
         subject: `[Contact Form] ${data.subject}`,
         html
       });

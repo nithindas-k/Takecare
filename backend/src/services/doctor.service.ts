@@ -153,7 +153,7 @@ export class DoctorService implements IDoctorService {
     if (data.licenseNumber) doctorUpdates.licenseNumber = data.licenseNumber;
     if (data.about) doctorUpdates.about = data.about;
 
-    // Handle signature update or removal
+
     if (data.signature) {
       doctorUpdates.signature = data.signature;
     } else if (data.removeSignature) {
@@ -244,14 +244,14 @@ export class DoctorService implements IDoctorService {
 
   async getDashboardStats(userId: string, startDate?: string, endDate?: string): Promise<DoctorDashboardStats> {
     const doctor = await this._doctorRepository.findByUserId(userId);
-    // console.log("DoctorService.getDashboardStats doctor:", doctor?._id);
+
     if (!doctor) {
       throw new NotFoundError(MESSAGES.DOCTOR_PROFILE_NOT_FOUND);
     }
     const start = startDate ? new Date(startDate) : undefined;
     const end = endDate ? new Date(endDate) : undefined;
     const result = await this._appointmentRepository.getDoctorDashboardStats(doctor._id.toString(), start, end);
-    // console.log("DoctorService.getDashboardStats result:", result);
+  
     return result;
   }
 
