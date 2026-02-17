@@ -1,6 +1,5 @@
 import { DayOfWeek, ITimeSlot, IBlockedDate } from "../../types/schedule.type";
 
-// ==================== REQUEST DTOs ====================
 
 export interface CreateScheduleDTO {
     doctorId: string;
@@ -41,7 +40,6 @@ export interface GetAvailableSlotsDTO {
     date: Date | string;
 }
 
-// ==================== RESPONSE DTOs ====================
 
 export interface ScheduleResponseDTO {
     id: string;

@@ -551,20 +551,7 @@ export class AppointmentService implements IAppointmentService {
             }
 
             if (isDoctor) {
-                // Removed immediate release of old slot. It will be released in acceptReschedule.
-                /* 
-                if (appointment.slotId) {
-                    const oldStartTime = parseAppointmentTime(appointment.appointmentTime);
-                    await this._scheduleRepository.updateSlotBookedStatus(
-                        appointment.doctorId.toString(),
-                        appointment.slotId,
-                        false,
-                        new Date(appointment.appointmentDate),
-                        oldStartTime,
-                        session
-                    );
-                }
-                */
+              
 
                 if (rescheduleData.slotId) {
                     const newStartTime = parseAppointmentTime(rescheduleData.appointmentTime);

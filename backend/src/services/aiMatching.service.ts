@@ -105,7 +105,6 @@ Cancer → Oncologist
     }
 
     async processPatientMessage(request: AIChatRequestDTO): Promise<AIChatResponseDTO> {
-        // Step 1: Check for emergency using simple detection first
         const isEmergency = this.detectEmergency(request.message);
         if (isEmergency) {
             return {

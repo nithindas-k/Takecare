@@ -235,7 +235,6 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
         updateData: UpdateQuery<IAppointmentDocument>,
         session?: ClientSession | undefined
     ): Promise<IAppointmentDocument | null> {
-        // console.log(`[AppointmentRepository] updateById called for ${appointmentId}`, updateData);
 
         if (!Types.ObjectId.isValid(appointmentId)) {
             // eslint-disable-next-line no-console
@@ -243,7 +242,6 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
             return null;
         }
 
-        // console.log(`[AppointmentRepository] Updating by _id: ${appointmentId}`);
         const update = Object.keys(updateData).some(key => key.startsWith('$'))
             ? updateData
             : { $set: updateData };
@@ -254,7 +252,6 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
             { new: true, runValidators: true, session: session || undefined }
         ).exec();
 
-        // console.log(`[AppointmentRepository] Update by _id result: ${result ? 'Success' : 'Failed'}`);
         return result;
     }
 

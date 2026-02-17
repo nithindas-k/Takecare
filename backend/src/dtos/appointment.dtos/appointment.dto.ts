@@ -30,7 +30,6 @@ export interface RescheduleAppointmentDTO {
     slotId?: string;
 }
 
-// ==================== RESPONSE DTOs ====================
 
 export interface AppointmentResponseDTO {
     _id: string;
@@ -88,7 +87,6 @@ export interface AppointmentListResponseDTO {
     totalPages: number;
 }
 
-// ==================== QUERY DTOs ====================
 
 export interface AppointmentQueryDTO {
     status?: AppointmentStatus;
