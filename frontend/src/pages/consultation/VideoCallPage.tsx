@@ -43,6 +43,8 @@ import { toast } from 'sonner';
 import { SESSION_STATUS } from '../../utils/constants';
 import { useCallRejoin } from '../../hooks/useCallRejoin';
 import { useAutoSaveNotes } from '../../hooks/useAutoSaveNotes';
+import { useNetworkQuality } from '../../hooks/useNetworkQuality';
+import { useAudioLevel } from '../../hooks/useAudioLevel';
 import { AutoSaveIndicator } from '../../components/video-call/AutoSaveIndicator';
 import { ReconnectingAlert } from '../../components/video-call/ReconnectingAlert';
 
@@ -122,14 +124,10 @@ const VideoCallContent: React.FC = () => {
         }
     }, [callEnded, checkCanRejoin]);
 
-    // Screen share state
     const [isScreenSharing, setIsScreenSharing] = React.useState(false);
-    // Track whether the remote user is sharing their screen (for object-fit)
     const [isRemoteScreenShare, setIsRemoteScreenShare] = React.useState(false);
-    // Camera facing mode for flip camera
     const [facingMode, setFacingMode] = React.useState<'user' | 'environment'>('user');
 
-    // Cleanup screen share when call ends
     useEffect(() => {
         if (callEnded && isScreenSharing) {
             setIsScreenSharing(false);
@@ -139,7 +137,6 @@ const VideoCallContent: React.FC = () => {
         }
     }, [callEnded, isScreenSharing, stream, myVideo]);
 
-    // Detect if remote video has landscape aspect ratio (screen share)
     useEffect(() => {
         if (!remoteStream) {
             setIsRemoteScreenShare(false);
@@ -151,18 +148,21 @@ const VideoCallContent: React.FC = () => {
         const checkAspect = () => {
             const settings = videoTrack.getSettings();
             if (settings.width && settings.height) {
-                // Screen shares are typically wider than tall
                 setIsRemoteScreenShare(settings.width > settings.height * 1.5);
             }
         };
 
-        // Check immediately and re-check periodically (track may change dimensions)
         checkAspect();
         const interval = setInterval(checkAspect, 2000);
         return () => clearInterval(interval);
     }, [remoteStream]);
 
-    // Auto-Save Notes Hook
+    const isCallActive = !!(callAccepted && !callEnded);
+    const networkStats = useNetworkQuality(peerConnection, isCallActive);
+
+    const { isSpeaking: isLocalSpeaking, level: localAudioLevel } = useAudioLevel(stream, isCallActive);
+    const { isSpeaking: isRemoteSpeaking } = useAudioLevel(remoteStream, isCallActive);
+
     const {
         isSaving: isAutoSaving,
         formatLastSaved,
@@ -170,7 +170,6 @@ const VideoCallContent: React.FC = () => {
         addNote: addAutoSavedNote
     } = useAutoSaveNotes(id);
 
-    // Notes Panel State
     const [isNotesOpen, setIsNotesOpen] = React.useState(false);
     const [noteTitle, setNoteTitle] = React.useState("");
     const [noteDescription, setNoteDescription] = React.useState("");
@@ -517,7 +516,7 @@ const VideoCallContent: React.FC = () => {
         }
 
         if (isScreenSharing) {
-            
+
             try {
                 if (stream) {
                     const camTrack = stream.getVideoTracks()[0];
@@ -545,7 +544,7 @@ const VideoCallContent: React.FC = () => {
             const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
             const screenTrack = screenStream.getVideoTracks()[0];
 
-            
+
             const senders = pc.getSenders();
             console.log('[SCREEN_SHARE] Senders:', senders.map(s => ({ kind: s.track?.kind, enabled: s.track?.enabled })));
             const videoSender = senders.find((s: RTCRtpSender) => s.track?.kind === 'video');
@@ -559,7 +558,7 @@ const VideoCallContent: React.FC = () => {
                 return;
             }
 
-          
+
             if (myVideo.current) {
                 myVideo.current.srcObject = screenStream;
             }
@@ -588,7 +587,7 @@ const VideoCallContent: React.FC = () => {
         }
     };
 
-    
+
     const handleFlipCamera = async () => {
         const newFacing = facingMode === 'user' ? 'environment' : 'user';
 
@@ -599,7 +598,6 @@ const VideoCallContent: React.FC = () => {
             });
             const newVideoTrack = newStream.getVideoTracks()[0];
 
-            // Replace track on peer connection
             const pc = peerConnection.current;
             if (pc) {
                 const senders = pc.getSenders();
@@ -609,16 +607,13 @@ const VideoCallContent: React.FC = () => {
                 }
             }
 
-            // Stop old video track
             if (stream) {
                 const oldVideoTrack = stream.getVideoTracks()[0];
                 if (oldVideoTrack) oldVideoTrack.stop();
-                // Replace track in existing stream so references stay valid
                 stream.removeTrack(stream.getVideoTracks()[0]);
                 stream.addTrack(newVideoTrack);
             }
 
-            // Update local preview
             if (myVideo.current) {
                 myVideo.current.srcObject = stream || newStream;
             }
@@ -626,7 +621,6 @@ const VideoCallContent: React.FC = () => {
             setFacingMode(newFacing);
             console.log('[FLIP_CAMERA] Switched to', newFacing);
         } catch (err: any) {
-            // Device may not support rear camera
             if (err.name === 'OverconstrainedError') {
                 toast.error('Rear camera not available on this device');
             } else {
@@ -640,34 +634,38 @@ const VideoCallContent: React.FC = () => {
         <div className="h-[100dvh] w-screen bg-[#0B1014] overflow-hidden font-sans flex flex-col relative selection:bg-[#00A1B0]/30">
 
 
-            {/* Reconnecting Alert */}
             {(connectionState === 'disconnected' || connectionState === 'failed' || connectionState === 'checking') && callAccepted && !callEnded && (
                 <ReconnectingAlert
-                    attempts={1} // We can enhance this later with real tracking
+                    attempts={1}
                     maxAttempts={5}
                 />
             )}
 
-            {/* Rejoin Call Banner removed to avoid redundancy with the central lobby button */}
-
-            {/* Remote Video - Full Screen Background */}
             <div className="absolute inset-0 bg-[#0B1014]">
                 {callAccepted && !callEnded ? (
-                    <video
-                        playsInline
-                        ref={userVideo}
-                        autoPlay
-                        className={`w-full h-full transition-all duration-300 ${isRemoteScreenShare ? 'object-contain bg-black' : 'object-cover'}`}
-                    />
+                    <div className="relative w-full h-full">
+                        <video
+                            playsInline
+                            ref={userVideo}
+                            autoPlay
+                            className={`w-full h-full transition-all duration-300 ${isRemoteScreenShare ? 'object-contain bg-black' : 'object-cover'}`}
+                        />
+                        {isRemoteSpeaking && (
+                            <div
+                                className="absolute inset-0 pointer-events-none z-10 transition-opacity duration-300"
+                                style={{
+                                    boxShadow: 'inset 0 0 30px rgba(0, 161, 176, 0.25), inset 0 0 60px rgba(0, 161, 176, 0.08)',
+                                    borderRadius: 'inherit',
+                                }}
+                            />
+                        )}
+                    </div>
                 ) : (
-                    /* Lobby Background - Simple blurred or dark */
                     <div className="w-full h-full flex items-center justify-center p-4 bg-[#0B1014]">
-                        {/* Empty background, waiting for Lobby Overlay */}
                     </div>
                 )}
             </div>
 
-            {/* Incoming Call Dialog */}
             <Dialog open={!!(incomingCall?.isReceivingCall)} onOpenChange={() => { }}>
                 <DialogContent className="sm:max-w-md bg-[#111418]/95 backdrop-blur-3xl border-white/5 p-8 rounded-[2.5rem] shadow-2xl">
                     <div className="flex flex-col items-center text-center">
@@ -710,10 +708,8 @@ const VideoCallContent: React.FC = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* Gradient Overlay for better readability */}
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none z-10"></div>
 
-            {/* Top Header — Glass Bar */}
             <AnimatePresence>
                 {(showControls || !callAccepted) && (
                     <motion.div
@@ -725,7 +721,6 @@ const VideoCallContent: React.FC = () => {
                     >
                         <Card className="bg-white/[0.04] backdrop-blur-2xl border border-white/[0.06] rounded-2xl shadow-2xl shadow-black/30 px-4 md:px-6 py-3">
                             <div className="flex items-center justify-between gap-2">
-                                {/* Back Button */}
                                 <TooltipProvider delayDuration={200}>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
@@ -745,19 +740,57 @@ const VideoCallContent: React.FC = () => {
                                     </Tooltip>
                                 </TooltipProvider>
 
-                                {/* Center — Name + Status */}
                                 <div className="flex flex-col items-center gap-1.5 min-w-0">
                                     <Badge variant="secondary" className="bg-[#00A1B0]/10 text-[#00A1B0] border border-[#00A1B0]/20 px-2.5 py-0.5 font-bold uppercase tracking-[0.15em] text-[9px] rounded-lg">
                                         {user?.role === 'doctor' ? 'Patient Session' : 'Doctor Session'}
                                     </Badge>
                                     {callAccepted && !callEnded ? (
-                                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 px-3 py-1 rounded-lg gap-2">
-                                            <span className="relative flex h-2 w-2">
-                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                            </span>
-                                            <span className="font-mono text-xs tracking-widest">{formatDuration(callDuration)}</span>
-                                        </Badge>
+                                        <div className="flex items-center gap-2">
+                                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 px-3 py-1 rounded-lg gap-2">
+                                                <span className="relative flex h-2 w-2">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                                </span>
+                                                <span className="font-mono text-xs tracking-widest">{formatDuration(callDuration)}</span>
+                                            </Badge>
+
+                                            <TooltipProvider delayDuration={200}>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <div className="flex items-end gap-[2px] h-5 px-1.5 cursor-default">
+                                                            {[1, 2, 3, 4].map((bar) => {
+                                                                const qualityMap = { excellent: 4, good: 3, fair: 2, poor: 1, unknown: 0 };
+                                                                const filledBars = qualityMap[networkStats.quality];
+                                                                const colorMap = {
+                                                                    excellent: 'bg-emerald-400',
+                                                                    good: 'bg-emerald-400',
+                                                                    fair: 'bg-amber-400',
+                                                                    poor: 'bg-red-400',
+                                                                    unknown: 'bg-gray-600',
+                                                                };
+                                                                const isFilled = bar <= filledBars;
+                                                                return (
+                                                                    <div
+                                                                        key={bar}
+                                                                        className={`w-[3px] rounded-full transition-all duration-500 ${isFilled ? colorMap[networkStats.quality] : 'bg-white/10'
+                                                                            }`}
+                                                                        style={{ height: `${bar * 4 + 2}px` }}
+                                                                    />
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="bottom" className="bg-[#1a1d22] text-white border-white/10 text-xs">
+                                                        <div className="space-y-1">
+                                                            <p className="font-semibold capitalize">{networkStats.quality} Connection</p>
+                                                            {networkStats.rtt !== null && <p className="text-gray-400">RTT: {networkStats.rtt}ms</p>}
+                                                            {networkStats.packetLoss !== null && <p className="text-gray-400">Packet Loss: {networkStats.packetLoss}%</p>}
+                                                            {networkStats.jitter !== null && <p className="text-gray-400">Jitter: {networkStats.jitter}ms</p>}
+                                                        </div>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        </div>
                                     ) : (
                                         <Badge variant="outline" className="bg-white/5 text-gray-400 border-white/10 px-3 py-1 rounded-lg gap-2">
                                             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
@@ -768,7 +801,6 @@ const VideoCallContent: React.FC = () => {
                                     )}
                                 </div>
 
-                                {/* Right Actions */}
                                 <div className="flex items-center gap-2">
                                     {isDoctor && sessionStatus === SESSION_STATUS.ENDED && (
                                         <div className="flex items-center gap-2">
@@ -818,7 +850,6 @@ const VideoCallContent: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* Notes Toggle Button (Doctor Only) - Positioned below header */}
             {isDoctor && (
                 <div className="absolute top-24 left-6 z-50">
                     <button
@@ -839,7 +870,6 @@ const VideoCallContent: React.FC = () => {
                 </div>
             )}
 
-            {/* Notes Panel (Doctor Only) */}
             <AnimatePresence>
                 {isDoctor && isNotesOpen && (
                     <motion.div
@@ -849,7 +879,6 @@ const VideoCallContent: React.FC = () => {
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                         className="absolute right-0 top-0 bottom-0 w-80 md:w-96 bg-[#111418]/95 backdrop-blur-xl border-l border-white/5 z-[60] flex flex-col shadow-2xl"
                     >
-                        {/* Panel Header */}
                         <div className="p-6 border-b border-white/5 bg-white/5">
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-3">
@@ -862,7 +891,6 @@ const VideoCallContent: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    {/* Auto-Save Indicator */}
                                     <AutoSaveIndicator
                                         isSaving={isAutoSaving}
                                         lastSavedText={formatLastSaved()}
@@ -878,7 +906,6 @@ const VideoCallContent: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Notes List */}
                         <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
                             {appointment?.doctorNotes && appointment.doctorNotes.length > 0 ? (
                                 [...appointment.doctorNotes].reverse().map((note: any, idx: number) => (
@@ -930,9 +957,7 @@ const VideoCallContent: React.FC = () => {
                             )}
                         </div>
 
-                        {/* Add New Note Input */}
                         <div className="p-6 bg-white/5 border-t border-white/5 space-y-4">
-                            {/* Category Selector */}
                             <div className="flex flex-wrap gap-2">
                                 {(['observation', 'diagnosis', 'medicine', 'lab_test'] as const).map((cat) => (
                                     <button
@@ -1022,7 +1047,6 @@ const VideoCallContent: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* Local Video — Premium Floating PIP */}
             <motion.div
                 drag={!!(callAccepted && !callEnded)}
                 dragConstraints={{ left: -100, right: 100, top: -100, bottom: 100 }}
@@ -1045,12 +1069,24 @@ const VideoCallContent: React.FC = () => {
                 transition={{ type: "spring", stiffness: 200, damping: 26 }}
                 className={`absolute z-40 overflow-hidden bg-[#1C1F24] transition-all
                    ${callAccepted && !callEnded
-                        ? 'cursor-move border-2 border-white/[0.08] shadow-2xl rounded-xl ring-1 ring-[#00A1B0]/10'
+                        ? 'cursor-move shadow-2xl rounded-xl'
                         : 'flex flex-col items-center justify-center p-0 md:p-0 aspect-video md:aspect-auto border-none shadow-none'
                     }`}
-                style={{ position: 'absolute' }}
+                style={{
+                    position: 'absolute',
+                    border: callAccepted && !callEnded
+                        ? isLocalSpeaking
+                            ? `2px solid rgba(0, 161, 176, ${0.4 + localAudioLevel * 0.6})`
+                            : '2px solid rgba(255,255,255,0.08)'
+                        : 'none',
+                    boxShadow: callAccepted && !callEnded && isLocalSpeaking
+                        ? `0 0 ${12 + localAudioLevel * 16}px rgba(0, 161, 176, ${0.15 + localAudioLevel * 0.25}), 0 20px 60px -15px rgba(0,0,0,0.6)`
+                        : callAccepted && !callEnded
+                            ? '0 20px 60px -15px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,161,176,0.15)'
+                            : 'none',
+                    transition: 'border 0.2s ease, box-shadow 0.3s ease',
+                }}
             >
-                {/* Video Element */}
                 <div className={`relative w-full h-full ${!callAccepted ? 'rounded-xl overflow-hidden' : ''}`}>
                     <video
                         playsInline
@@ -1060,7 +1096,6 @@ const VideoCallContent: React.FC = () => {
                         className={`w-full h-full object-cover ${isCamOff ? 'hidden' : 'block'}`}
                     />
 
-                    {/* Fallback Avatar */}
                     {isCamOff && (
                         <div className="w-full h-full flex items-center justify-center bg-[#1C1F24]">
                             <div className={`rounded-full bg-[#2A2F32] flex items-center justify-center ${!callAccepted ? 'w-32 h-32' : 'w-12 h-12'}`}>
@@ -1069,11 +1104,9 @@ const VideoCallContent: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Lobby Controls Overlay — show before call starts OR after call ended */}
                     {(!callAccepted || callEnded) && (
                         <div className="absolute inset-x-0 bottom-0 p-6 md:p-8 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col items-center gap-5">
 
-                            {/* Title */}
                             <div className="text-center">
                                 <h3 className="text-white text-xl md:text-2xl font-bold mb-1 tracking-tight">
                                     {callEnded
@@ -1089,7 +1122,6 @@ const VideoCallContent: React.FC = () => {
                                 </p>
                             </div>
 
-                            {/* Mic/Cam Toggles */}
                             <div className="flex items-center gap-3">
                                 <Button
                                     onClick={toggleMute}
@@ -1109,7 +1141,6 @@ const VideoCallContent: React.FC = () => {
                                 </Button>
                             </div>
 
-                            {/* Start/Rejoin Button */}
                             <div className="w-full max-w-xs">
                                 {canRejoin ? (
                                     <Button
@@ -1148,7 +1179,6 @@ const VideoCallContent: React.FC = () => {
                     )}
                 </div>
 
-                {/* PIP Muted Indicator */}
                 {isMuted && callAccepted && !callEnded && (
                     <div className="absolute bottom-2.5 right-2.5 w-7 h-7 rounded-lg bg-red-500/90 backdrop-blur-sm flex items-center justify-center shadow-lg shadow-red-500/20 ring-1 ring-red-400/20">
                         <MicOff className="text-white" size={12} />
@@ -1156,7 +1186,6 @@ const VideoCallContent: React.FC = () => {
                 )}
             </motion.div>
 
-            {/* Bottom Control Bar — Premium Glass */}
             <AnimatePresence>
                 {callAccepted && !callEnded && (
                     <motion.div
@@ -1171,7 +1200,6 @@ const VideoCallContent: React.FC = () => {
                                 <TooltipProvider delayDuration={150}>
                                     <div className="flex items-center justify-center gap-2 md:gap-4">
 
-                                        {/* Camera Toggle */}
                                         <Tooltip>
                                             <TooltipTrigger asChild>
                                                 <motion.button
@@ -1195,7 +1223,6 @@ const VideoCallContent: React.FC = () => {
                                             <TooltipContent side="top" className="bg-[#1a1d22] text-white border-white/10 text-xs">{isCamOff ? 'Turn On Camera' : 'Turn Off Camera'}</TooltipContent>
                                         </Tooltip>
 
-                                        {/* Microphone Toggle */}
                                         <Tooltip>
                                             <TooltipTrigger asChild>
                                                 <motion.button
@@ -1219,7 +1246,6 @@ const VideoCallContent: React.FC = () => {
                                             <TooltipContent side="top" className="bg-[#1a1d22] text-white border-white/10 text-xs">{isMuted ? 'Unmute' : 'Mute'}</TooltipContent>
                                         </Tooltip>
 
-                                        {/* Screen Share */}
                                         <Tooltip>
                                             <TooltipTrigger asChild>
                                                 <motion.button
@@ -1239,7 +1265,6 @@ const VideoCallContent: React.FC = () => {
                                             <TooltipContent side="top" className="bg-[#1a1d22] text-white border-white/10 text-xs">{isScreenSharing ? 'Stop Sharing' : 'Share Screen'}</TooltipContent>
                                         </Tooltip>
 
-                                        {/* Flip Camera — mobile only */}
                                         {isMobile && (
                                             <Tooltip>
                                                 <TooltipTrigger asChild>
@@ -1258,7 +1283,6 @@ const VideoCallContent: React.FC = () => {
                                             </Tooltip>
                                         )}
 
-                                        {/* End Call — Destructive */}
                                         <Tooltip>
                                             <TooltipTrigger asChild>
                                                 <motion.button
@@ -1282,7 +1306,6 @@ const VideoCallContent: React.FC = () => {
                                             <TooltipContent side="top" className="bg-red-600 text-white border-red-500/30 text-xs font-semibold">End Call</TooltipContent>
                                         </Tooltip>
 
-                                        {/* Fullscreen Toggle */}
                                         <Tooltip>
                                             <TooltipTrigger asChild>
                                                 <motion.button
@@ -1303,7 +1326,6 @@ const VideoCallContent: React.FC = () => {
                                             <TooltipContent side="top" className="bg-[#1a1d22] text-white border-white/10 text-xs">{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</TooltipContent>
                                         </Tooltip>
 
-                                        {/* More Options Dropdown */}
                                         <DropdownMenu>
                                             <Tooltip>
                                                 <TooltipTrigger asChild>
@@ -1346,7 +1368,6 @@ const VideoCallContent: React.FC = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-            {/* Premium Time Over Modal for Patient */}
             <AnimatePresence>
                 {isTimeOver && !isDoctor && sessionStatus !== SESSION_STATUS.CONTINUED_BY_DOCTOR && sessionStatus !== SESSION_STATUS.ENDED && (
                     <motion.div
@@ -1388,7 +1409,6 @@ const VideoCallContent: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* Improved Doctor Session Controls (Modal Style) when time is over */}
             <AnimatePresence>
                 {isTimeOver && isDoctor && sessionStatus === SESSION_STATUS.WAITING_FOR_DOCTOR && (
                     <motion.div
@@ -1435,7 +1455,6 @@ const VideoCallContent: React.FC = () => {
             </AnimatePresence>
 
 
-            {/* End Session Confirmation Dialog for Doctor */}
             <Dialog open={endSessionDialogOpen} onOpenChange={setEndSessionDialogOpen}>
                 <DialogContent className="sm:max-w-md bg-[#111418]/95 backdrop-blur-xl border-white/5 p-8 rounded-[2.5rem] shadow-2xl">
                     <DialogHeader className="mb-8 text-center">
