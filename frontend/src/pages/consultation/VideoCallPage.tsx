@@ -7,7 +7,7 @@ import {
     PhoneOff,
     User, ChevronLeft,
     Maximize, Minimize,
-    Settings,
+    Settings, ScreenShare, MoreVertical,
     ClipboardList, Clock, StickyNote, Plus, BookOpen, X
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -29,6 +29,14 @@ import { Badge } from "../../components/ui/badge";
 import { Card } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../components/ui/tooltip";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu";
 
 import { useSocket } from '../../context/SocketContext';
 import { toast } from 'sonner';
@@ -57,17 +65,16 @@ const VideoCallContent: React.FC = () => {
         incomingCall,
         connectionState,
         remoteStream,
-        stream
+        stream,
+        peerConnection
     } = useVideoCall();
     const user = useSelector(selectCurrentUser) as any;
 
-    // Fix for remote video/audio attachment
     useEffect(() => {
         if (userVideo.current && remoteStream) {
             console.log("[VIDEO_CALL] Attaching remoteStream to video element", remoteStream.getTracks().length, "tracks");
             userVideo.current.srcObject = remoteStream;
 
-            // Explicitly call play to handle some browser auto-play restrictions
             userVideo.current.play().catch(e => console.warn("[VIDEO_CALL] Auto-play prevented:", e));
         }
     }, [remoteStream, userVideo]);
@@ -93,12 +100,40 @@ const VideoCallContent: React.FC = () => {
     const [extensionCount, setExtensionCount] = React.useState(0);
     const [endSessionDialogOpen, setEndSessionDialogOpen] = React.useState(false);
 
-    // Call Rejoin Hook
     const {
         canRejoin,
         isRejoining,
-        rejoinCall: handleRejoinCall
+        rejoinCall: handleRejoinCall,
+        checkCanRejoin
     } = useCallRejoin(id);
+
+   
+    useEffect(() => {
+        if (callEnded) {
+            
+            const delays = [1000, 3000, 6000];
+            const timers = delays.map((delay) =>
+                setTimeout(() => {
+                    console.log(`[REJOIN] Checking rejoin status (delay: ${delay}ms)`);
+                    checkCanRejoin();
+                }, delay)
+            );
+            return () => timers.forEach(clearTimeout);
+        }
+    }, [callEnded, checkCanRejoin]);
+
+    // Screen share state
+    const [isScreenSharing, setIsScreenSharing] = React.useState(false);
+
+    // Cleanup screen share when call ends
+    useEffect(() => {
+        if (callEnded && isScreenSharing) {
+            setIsScreenSharing(false);
+            if (stream && myVideo.current) {
+                myVideo.current.srcObject = stream;
+            }
+        }
+    }, [callEnded, isScreenSharing, stream, myVideo]);
 
     // Auto-Save Notes Hook
     const {
@@ -426,8 +461,106 @@ const VideoCallContent: React.FC = () => {
         };
     }, [socket, appointment?._id, id, isDoctor, navigate, leaveCall, updateSessionStatus]);
 
-    const toggleFullscreen = () => {
-        setIsFullscreen(!isFullscreen);
+    const toggleFullscreen = async () => {
+        try {
+            if (!document.fullscreenElement) {
+                await document.documentElement.requestFullscreen();
+                setIsFullscreen(true);
+            } else {
+                await document.exitFullscreen();
+                setIsFullscreen(false);
+            }
+        } catch (err) {
+            console.warn('[FULLSCREEN] Error toggling fullscreen:', err);
+        }
+    };
+
+    // Sync isFullscreen state with browser fullscreen changes (e.g. pressing Esc)
+    useEffect(() => {
+        const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+        document.addEventListener('fullscreenchange', onFsChange);
+        return () => document.removeEventListener('fullscreenchange', onFsChange);
+    }, []);
+
+    const handleScreenShare = async () => {
+        const pc = peerConnection.current;
+        if (!pc) {
+            console.warn('[SCREEN_SHARE] No peer connection available');
+            toast.error('No active connection for screen sharing');
+            return;
+        }
+
+        if (isScreenSharing) {
+            // Stop screen sharing — restore camera track
+            try {
+                if (stream) {
+                    const camTrack = stream.getVideoTracks()[0];
+                    if (camTrack) {
+                        const senders = pc.getSenders();
+                        const videoSender = senders.find((s: RTCRtpSender) => s.track?.kind === 'video') ||
+                            senders.find((s: RTCRtpSender) => s.track === null && s !== senders.find(a => a.track?.kind === 'audio'));
+                        if (videoSender) {
+                            await videoSender.replaceTrack(camTrack);
+                            console.log('[SCREEN_SHARE] Restored camera track');
+                        }
+                        if (myVideo.current) {
+                            myVideo.current.srcObject = stream;
+                        }
+                    }
+                }
+                setIsScreenSharing(false);
+            } catch (err) {
+                console.error('[SCREEN_SHARE] Error stopping screen share:', err);
+            }
+            return;
+        }
+
+        try {
+            const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+            const screenTrack = screenStream.getVideoTracks()[0];
+
+            // Replace video track on peer connection
+            const senders = pc.getSenders();
+            console.log('[SCREEN_SHARE] Senders:', senders.map(s => ({ kind: s.track?.kind, enabled: s.track?.enabled })));
+            const videoSender = senders.find((s: RTCRtpSender) => s.track?.kind === 'video');
+            if (videoSender) {
+                await videoSender.replaceTrack(screenTrack);
+                console.log('[SCREEN_SHARE] Screen track replaced successfully');
+            } else {
+                console.warn('[SCREEN_SHARE] No video sender found — cannot share screen');
+                screenStream.getTracks().forEach(t => t.stop());
+                toast.error('Could not start screen sharing');
+                return;
+            }
+
+            // Show screen share in local preview
+            if (myVideo.current) {
+                myVideo.current.srcObject = screenStream;
+            }
+
+            setIsScreenSharing(true);
+            toast.success('Screen sharing started');
+
+            // When user clicks browser "Stop sharing" button
+            screenTrack.onended = async () => {
+                if (stream) {
+                    const camTrack = stream.getVideoTracks()[0];
+                    if (camTrack && videoSender) {
+                        await videoSender.replaceTrack(camTrack);
+                    }
+                    if (myVideo.current) {
+                        myVideo.current.srcObject = stream;
+                    }
+                }
+                setIsScreenSharing(false);
+                toast.info('Screen sharing stopped');
+            };
+        } catch (err: any) {
+            if (err.name !== 'NotAllowedError') {
+                console.error('[SCREEN_SHARE] Error:', err);
+                toast.error('Failed to start screen sharing');
+            }
+        }
     };
 
     return (
@@ -507,85 +640,107 @@ const VideoCallContent: React.FC = () => {
             {/* Gradient Overlay for better readability */}
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none z-10"></div>
 
-            {/* Top Header */}
+            {/* Top Header — Glass Bar */}
             <AnimatePresence>
                 {(showControls || !callAccepted) && (
                     <motion.div
                         initial={{ y: -100, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: -100, opacity: 0 }}
-                        className="absolute top-0 left-0 right-0 z-50 px-4 md:px-6 py-4 md:py-6"
+                        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+                        className="absolute top-0 left-0 right-0 z-50 px-3 md:px-6 py-3 md:py-5"
                     >
-                        <div className="flex items-center justify-between">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                    leaveCall();
-                                    navigate(-1);
-                                }}
-                                className="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/5 text-white hover:bg-white/10 transition-all shadow-xl"
-                            >
-                                <ChevronLeft size={20} />
-                            </Button>
-
-                            <div className="flex flex-col items-center">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Badge variant="secondary" className="bg-[#00A1B0]/10 text-[#00A1B0] border-[#00A1B0]/20 px-2 py-0.5 font-black uppercase tracking-[0.2em] text-[9px]">
-                                        {user?.role === 'doctor' ? 'Patient' : 'Doctor'}
-                                    </Badge>
-                                </div>
-                                {callAccepted && !callEnded ? (
-                                    <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-white/5 backdrop-blur-md border border-white/5">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                                        <span className="text-white font-mono text-sm tracking-widest">{formatDuration(callDuration)}</span>
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center gap-2 text-gray-400">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-white/20"></div>
-                                        <span className="text-[11px] font-black uppercase tracking-widest">
-                                            {incomingCall?.isReceivingCall ? 'Ringing...' : 'Initializing Session'}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                {isDoctor && sessionStatus === SESSION_STATUS.ENDED && (
-                                    <div className="flex items-center gap-2">
-                                        {!isPostConsultationWindowOpen ? (
+                        <Card className="bg-white/[0.04] backdrop-blur-2xl border border-white/[0.06] rounded-2xl shadow-2xl shadow-black/30 px-4 md:px-6 py-3">
+                            <div className="flex items-center justify-between gap-2">
+                                {/* Back Button */}
+                                <TooltipProvider delayDuration={200}>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
                                             <Button
-                                                onClick={handleEnablePostChat}
-                                                size="sm"
-                                                className="hidden md:flex items-center gap-2 rounded-xl px-4 h-10 bg-amber-500 hover:bg-amber-600 text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-amber-500/20"
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => {
+                                                    leaveCall();
+                                                    navigate(-1);
+                                                }}
+                                                className="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.06] text-white/70 hover:text-white transition-all duration-200 hover:scale-105"
                                             >
-                                                <ClipboardList className="h-4 w-4" />
-                                                Request Test
+                                                <ChevronLeft size={18} />
                                             </Button>
-                                        ) : (
-                                            <div className="hidden md:flex items-center gap-2 px-4 h-10 bg-amber-500/10 text-amber-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-500/20 backdrop-blur-sm">
-                                                <Clock className="h-3.5 w-3.5" /> Follow-up Open
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                {isDoctor && sessionStatus !== SESSION_STATUS.ENDED && (
-                                    <Button
-                                        onClick={() => setEndSessionDialogOpen(true)}
-                                        className="h-10 px-5 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 font-black uppercase text-[10px] tracking-widest rounded-xl transition-all backdrop-blur-sm"
-                                    >
-                                        Wind Up
-                                    </Button>
-                                )}
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/5 text-white hover:bg-white/10 transition-all shadow-xl"
-                                >
-                                    <Settings size={20} />
-                                </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="bottom" className="bg-[#1a1d22] text-white border-white/10 text-xs">Go Back</TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+
+                                {/* Center — Name + Status */}
+                                <div className="flex flex-col items-center gap-1.5 min-w-0">
+                                    <Badge variant="secondary" className="bg-[#00A1B0]/10 text-[#00A1B0] border border-[#00A1B0]/20 px-2.5 py-0.5 font-bold uppercase tracking-[0.15em] text-[9px] rounded-lg">
+                                        {user?.role === 'doctor' ? 'Patient Session' : 'Doctor Session'}
+                                    </Badge>
+                                    {callAccepted && !callEnded ? (
+                                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 px-3 py-1 rounded-lg gap-2">
+                                            <span className="relative flex h-2 w-2">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                            </span>
+                                            <span className="font-mono text-xs tracking-widest">{formatDuration(callDuration)}</span>
+                                        </Badge>
+                                    ) : (
+                                        <Badge variant="outline" className="bg-white/5 text-gray-400 border-white/10 px-3 py-1 rounded-lg gap-2">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                                            <span className="text-[10px] font-semibold uppercase tracking-wider">
+                                                {incomingCall?.isReceivingCall ? 'Ringing…' : 'Connecting…'}
+                                            </span>
+                                        </Badge>
+                                    )}
+                                </div>
+
+                                {/* Right Actions */}
+                                <div className="flex items-center gap-2">
+                                    {isDoctor && sessionStatus === SESSION_STATUS.ENDED && (
+                                        <div className="flex items-center gap-2">
+                                            {!isPostConsultationWindowOpen ? (
+                                                <Button
+                                                    onClick={handleEnablePostChat}
+                                                    size="sm"
+                                                    className="hidden md:flex items-center gap-2 rounded-xl px-4 h-9 bg-amber-500 hover:bg-amber-400 text-white font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02]"
+                                                >
+                                                    <ClipboardList className="h-3.5 w-3.5" />
+                                                    Request Test
+                                                </Button>
+                                            ) : (
+                                                <div className="hidden md:flex items-center gap-2 px-3 h-9 bg-amber-500/10 text-amber-400 rounded-xl text-[10px] font-bold uppercase tracking-widest border border-amber-500/20 backdrop-blur-sm">
+                                                    <Clock className="h-3.5 w-3.5" /> Follow-up Open
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {isDoctor && sessionStatus !== SESSION_STATUS.ENDED && (
+                                        <Button
+                                            onClick={() => setEndSessionDialogOpen(true)}
+                                            size="sm"
+                                            className="h-9 px-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-bold uppercase text-[10px] tracking-widest rounded-xl transition-all backdrop-blur-sm hover:scale-[1.02]"
+                                        >
+                                            Wind Up
+                                        </Button>
+                                    )}
+                                    <TooltipProvider delayDuration={200}>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.06] text-white/70 hover:text-white transition-all duration-200 hover:scale-105"
+                                                >
+                                                    <Settings size={18} />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="bottom" className="bg-[#1a1d22] text-white border-white/10 text-xs">Settings</TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                </div>
                             </div>
-                        </div>
+                        </Card>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -794,7 +949,7 @@ const VideoCallContent: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* Local Video - Floating Picture in Picture OR Lobby View */}
+            {/* Local Video — Premium Floating PIP */}
             <motion.div
                 drag={!!(callAccepted && !callEnded)}
                 dragConstraints={{ left: -100, right: 100, top: -100, bottom: 100 }}
@@ -803,21 +958,21 @@ const VideoCallContent: React.FC = () => {
                 animate={{
                     opacity: 1,
                     scale: 1,
-                    top: callAccepted && !callEnded ? (isMobile ? 80 : 32) : "50%",
-                    right: callAccepted && !callEnded ? (isMobile ? 16 : 32) : "50%",
+                    top: callAccepted && !callEnded ? (isMobile ? 90 : 28) : "50%",
+                    right: callAccepted && !callEnded ? (isMobile ? 12 : 28) : "50%",
                     x: callAccepted && !callEnded ? 0 : "50%",
                     y: callAccepted && !callEnded ? 0 : "-50%",
-                    width: callAccepted && !callEnded ? (isMobile ? "110px" : "220px") : (isMobile ? "100%" : "100%"), // Larger PIP on desktop
-                    height: callAccepted && !callEnded ? (isMobile ? "160px" : "320px") : (isMobile ? "100%" : "100%"),
-                    maxWidth: callAccepted && !callEnded ? "300px" : "800px",
-                    maxHeight: callAccepted && !callEnded ? "400px" : "600px",
-                    borderRadius: callAccepted && !callEnded ? "1.5rem" : "2rem",
-                    boxShadow: callAccepted && !callEnded ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : "none",
+                    width: callAccepted && !callEnded ? (isMobile ? "100px" : "200px") : (isMobile ? "100%" : "100%"),
+                    height: callAccepted && !callEnded ? (isMobile ? "140px" : "280px") : (isMobile ? "100%" : "100%"),
+                    maxWidth: callAccepted && !callEnded ? "280px" : "800px",
+                    maxHeight: callAccepted && !callEnded ? "380px" : "600px",
+                    borderRadius: callAccepted && !callEnded ? "1rem" : "1.5rem",
+                    boxShadow: callAccepted && !callEnded ? "0 20px 60px -15px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 161, 176, 0.15)" : "none",
                 }}
-                transition={{ type: "spring", stiffness: 180, damping: 24 }}
+                transition={{ type: "spring", stiffness: 200, damping: 26 }}
                 className={`absolute z-40 overflow-hidden bg-[#1C1F24] transition-all
                    ${callAccepted && !callEnded
-                        ? 'cursor-move border border-white/10 shadow-xl rounded-xl'
+                        ? 'cursor-move border-2 border-white/[0.08] shadow-2xl rounded-xl ring-1 ring-[#00A1B0]/10'
                         : 'flex flex-col items-center justify-center p-0 md:p-0 aspect-video md:aspect-auto border-none shadow-none'
                     }`}
                 style={{ position: 'absolute' }}
@@ -841,32 +996,44 @@ const VideoCallContent: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Lobby Controls Overlay */}
-                    {!callAccepted && !callEnded && (
-                        <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/80 to-transparent flex flex-col items-center gap-6">
+                    {/* Lobby Controls Overlay — show before call starts OR after call ended */}
+                    {(!callAccepted || callEnded) && (
+                        <div className="absolute inset-x-0 bottom-0 p-6 md:p-8 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col items-center gap-5">
 
                             {/* Title */}
                             <div className="text-center">
-                                <h3 className="text-white text-2xl font-bold mb-1">
-                                    {user?.role === 'doctor' ? 'Patient Consultation' : 'Doctor Consultation'}
+                                <h3 className="text-white text-xl md:text-2xl font-bold mb-1 tracking-tight">
+                                    {callEnded
+                                        ? 'Call Disconnected'
+                                        : user?.role === 'doctor' ? 'Patient Consultation' : 'Doctor Consultation'
+                                    }
                                 </h3>
-                                <p className="text-[#8696A0] text-sm">Check your audio and video before joining</p>
+                                <p className="text-gray-400 text-xs md:text-sm font-medium">
+                                    {callEnded
+                                        ? 'You can rejoin the session or start a new call'
+                                        : 'Check your audio and video before joining'
+                                    }
+                                </p>
                             </div>
 
                             {/* Mic/Cam Toggles */}
-                            <div className="flex items-center gap-4">
-                                <button
+                            <div className="flex items-center gap-3">
+                                <Button
                                     onClick={toggleMute}
-                                    className={`p-4 rounded-full transition-colors ${isMuted ? 'bg-[#DC3545] text-white' : 'bg-[#2A2F32] text-white hover:bg-[#32383c]'}`}
+                                    size="icon"
+                                    variant="ghost"
+                                    className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl transition-all duration-200 border ${isMuted ? 'bg-red-500/90 border-red-400/30 text-white hover:bg-red-500' : 'bg-white/[0.06] border-white/[0.08] text-white hover:bg-white/[0.12]'}`}
                                 >
                                     {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
-                                </button>
-                                <button
+                                </Button>
+                                <Button
                                     onClick={toggleCam}
-                                    className={`p-4 rounded-full transition-colors ${isCamOff ? 'bg-[#DC3545] text-white' : 'bg-[#2A2F32] text-white hover:bg-[#32383c]'}`}
+                                    size="icon"
+                                    variant="ghost"
+                                    className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl transition-all duration-200 border ${isCamOff ? 'bg-red-500/90 border-red-400/30 text-white hover:bg-red-500' : 'bg-white/[0.06] border-white/[0.08] text-white hover:bg-white/[0.12]'}`}
                                 >
                                     {isCamOff ? <VideoOff size={20} /> : <Video size={20} />}
-                                </button>
+                                </Button>
                             </div>
 
                             {/* Start/Rejoin Button */}
@@ -881,15 +1048,15 @@ const VideoCallContent: React.FC = () => {
                                             }
                                         }}
                                         disabled={isRejoining || !stream}
-                                        className="w-full h-12 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold text-lg"
+                                        className="w-full h-13 bg-amber-500 hover:bg-amber-400 text-white rounded-2xl font-bold text-sm uppercase tracking-wider shadow-xl shadow-amber-500/25 transition-all duration-200 active:scale-[0.97] disabled:opacity-50"
                                     >
                                         {isRejoining ? (
                                             <div className="flex items-center gap-2">
-                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                                Rejoining...
+                                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                Rejoining…
                                             </div>
                                         ) : !stream ? (
-                                            "Awaiting Camera..."
+                                            "Awaiting Camera…"
                                         ) : (
                                             "Rejoin Session"
                                         )}
@@ -898,9 +1065,9 @@ const VideoCallContent: React.FC = () => {
                                     <Button
                                         onClick={() => targetUserId && callUser(targetUserId)}
                                         disabled={!targetUserId || !stream}
-                                        className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-lg"
+                                        className="w-full h-13 bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl font-bold text-sm uppercase tracking-wider shadow-xl shadow-emerald-500/25 transition-all duration-200 active:scale-[0.97] disabled:opacity-50"
                                     >
-                                        {!targetUserId ? 'Loading...' : !stream ? 'Awaiting Camera...' : 'Start Consultation'}
+                                        {!targetUserId ? 'Loading…' : !stream ? 'Awaiting Camera…' : callEnded ? 'Reconnect' : 'Start Consultation'}
                                     </Button>
                                 )}
                             </div>
@@ -908,104 +1075,176 @@ const VideoCallContent: React.FC = () => {
                     )}
                 </div>
 
-                {/* PIP Muted Indicator (Only in Call) */}
+                {/* PIP Muted Indicator */}
                 {isMuted && callAccepted && !callEnded && (
-                    <div className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-[#DC3545] flex items-center justify-center">
-                        <MicOff className="text-white" size={11} />
+                    <div className="absolute bottom-2.5 right-2.5 w-7 h-7 rounded-lg bg-red-500/90 backdrop-blur-sm flex items-center justify-center shadow-lg shadow-red-500/20 ring-1 ring-red-400/20">
+                        <MicOff className="text-white" size={12} />
                     </div>
                 )}
             </motion.div>
 
-            {/* Bottom Control Bar - Only for Active Calls */}
+            {/* Bottom Control Bar — Premium Glass */}
             <AnimatePresence>
                 {callAccepted && !callEnded && (
                     <motion.div
                         initial={{ y: 200, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 200, opacity: 0 }}
+                        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
                         className="absolute bottom-0 left-0 right-0 z-50"
                     >
-                        {/* Main Controls - Responsive */}
-                        <div className="bg-gradient-to-t from-[#0B1014] via-[#0B1014]/90 to-transparent pt-16 pb-8 px-6">
-                            <div className="flex items-center justify-center gap-4 md:gap-8 max-w-screen-md mx-auto">
+                        <div className="bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-20 pb-6 md:pb-8 px-4 md:px-6">
+                            <Card className="max-w-lg mx-auto bg-white/[0.05] backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-2xl shadow-black/40 px-3 md:px-6 py-3 md:py-4">
+                                <TooltipProvider delayDuration={150}>
+                                    <div className="flex items-center justify-center gap-2 md:gap-4">
 
-                                {/* Camera Toggle */}
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={toggleCam}
-                                    className="flex flex-col items-center gap-2 group"
-                                >
-                                    <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center transition-all duration-200 border border-white/5 ${isCamOff
-                                        ? 'bg-[#DC3545] text-white'
-                                        : 'bg-[#2A2F32] group-hover:bg-[#3A3F42] text-white'
-                                        }`}>
-                                        {isCamOff ? (
-                                            <VideoOff size={isMobile ? 20 : 24} />
-                                        ) : (
-                                            <Video size={isMobile ? 20 : 24} />
-                                        )}
-                                    </div>
-                                    <span className="text-[#8696A0] text-[10px] md:text-xs font-medium">Camera</span>
-                                </motion.button>
+                                        {/* Camera Toggle */}
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <motion.button
+                                                    whileHover={{ scale: 1.08 }}
+                                                    whileTap={{ scale: 0.92 }}
+                                                    onClick={toggleCam}
+                                                    className="group"
+                                                >
+                                                    <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all duration-200 border ${isCamOff
+                                                        ? 'bg-red-500/90 border-red-400/30 text-white shadow-lg shadow-red-500/20'
+                                                        : 'bg-white/[0.06] border-white/[0.08] text-white/80 hover:bg-white/[0.12] hover:text-white'
+                                                        }`}>
+                                                        {isCamOff ? (
+                                                            <VideoOff size={isMobile ? 18 : 20} />
+                                                        ) : (
+                                                            <Video size={isMobile ? 18 : 20} />
+                                                        )}
+                                                    </div>
+                                                </motion.button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" className="bg-[#1a1d22] text-white border-white/10 text-xs">{isCamOff ? 'Turn On Camera' : 'Turn Off Camera'}</TooltipContent>
+                                        </Tooltip>
 
-                                {/* Microphone Toggle */}
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={toggleMute}
-                                    className="flex flex-col items-center gap-2 group"
-                                >
-                                    <div className={`w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center transition-all duration-200 border border-white/5 ${isMuted
-                                        ? 'bg-[#DC3545] text-white'
-                                        : 'bg-[#2A2F32] group-hover:bg-[#3A3F42] text-white'
-                                        }`}>
-                                        {isMuted ? (
-                                            <MicOff size={isMobile ? 20 : 24} />
-                                        ) : (
-                                            <Mic size={isMobile ? 20 : 24} />
-                                        )}
-                                    </div>
-                                    <span className="text-[#8696A0] text-[10px] md:text-xs font-medium">Mic</span>
-                                </motion.button>
+                                        {/* Microphone Toggle */}
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <motion.button
+                                                    whileHover={{ scale: 1.08 }}
+                                                    whileTap={{ scale: 0.92 }}
+                                                    onClick={toggleMute}
+                                                    className="group"
+                                                >
+                                                    <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all duration-200 border ${isMuted
+                                                        ? 'bg-red-500/90 border-red-400/30 text-white shadow-lg shadow-red-500/20'
+                                                        : 'bg-white/[0.06] border-white/[0.08] text-white/80 hover:bg-white/[0.12] hover:text-white'
+                                                        }`}>
+                                                        {isMuted ? (
+                                                            <MicOff size={isMobile ? 18 : 20} />
+                                                        ) : (
+                                                            <Mic size={isMobile ? 18 : 20} />
+                                                        )}
+                                                    </div>
+                                                </motion.button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" className="bg-[#1a1d22] text-white border-white/10 text-xs">{isMuted ? 'Unmute' : 'Mute'}</TooltipContent>
+                                        </Tooltip>
 
-                                {/* End Call - Larger */}
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => {
-                                        if (isDoctor && sessionStatus !== SESSION_STATUS.ENDED) {
-                                            setEndSessionDialogOpen(true);
-                                        } else {
-                                            leaveCall();
-                                            navigate(-1);
-                                        }
-                                    }}
-                                    className="flex flex-col items-center gap-2 mx-2 md:mx-4"
-                                >
-                                    <div className="w-16 h-16 md:w-20 md:h-20 rounded-3xl bg-[#DC3545] hover:bg-[#C82333] flex items-center justify-center shadow-lg transition-all">
-                                        <PhoneOff size={isMobile ? 28 : 32} className="text-white transform rotate-0" />
-                                    </div>
-                                    <span className="text-[#DC3545] text-[10px] md:text-xs font-bold uppercase mt-1">End Call</span>
-                                </motion.button>
+                                        {/* Screen Share */}
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <motion.button
+                                                    whileHover={{ scale: 1.08 }}
+                                                    whileTap={{ scale: 0.92 }}
+                                                    onClick={handleScreenShare}
+                                                    className="hidden md:block group"
+                                                >
+                                                    <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all duration-200 border ${isScreenSharing
+                                                        ? 'bg-primary/90 border-primary/30 text-white shadow-lg shadow-primary/20'
+                                                        : 'bg-white/[0.06] border-white/[0.08] text-white/80 hover:bg-white/[0.12] hover:text-white'
+                                                        }`}>
+                                                        <ScreenShare size={20} />
+                                                    </div>
+                                                </motion.button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" className="bg-[#1a1d22] text-white border-white/10 text-xs">{isScreenSharing ? 'Stop Sharing' : 'Share Screen'}</TooltipContent>
+                                        </Tooltip>
 
-                                {/* Fullscreen Toggle */}
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={toggleFullscreen}
-                                    className="hidden md:flex flex-col items-center gap-2 group"
-                                >
-                                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-[#2A2F32] flex items-center justify-center border border-white/5 group-hover:bg-[#3A3F42] transition-all">
-                                        {isFullscreen ? (
-                                            <Minimize size={20} className="text-white" />
-                                        ) : (
-                                            <Maximize size={20} className="text-white" />
-                                        )}
+                                        {/* End Call — Destructive */}
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <motion.button
+                                                    whileHover={{ scale: 1.08 }}
+                                                    whileTap={{ scale: 0.92 }}
+                                                    onClick={() => {
+                                                        if (isDoctor && sessionStatus !== SESSION_STATUS.ENDED) {
+                                                            setEndSessionDialogOpen(true);
+                                                        } else {
+                                                            leaveCall();
+                                                            navigate(-1);
+                                                        }
+                                                    }}
+                                                    className="mx-1 md:mx-2"
+                                                >
+                                                    <div className="w-14 h-12 md:w-[4.5rem] md:h-14 rounded-2xl bg-red-500 hover:bg-red-400 flex items-center justify-center shadow-xl shadow-red-500/30 transition-all duration-200">
+                                                        <PhoneOff size={isMobile ? 22 : 24} className="text-white" />
+                                                    </div>
+                                                </motion.button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" className="bg-red-600 text-white border-red-500/30 text-xs font-semibold">End Call</TooltipContent>
+                                        </Tooltip>
+
+                                        {/* Fullscreen Toggle */}
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <motion.button
+                                                    whileHover={{ scale: 1.08 }}
+                                                    whileTap={{ scale: 0.92 }}
+                                                    onClick={toggleFullscreen}
+                                                    className="hidden md:block group"
+                                                >
+                                                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all duration-200 border bg-white/[0.06] border-white/[0.08] text-white/80 hover:bg-white/[0.12] hover:text-white">
+                                                        {isFullscreen ? (
+                                                            <Minimize size={20} />
+                                                        ) : (
+                                                            <Maximize size={20} />
+                                                        )}
+                                                    </div>
+                                                </motion.button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" className="bg-[#1a1d22] text-white border-white/10 text-xs">{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</TooltipContent>
+                                        </Tooltip>
+
+                                        {/* More Options Dropdown */}
+                                        <DropdownMenu>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <motion.button
+                                                            whileHover={{ scale: 1.08 }}
+                                                            whileTap={{ scale: 0.92 }}
+                                                            className="group"
+                                                        >
+                                                            <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all duration-200 border bg-white/[0.06] border-white/[0.08] text-white/80 hover:bg-white/[0.12] hover:text-white">
+                                                                <MoreVertical size={isMobile ? 18 : 20} />
+                                                            </div>
+                                                        </motion.button>
+                                                    </DropdownMenuTrigger>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="top" className="bg-[#1a1d22] text-white border-white/10 text-xs">More Options</TooltipContent>
+                                            </Tooltip>
+                                            <DropdownMenuContent side="top" align="end" className="bg-[#1a1d22]/95 backdrop-blur-2xl border-white/10 text-white rounded-xl shadow-2xl min-w-[180px] mb-2">
+                                                <DropdownMenuItem onClick={toggleFullscreen} className="gap-2 text-sm cursor-pointer hover:bg-white/10 rounded-lg focus:bg-white/10 focus:text-white">
+                                                    {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
+                                                    {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator className="bg-white/10" />
+                                                <DropdownMenuItem className="gap-2 text-sm cursor-pointer hover:bg-white/10 rounded-lg focus:bg-white/10 focus:text-white">
+                                                    <Settings size={16} />
+                                                    Settings
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+
                                     </div>
-                                    <span className="text-[#8696A0] text-xs font-medium">Screen</span>
-                                </motion.button>
-                            </div>
+                                </TooltipProvider>
+                            </Card>
                         </div>
                     </motion.div>
                 )}

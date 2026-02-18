@@ -25,6 +25,7 @@ interface VideoCallContextType {
     incomingCall: any;
     connectionState: RTCIceConnectionState;
     remoteStream: MediaStream | null;
+    peerConnection: React.RefObject<RTCPeerConnection | null>;
 }
 
 const VideoCallContext = createContext<VideoCallContextType | undefined>(undefined);
@@ -353,7 +354,8 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             toggleCam,
             incomingCall,
             connectionState,
-            remoteStream
+            remoteStream,
+            peerConnection: connectionRef
         }}>
             {children}
         </VideoCallContext.Provider>
