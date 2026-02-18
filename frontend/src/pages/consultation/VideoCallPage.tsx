@@ -7,7 +7,7 @@ import {
     PhoneOff,
     User, ChevronLeft,
     Maximize, Minimize,
-    Settings, ScreenShare, MoreVertical,
+    Settings, ScreenShare, MoreVertical, SwitchCamera,
     ClipboardList, Clock, StickyNote, Plus, BookOpen, X
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -107,10 +107,10 @@ const VideoCallContent: React.FC = () => {
         checkCanRejoin
     } = useCallRejoin(id);
 
-   
+
     useEffect(() => {
         if (callEnded) {
-            
+
             const delays = [1000, 3000, 6000];
             const timers = delays.map((delay) =>
                 setTimeout(() => {
@@ -124,6 +124,10 @@ const VideoCallContent: React.FC = () => {
 
     // Screen share state
     const [isScreenSharing, setIsScreenSharing] = React.useState(false);
+    // Track whether the remote user is sharing their screen (for object-fit)
+    const [isRemoteScreenShare, setIsRemoteScreenShare] = React.useState(false);
+    // Camera facing mode for flip camera
+    const [facingMode, setFacingMode] = React.useState<'user' | 'environment'>('user');
 
     // Cleanup screen share when call ends
     useEffect(() => {
@@ -134,6 +138,29 @@ const VideoCallContent: React.FC = () => {
             }
         }
     }, [callEnded, isScreenSharing, stream, myVideo]);
+
+    // Detect if remote video has landscape aspect ratio (screen share)
+    useEffect(() => {
+        if (!remoteStream) {
+            setIsRemoteScreenShare(false);
+            return;
+        }
+        const videoTrack = remoteStream.getVideoTracks()[0];
+        if (!videoTrack) return;
+
+        const checkAspect = () => {
+            const settings = videoTrack.getSettings();
+            if (settings.width && settings.height) {
+                // Screen shares are typically wider than tall
+                setIsRemoteScreenShare(settings.width > settings.height * 1.5);
+            }
+        };
+
+        // Check immediately and re-check periodically (track may change dimensions)
+        checkAspect();
+        const interval = setInterval(checkAspect, 2000);
+        return () => clearInterval(interval);
+    }, [remoteStream]);
 
     // Auto-Save Notes Hook
     const {
@@ -475,7 +502,6 @@ const VideoCallContent: React.FC = () => {
         }
     };
 
-    // Sync isFullscreen state with browser fullscreen changes (e.g. pressing Esc)
     useEffect(() => {
         const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
         document.addEventListener('fullscreenchange', onFsChange);
@@ -491,7 +517,7 @@ const VideoCallContent: React.FC = () => {
         }
 
         if (isScreenSharing) {
-            // Stop screen sharing — restore camera track
+            
             try {
                 if (stream) {
                     const camTrack = stream.getVideoTracks()[0];
@@ -519,7 +545,7 @@ const VideoCallContent: React.FC = () => {
             const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
             const screenTrack = screenStream.getVideoTracks()[0];
 
-            // Replace video track on peer connection
+            
             const senders = pc.getSenders();
             console.log('[SCREEN_SHARE] Senders:', senders.map(s => ({ kind: s.track?.kind, enabled: s.track?.enabled })));
             const videoSender = senders.find((s: RTCRtpSender) => s.track?.kind === 'video');
@@ -533,7 +559,7 @@ const VideoCallContent: React.FC = () => {
                 return;
             }
 
-            // Show screen share in local preview
+          
             if (myVideo.current) {
                 myVideo.current.srcObject = screenStream;
             }
@@ -541,7 +567,6 @@ const VideoCallContent: React.FC = () => {
             setIsScreenSharing(true);
             toast.success('Screen sharing started');
 
-            // When user clicks browser "Stop sharing" button
             screenTrack.onended = async () => {
                 if (stream) {
                     const camTrack = stream.getVideoTracks()[0];
@@ -559,6 +584,54 @@ const VideoCallContent: React.FC = () => {
             if (err.name !== 'NotAllowedError') {
                 console.error('[SCREEN_SHARE] Error:', err);
                 toast.error('Failed to start screen sharing');
+            }
+        }
+    };
+
+    
+    const handleFlipCamera = async () => {
+        const newFacing = facingMode === 'user' ? 'environment' : 'user';
+
+        try {
+            const newStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { exact: newFacing } },
+                audio: false
+            });
+            const newVideoTrack = newStream.getVideoTracks()[0];
+
+            // Replace track on peer connection
+            const pc = peerConnection.current;
+            if (pc) {
+                const senders = pc.getSenders();
+                const videoSender = senders.find((s: RTCRtpSender) => s.track?.kind === 'video');
+                if (videoSender) {
+                    await videoSender.replaceTrack(newVideoTrack);
+                }
+            }
+
+            // Stop old video track
+            if (stream) {
+                const oldVideoTrack = stream.getVideoTracks()[0];
+                if (oldVideoTrack) oldVideoTrack.stop();
+                // Replace track in existing stream so references stay valid
+                stream.removeTrack(stream.getVideoTracks()[0]);
+                stream.addTrack(newVideoTrack);
+            }
+
+            // Update local preview
+            if (myVideo.current) {
+                myVideo.current.srcObject = stream || newStream;
+            }
+
+            setFacingMode(newFacing);
+            console.log('[FLIP_CAMERA] Switched to', newFacing);
+        } catch (err: any) {
+            // Device may not support rear camera
+            if (err.name === 'OverconstrainedError') {
+                toast.error('Rear camera not available on this device');
+            } else {
+                console.error('[FLIP_CAMERA] Error:', err);
+                toast.error('Failed to switch camera');
             }
         }
     };
@@ -584,7 +657,7 @@ const VideoCallContent: React.FC = () => {
                         playsInline
                         ref={userVideo}
                         autoPlay
-                        className="w-full h-full object-cover"
+                        className={`w-full h-full transition-all duration-300 ${isRemoteScreenShare ? 'object-contain bg-black' : 'object-cover'}`}
                     />
                 ) : (
                     /* Lobby Background - Simple blurred or dark */
@@ -1153,18 +1226,37 @@ const VideoCallContent: React.FC = () => {
                                                     whileHover={{ scale: 1.08 }}
                                                     whileTap={{ scale: 0.92 }}
                                                     onClick={handleScreenShare}
-                                                    className="hidden md:block group"
+                                                    className="group"
                                                 >
                                                     <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all duration-200 border ${isScreenSharing
                                                         ? 'bg-primary/90 border-primary/30 text-white shadow-lg shadow-primary/20'
                                                         : 'bg-white/[0.06] border-white/[0.08] text-white/80 hover:bg-white/[0.12] hover:text-white'
                                                         }`}>
-                                                        <ScreenShare size={20} />
+                                                        <ScreenShare size={isMobile ? 18 : 20} />
                                                     </div>
                                                 </motion.button>
                                             </TooltipTrigger>
                                             <TooltipContent side="top" className="bg-[#1a1d22] text-white border-white/10 text-xs">{isScreenSharing ? 'Stop Sharing' : 'Share Screen'}</TooltipContent>
                                         </Tooltip>
+
+                                        {/* Flip Camera — mobile only */}
+                                        {isMobile && (
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <motion.button
+                                                        whileHover={{ scale: 1.08 }}
+                                                        whileTap={{ scale: 0.92 }}
+                                                        onClick={handleFlipCamera}
+                                                        className="group"
+                                                    >
+                                                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 border bg-white/[0.06] border-white/[0.08] text-white/80 hover:bg-white/[0.12] hover:text-white">
+                                                            <SwitchCamera size={18} />
+                                                        </div>
+                                                    </motion.button>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="top" className="bg-[#1a1d22] text-white border-white/10 text-xs">Flip Camera</TooltipContent>
+                                            </Tooltip>
+                                        )}
 
                                         {/* End Call — Destructive */}
                                         <Tooltip>
@@ -1230,6 +1322,11 @@ const VideoCallContent: React.FC = () => {
                                                 <TooltipContent side="top" className="bg-[#1a1d22] text-white border-white/10 text-xs">More Options</TooltipContent>
                                             </Tooltip>
                                             <DropdownMenuContent side="top" align="end" className="bg-[#1a1d22]/95 backdrop-blur-2xl border-white/10 text-white rounded-xl shadow-2xl min-w-[180px] mb-2">
+                                                <DropdownMenuItem onClick={handleFlipCamera} className="gap-2 text-sm cursor-pointer hover:bg-white/10 rounded-lg focus:bg-white/10 focus:text-white">
+                                                    <SwitchCamera size={16} />
+                                                    Flip Camera
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator className="bg-white/10" />
                                                 <DropdownMenuItem onClick={toggleFullscreen} className="gap-2 text-sm cursor-pointer hover:bg-white/10 rounded-lg focus:bg-white/10 focus:text-white">
                                                     {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
                                                     {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
