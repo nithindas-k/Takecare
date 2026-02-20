@@ -86,7 +86,7 @@ export class ReviewService implements IReviewService {
     }
 
     async getDoctorReviews(doctorId: string): Promise<IReview[]> {
-        // Safe check: if the ID is a User ID, find the corresponding Doctor ID
+       
         const doctorDoc = await this._doctorRepository.findByUserId(doctorId);
         const targetDoctorId = doctorDoc ? doctorDoc._id.toString() : doctorId;
 
@@ -153,7 +153,7 @@ export class ReviewService implements IReviewService {
             throw new AppError("Failed to update review with response", HttpStatus.INTERNAL_ERROR);
         }
 
-        // Notify patient
+       
         const doctorUser = await this._userRepository.findById(userId);
         const title = isUpdate ? "Doctor Updated Response to Review" : "Doctor Responded to Your Review";
         const message = isUpdate
