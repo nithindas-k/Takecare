@@ -41,7 +41,7 @@ export class PrescriptionService implements IPrescriptionService {
             throw new AppError("Prescription already exists for this appointment", HttpStatus.BAD_REQUEST);
         }
 
-        // Use provided signature, or fall back to doctor's saved signature
+       
         const signatureToUse = data.doctorSignature || doctor.signature || null;
 
         const prescriptionData = {

@@ -31,16 +31,12 @@ export class SocketService {
         });
 
         this._io.on("connection", (socket: Socket) => {
-            // console.log(`New socket connection: ${socket.id}`);
 
-            // WebRTC Events
             socket.on("call-user", ({ userToCall, signalData, from, name, isRejoin }) => {
-                // console.log(`Call from ${from} (${name}) to ${userToCall}`);
                 this._io?.to(userToCall).emit("call-user", { signal: signalData, from, name, isRejoin });
             });
 
             socket.on("answer-call", (data) => {
-                // console.log(`Call answered by ${socket.id} for ${data.to}`);
                 this._io?.to(data.to).emit("call-accepted", data.signal);
             });
 
@@ -66,13 +62,11 @@ export class SocketService {
             socket.on("join-chat", (roomId: string) => {
                 const room = String(roomId);
                 socket.join(room);
-                // console.log(`Socket [${socket.id}] joined room: ${room}`);
             });
 
             socket.on("leave-chat", (roomId: string) => {
                 const room = String(roomId);
                 socket.leave(room);
-                // console.log(`Socket [${socket.id}] left room: ${room}`);
             });
 
             socket.on("typing", ({ id, userId }: { id: string, userId: string }) => {
@@ -90,10 +84,8 @@ export class SocketService {
             socket.on("send-message", (data: Record<string, unknown>) => {
                 const roomId = String(data.conversationId || data.appointmentId || "");
                 if (roomId) {
-                    // console.log(`Socket [${socket.id}] sending message to room ${roomId}`);
 
                 } else {
-                    // console.error("Socket error: send-message received without roomId");
                 }
             });
 
