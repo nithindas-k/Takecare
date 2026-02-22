@@ -208,7 +208,6 @@ export class ScheduleService implements IScheduleService {
 
         const date = new Date(data.date);
 
-        // Prevent blocking if active appointments exist
         const startOfDay = new Date(date);
         startOfDay.setHours(0, 0, 0, 0);
         const endOfDay = new Date(date);
