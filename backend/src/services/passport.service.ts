@@ -27,7 +27,6 @@ export class PassportService {
           accessToken: string,
           refreshToken: string,
           profile: Profile,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           done: any
         ) => {
           try {
@@ -73,7 +72,6 @@ export class PassportService {
               }
             }
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             return done(null, user as any);
           } catch (error) {
             return done(error as Error);
@@ -82,12 +80,10 @@ export class PassportService {
       )
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     passport.serializeUser((user: any, done: any) =>
       done(null, (user as IUserDocument)._id.toString())
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     passport.deserializeUser(async (id: string, done: any) => {
       const user = await this._userRepository.findById(id);
       done(null, user);

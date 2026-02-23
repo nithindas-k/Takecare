@@ -193,7 +193,7 @@ export class AuthService implements IAuthService {
       throw new UnauthorizedError("Incorrect old password");
     }
 
-    // Check if new password is same as old
+
     if (oldPassword === newPassword) {
       throw new UnauthorizedError("New password cannot be the same as old password");
     }
