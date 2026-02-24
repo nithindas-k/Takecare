@@ -237,7 +237,6 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
     ): Promise<IAppointmentDocument | null> {
 
         if (!Types.ObjectId.isValid(appointmentId)) {
-            // eslint-disable-next-line no-console
             console.warn(`[AppointmentRepository] Invalid ObjectId: ${appointmentId}`);
             return null;
         }
@@ -405,7 +404,6 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
 
         const totalPatients = earningsStats?.uniquePatients?.length || 0;
 
-        //Appointments Today
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
         const endOfDay = new Date();
