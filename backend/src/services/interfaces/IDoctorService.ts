@@ -88,7 +88,8 @@ export interface IDoctorService {
     userId: string,
     data: UpdateDoctorProfileDTO,
     profileImage?: Express.Multer.File,
-    removeProfileImage?: boolean
+    removeProfileImage?: boolean,
+    signatureImage?: Express.Multer.File
   ): Promise<DoctorProfileDTO>;
   getVerifiedDoctors(
     query?: string,

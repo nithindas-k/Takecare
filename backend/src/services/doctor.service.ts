@@ -113,7 +113,8 @@ export class DoctorService implements IDoctorService {
     userId: string,
     data: UpdateDoctorProfileDTO,
     profileImage?: Express.Multer.File,
-    removeProfileImage?: boolean
+    removeProfileImage?: boolean,
+    signatureImage?: Express.Multer.File
   ): Promise<DoctorProfileDTO> {
     DoctorValidator.validateProfileUpdate(data);
 
@@ -153,8 +154,10 @@ export class DoctorService implements IDoctorService {
     if (data.licenseNumber) doctorUpdates.licenseNumber = data.licenseNumber;
     if (data.about) doctorUpdates.about = data.about;
 
-
-    if (data.signature) {
+    // Prefer uploaded signature image (Cloudinary URL) over raw base64 in DTO
+    if (signatureImage) {
+      doctorUpdates.signature = signatureImage.path;
+    } else if (data.signature) {
       doctorUpdates.signature = data.signature;
     } else if (data.removeSignature) {
       doctorUpdates.signature = null;

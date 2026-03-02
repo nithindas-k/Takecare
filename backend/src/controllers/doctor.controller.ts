@@ -117,6 +117,10 @@ export class DoctorController implements IDoctorController {
         }
       }
 
+      // Normalise removeSignature which may arrive as a boolean or a string
+      const removeSignatureFlag =
+        bodyData.removeSignature === true || bodyData.removeSignature === "true";
+
       const dto: UpdateDoctorProfileDTO = {
         name: bodyData.name ? String(bodyData.name) : undefined,
         phone: bodyData.phone ? String(bodyData.phone) : undefined,
@@ -131,13 +135,25 @@ export class DoctorController implements IDoctorController {
         qualifications: bodyData.qualifications && (Array.isArray(bodyData.qualifications) || String(bodyData.qualifications).trim()) ? (Array.isArray(bodyData.qualifications) ? bodyData.qualifications : JSON.parse(String(bodyData.qualifications))) : undefined,
         about: bodyData.about ? String(bodyData.about) : undefined,
         signature: bodyData.signature ? String(bodyData.signature) : undefined,
-        removeSignature: bodyData.removeSignature === 'true',
+        removeSignature: removeSignatureFlag,
       };
 
-      const profileImage = req.file;
+      // Files: profile image and optional signature image
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+      const profileImage =
+        (Array.isArray((files as any)?.profileImage) && (files as any).profileImage[0]) ||
+        (req as any).file;
+      const signatureImage =
+        Array.isArray((files as any)?.signatureImage) ? (files as any).signatureImage[0] : undefined;
       const removeProfileImage = req.body.removeProfileImage === 'true';
 
-      const result = await this._doctorService.updateProfile(userId, dto, profileImage, removeProfileImage);
+      const result = await this._doctorService.updateProfile(
+        userId,
+        dto,
+        profileImage,
+        removeProfileImage,
+        signatureImage
+      );
 
       sendSuccess(res, result, MESSAGES.PROFILE_UPDATED, STATUS.OK);
     } catch (error: unknown) {

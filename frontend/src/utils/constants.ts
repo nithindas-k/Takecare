@@ -33,7 +33,8 @@ export const DOCTOR_API_ROUTES = {
   RESET_PASSWORD: "/auth/reset-password",
   VERIFICATION: "/doctors/verification",
   SUBMIT_VERIFICATION: "/doctors/submit-verification",
-  PROFILE: "/users/profile",
+  // Doctor profile should use the doctors router, not users
+  PROFILE: "/doctors/profile",
   SCHEDULE: "/doctors/schedule",
   SCHEDULE_BY_ID: (doctorId: string): string => `/doctors/schedule/${doctorId}`,
   BLOCK_DATE: (doctorId?: string): string => doctorId ? `/doctors/schedule/${doctorId}/block-date` : "/doctors/schedule/block-date",

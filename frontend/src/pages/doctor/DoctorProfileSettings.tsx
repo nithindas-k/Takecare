@@ -68,6 +68,7 @@ const DoctorProfileSettings: React.FC = () => {
   // Signature states
   const [signature, setSignature] = useState<string | null>(null);
   const [removeSignature, setRemoveSignature] = useState(false);
+  const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
@@ -293,18 +294,49 @@ const DoctorProfileSettings: React.FC = () => {
     setIsDrawing(false);
     const canvas = signatureCanvasRef.current;
     if (canvas) {
-      setSignature(canvas.toDataURL());
+      const dataUrl = canvas.toDataURL("image/png");
+      setSignature(dataUrl);
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], "signature.png", { type: "image/png" });
+          setSignatureFile(file);
+        }
+      }, "image/png");
     }
   };
 
-  const clearSignature = () => {
+  const clearSignature = async () => {
     const canvas = signatureCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    // Optimistically clear in UI
     setSignature(null);
+    setSignatureFile(null);
     setRemoveSignature(true);
+
+    try {
+      const additionalInformation = {
+        removeSignature: true,
+      };
+      const formData = new FormData();
+      formData.append("additionalInformation", JSON.stringify(additionalInformation));
+
+      const response = await doctorService.updateProfile(formData);
+      if (response?.success && response.data) {
+        dispatch(setUser({ ...response.data, _id: response.data.id || response.data._id }));
+        toast.success("Signature removed successfully");
+      } else {
+        toast.error(response?.message || "Failed to remove signature");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to remove signature");
+    }
   };
 
 
@@ -322,8 +354,8 @@ const DoctorProfileSettings: React.FC = () => {
         languages,
         qualifications,
         about,
-        signature: signature || undefined,
-        removeSignature: removeSignature
+        // Signature is now uploaded as a file; keep flag only
+        removeSignature: removeSignature,
       };
       console.log('Submitting signature:', signature ? signature.substring(0, 50) + '...' : 'null');
       const formData = new FormData();
@@ -333,6 +365,11 @@ const DoctorProfileSettings: React.FC = () => {
         formData.append("profileImage", profileImage);
       } else if (removeImage) {
         formData.append("removeProfileImage", "true");
+      }
+      if (signatureFile) {
+        formData.append("signatureImage", signatureFile);
+      } else if (removeSignature) {
+        formData.append("removeSignature", "true");
       }
       const response = await doctorService.updateProfile(formData);
       console.log('Update response:', response);
