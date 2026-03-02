@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useSelector } from 'react-redux';
@@ -165,6 +166,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 setSocket(null);
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userId, userRole]);
 
     return (

@@ -245,7 +245,7 @@ const PatientOTPVerify: React.FC = () => {
         } else {
           setServerError(response.message || "Invalid OTP.");
         }
-      } catch (e: unknown) {
+      } catch {
         setServerError("Verification failed. Please try again.");
       } finally {
         setSubmitting(false);

@@ -41,9 +41,10 @@ export const useCallRejoin = (appointmentId: string | undefined) => {
             toast.success('Rejoined call successfully!');
             setRejoinStatus({ canRejoin: false, session: null });
             return response.data;
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error rejoining call:', error);
-            toast.error(error.response?.data?.message || 'Failed to rejoin call');
+            const err = error as { response?: { data?: { message?: string } }; message?: string };
+            toast.error(err.response?.data?.message || err.message || 'Failed to rejoin call');
             return null;
         } finally {
             setIsRejoining(false);

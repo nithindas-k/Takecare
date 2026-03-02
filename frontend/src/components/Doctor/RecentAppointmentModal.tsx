@@ -27,6 +27,8 @@ const RecentAppointmentModal: React.FC<RecentAppointmentModalProps> = ({ isOpen,
             setAppointment(null);
             setPrescription(null);
         }
+        // we intentionally avoid adding fetchDetails to deps to prevent re-creation loops
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, appointmentId]);
 
     const fetchDetails = async () => {

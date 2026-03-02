@@ -235,7 +235,7 @@ const DoctorOTPVerify: React.FC = () => {
         } else {
           setServerMessage(response?.message || "Invalid OTP. Please try again.");
         }
-      } catch (e: unknown) {
+      } catch {
         setServerMessage("Verification failed. Please try again.");
       } finally {
         setSubmitting(false);
@@ -259,7 +259,7 @@ const DoctorOTPVerify: React.FC = () => {
       } else {
         setServerMessage(response?.message || "Could not resend OTP.");
       }
-    } catch (e: unknown) {
+    } catch {
       setServerMessage("Could not resend OTP.");
     } finally {
       setSubmitting(false);

@@ -48,8 +48,9 @@ const DoctorReviews: React.FC = () => {
             } else {
                 toast.error(res.message || "Failed to fetch reviews");
             }
-        } catch (e: any) {
-            toast.error(e.message || "Error fetching reviews");
+        } catch (e: unknown) {
+            const error = e as { message?: string };
+            toast.error(error.message || "Error fetching reviews");
         } finally {
             setLoading(false);
         }
@@ -78,7 +79,7 @@ const DoctorReviews: React.FC = () => {
             } else {
                 toast.error(res.message || "Failed to send response");
             }
-        } catch (error) {
+        } catch {
             toast.error("Error sending response");
         } finally {
             setIsSending(false);

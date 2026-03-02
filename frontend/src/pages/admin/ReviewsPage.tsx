@@ -72,7 +72,7 @@ const ReviewsPage: React.FC = () => {
             } else {
                 toast.error(res.message || "Failed to delete review");
             }
-        } catch (error) {
+        } catch {
             toast.error("Error deleting review");
         } finally {
             setDeleteId(null);

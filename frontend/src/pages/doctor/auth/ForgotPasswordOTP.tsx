@@ -196,7 +196,7 @@ const DoctorForgotPasswordOTP: React.FC = () => {
         } else {
           setServerError(response.message || "OTP verification failed");
         }
-      } catch (e: unknown) {
+      } catch {
         setServerError("Invalid OTP. Please try again.");
       } finally {
         setSubmitting(false);

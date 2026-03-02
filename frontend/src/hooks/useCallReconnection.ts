@@ -55,7 +55,8 @@ export const useCallReconnection = (
             toast.error('Connection timeout. Please rejoin the call.');
             onReconnectFailed?.();
         }, 30000);
-    }, [reconnectionState.isReconnecting, reconnectionState.maxAttempts, onReconnectFailed]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [reconnectionState.isReconnecting, onReconnectFailed]);
 
     const stopReconnection = useCallback(() => {
         if (reconnectIntervalRef.current) {

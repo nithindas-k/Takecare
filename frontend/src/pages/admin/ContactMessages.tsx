@@ -37,8 +37,9 @@ const ContactMessages: React.FC = () => {
             } else {
                 toast.error(res.message || "Failed to fetch messages");
             }
-        } catch (error: any) {
-            toast.error(error.message || "Error fetching messages");
+        } catch (error: unknown) {
+            const err = error as { message?: string };
+            toast.error(err.message || "Error fetching messages");
         } finally {
             setLoading(false);
         }
@@ -67,8 +68,9 @@ const ContactMessages: React.FC = () => {
             } else {
                 toast.error(res.message || "Failed to send reply");
             }
-        } catch (error: any) {
-            toast.error(error.message || "Error sending reply");
+        } catch (error: unknown) {
+            const err = error as { message?: string };
+            toast.error(err.message || "Error sending reply");
         } finally {
             setIsSending(false);
         }

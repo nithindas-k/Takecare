@@ -55,7 +55,7 @@ const AdminLogin: React.FC = () => {
             _id: user.id,
             name: user.name,
             email: user.email,
-            role: user.role as any,
+            role: user.role as 'patient' | 'doctor' | 'admin',
           }));
         }
         toast.success("Admin login successful!");

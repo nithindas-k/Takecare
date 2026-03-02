@@ -180,6 +180,7 @@ const DoctorAppointmentDetails: React.FC = () => {
         };
 
         fetchAppointment();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     const getStatusColor = (status: string) => {

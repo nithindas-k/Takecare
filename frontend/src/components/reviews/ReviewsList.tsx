@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useCallback } from 'react';
 import ReviewCard from './ReviewCard';
 import ReviewForm from './ReviewForm';

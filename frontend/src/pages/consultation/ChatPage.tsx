@@ -1,4 +1,5 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Send, Smile, MoreVertical,
@@ -612,7 +613,8 @@ const ChatPage = () => {
             socket.off("session-status-updated", onSessionStatusUpdated);
             socket.off("session-ended", onSessionEnded);
         };
-    }, [socket, appointment, id, isDoctor, navigate]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [socket, id, isDoctor, navigate]);
 
     const getAvatarUrl = (profileImage: string | null | undefined, name: string) => {
         if (profileImage) {

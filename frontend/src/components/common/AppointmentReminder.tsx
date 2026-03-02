@@ -95,8 +95,7 @@ const AppointmentReminder: React.FC = () => {
         fetchNextAppointment();
         const interval = setInterval(fetchNextAppointment, 60000 * 5);
         return () => clearInterval(interval);
-
-    }, [user?.id, user?.role]);
+    }, [user]);
 
 
     const [reminderStatus, setReminderStatus] = useState({ early: false, started: false });

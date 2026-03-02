@@ -115,7 +115,7 @@ const AdminAppointmentsListPage: React.FC = () => {
   const fetchAppointments = useCallback(async (currentPage: number) => {
     setLoading(true);
     try {
-      const filters: any = {};
+      const filters: Record<string, string> = {};
       if (debouncedSearch) filters.search = debouncedSearch;
       if (status !== "all") filters.status = status;
 
@@ -127,8 +127,9 @@ const AdminAppointmentsListPage: React.FC = () => {
       } else {
         toast.error(res?.message || "Failed to fetch appointments");
       }
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message || e?.message || "Error fetching appointments");
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string };
+      toast.error(err.response?.data?.message || err.message || "Error fetching appointments");
     }
     setLoading(false);
   }, [debouncedSearch, status, limit]);

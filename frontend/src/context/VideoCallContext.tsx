@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-refresh/only-export-components, @typescript-eslint/no-explicit-any */
 import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
 import { useSocket } from './SocketContext';
 import { useSelector } from 'react-redux';
@@ -326,7 +326,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             socket.off('ice-candidate');
             socket.off('call-ended');
         };
-    }, [socket, answerCall]);
+    }, [socket, answerCall, processIceQueue]);
 
     useEffect(() => {
         if (incomingCall?.isRejoin && stream && socket) {

@@ -213,7 +213,7 @@ const DoctorRegister: React.FC = () => {
   const handleGoogleSignIn = useCallback(() => {
     try {
       authService.doctorGoogleLogin();
-    } catch (error) {
+    } catch {
       setServerError("Failed to initiate Google sign-in.");
     }
   }, []);

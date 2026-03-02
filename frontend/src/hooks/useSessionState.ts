@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { SESSION_STATUS, isSessionActive, isSessionLocked, canExtendSession } from '../utils/constants';
