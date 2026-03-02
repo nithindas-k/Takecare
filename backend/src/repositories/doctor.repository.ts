@@ -199,7 +199,7 @@ export class DoctorRepository extends BaseRepository<IDoctorDocument> implements
     return await this.model.countDocuments({ verificationStatus: VerificationStatus.Approved });
   }
 
-  async searchDoctors(criteria: Record<string, any>): Promise<IDoctorDocument[]> {
+  async searchDoctors(criteria: Record<string, unknown>): Promise<IDoctorDocument[]> {
     return await this.model.find(criteria).populate("userId").exec();
   }
 

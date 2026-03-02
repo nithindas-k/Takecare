@@ -139,12 +139,14 @@ export class DoctorController implements IDoctorController {
       };
 
       // Files: profile image and optional signature image
-      const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
-      const profileImage =
-        (Array.isArray((files as any)?.profileImage) && (files as any).profileImage[0]) ||
-        (req as any).file;
-      const signatureImage =
-        Array.isArray((files as any)?.signatureImage) ? (files as any).signatureImage[0] : undefined;
+      type MulterFiles = { [fieldname: string]: Express.Multer.File[] };
+      const files =
+        req.files && !Array.isArray(req.files)
+          ? (req.files as MulterFiles)
+          : undefined;
+
+      const profileImage = files?.profileImage?.[0] ?? (req as Request & { file?: Express.Multer.File }).file;
+      const signatureImage = files?.signatureImage?.[0];
       const removeProfileImage = req.body.removeProfileImage === 'true';
 
       const result = await this._doctorService.updateProfile(

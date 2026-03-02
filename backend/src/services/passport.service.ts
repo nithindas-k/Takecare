@@ -1,5 +1,5 @@
 import passport from "passport";
-import { Strategy as GoogleStrategy, Profile } from "passport-google-oauth20";
+import { Strategy as GoogleStrategy, Profile, VerifyCallback } from "passport-google-oauth20";
 import { googleOAuthConfig } from "../configs/googleOAuth.config";
 import { IUserRepository } from "../repositories/interfaces/IUser.repository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
@@ -27,7 +27,7 @@ export class PassportService {
           accessToken: string,
           refreshToken: string,
           profile: Profile,
-          done: any
+          done: VerifyCallback
         ) => {
           try {
             const email = profile.emails?.[0]?.value;
@@ -72,7 +72,7 @@ export class PassportService {
               }
             }
 
-            return done(null, user as any);
+            return done(null, user as unknown as Express.User);
           } catch (error) {
             return done(error as Error);
           }
@@ -80,13 +80,15 @@ export class PassportService {
       )
     );
 
-    passport.serializeUser((user: any, done: any) =>
-      done(null, (user as IUserDocument)._id.toString())
-    );
+    passport.serializeUser((user, done) => {
+      const userDoc = user as unknown as IUserDocument;
+      done(null, userDoc._id.toString());
+    });
 
-    passport.deserializeUser(async (id: string, done: any) => {
-      const user = await this._userRepository.findById(id);
-      done(null, user);
+    passport.deserializeUser(async (id, done) => {
+      const userId = String(id);
+      const user = await this._userRepository.findById(userId);
+      done(null, user as unknown as Express.User);
     });
   }
 }

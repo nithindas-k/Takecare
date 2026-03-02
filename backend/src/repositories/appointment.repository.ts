@@ -237,7 +237,7 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
     ): Promise<IAppointmentDocument | null> {
 
         if (!Types.ObjectId.isValid(appointmentId)) {
-            console.warn(`[AppointmentRepository] Invalid ObjectId: ${appointmentId}`);
+            process.stderr.write(`[AppointmentRepository] Invalid ObjectId: ${appointmentId}\n`);
             return null;
         }
 

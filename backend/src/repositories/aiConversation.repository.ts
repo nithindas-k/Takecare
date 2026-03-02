@@ -16,17 +16,17 @@ export class AIConversationRepository implements IAIConversationRepository {
     }
 
     async findActiveByPatientId(patientId: string): Promise<IAIConversationDocument | null> {
-        return (await this.model
+        return await this.model
             .findOne({
                 patientId: new Types.ObjectId(patientId),
                 status: "active",
             })
             .sort({ lastActivity: -1 })
-            .lean()) as any;
+            .exec();
     }
 
     async findById(conversationId: string): Promise<IAIConversationDocument | null> {
-        return (await this.model.findById(conversationId).lean()) as any;
+        return await this.model.findById(conversationId).exec();
     }
 
     async addMessage(
@@ -35,7 +35,7 @@ export class AIConversationRepository implements IAIConversationRepository {
         content: string,
         recommendations?: Record<string, unknown>
     ): Promise<IAIConversationDocument | null> {
-        return (await this.model.findByIdAndUpdate(
+        return await this.model.findByIdAndUpdate(
             conversationId,
             {
                 $push: {
@@ -51,14 +51,14 @@ export class AIConversationRepository implements IAIConversationRepository {
                 },
             },
             { new: true }
-        ).lean()) as any;
+        ).exec();
     }
 
     async updateExtractedInfo(
         conversationId: string,
         extractedInfo: Record<string, unknown>
     ): Promise<IAIConversationDocument | null> {
-        return (await this.model.findByIdAndUpdate(
+        return await this.model.findByIdAndUpdate(
             conversationId,
             {
                 $set: {
@@ -67,7 +67,7 @@ export class AIConversationRepository implements IAIConversationRepository {
                 },
             },
             { new: true }
-        ).lean()) as any;
+        ).exec();
     }
 
     async addRecommendedDoctors(
@@ -75,7 +75,7 @@ export class AIConversationRepository implements IAIConversationRepository {
         doctorIds: string[]
     ): Promise<IAIConversationDocument | null> {
         const objectIds = doctorIds.map((id) => new Types.ObjectId(id));
-        return (await this.model.findByIdAndUpdate(
+        return await this.model.findByIdAndUpdate(
             conversationId,
             {
                 $addToSet: {
@@ -86,14 +86,14 @@ export class AIConversationRepository implements IAIConversationRepository {
                 },
             },
             { new: true }
-        ).lean()) as any;
+        ).exec();
     }
 
     async updateStatus(
         conversationId: string,
         status: "active" | "completed" | "abandoned"
     ): Promise<IAIConversationDocument | null> {
-        return (await this.model.findByIdAndUpdate(
+        return await this.model.findByIdAndUpdate(
             conversationId,
             {
                 $set: {
@@ -102,7 +102,7 @@ export class AIConversationRepository implements IAIConversationRepository {
                 },
             },
             { new: true }
-        ).lean()) as any;
+        ).exec();
     }
 
     async getConversationHistory(conversationId: string): Promise<{

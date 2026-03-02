@@ -84,8 +84,9 @@ export class SocketService {
             socket.on("send-message", (data: Record<string, unknown>) => {
                 const roomId = String(data.conversationId || data.appointmentId || "");
                 if (roomId) {
-
+                    socket.to(roomId).emit("receive-message", data);
                 } else {
+                    // No-op: we can't route without a room id
                 }
             });
 

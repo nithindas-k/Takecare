@@ -3,6 +3,7 @@ import { env } from "../configs/env";
 import { IAIMatchingService } from "./interfaces/IAIMatching.service";
 import { IAIConversationRepository } from "../repositories/interfaces/IAIConversation.repository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
+import type { IDoctorDocument } from "../types/doctor.type";
 import {
     AIChatRequestDTO,
     AIChatResponseDTO,
@@ -218,7 +219,7 @@ Would you like to consult any of these specialists, or perhaps describe your sym
             conversationId,
             "assistant",
             finalMessage,
-            recommendations as any 
+            recommendations as unknown as Record<string, unknown>
         );
 
         return {
@@ -260,8 +261,9 @@ Would you like to consult any of these specialists, or perhaps describe your sym
             if (!responseContent) throw new BadRequestError("No response from AI");
 
             return JSON.parse(responseContent);
-        } catch (error: any) {
-            console.error("CRITICAL: Error extracting patient info:", error.message || error);
+        } catch (error: unknown) {
+            const messageText = error instanceof Error ? error.message : String(error);
+            process.stderr.write(`CRITICAL: Error extracting patient info: ${messageText}\n`);
             return {
                 intent: "gather_info",
                 patient_concern: message,
@@ -272,7 +274,7 @@ Would you like to consult any of these specialists, or perhaps describe your sym
     }
 
     async scoreDoctors(
-        doctors: any[],
+        doctors: IDoctorDocument[],
         aiAnalysis: Record<string, unknown>
     ): Promise<DoctorMatchDTO[]> {
         try {
@@ -284,16 +286,23 @@ SYMPTOMS: ${Array.isArray(aiAnalysis.symptoms) ? aiAnalysis.symptoms.join(', ') 
 REQUIRED SPECIALTY: ${aiAnalysis.specialty_required}
 
 AVAILABLE DOCTORS:
-${JSON.stringify(doctors.map(d => ({
-                id: d._id,
-                name: d.userId?.name,
-                specialty: d.specialty,
-                experience: d.experienceYears,
-                rating: d.ratingAvg,
-                reviewCount: d.ratingCount,
-                qualifications: d.qualifications,
-                about: d.about
-            })), null, 2)}
+${JSON.stringify(
+                doctors.map(d => {
+                    const user = (d.userId as unknown as { name?: string }) || {};
+                    return {
+                        id: d._id.toString(),
+                        name: user.name ?? "Doctor",
+                        specialty: d.specialty,
+                        experience: d.experienceYears,
+                        rating: d.ratingAvg,
+                        reviewCount: d.ratingCount,
+                        qualifications: d.qualifications,
+                        about: d.about
+                    };
+                }),
+                null,
+                2
+            )}
 
 SCORING CRITERIA (0-100):
 1. Specialty Match (50 points)
@@ -305,46 +314,51 @@ Return JSON format: { "ranked_doctors": [{ "doctor_id": "id", "match_score": 95,
 `;
 
             const response = await this.groq.chat.completions.create({
-                messages: [{ role: 'user', content: scoringPrompt } as any],
+                messages: [{ role: "user", content: scoringPrompt }] as Groq.Chat.ChatCompletionMessageParam[],
                 model: "llama-3.3-70b-versatile",
                 temperature: 0.5,
                 response_format: { type: "json_object" }
             });
 
-            const scoringResult = JSON.parse(response.choices[0].message.content || '{"ranked_doctors":[]}');
+            const scoringResult = JSON.parse(response.choices[0].message.content || '{"ranked_doctors":[]}') as {
+                ranked_doctors: Array<{ doctor_id: string; match_score: number; match_reason: string }>;
+            };
 
-            return scoringResult.ranked_doctors.map((score: any) => {
-                const doctor = doctors.find(d => d._id.toString() === score.doctor_id);
-                if (!doctor) return null;
+            const mapped = scoringResult.ranked_doctors
+                .map((score): DoctorMatchDTO | null => {
+                    const doctor = doctors.find(d => d._id.toString() === score.doctor_id);
+                    if (!doctor) return null;
 
-                const user = doctor.userId as any; // Populated user object
+                    const user = (doctor.userId as unknown as { name?: string; profileImage?: string | null }) || {};
 
-                return {
-                    doctorId: doctor._id.toString(),
-                    name: user?.name,
-                    specialty: doctor.specialty,
-                    profileImage: user?.profileImage,
-                    matchScore: score.match_score,
-                    reasoning: score.match_reason,
-                    pros: [
-                        `${doctor.experienceYears} years experience`,
-                        `Rated ${doctor.ratingAvg}/5`,
-                    ],
-                };
-            }).filter(Boolean);
+                    return {
+                        doctorId: doctor._id.toString(),
+                        name: user.name ?? "Doctor",
+                        specialty: (doctor.specialty as string | undefined) ?? "General Physician",
+                        profileImage: user.profileImage ?? undefined,
+                        matchScore: score.match_score,
+                        reasoning: score.match_reason ?? "Recommended based on specialty and experience.",
+                        pros: [
+                            `${doctor.experienceYears ?? 0} years experience`,
+                            `Rated ${doctor.ratingAvg ?? 0}/5`,
+                        ],
+                    };
+                })
+                .filter((m): m is DoctorMatchDTO => m !== null);
 
-        } catch (error) {
-            console.error('Scoring error:', error);
+            return mapped;
+
+        } catch {
             // Fallback ranking
-            return doctors.map(d => {
-                const user = d.userId as any;
+            return doctors.map((d): DoctorMatchDTO => {
+                const user = (d.userId as unknown as { name?: string; profileImage?: string | null }) || {};
                 return {
                     doctorId: d._id.toString(),
-                    name: user?.name,
-                    specialty: d.specialty,
-                    profileImage: user?.profileImage,
+                    name: user.name ?? "Doctor",
+                    specialty: (d.specialty as string | undefined) ?? "General Physician",
+                    profileImage: user.profileImage ?? undefined,
                     matchScore: 80,
-                    reasoning: `Matched based on specialty: ${d.specialty}`,
+                    reasoning: `Matched based on specialty: ${String(d.specialty ?? "")}`,
                 };
             });
         }
@@ -385,13 +399,13 @@ CRITICAL RULES:
 
         try {
             const response = await this.groq.chat.completions.create({
-                messages: [{ role: 'user', content: prompt } as any],
+                messages: [{ role: "user", content: prompt } as Groq.Chat.ChatCompletionMessageParam],
                 model: "llama-3.3-70b-versatile",
                 temperature: 0.7,
             });
 
             return response.choices[0].message.content || 'I have found some excellent doctors for you.';
-        } catch (error) {
+        } catch {
             return `Based on your concern about ${aiAnalysis.patient_concern}, I have found some excellent ${aiAnalysis.specialty_required}s for you. You can see my top recommendations in the sidebar on the right.`;
         }
     }
