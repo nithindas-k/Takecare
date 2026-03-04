@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import gsap from 'gsap';
 import {
-    FaCheckCircle,
     FaStar,
     FaArrowRight,
     FaCheck,
@@ -323,20 +322,20 @@ const LandingPage: React.FC = () => {
                             <p className="text-gray-600 font-medium text-lg">Access India's top-rated doctors across all specialties. Instant booking, verified profiles, and secure consultations.</p>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
-                            <div className="relative flex-1 lg:w-[400px]">
-                                <FaSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+                            <div className="relative flex-1 lg:w-[350px]">
+                                <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
                                 <input
                                     type="text"
-                                    placeholder="Search by doctor name..."
-                                    className="w-full pl-12 pr-5 py-4 bg-white rounded-2xl border border-gray-200 focus:border-[#00A1B0] focus:ring-0 transition-all outline-none font-semibold text-gray-900 shadow-sm"
+                                    placeholder="Search by name..."
+                                    className="w-full pl-11 pr-4 py-3 bg-white rounded-xl border border-gray-200 focus:border-[#008f9c] focus:ring-0 transition-all outline-none font-semibold text-gray-700 text-sm shadow-sm"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
                             </div>
-                            <div className="w-full sm:w-64">
+                            <div className="w-full sm:w-56">
                                 <Select value={speciality} onValueChange={setSpeciality}>
-                                    <SelectTrigger className="w-full py-8 bg-white border-gray-200 rounded-2xl focus:ring-0 focus:border-[#00A1B0] font-bold text-gray-900 shadow-sm uppercase tracking-wider text-[11px]">
+                                    <SelectTrigger className="w-full py-6 bg-white border-gray-200 rounded-xl focus:ring-0 focus:border-[#008f9c] font-bold text-gray-700 shadow-sm uppercase tracking-wider text-[10px]">
                                         <SelectValue placeholder="All Specialities" />
                                     </SelectTrigger>
                                     <SelectContent className="bg-white z-[100] rounded-2xl border-gray-100 shadow-2xl">
@@ -353,27 +352,34 @@ const LandingPage: React.FC = () => {
                     </div>
 
                     {isLoading ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {[1, 2, 3, 4, 5, 6].map((i) => (
-                                <div key={i} className="bg-white rounded-3xl p-6 space-y-4">
-                                    <div className="flex items-center gap-4">
-                                        <Skeleton className="h-20 w-20 rounded-full" />
-                                        <div className="flex-1 space-y-2">
-                                            <Skeleton className="h-5 w-3/4" />
-                                            <Skeleton className="h-4 w-1/2" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                                <div key={i} className="bg-white rounded-2xl p-4 space-y-3 border border-gray-100 shadow-sm">
+                                    <div className="flex items-center gap-3">
+                                        <Skeleton className="h-14 w-14 rounded-xl" />
+                                        <div className="flex-1 space-y-1.5">
+                                            <Skeleton className="h-4 w-3/4 rounded" />
+                                            <Skeleton className="h-3 w-1/2 rounded" />
                                         </div>
                                     </div>
-                                    <Skeleton className="h-40 w-full rounded-2xl" />
-                                    <Skeleton className="h-10 w-full" />
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Skeleton className="h-12 rounded-xl" />
+                                        <Skeleton className="h-12 rounded-xl" />
+                                    </div>
+                                    <Skeleton className="h-10 w-full rounded-lg" />
                                 </div>
                             ))}
                         </div>
                     ) : doctors.length === 0 ? (
-                        <div className="bg-white rounded-3xl p-16 text-center border border-dashed border-gray-200">
-                            <p className="text-gray-400">No doctors matching your criteria were found.</p>
+                        <div className="bg-white rounded-2xl p-10 text-center border border-dashed border-gray-200">
+                            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <FaSearch className="w-5 h-5 text-gray-300" />
+                            </div>
+                            <h3 className="text-base font-bold text-gray-900 mb-1">No doctors found</h3>
+                            <p className="text-xs text-gray-500">Try adjusting your search or filters.</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
                             {doctors.map((doctor) => {
                                 const id = doctor._id || doctor.id;
                                 const ratingValue = doctor.ratingAvg || doctor.rating || 4.5;
@@ -384,60 +390,63 @@ const LandingPage: React.FC = () => {
                                 return (
                                     <div
                                         key={id}
-                                        className="group bg-white rounded-[40px] p-8 border border-gray-100 hover:border-[#00A1B0]/30 transition-all duration-500 flex flex-col shadow-sm hover:shadow-xl hover:shadow-gray-200/50"
+                                        className="group relative bg-white rounded-2xl p-4 border border-gray-100 hover:border-[#008f9c]/30 hover:shadow-md transition-all duration-300 flex flex-col"
                                     >
-                                        <div className="flex items-start gap-5 mb-8">
+                                        {/* compact Status Badge */}
+                                        <div className="absolute top-3 right-3 flex items-center gap-1 px-1.5 py-0.5 bg-green-50 rounded-full border border-green-100/50">
+                                            <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                            <span className="text-[8px] font-bold text-green-600 uppercase">Live</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 mb-4">
                                             <div className="relative shrink-0">
-                                                <div className="w-24 h-24 rounded-[32px] overflow-hidden bg-gray-50 border-2 border-white ring-1 ring-gray-100 group-hover:ring-[#00A1B0]/20 transition-all">
+                                                <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-50 border-2 border-white ring-1 ring-gray-100">
                                                     <img
                                                         src={getImageUrl(doctor?.image)}
                                                         alt={doctor?.name}
-                                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                                        className="w-full h-full object-cover"
                                                         onError={(e) => ((e.target as HTMLImageElement).src = "/doctor.png")}
                                                     />
                                                 </div>
-                                                <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-[#00A1B0] rounded-xl flex items-center justify-center border-2 border-white shadow-sm">
-                                                    <FaCheckCircle className="text-white w-3 h-3" />
-                                                </div>
                                             </div>
-                                            <div className="flex-1 min-w-0 pt-2">
-                                                <h3 className="text-2xl font-black text-gray-900 truncate tracking-tight mb-1 group-hover:text-[#00A1B0] transition-colors">{doctor?.name}</h3>
-                                                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#00A1B0]/10 text-[#00A1B0] text-[10px] font-black uppercase tracking-wider mb-4">
-                                                    {doctor?.speciality || 'Specialist'}
-                                                </div>
+
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="text-base font-bold text-gray-900 truncate tracking-tight mb-0.5">{doctor?.name}</h3>
+                                                <p className="text-[#00A1B0] text-[9px] font-black uppercase tracking-wider mb-1">{doctor?.speciality || 'Specialist'}</p>
+
                                                 <div className="flex items-center gap-2">
-                                                    <div className="flex items-center gap-0.5 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-100">
-                                                        <FaStar className="w-3.5 h-3.5 text-yellow-500 fill-current" />
-                                                        <span className="text-sm font-black text-yellow-700 leading-none">{ratingValue}</span>
+                                                    <div className="flex items-center gap-0.5 bg-yellow-50 px-1 py-0.5 rounded border border-yellow-100/50">
+                                                        <FaStar className="w-2.5 h-2.5 text-yellow-500 fill-current" />
+                                                        <span className="text-[10px] font-black text-yellow-700">{ratingValue}</span>
                                                     </div>
-                                                    <span className="text-[11px] font-bold text-gray-400 tracking-tight">{reviews} Reviews</span>
+                                                    <span className="text-[9px] font-bold text-gray-400">{reviews} reviews</span>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-4 mb-8">
-                                            <div className="p-4 bg-gray-50/50 rounded-3xl border border-gray-100">
-                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Expertise</p>
-                                                <p className="text-lg font-black text-gray-900 tracking-tight">{experience} Years</p>
+                                        <div className="grid grid-cols-2 gap-2 mb-4">
+                                            <div className="px-3 py-2 bg-gray-50/50 rounded-xl border border-gray-100/50">
+                                                <p className="text-[7px] text-gray-400 font-bold uppercase mb-0.5">Exp.</p>
+                                                <p className="text-xs font-black text-gray-900">{experience} Yrs</p>
                                             </div>
-                                            <div className="p-4 bg-[#00A1B0]/5 rounded-3xl border border-[#00A1B0]/10">
-                                                <p className="text-[10px] text-[#00A1B0]/60 font-bold uppercase tracking-wider mb-1">Consult Fee</p>
-                                                <p className="text-lg font-black text-[#00A1B0] tracking-tight">₹{fees}</p>
+                                            <div className="px-3 py-2 bg-[#00A1B0]/[0.02] rounded-xl border border-[#00A1B0]/10">
+                                                <p className="text-[7px] text-[#00A1B0]/60 font-bold uppercase mb-0.5">Fee</p>
+                                                <p className="text-xs font-black text-[#00A1B0]">₹{fees}</p>
                                             </div>
                                         </div>
 
-                                        <div className="mt-auto flex flex-col gap-3">
+                                        <div className="mt-auto flex flex-col gap-1.5">
                                             <button
                                                 onClick={() => handleBookNow(id)}
-                                                className="w-full py-5 bg-[#00A1B0] text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.25em] hover:bg-[#008f9c] transition-all active:scale-[0.98] shadow-md shadow-gray-200"
+                                                className="w-full py-2.5 bg-[#00A1B0] text-white rounded-lg font-black text-[9px] uppercase tracking-wider hover:bg-[#008f9c] transition-colors active:scale-[0.98]"
                                             >
-                                                Instant Booking
+                                                Book Now
                                             </button>
                                             <button
                                                 onClick={() => navigate(`/doctors/${id}`)}
-                                                className="w-full py-2 text-gray-400 font-bold hover:text-[#00A1B0] transition-all text-[11px] uppercase tracking-[0.15em]"
+                                                className="w-full py-1.5 text-gray-400 font-bold hover:text-[#00A1B0] transition-colors text-[9px] uppercase tracking-wider rounded-lg hover:bg-gray-50"
                                             >
-                                                Doctor Portfolio
+                                                Details
                                             </button>
                                         </div>
                                     </div>
