@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import gsap from 'gsap';
 import {
     FaCheckCircle,
@@ -10,15 +10,31 @@ import {
     FaVideo,
     FaShieldAlt,
     FaClock,
-    FaComments
+    FaComments,
+    FaSearch,
 } from 'react-icons/fa';
 import { Skeleton } from '../components/ui/skeleton';
 import LandingNavbar from '../components/common/LandingNavbar';
 import doctorService from '../services/doctorService';
 import { API_BASE_URL } from '../utils/constants';
-
+import { selectCurrentUser } from '../redux/user/userSlice';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "../components/ui/select";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from "../components/ui/dialog";
 
 const CountUp = ({ end, duration = 2, decimals = 0, suffix = '' }: { end: number, duration?: number, decimals?: number, suffix?: string }) => {
+    // ... (CountUp content remains same)
     const [count, setCount] = useState(0);
     const nodeRef = useRef(null);
     const hasAnimated = useRef(false);
@@ -62,20 +78,48 @@ const CountUp = ({ end, duration = 2, decimals = 0, suffix = '' }: { end: number
     return <span ref={nodeRef}>{count.toFixed(decimals)}{suffix}</span>;
 };
 
+interface Doctor {
+    id: string;
+    _id?: string;
+    name: string;
+    image?: string;
+    speciality: string;
+    rating?: number;
+    ratingAvg?: number;
+    reviews?: number;
+    ratingCount?: number;
+    fees?: number;
+    videoFees?: number;
+    VideoFees?: number;
+    experience?: number;
+    experienceYears?: number;
+}
+
 const LandingPage: React.FC = () => {
     const navigate = useNavigate();
+    const currentUser = useSelector(selectCurrentUser);
     const [stats, setStats] = useState({
         doctors: 0,
         patients: 0,
         appointments: 0
     });
-    const [featuredDoctors, setFeaturedDoctors] = useState<any[]>([]);
+    const [doctors, setDoctors] = useState<Doctor[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [speciality, setSpeciality] = useState('');
+    const [showLoginDialog, setShowLoginDialog] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-
             const statsResult = await doctorService.getLandingStats();
             if (statsResult?.success && statsResult?.data) {
                 setStats({
@@ -84,16 +128,21 @@ const LandingPage: React.FC = () => {
                     appointments: statsResult.data.appointments || 0
                 });
             }
-            const result = await doctorService.getAllDoctors({ page: 1, limit: 3 });
-            const list = result?.data?.doctors ?? result?.doctors ?? [];
 
-            setFeaturedDoctors(Array.isArray(list) ? list : []);
+            const result = await doctorService.getAllDoctors({
+                page: 1,
+                limit: 6,
+                query: debouncedSearch,
+                specialty: speciality === 'all' ? '' : speciality
+            });
+            const list = result?.data?.doctors ?? result?.doctors ?? [];
+            setDoctors(Array.isArray(list) ? list : []);
         } catch (err) {
             console.warn('Failed to load data', err);
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [debouncedSearch, speciality]);
 
     useEffect(() => {
         fetchData();
@@ -109,6 +158,14 @@ const LandingPage: React.FC = () => {
         if (imagePath.startsWith('http')) return imagePath;
         const cleanPath = imagePath.replace(/\\/g, '/');
         return `${API_BASE_URL}/${cleanPath}`;
+    };
+
+    const handleBookNow = (doctorId: string) => {
+        if (!currentUser) {
+            setShowLoginDialog(true);
+        } else {
+            navigate(`/doctors/${doctorId}`);
+        }
     };
 
     return (
@@ -140,14 +197,14 @@ const LandingPage: React.FC = () => {
 
                             <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-8">
                                 <button
-                                    onClick={() => navigate('/patient/register')}
+                                    onClick={() => document.getElementById('doctors-search')?.scrollIntoView({ behavior: 'smooth' })}
                                     className="group px-6 py-3 bg-[#00A1B0] text-white rounded-lg font-medium hover:bg-[#008f9c] transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#00A1B0]/20"
                                 >
                                     <span>Book Consultation</span>
                                     <FaArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                                 </button>
                                 <button
-                                    onClick={() => navigate('/doctors')}
+                                    onClick={() => document.getElementById('doctors-search')?.scrollIntoView({ behavior: 'smooth' })}
                                     className="px-6 py-3 bg-gray-50 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition-all"
                                 >
                                     Browse Doctors
@@ -257,122 +314,145 @@ const LandingPage: React.FC = () => {
                 </div>
             </section>
 
-            {/* Doctors - Ultra Premium Cards */}
-            <section className="py-12 md:py-16 px-4 md:px-6 bg-gray-50 fade-in">
+            {/* Find Your Doctor - Professional Search and Filter */}
+            <section id="doctors-search" className="py-24 px-4 md:px-6 bg-[#f8fafb] border-y border-gray-100 fade-in">
                 <div className="max-w-6xl mx-auto">
-                    <div className="text-center mb-12">
-                        <h2 className="text-3xl font-bold text-gray-900 mb-3">Featured Doctors</h2>
-                        <p className="text-gray-500">Meet our verified specialists</p>
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-16 gap-8">
+                        <div className="max-w-xl">
+                            <h2 className="text-4xl md:text-5xl font-black text-gray-900 mb-6 tracking-tight leading-tight">Expert Specialists</h2>
+                            <p className="text-gray-600 font-medium text-lg">Access India's top-rated doctors across all specialties. Instant booking, verified profiles, and secure consultations.</p>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+                            <div className="relative flex-1 lg:w-[400px]">
+                                <FaSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search by doctor name..."
+                                    className="w-full pl-12 pr-5 py-4 bg-white rounded-2xl border border-gray-200 focus:border-[#00A1B0] focus:ring-0 transition-all outline-none font-semibold text-gray-900 shadow-sm"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                            <div className="w-full sm:w-64">
+                                <Select value={speciality} onValueChange={setSpeciality}>
+                                    <SelectTrigger className="w-full py-8 bg-white border-gray-200 rounded-2xl focus:ring-0 focus:border-[#00A1B0] font-bold text-gray-900 shadow-sm uppercase tracking-wider text-[11px]">
+                                        <SelectValue placeholder="All Specialities" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-white z-[100] rounded-2xl border-gray-100 shadow-2xl">
+                                        <SelectItem value="all">All Specialities</SelectItem>
+                                        <SelectItem value="Cardiologist">Cardiologist</SelectItem>
+                                        <SelectItem value="Neurologist">Neurologist</SelectItem>
+                                        <SelectItem value="Dermatologist">Dermatologist</SelectItem>
+                                        <SelectItem value="Pediatrician">Pediatrician</SelectItem>
+                                        <SelectItem value="Psychologist">Psychologist</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
                     </div>
 
                     {isLoading ? (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {[1, 2, 3].map((i) => (
-                                <div key={i} className="bg-white rounded-3xl p-8 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {[1, 2, 3, 4, 5, 6].map((i) => (
+                                <div key={i} className="bg-white rounded-3xl p-6 space-y-4">
                                     <div className="flex items-center gap-4">
-                                        <Skeleton className="h-20 w-20 rounded-full shrink-0" />
+                                        <Skeleton className="h-20 w-20 rounded-full" />
                                         <div className="flex-1 space-y-2">
                                             <Skeleton className="h-5 w-3/4" />
                                             <Skeleton className="h-4 w-1/2" />
                                         </div>
                                     </div>
+                                    <Skeleton className="h-40 w-full rounded-2xl" />
                                     <Skeleton className="h-10 w-full" />
                                 </div>
                             ))}
                         </div>
-                    ) : featuredDoctors.length === 0 ? (
-                        <div className="bg-white rounded-3xl p-16 text-center">
-                            <p className="text-gray-400">No doctors available</p>
+                    ) : doctors.length === 0 ? (
+                        <div className="bg-white rounded-3xl p-16 text-center border border-dashed border-gray-200">
+                            <p className="text-gray-400">No doctors matching your criteria were found.</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {featuredDoctors.slice(0, 3).map((doctor) => {
-                                const id = (doctor as any)?.id || (doctor as any)?._id || (doctor as any)?.customId;
-                                const rating = Math.round(doctor?.rating ?? doctor?.ratingAvg ?? 0);
-                                const reviews = doctor?.reviews ?? doctor?.ratingCount ?? 0;
-                                const fees = doctor?.fees ?? doctor?.VideoFees ?? doctor?.videoFees ?? 0;
-                                const experience = doctor?.experience ?? doctor?.experienceYears ?? 0;
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {doctors.map((doctor) => {
+                                const id = doctor._id || doctor.id;
+                                const ratingValue = doctor.ratingAvg || doctor.rating || 4.5;
+                                const reviews = doctor.ratingCount || doctor.reviews || 0;
+                                const experience = doctor.experienceYears || doctor.experience || 5;
+                                const fees = doctor.videoFees || doctor.VideoFees || doctor.fees || 500;
 
                                 return (
                                     <div
-                                        key={id || doctor?.name}
-                                        className="group bg-white rounded-3xl p-8 hover:shadow-2xl transition-all duration-500 border border-gray-100"
+                                        key={id}
+                                        className="group bg-white rounded-[40px] p-8 border border-gray-100 hover:border-[#00A1B0]/30 transition-all duration-500 flex flex-col shadow-sm hover:shadow-xl hover:shadow-gray-200/50"
                                     >
-                                        {/* Header with Avatar */}
-                                        <div className="flex items-start gap-4 mb-8">
-                                            {/* Circular Avatar */}
+                                        <div className="flex items-start gap-5 mb-8">
                                             <div className="relative shrink-0">
-                                                <div className="w-20 h-20 rounded-full overflow-hidden ring-2 ring-gray-100 group-hover:ring-[#00A1B0] transition-all duration-500">
+                                                <div className="w-24 h-24 rounded-[32px] overflow-hidden bg-gray-50 border-2 border-white ring-1 ring-gray-100 group-hover:ring-[#00A1B0]/20 transition-all">
                                                     <img
                                                         src={getImageUrl(doctor?.image)}
                                                         alt={doctor?.name}
-                                                        className="w-full h-full object-cover object-top group-hover:scale-110 transition-transform duration-700"
+                                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                                                         onError={(e) => ((e.target as HTMLImageElement).src = "/doctor.png")}
                                                     />
                                                 </div>
-                                                {/* Verified Mini Badge */}
-                                                <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-[#00A1B0] rounded-full flex items-center justify-center shadow-lg">
-                                                    <FaCheckCircle className="text-white w-3.5 h-3.5" />
+                                                <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-[#00A1B0] rounded-xl flex items-center justify-center border-2 border-white shadow-sm">
+                                                    <FaCheckCircle className="text-white w-3 h-3" />
                                                 </div>
                                             </div>
-
-                                            {/* Name and Specialty */}
-                                            <div className="flex-1 min-w-0">
-                                                <h3 className="text-xl font-bold text-gray-900 mb-1 truncate">{doctor?.name}</h3>
-                                                <p className="text-sm text-gray-500 mb-2 truncate">
-                                                    {doctor?.speciality || doctor?.specialty || 'Specialist'}
-                                                </p>
-
-                                                {/* Rating - Compact */}
+                                            <div className="flex-1 min-w-0 pt-2">
+                                                <h3 className="text-2xl font-black text-gray-900 truncate tracking-tight mb-1 group-hover:text-[#00A1B0] transition-colors">{doctor?.name}</h3>
+                                                <div className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-[#00A1B0]/10 text-[#00A1B0] text-[10px] font-black uppercase tracking-wider mb-4">
+                                                    {doctor?.speciality || 'Specialist'}
+                                                </div>
                                                 <div className="flex items-center gap-2">
-                                                    <div className="flex items-center gap-0.5">
-                                                        {[...Array(5)].map((_, i) => (
-                                                            <FaStar
-                                                                key={i}
-                                                                className={`w-3 h-3 ${i < rating ? 'text-yellow-400 fill-current' : 'text-gray-200 fill-current'}`}
-                                                            />
-                                                        ))}
+                                                    <div className="flex items-center gap-0.5 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-100">
+                                                        <FaStar className="w-3.5 h-3.5 text-yellow-500 fill-current" />
+                                                        <span className="text-sm font-black text-yellow-700 leading-none">{ratingValue}</span>
                                                     </div>
-                                                    <span className="text-xs text-gray-400">({reviews})</span>
+                                                    <span className="text-[11px] font-bold text-gray-400 tracking-tight">{reviews} Reviews</span>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Stats Grid */}
-                                        <div className="grid grid-cols-2 gap-4 mb-8 pb-8 border-b border-gray-100">
-                                            {/* Experience */}
-                                            <div className="bg-gray-50 rounded-xl p-4">
-                                                <p className="text-xs text-gray-500 mb-1">Experience</p>
-                                                <p className="text-lg font-bold text-gray-900">{experience} yrs</p>
+                                        <div className="grid grid-cols-2 gap-4 mb-8">
+                                            <div className="p-4 bg-gray-50/50 rounded-3xl border border-gray-100">
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Expertise</p>
+                                                <p className="text-lg font-black text-gray-900 tracking-tight">{experience} Years</p>
                                             </div>
-
-                                            {/* Consultation Fee */}
-                                            <div className="bg-[#00A1B0]/5 rounded-xl p-4">
-                                                <p className="text-xs text-gray-500 mb-1">Fee</p>
-                                                <p className="text-lg font-bold text-[#00A1B0]">₹{fees}</p>
+                                            <div className="p-4 bg-[#00A1B0]/5 rounded-3xl border border-[#00A1B0]/10">
+                                                <p className="text-[10px] text-[#00A1B0]/60 font-bold uppercase tracking-wider mb-1">Consult Fee</p>
+                                                <p className="text-lg font-black text-[#00A1B0] tracking-tight">₹{fees}</p>
                                             </div>
                                         </div>
 
-                                        {/* CTA Button - Landing Page */}
-                                        <button
-                                            onClick={() => navigate('/patient/register')}
-                                            className="w-full px-5 py-3 bg-[#00A1B0] text-white rounded-xl font-medium hover:bg-[#008f9c] transition-all shadow-lg shadow-[#00A1B0]/20 hover:shadow-xl hover:shadow-[#00A1B0]/30"
-                                        >
-                                            Get Started
-                                        </button>
+                                        <div className="mt-auto flex flex-col gap-3">
+                                            <button
+                                                onClick={() => handleBookNow(id)}
+                                                className="w-full py-5 bg-[#00A1B0] text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.25em] hover:bg-[#008f9c] transition-all active:scale-[0.98] shadow-md shadow-gray-200"
+                                            >
+                                                Instant Booking
+                                            </button>
+                                            <button
+                                                onClick={() => navigate(`/doctors/${id}`)}
+                                                className="w-full py-2 text-gray-400 font-bold hover:text-[#00A1B0] transition-all text-[11px] uppercase tracking-[0.15em]"
+                                            >
+                                                Doctor Portfolio
+                                            </button>
+                                        </div>
                                     </div>
                                 );
                             })}
                         </div>
                     )}
 
-                    <div className="text-center mt-8">
+                    <div className="text-center mt-12">
                         <button
-                            onClick={() => navigate('/patient/register')}
-                            className="px-6 py-2.5 text-[#00A1B0] font-medium hover:text-[#008f9c] transition-colors inline-flex items-center gap-2"
+                            onClick={() => navigate('/doctors')}
+                            className="px-8 py-3 bg-white text-gray-900 font-bold rounded-xl border border-gray-200 hover:border-[#00A1B0] hover:text-[#00A1B0] transition-all inline-flex items-center gap-2 group shadow-sm"
                         >
-                            <span>Sign Up to View All Doctors</span>
-                            <FaArrowRight className="w-4 h-4" />
+                            <span>Explore All Doctors</span>
+                            <FaArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                         </button>
                     </div>
                 </div>
@@ -454,6 +534,45 @@ const LandingPage: React.FC = () => {
                     </div>
                 </div>
             </footer>
+
+            {/* Login Required Dialog - Professional High-Contrast */}
+            <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
+                <DialogContent className="sm:max-w-[440px] bg-white border border-gray-100 shadow-[0_40px_100px_-15px_rgba(0,161,176,0.1)] rounded-[40px] p-0 overflow-hidden">
+                    <div className="h-3 bg-[#00A1B0]" />
+                    <div className="p-12 text-center">
+                        <div className="w-24 h-24 bg-[#00A1B0]/10 rounded-[32px] flex items-center justify-center mx-auto mb-10">
+                            <FaShieldAlt className="w-10 h-10 text-[#00A1B0]" />
+                        </div>
+
+                        <DialogHeader>
+                            <DialogTitle className="text-4xl font-black text-gray-900 tracking-tighter mb-4">
+                                Authentication <span className="text-[#00A1B0]">Required</span>
+                            </DialogTitle>
+                            <DialogDescription className="text-gray-500 font-medium text-base mb-12 max-w-[300px] mx-auto leading-relaxed">
+                                Join our network to schedule priority consultations with top-tier medical specialists.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="flex flex-col gap-4">
+                            <button
+                                onClick={() => {
+                                    setShowLoginDialog(false);
+                                    navigate('/patient/login');
+                                }}
+                                className="w-full py-6 bg-[#00A1B0] text-white font-black rounded-3xl hover:bg-[#008f9c] transition-all text-xs uppercase tracking-[0.3em] shadow-lg shadow-[#00A1B0]/10 active:scale-[0.97]"
+                            >
+                                Secure Login
+                            </button>
+                            <button
+                                onClick={() => setShowLoginDialog(false)}
+                                className="w-full py-4 text-gray-400 font-bold hover:text-[#00A1B0] transition-all text-xs uppercase tracking-[0.2em]"
+                            >
+                                Return to Page
+                            </button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
