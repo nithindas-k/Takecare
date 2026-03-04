@@ -544,39 +544,38 @@ const LandingPage: React.FC = () => {
                 </div>
             </footer>
 
-            {/* Login Required Dialog - Professional High-Contrast */}
+            {/* Login Required Dialog - Minimal & Elegant */}
             <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
-                <DialogContent className="sm:max-w-[440px] bg-white border border-gray-100 shadow-[0_40px_100px_-15px_rgba(0,161,176,0.1)] rounded-[40px] p-0 overflow-hidden">
-                    <div className="h-3 bg-[#00A1B0]" />
-                    <div className="p-12 text-center">
-                        <div className="w-24 h-24 bg-[#00A1B0]/10 rounded-[32px] flex items-center justify-center mx-auto mb-10">
-                            <FaShieldAlt className="w-10 h-10 text-[#00A1B0]" />
+                <DialogContent className="sm:max-w-[400px] bg-white border-0 shadow-2xl rounded-3xl p-0 overflow-hidden">
+                    <div className="p-10 text-center">
+                        <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <FaShieldAlt className="w-6 h-6 text-gray-400" />
                         </div>
 
-                        <DialogHeader>
-                            <DialogTitle className="text-4xl font-black text-gray-900 tracking-tighter mb-4">
-                                Authentication <span className="text-[#00A1B0]">Required</span>
+                        <DialogHeader className="mb-8">
+                            <DialogTitle className="text-2xl font-bold text-gray-900 mb-2">
+                                Sign in Required
                             </DialogTitle>
-                            <DialogDescription className="text-gray-500 font-medium text-base mb-12 max-w-[300px] mx-auto leading-relaxed">
-                                Join our network to schedule priority consultations with top-tier medical specialists.
+                            <DialogDescription className="text-gray-500 text-sm leading-relaxed max-w-[280px] mx-auto">
+                                Please sign in to your account to continue with your doctor consultation.
                             </DialogDescription>
                         </DialogHeader>
 
-                        <div className="flex flex-col gap-4">
+                        <div className="space-y-3">
                             <button
                                 onClick={() => {
                                     setShowLoginDialog(false);
                                     navigate('/patient/login');
                                 }}
-                                className="w-full py-6 bg-[#00A1B0] text-white font-black rounded-3xl hover:bg-[#008f9c] transition-all text-xs uppercase tracking-[0.3em] shadow-lg shadow-[#00A1B0]/10 active:scale-[0.97]"
+                                className="w-full py-3.5 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 transition-all text-sm"
                             >
-                                Secure Login
+                                Sign In
                             </button>
                             <button
                                 onClick={() => setShowLoginDialog(false)}
-                                className="w-full py-4 text-gray-400 font-bold hover:text-[#00A1B0] transition-all text-xs uppercase tracking-[0.2em]"
+                                className="w-full py-3 text-gray-500 font-bold hover:text-gray-900 transition-all text-sm"
                             >
-                                Return to Page
+                                Back to Page
                             </button>
                         </div>
                     </div>
