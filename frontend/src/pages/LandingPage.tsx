@@ -108,6 +108,9 @@ const LandingPage: React.FC = () => {
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [speciality, setSpeciality] = useState('');
     const [showLoginDialog, setShowLoginDialog] = useState(false);
+    const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+    const [showDetailsModal, setShowDetailsModal] = useState(false);
+    const [activeTab, setActiveTab] = useState<'about' | 'reviews' | 'services'>('about');
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -443,7 +446,11 @@ const LandingPage: React.FC = () => {
                                                 Book Now
                                             </button>
                                             <button
-                                                onClick={() => navigate(`/doctors/${id}`)}
+                                                onClick={() => {
+                                                    setSelectedDoctor(doctor);
+                                                    setActiveTab('about');
+                                                    setShowDetailsModal(true);
+                                                }}
                                                 className="w-full py-1.5 text-gray-400 font-bold hover:text-[#00A1B0] transition-colors text-[9px] uppercase tracking-wider rounded-lg hover:bg-gray-50"
                                             >
                                                 Details
@@ -581,6 +588,146 @@ const LandingPage: React.FC = () => {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Doctor Details Modal - Premium Design */}
+            {/* Doctor Details Modal - Minimal & Professional Responsive */}
+            <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+                <DialogContent className="w-[92vw] sm:max-w-[440px] bg-white border-0 shadow-2xl rounded-[28px] sm:rounded-[32px] p-0 overflow-hidden outline-none">
+                    {selectedDoctor && (() => {
+                        const doctor = selectedDoctor;
+                        const ratingValue = doctor.ratingAvg || doctor.rating || 4.5;
+                        const reviewsCount = doctor.ratingCount || doctor.reviews || 0;
+                        const experience = doctor.experienceYears || doctor.experience || 5;
+                        const fees = doctor.videoFees || doctor.VideoFees || doctor.fees || 500;
+                        const id = doctor._id || doctor.id;
+
+                        return (
+                            <div className="flex flex-col">
+                                {/* Minimal Profile Header - Responsive */}
+                                <div className="p-5 sm:p-8 pb-4 sm:pb-6 flex items-center gap-4 sm:gap-6">
+                                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl overflow-hidden bg-gray-50 border-2 border-white ring-1 ring-gray-100 shrink-0">
+                                        <img
+                                            src={getImageUrl(doctor.image)}
+                                            alt={doctor.name}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => ((e.target as HTMLImageElement).src = "/doctor.png")}
+                                        />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-0.5 sm:mb-1 truncate">{doctor.name}</h2>
+                                        <p className="text-[#00A1B0] text-[8px] sm:text-[10px] font-black uppercase tracking-widest leading-none">
+                                            {doctor.speciality || 'Specialist'}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowDetailsModal(false)}
+                                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors"
+                                    >
+                                        <span className="text-xs">✕</span>
+                                    </button>
+                                </div>
+
+                                {/* Minimal Stats Bar - Responsive */}
+                                <div className="px-5 sm:px-8 pb-4 sm:pb-6 grid grid-cols-3 gap-3 sm:gap-4 border-b border-gray-100">
+                                    <div className="space-y-0.5">
+                                        <p className="text-[8px] sm:text-[9px] text-gray-400 font-bold uppercase tracking-wider">Rating</p>
+                                        <div className="flex items-center gap-1">
+                                            <FaStar className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-yellow-500 fill-current" />
+                                            <span className="text-xs sm:text-sm font-black text-gray-900">{ratingValue}</span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <p className="text-[8px] sm:text-[9px] text-gray-400 font-bold uppercase tracking-wider">Exp</p>
+                                        <p className="text-xs sm:text-sm font-black text-gray-900">{experience} Yrs</p>
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <p className="text-[8px] sm:text-[9px] text-[#00A1B0]/60 font-bold uppercase tracking-wider">Fee</p>
+                                        <p className="text-xs sm:text-sm font-black text-[#00A1B0]">₹{fees}</p>
+                                    </div>
+                                </div>
+
+                                {/* Minimal Tabs - Responsive */}
+                                <div className="px-5 sm:px-8 flex items-center gap-4 sm:gap-6 border-b border-gray-100">
+                                    {['about', 'reviews', 'services'].map((tab) => (
+                                        <button
+                                            key={tab}
+                                            onClick={() => setActiveTab(tab as any)}
+                                            className={`py-3 sm:py-4 text-[9px] sm:text-[10px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === tab
+                                                    ? 'border-[#008f9c] text-gray-900'
+                                                    : 'border-transparent text-gray-400 hover:text-gray-600'
+                                                }`}
+                                        >
+                                            {tab}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Tab Content Container - Responsive */}
+                                <div className="p-5 sm:p-8 h-[180px] sm:h-[220px] overflow-y-auto scrollbar-hide">
+                                    {activeTab === 'about' && (
+                                        <div className="space-y-2 sm:space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                            <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                                                Highly skilled {doctor.speciality || 'Specialist'} with over {experience} years of experience in providing comprehensive patient care.
+                                            </p>
+                                            <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                                                Committed to utilizing advanced clinical methods to ensure optimal health outcomes.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {activeTab === 'reviews' && (
+                                        <div className="space-y-3 sm:space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                            {reviewsCount === 0 ? (
+                                                <div className="text-center py-4">
+                                                    <p className="text-[10px] sm:text-xs text-gray-400">No reviews yet.</p>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2 sm:space-y-3">
+                                                    {[1, 2].map(r => (
+                                                        <div key={r} className="p-2 sm:p-3 bg-gray-50 rounded-lg sm:rounded-xl">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <div className="flex gap-0.5">
+                                                                    {[1, 2, 3, 4, 5].map(s => <FaStar key={s} className="w-1.5 h-1.5 sm:w-2 sm:h-2 text-yellow-500 fill-current" />)}
+                                                                </div>
+                                                                <span className="text-[8px] sm:text-[10px] font-bold text-gray-400">Verified Patient</span>
+                                                            </div>
+                                                            <p className="text-[10px] sm:text-xs text-gray-600 italic">"Excellent experience, very professional."</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {activeTab === 'services' && (
+                                        <div className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                            {['General Consultation', 'Follow-up', 'Video Call', 'Emergency'].map(s => (
+                                                <div key={s} className="px-2 sm:px-3 py-1.5 sm:py-2 bg-[#00A1B0]/[0.02] border border-[#00A1B0]/5 rounded-lg text-[8px] sm:text-[10px] font-bold text-gray-600 uppercase">
+                                                    • {s}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Modal Footer Action - Responsive */}
+                                <div className="px-5 sm:px-8 pb-5 sm:pb-8 pt-2">
+                                    <button
+                                        onClick={() => {
+                                            setShowDetailsModal(false);
+                                            handleBookNow(id);
+                                        }}
+                                        className="w-full py-3.5 sm:py-4 bg-gray-900 text-white rounded-xl sm:rounded-2xl font-black text-[9px] sm:text-[10px] uppercase tracking-[0.2em] hover:bg-gray-800 transition-all active:scale-[0.98] shadow-lg shadow-black/5"
+                                    >
+                                        Book Consultation
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })()}
+                </DialogContent>
+            </Dialog>
+
         </div>
     );
 };
