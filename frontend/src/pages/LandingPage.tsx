@@ -33,7 +33,6 @@ import {
 } from "../components/ui/dialog";
 
 const CountUp = ({ end, duration = 2, decimals = 0, suffix = '' }: { end: number, duration?: number, decimals?: number, suffix?: string }) => {
-    // ... (CountUp content remains same)
     const [count, setCount] = useState(0);
     const nodeRef = useRef(null);
     const hasAnimated = useRef(false);
@@ -50,11 +49,8 @@ const CountUp = ({ end, duration = 2, decimals = 0, suffix = '' }: { end: number
                         if (!startTime) startTime = timestamp;
                         const progress = timestamp - startTime;
                         const percentage = Math.min(progress / (duration * 1000), 1);
-
                         const ease = percentage === 1 ? 1 : 1 - Math.pow(2, -10 * percentage);
-
                         setCount(end * ease);
-
                         if (percentage < 1) {
                             animationFrame = requestAnimationFrame(animate);
                         }
@@ -67,15 +63,24 @@ const CountUp = ({ end, duration = 2, decimals = 0, suffix = '' }: { end: number
             { threshold: 0.1 }
         );
 
-        if (nodeRef.current) {
-            observer.observe(nodeRef.current);
-        }
-
+        if (nodeRef.current) observer.observe(nodeRef.current);
         return () => observer.disconnect();
     }, [end, duration]);
 
     return <span ref={nodeRef}>{count.toFixed(decimals)}{suffix}</span>;
 };
+
+interface Review {
+    _id: string;
+    patientId: {
+        _id: string;
+        name: string;
+        profileImage: string;
+    };
+    rating: number;
+    comment: string;
+    createdAt: string;
+}
 
 interface Doctor {
     id: string;
@@ -92,6 +97,8 @@ interface Doctor {
     VideoFees?: number;
     experience?: number;
     experienceYears?: number;
+    about?: string;
+    qualifications?: string[];
 }
 
 const LandingPage: React.FC = () => {
@@ -111,6 +118,8 @@ const LandingPage: React.FC = () => {
     const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [activeTab, setActiveTab] = useState<'about' | 'reviews' | 'services'>('about');
+    const [doctorReviews, setDoctorReviews] = useState<Review[]>([]);
+    const [isLoadingReviews, setIsLoadingReviews] = useState(false);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -118,6 +127,29 @@ const LandingPage: React.FC = () => {
         }, 500);
         return () => clearTimeout(timer);
     }, [searchQuery]);
+
+    const fetchDoctorReviews = useCallback(async (doctorId: string) => {
+        setIsLoadingReviews(true);
+        try {
+            const res = await doctorService.getReviews(doctorId);
+            if (res.success) {
+                setDoctorReviews(res.data || []);
+            }
+        } catch (err) {
+            console.warn("Failed to fetch reviews", err);
+        } finally {
+            setIsLoadingReviews(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (showDetailsModal && selectedDoctor) {
+            const doctorId = selectedDoctor.id || selectedDoctor._id;
+            if (doctorId) {
+                fetchDoctorReviews(doctorId);
+            }
+        }
+    }, [showDetailsModal, selectedDoctor, fetchDoctorReviews]);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
@@ -596,7 +628,6 @@ const LandingPage: React.FC = () => {
                     {selectedDoctor && (() => {
                         const doctor = selectedDoctor;
                         const ratingValue = doctor.ratingAvg || doctor.rating || 4.5;
-                        const reviewsCount = doctor.ratingCount || doctor.reviews || 0;
                         const experience = doctor.experienceYears || doctor.experience || 5;
                         const fees = doctor.videoFees || doctor.VideoFees || doctor.fees || 500;
                         const id = doctor._id || doctor.id;
@@ -653,8 +684,8 @@ const LandingPage: React.FC = () => {
                                             key={tab}
                                             onClick={() => setActiveTab(tab as any)}
                                             className={`py-3 sm:py-4 text-[9px] sm:text-[10px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === tab
-                                                    ? 'border-[#008f9c] text-gray-900'
-                                                    : 'border-transparent text-gray-400 hover:text-gray-600'
+                                                ? 'border-[#008f9c] text-gray-900'
+                                                : 'border-transparent text-gray-400 hover:text-gray-600'
                                                 }`}
                                         >
                                             {tab}
@@ -667,31 +698,49 @@ const LandingPage: React.FC = () => {
                                     {activeTab === 'about' && (
                                         <div className="space-y-2 sm:space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                             <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                                                Highly skilled {doctor.speciality || 'Specialist'} with over {experience} years of experience in providing comprehensive patient care.
-                                            </p>
-                                            <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                                                Committed to utilizing advanced clinical methods to ensure optimal health outcomes.
+                                                {doctor.about ||
+                                                    `Highly skilled ${doctor.speciality || 'Specialist'} with over ${experience} years of experience in providing comprehensive patient care. Committed to utilizing advanced clinical methods to ensure optimal health outcomes.`
+                                                }
                                             </p>
                                         </div>
                                     )}
 
                                     {activeTab === 'reviews' && (
                                         <div className="space-y-3 sm:space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                            {reviewsCount === 0 ? (
+                                            {isLoadingReviews ? (
+                                                <div className="flex flex-col items-center justify-center py-8 gap-3">
+                                                    <div className="w-6 h-6 border-2 border-gray-200 border-t-[#00A1B0] rounded-full animate-spin" />
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Loading reviews...</p>
+                                                </div>
+                                            ) : doctorReviews.length === 0 ? (
                                                 <div className="text-center py-4">
-                                                    <p className="text-[10px] sm:text-xs text-gray-400">No reviews yet.</p>
+                                                    <p className="text-[10px] sm:text-xs text-gray-400">No reviews yet for this doctor.</p>
                                                 </div>
                                             ) : (
-                                                <div className="space-y-2 sm:space-y-3">
-                                                    {[1, 2].map(r => (
-                                                        <div key={r} className="p-2 sm:p-3 bg-gray-50 rounded-lg sm:rounded-xl">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <div className="flex gap-0.5">
-                                                                    {[1, 2, 3, 4, 5].map(s => <FaStar key={s} className="w-1.5 h-1.5 sm:w-2 sm:h-2 text-yellow-500 fill-current" />)}
+                                                <div className="space-y-3">
+                                                    {doctorReviews.map((review) => (
+                                                        <div key={review._id} className="p-3 bg-gray-50 rounded-xl border border-gray-100/50">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-200">
+                                                                    {review.patientId?.profileImage ? (
+                                                                        <img src={review.patientId.profileImage} alt="" className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-gray-400">P</div>
+                                                                    )}
                                                                 </div>
-                                                                <span className="text-[8px] sm:text-[10px] font-bold text-gray-400">Verified Patient</span>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <p className="text-[10px] font-black text-gray-900 truncate">{review.patientId?.name || "Patient"}</p>
+                                                                        <div className="flex items-center gap-0.5">
+                                                                            {[1, 2, 3, 4, 5].map(s => (
+                                                                                <FaStar key={s} className={`w-1.5 h-1.5 ${s <= review.rating ? "text-yellow-500 fill-current" : "text-gray-200"}`} />
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                    <p className="text-[8px] text-gray-400 font-bold">{new Date(review.createdAt).toLocaleDateString()}</p>
+                                                                </div>
                                                             </div>
-                                                            <p className="text-[10px] sm:text-xs text-gray-600 italic">"Excellent experience, very professional."</p>
+                                                            <p className="text-[11px] text-gray-600 leading-relaxed italic">"{review.comment}"</p>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -700,12 +749,22 @@ const LandingPage: React.FC = () => {
                                     )}
 
                                     {activeTab === 'services' && (
-                                        <div className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                            {['General Consultation', 'Follow-up', 'Video Call', 'Emergency'].map(s => (
-                                                <div key={s} className="px-2 sm:px-3 py-1.5 sm:py-2 bg-[#00A1B0]/[0.02] border border-[#00A1B0]/5 rounded-lg text-[8px] sm:text-[10px] font-bold text-gray-600 uppercase">
-                                                    • {s}
-                                                </div>
-                                            ))}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                            {doctor.qualifications && doctor.qualifications.length > 0 ? (
+                                                doctor.qualifications.map((q, idx) => (
+                                                    <div key={idx} className="px-3 py-2 bg-[#00A1B0]/[0.02] border border-[#00A1B0]/5 rounded-lg text-[10px] font-bold text-gray-600 uppercase flex items-center gap-2">
+                                                        <div className="w-1 h-1 bg-[#00A1B0] rounded-full shrink-0" />
+                                                        <span className="truncate">{q}</span>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                ['General Consultation', 'Specialized Care', 'Video Consultation', 'Emergency Care'].map(s => (
+                                                    <div key={s} className="px-3 py-2 bg-[#00A1B0]/[0.02] border border-[#00A1B0]/5 rounded-lg text-[10px] font-bold text-gray-600 uppercase flex items-center gap-2">
+                                                        <div className="w-1 h-1 bg-[#00A1B0] rounded-full shrink-0" />
+                                                        <span className="truncate">{s}</span>
+                                                    </div>
+                                                ))
+                                            )}
                                         </div>
                                     )}
                                 </div>
