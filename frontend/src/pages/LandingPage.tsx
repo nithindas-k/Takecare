@@ -142,14 +142,31 @@ const LandingPage: React.FC = () => {
         }
     }, []);
 
+    const fetchDoctorDetails = useCallback(async (doctorId: string) => {
+        try {
+            const res = await doctorService.getDoctorById(doctorId);
+            if (res.success && res.data) {
+                setSelectedDoctor(prev => prev ? { ...prev, ...res.data } : res.data);
+            }
+        } catch (err) {
+            console.warn("Failed to fetch doctor details", err);
+        }
+    }, []);
+
     useEffect(() => {
         if (showDetailsModal && selectedDoctor) {
             const doctorId = selectedDoctor.id || selectedDoctor._id;
             if (doctorId) {
+                // Fetch reviews
                 fetchDoctorReviews(doctorId);
+
+                // Fetch full details if 'about' is missing (which it is for list DTO)
+                if (!selectedDoctor.about) {
+                    fetchDoctorDetails(doctorId);
+                }
             }
         }
-    }, [showDetailsModal, selectedDoctor, fetchDoctorReviews]);
+    }, [showDetailsModal, selectedDoctor?.id, selectedDoctor?._id, fetchDoctorReviews, fetchDoctorDetails]);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
@@ -696,12 +713,28 @@ const LandingPage: React.FC = () => {
                                 {/* Tab Content Container - Responsive */}
                                 <div className="p-5 sm:p-8 h-[180px] sm:h-[220px] overflow-y-auto scrollbar-hide">
                                     {activeTab === 'about' && (
-                                        <div className="space-y-2 sm:space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                            <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                                                {doctor.about ||
-                                                    `Highly skilled ${doctor.speciality || 'Specialist'} with over ${experience} years of experience in providing comprehensive patient care. Committed to utilizing advanced clinical methods to ensure optimal health outcomes.`
-                                                }
-                                            </p>
+                                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                            <div className="space-y-2">
+                                                <p className="text-[10px] text-[#00A1B0] font-black uppercase tracking-widest">Biography</p>
+                                                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                                                    {doctor.about ||
+                                                        `Highly skilled ${doctor.speciality || 'Specialist'} with over ${experience} years of experience in providing comprehensive patient care. Committed to utilizing advanced clinical methods to ensure optimal health outcomes.`
+                                                    }
+                                                </p>
+                                            </div>
+
+                                            {(doctor.qualifications && doctor.qualifications.length > 0) && (
+                                                <div className="space-y-2 text-left">
+                                                    <p className="text-[10px] text-[#00A1B0] font-black uppercase tracking-widest">Qualifications</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {doctor.qualifications.map((q, idx) => (
+                                                            <span key={idx} className="px-2 py-1 bg-gray-50 border border-gray-100 rounded text-[10px] font-bold text-gray-500 uppercase">
+                                                                {q}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 
