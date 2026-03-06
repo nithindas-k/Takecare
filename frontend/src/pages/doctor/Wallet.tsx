@@ -71,7 +71,7 @@ const DoctorWallet: React.FC = () => {
         };
     };
 
-  
+
 
     const hasReversals = transactions.some(txn =>
         txn.type === 'Consultation Reversal' || txn.type === 'Commission Reversal'

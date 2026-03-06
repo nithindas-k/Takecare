@@ -416,12 +416,22 @@ const ChatPage = () => {
     const [isTimeOver, setIsTimeOver] = useState(false);
     const [extensionCount, setExtensionCount] = useState(0);
 
-    const isPostConsultationWindowOpen = React.useMemo(() => {
-        if (!appointment?.postConsultationChatWindow) return false;
+    // Bug Fix: Use state + interval instead of useMemo so expiry is detected live
+    const [isPostConsultationWindowOpen, setIsPostConsultationWindowOpen] = useState(false);
+    const currentAppointmentIdRef = useRef<string | null>(null);
+
+    const computePostConsultWindow = React.useCallback(() => {
+        if (!appointment?.postConsultationChatWindow) { setIsPostConsultationWindowOpen(false); return; }
         const { isActive, expiresAt } = appointment.postConsultationChatWindow;
-        if (!isActive || !expiresAt) return false;
-        return new Date(expiresAt) > new Date();
+        if (!isActive || !expiresAt) { setIsPostConsultationWindowOpen(false); return; }
+        setIsPostConsultationWindowOpen(new Date(expiresAt) > new Date());
     }, [appointment]);
+
+    useEffect(() => {
+        computePostConsultWindow();
+        const windowTimer = setInterval(computePostConsultWindow, 60_000);
+        return () => clearInterval(windowTimer);
+    }, [computePostConsultWindow]);
 
     const canStartSession = React.useMemo(() => {
         if (!appointment?.appointmentDate) return false;
@@ -530,44 +540,34 @@ const ChatPage = () => {
         const onSessionStatusUpdated = (data: SessionStatusData) => {
             console.log("[SOCKET] Session status updated:", data);
 
-
-            const matchId = appointment?._id || id;
+            // Bug Fix: Use currentAppointmentIdRef (reliable) + fallbacks for matching
+            const matchAptId = currentAppointmentIdRef.current || appointment?._id || id;
             const matchCustomId = appointment?.customId;
 
             const isMatch =
-                data.appointmentId === matchId ||
-                String(data.appointmentId) === String(matchId) ||
+                data.appointmentId === matchAptId ||
+                String(data.appointmentId) === String(matchAptId) ||
                 (data.customId && matchCustomId && data.customId === matchCustomId) ||
-                (data.customId && data.customId === id) ||
-                (data.appointmentId === id);
+                (currentAppointmentIdRef.current && data.appointmentId === currentAppointmentIdRef.current);
 
             if (isMatch) {
-
-
                 setSessionStatus(data.status);
                 if (data.extensionCount !== undefined) setExtensionCount(data.extensionCount);
-
 
                 if (data.postConsultationChatWindow) {
                     setAppointment((prev) => {
                         if (!prev) return null;
-                        const updated = {
+                        return {
                             ...prev,
                             postConsultationChatWindow: data.postConsultationChatWindow,
                             TEST_NEEDED: data.TEST_NEEDED
                         };
-                        console.log("[CHAT_PAGE] Updated appointment postConsultationChatWindow:", updated.postConsultationChatWindow);
-
-
-                        return { ...updated };
                     });
 
                     if (data.postConsultationChatWindow.isActive) {
                         toast.success("Consultation Chat Unlocked for 24 Hours");
                         setIsTimeOver(false);
-
-
-                        const appointmentId = currentAppointmentId || id;
+                        const appointmentId = currentAppointmentIdRef.current || id;
                         if (appointmentId) {
                             chatService.getAppointment(appointmentId).then((res) => {
                                 if (res.data) setAppointment(res.data);
@@ -587,7 +587,7 @@ const ChatPage = () => {
                     setConversations(prev => prev.map(c => c.appointmentId === data.appointmentId ? { ...c, unreadCount: 0 } : c));
                 }
             } else {
-                console.warn("[SOCKET] Session update received for different appointment:", data.appointmentId, "Expected:", matchId);
+                console.warn("[SOCKET] Session update for different appointment:", data.appointmentId, "Expected:", matchAptId);
             }
 
             setConversations((prev: Conversation[]) => prev.map(conv => {
@@ -597,8 +597,10 @@ const ChatPage = () => {
                 return conv;
             }));
         };
+
         const onSessionEnded = (data: { appointmentId: string }) => {
-            if (data.appointmentId === (appointment?._id || id)) {
+            const matchAptId = currentAppointmentIdRef.current || appointment?._id || id;
+            if (data.appointmentId === matchAptId || String(data.appointmentId) === String(matchAptId)) {
                 console.log("[SOCKET] Session ended for:", data.appointmentId);
                 toast.info("Session has been ended.");
                 setSessionStatus(SESSION_STATUS.ENDED);
@@ -641,7 +643,13 @@ const ChatPage = () => {
     }, [user]);
 
 
-    // 4. Socket Synchronization - Dedicated Effect
+    // Socket Synchronization - Dedicated Effect
+    // Bug Fix: Use a ref for convId to avoid stale closures on reconnect
+    const convIdRef = useRef<string | null>(null);
+    useEffect(() => {
+        convIdRef.current = currentConversationId;
+    }, [currentConversationId]);
+
     useEffect(() => {
         if (!socket || !currentConversationId || !user) return;
 
@@ -649,19 +657,19 @@ const ChatPage = () => {
         const convId = currentConversationId;
         const myUserId = String(user.id || (user as { _id?: string })._id || "");
 
+        // Bug Fix: Always use the ref value to avoid stale closures on reconnect
         const performJoin = () => {
-            socket.emit('join-chat', convId);
-            socket.emit('mark-read', { id: convId, userId: myUserId });
+            const roomId = convIdRef.current || convId;
+            socket.emit('join-chat', roomId);
+            socket.emit('mark-read', { id: roomId, userId: myUserId });
         };
 
         const handleNewMessage = (newMessage: IMessage) => {
-
             const msgConvId = String(newMessage.conversationId || "");
-            const msgAppId = String(newMessage.appointmentId || "");
+            const currentConvId = convIdRef.current || convId;
 
-
-            const isRelevant = msgConvId === convId || msgAppId === id;
-
+            // Bug Fix: Only match by conversationId (the canonical room ID)
+            const isRelevant = msgConvId === currentConvId;
             if (!isRelevant) return;
 
             const isFromMe = (newMessage.senderModel === 'User' && !isDoctor) || (newMessage.senderModel === 'Doctor' && isDoctor);
@@ -681,23 +689,23 @@ const ChatPage = () => {
             setMessages(prev => {
                 const mId = String(uiMsg.id);
 
+                // Dedup by permanent ID
                 if (prev.some(m => String(m.id) === mId)) return prev;
 
-
+                // Bug Fix: Replace temp message by content match (handles the race between
+                // socket delivery and REST response ID swap)
                 if (senderType === 'user') {
                     const tempIdx = prev.findIndex(m =>
                         String(m.id).startsWith('temp-') &&
                         m.text === newMessage.content &&
                         m.sender === 'user'
                     );
-
                     if (tempIdx !== -1) {
                         const updated = [...prev];
                         updated[tempIdx] = uiMsg;
                         return updated;
                     }
                 }
-
 
                 return [...prev, uiMsg];
             });
@@ -719,7 +727,6 @@ const ChatPage = () => {
             if (typingId === convId && String(typingUserId) !== myUserId) {
                 setIsOtherTyping(isTyping);
             }
-
             setTypingRooms(prev => ({ ...prev, [typingId]: isTyping }));
         };
 
@@ -748,7 +755,7 @@ const ChatPage = () => {
             socket.off('messages-read', onRead);
             socket.emit('leave-chat', convId);
         };
-    }, [socket, currentConversationId, user, isDoctor, id]);
+    }, [socket, currentConversationId, user, isDoctor]);
 
 
     useEffect(() => {
@@ -817,7 +824,6 @@ const ChatPage = () => {
 
             setIsLoading(true);
             try {
-
                 const convData = await chatService.getConversation(id);
                 if (!convData) throw new Error("Conversation not found");
 
@@ -826,13 +832,14 @@ const ChatPage = () => {
 
                 setSessionStatus(convData.sessionStatus || (convData.isLocked ? SESSION_STATUS.ENDED : SESSION_STATUS.ACTIVE));
                 if (convData.activeAppointmentId) {
+                    // Bug Fix: Keep ref in sync for socket event matching
+                    currentAppointmentIdRef.current = convData.activeAppointmentId;
                     setCurrentAppointmentId(convData.activeAppointmentId);
                     const appResponse = await chatService.getAppointment(convData.activeAppointmentId);
                     setAppointment(appResponse.data);
                 }
 
                 const isPMe = !isDoctor;
-
                 const otherParty = isPMe ? convData.doctor : convData.patient;
                 const otherName = isPMe
                     ? (otherParty?.userId?.name || otherParty?.name || 'Doctor')
@@ -848,6 +855,7 @@ const ChatPage = () => {
                     name: otherName,
                     specialty: otherParty?.specialty || 'General',
                     avatar: getAvatarUrl(otherAvatarRaw, otherName),
+                    // Bug Fix: Use current onlineUsers snapshot without making it a dep
                     online: onlineUsers.includes(getOnlineId(otherParty)),
                     unread: 0
                 });
@@ -874,7 +882,10 @@ const ChatPage = () => {
         };
 
         if (user) initChatContext();
-    }, [id, user, isDoctor, onlineUsers]);
+        // Bug Fix: Removed `onlineUsers` from deps — it caused a re-init on every
+        // presence change. Online status is a snapshot taken once on init.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id, user, isDoctor]);
 
 
 
@@ -904,8 +915,9 @@ const ChatPage = () => {
     };
 
     const handleSendMessage = async () => {
-        const targetId = currentConversationId || id;
-        if (!inputValue.trim() || !targetId || !socket) return;
+        // Bug Fix: require conversationId to be resolved before sending
+        const targetId = currentConversationId;
+        if (!inputValue.trim() || !targetId) return;
 
         const currentVal = inputValue;
         setInputValue("");
@@ -921,28 +933,19 @@ const ChatPage = () => {
             type: 'text',
         };
 
+        // Optimistic UI — add temp message immediately
         setMessages(prev => [...prev, newMessage]);
 
-        const socketData = {
-            id: tempId,
-            conversationId: currentConversationId,
-            appointmentId: appointment?._id || (currentConversationId ? null : id),
-            content: currentVal,
-            senderId: user?.id || (user as any)?._id,
-            senderModel: isDoctor ? 'Doctor' : 'User',
-            type: 'text',
-            createdAt: new Date().toISOString(),
-            status: 'sent'
-        };
-
-        socket.emit('send-message', socketData);
-
+        // Bug Fix: Do NOT emit socket.emit('send-message') from the client.
+        // The REST API (chatService.sendMessage) saves to DB and the backend
+        // emits 'receive-message' to the conversation room — including us.
+        // The socket listener will replace this temp message when the server echo arrives.
         try {
             const savedMessage = await chatService.sendMessage(targetId, currentVal, 'text');
             const permanentId = (savedMessage as any)._id || savedMessage.id;
-
+            // Swap temp ID with permanent ID (for the case where server echo arrives late)
             setMessages(prev => prev.map(m =>
-                String(m.id) === tempId ? { ...m, id: permanentId } : m
+                String(m.id) === tempId ? { ...m, id: permanentId, status: 'sent' } : m
             ));
         } catch (error) {
             console.error("Failed to persist message", error);
@@ -1089,24 +1092,14 @@ const ChatPage = () => {
             const croppedFile = new File([croppedImageBlob], `cropped-image-${Date.now()}.jpg`, { type: 'image/jpeg' });
             imageUrl = await chatService.uploadAttachment(targetId, croppedFile);
 
-            const socketData = {
-                id: `temp-${Date.now()}`,
-                conversationId: currentConversationId,
-                appointmentId: appointment?._id || (currentConversationId ? null : id),
-                content: imageUrl,
-                senderId: user?.id || (user as any)?._id,
-                senderModel: isDoctor ? 'Doctor' : 'User',
-                type: 'image' as const,
-                createdAt: new Date().toISOString(),
-                status: 'sending' as const
-            };
-            if (socket) socket.emit('send-message', socketData);
-
+            // Bug Fix: Do NOT emit socket.emit for images either — same reason as text.
+            // REST save triggers the backend emit to the room.
+            const tempImgId = `temp-${Date.now()}`;
             const uiMsg: Message = {
-                id: socketData.id,
+                id: tempImgId,
                 sender: 'user',
-                text: socketData.content,
-                time: new Date(socketData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                text: imageUrl,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 status: 'sending' as const,
                 type: 'image',
             };
@@ -1115,10 +1108,9 @@ const ChatPage = () => {
             const savedMessage = await chatService.sendMessage(targetId, imageUrl, 'image');
 
             const permanentId = (savedMessage as any)._id || savedMessage.id;
-            const tempId = socketData.id;
 
             setMessages(prev => prev.map(m =>
-                String(m.id) === tempId ? { ...m, id: permanentId, status: 'sent' } : m
+                String(m.id) === tempImgId ? { ...m, id: permanentId, status: 'sent' } : m
             ));
 
             setIsCropping(false);

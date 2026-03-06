@@ -5,6 +5,8 @@ import { env } from "../configs/env"
 export class SocketService {
     private _io: Server | null = null;
     private _onlineUsers = new Map<string, string>();
+    // Maps userId -> socketId for sender-exclusion on message broadcast
+    private _userSocketMap = new Map<string, string>();
 
     init(httpServer: HttpServer) {
         const envOrigins = [env.CLIENT_URL, env.CLIENT_URL_1, env.CLIENT_URL_2]
@@ -52,8 +54,9 @@ export class SocketService {
             socket.on("join", (userId: string) => {
                 socket.join(userId);
                 this._onlineUsers.set(userId, socket.id);
+                // Track userId→socketId for message sender exclusion
+                this._userSocketMap.set(userId, socket.id);
                 this._io?.emit("user-status", { userId, status: 'online' });
-
 
                 const onlineUserIds = Array.from(this._onlineUsers.keys());
                 socket.emit("online-users", onlineUserIds);
@@ -96,12 +99,12 @@ export class SocketService {
                     if (sid === socket.id) {
                         disconnectedUserId = uid;
                         this._onlineUsers.delete(uid);
+                        this._userSocketMap.delete(uid);
                         break;
                     }
                 }
                 if (disconnectedUserId) {
                     this._io?.emit("user-status", { userId: disconnectedUserId, status: 'offline' });
-
                 }
             });
         });
@@ -109,6 +112,10 @@ export class SocketService {
 
     isUserOnline(userId: string): boolean {
         return this._onlineUsers.has(userId);
+    }
+
+    getUserSocketId(userId: string): string | undefined {
+        return this._userSocketMap.get(userId);
     }
 
     notify(userId: string, data: unknown) {
@@ -138,6 +145,17 @@ export class SocketService {
     emitToRoom(roomId: string, event: string, data: unknown) {
         if (this._io) {
             this._io.to(roomId).emit(event, data);
+        }
+    }
+
+    /**
+     * Emit to a room but exclude a specific socket (usually the sender).
+     * Prevents the sender from receiving their own message back via socket
+     * when the REST API triggers the backend emit.
+     */
+    emitToRoomExcluding(roomId: string, excludeSocketId: string, event: string, data: unknown) {
+        if (this._io) {
+            this._io.to(roomId).except(excludeSocketId).emit(event, data);
         }
     }
 

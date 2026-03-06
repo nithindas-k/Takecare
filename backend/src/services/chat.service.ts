@@ -137,7 +137,14 @@ export class ChatService implements IChatService {
             appointmentId: String(appointment._id)
         };
 
-        socketService.emitToRoom(conversationId, "receive-message", messagePayload);
+        // Bug Fix: Exclude the sender's own socket so they don't receive their own
+        // message back. Their optimistic temp message handles the UI update.
+        const senderSocketId = socketService.getUserSocketId(userId);
+        if (senderSocketId) {
+            socketService.emitToRoomExcluding(conversationId, senderSocketId, "receive-message", messagePayload);
+        } else {
+            socketService.emitToRoom(conversationId, "receive-message", messagePayload);
+        }
 
         return message;
     }
@@ -385,6 +392,7 @@ export class ChatService implements IChatService {
             appointmentId
         };
 
+        // System messages go to all participants (no sender exclusion needed)
         socketService.emitToRoom(conversationId, "receive-message", messagePayload);
 
         return message;
