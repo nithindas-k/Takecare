@@ -8,6 +8,12 @@ export interface ChatMessage {
     recommendations?: DoctorRecommendation;
 }
 
+export interface AvailableSlot {
+    day: string;
+    startTime: string;
+    endTime: string;
+}
+
 export interface DoctorMatch {
     doctorId: string;
     matcherId?: string;
@@ -19,6 +25,7 @@ export interface DoctorMatch {
     pros?: string[];
     cons?: string[];
     availabilitySummary?: string;
+    availableSlots?: AvailableSlot[];
 }
 
 export interface DoctorRecommendation {

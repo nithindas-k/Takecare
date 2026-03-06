@@ -7,6 +7,7 @@ import { AI_ROUTES } from "../constants/routes.constants";
 
 import { AIConversationRepository } from "../repositories/aiConversation.repository";
 import { DoctorRepository } from "../repositories/doctor.repository";
+import { ScheduleRepository } from "../repositories/schedule.repository";
 import { AIMatchingService } from "../services/aiMatching.service";
 import AIConversationModel from "../models/aiConversation.model";
 
@@ -15,7 +16,8 @@ const router = Router();
 
 const aiConversationRepository = new AIConversationRepository(AIConversationModel);
 const doctorRepository = new DoctorRepository();
-const aiMatchingService = new AIMatchingService(aiConversationRepository, doctorRepository);
+const scheduleRepository = new ScheduleRepository();
+const aiMatchingService = new AIMatchingService(aiConversationRepository, doctorRepository, scheduleRepository);
 const aiController = new AIController(aiMatchingService);
 
 

@@ -33,9 +33,15 @@ export interface AIResponseDTO {
     followUpQuestions?: string[];
 }
 
+export interface AvailableSlotDTO {
+    day: string;       // e.g. "Monday"
+    startTime: string; // e.g. "09:00"
+    endTime: string;   // e.g. "09:30"
+}
+
 export interface DoctorMatchDTO {
     doctorId: string;
-    matcherId?: string; 
+    matcherId?: string;
     name: string;
     specialty: string;
     profileImage?: string;
@@ -44,6 +50,7 @@ export interface DoctorMatchDTO {
     pros?: string[];
     cons?: string[];
     availabilitySummary?: string;
+    availableSlots?: AvailableSlotDTO[];
 }
 
 export interface DoctorRecommendationDTO {

@@ -3,6 +3,7 @@ import { env } from "../configs/env";
 import { IAIMatchingService } from "./interfaces/IAIMatching.service";
 import { IAIConversationRepository } from "../repositories/interfaces/IAIConversation.repository";
 import { IDoctorRepository } from "../repositories/interfaces/IDoctor.repository";
+import { IScheduleRepository } from "../repositories/interfaces/ISchedule.repository";
 import type { IDoctorDocument } from "../types/doctor.type";
 import {
     AIChatRequestDTO,
@@ -10,9 +11,30 @@ import {
     DoctorRecommendationDTO,
     ChatMessageDTO,
     DoctorMatchDTO,
+    AvailableSlotDTO,
 } from "../dtos/ai.dtos/aiMatching.dto";
 import { EMERGENCY_KEYWORDS } from "../types/aiMatching.type";
 import { BadRequestError } from "../errors/AppError";
+
+
+const SPECIALTY_ALIASES: Record<string, string[]> = {
+    "general physician": ["General Physician", "General Medicine", "General Practice", "Family Medicine", "GP", "General Practitioner"],
+    "cardiologist": ["Cardiologist", "Cardiology"],
+    "dermatologist": ["Dermatologist", "Dermatology"],
+    "orthopedic": ["Orthopedic", "Orthopaedic", "Orthopaedics", "Orthopedics", "Orthopedic Surgeon"],
+    "psychiatrist": ["Psychiatrist", "Psychiatry", "Mental Health"],
+    "gastroenterologist": ["Gastroenterologist", "Gastroenterology"],
+    "gynecologist": ["Gynecologist", "Gynaecologist", "Gynecology", "Gynaecology", "OB-GYN"],
+    "pediatrician": ["Pediatrician", "Paediatrician", "Pediatrics", "Paediatrics"],
+    "endocrinologist": ["Endocrinologist", "Endocrinology"],
+    "nephrologist": ["Nephrologist", "Nephrology"],
+    "ophthalmologist": ["Ophthalmologist", "Ophthalmology", "Eye Specialist"],
+    "ent specialist": ["ENT Specialist", "ENT", "Otolaryngologist", "Ear Nose Throat"],
+    "dentist": ["Dentist", "Dental Surgeon", "Dentistry"],
+    "neurologist": ["Neurologist", "Neurology"],
+    "pulmonologist": ["Pulmonologist", "Pulmonology", "Chest Physician", "Respiratory Medicine"],
+    "oncologist": ["Oncologist", "Oncology"],
+};
 
 export class AIMatchingService implements IAIMatchingService {
     private groq: Groq;
@@ -98,11 +120,57 @@ Cancer → Oncologist
 
     constructor(
         private aiConversationRepository: IAIConversationRepository,
-        private doctorRepository: IDoctorRepository
+        private doctorRepository: IDoctorRepository,
+        private scheduleRepository: IScheduleRepository
     ) {
         this.groq = new Groq({
             apiKey: env.GROQ_API_KEY,
         });
+    }
+
+    /**
+     * Returns true if the doctor has at least one enabled day with at least
+     * one enabled, unbooked slot — meaning they can still accept appointments.
+     */
+    private async _hasAvailableSlots(doctorId: string): Promise<boolean> {
+        try {
+            const schedule = await this.scheduleRepository.findByDoctorId(doctorId);
+            if (!schedule || !schedule.isActive) return false;
+
+            return schedule.weeklySchedule.some(
+                (day) =>
+                    day.enabled &&
+                    day.slots.some((slot) => slot.enabled && !slot.booked)
+            );
+        } catch {
+            // If we can't check, allow the doctor through rather than silently dropping them
+            return true;
+        }
+    }
+
+    /**
+     * Returns up to `limit` available (enabled + unbooked) slots for a doctor,
+     * grouped by day of the week.
+     */
+    private async _getAvailableSlots(doctorId: string, limit = 6): Promise<AvailableSlotDTO[]> {
+        try {
+            const schedule = await this.scheduleRepository.findByDoctorId(doctorId);
+            if (!schedule || !schedule.isActive) return [];
+
+            const slots: AvailableSlotDTO[] = [];
+            for (const day of schedule.weeklySchedule) {
+                if (!day.enabled) continue;
+                for (const slot of day.slots) {
+                    if (!slot.enabled || slot.booked) continue;
+                    slots.push({ day: day.day, startTime: slot.startTime, endTime: slot.endTime });
+                    if (slots.length >= limit) break;
+                }
+                if (slots.length >= limit) break;
+            }
+            return slots;
+        } catch {
+            return [];
+        }
     }
 
     async processPatientMessage(request: AIChatRequestDTO): Promise<AIChatResponseDTO> {
@@ -166,18 +234,39 @@ This is NOT something to wait for a scheduled appointment. Please seek emergency
 
         // Step 3: If AI is ready to recommend doctors
         if (aiAnalysis.intent === "recommend_doctors" && aiAnalysis.specialty_required) {
-            // Map legacy 'Approved' status to the query
+            const specialtyRaw = aiAnalysis.specialty_required as string;
+
+            // Build a flexible OR-regex from known aliases so "General Physician"
+            // matches "General Medicine", "GP", "Family Medicine", etc.
+            const aliasKey = specialtyRaw.toLowerCase().trim();
+            const aliasVariants = SPECIALTY_ALIASES[aliasKey] ?? [specialtyRaw];
+            const specialtyRegex = new RegExp(
+                aliasVariants.map(v => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'),
+                'i'
+            );
+
             const mongoQuery = {
                 verificationStatus: "approved",
                 isActive: true,
-                specialty: { $regex: new RegExp(`^${aiAnalysis.specialty_required}$`, 'i') }
+                specialty: { $regex: specialtyRegex },
             };
 
             const doctors = await this.doctorRepository.searchDoctors(mongoQuery);
 
-            if (doctors.length > 0) {
+            // Filter doctors who actually have at least one available (unbooked) slot
+            const availabilityChecks = await Promise.all(
+                doctors.map(async (d) => ({
+                    doctor: d,
+                    hasSlots: await this._hasAvailableSlots(d._id.toString()),
+                }))
+            );
+            const availableDoctors = availabilityChecks
+                .filter((r) => r.hasSlots)
+                .map((r) => r.doctor);
+
+            if (availableDoctors.length > 0) {
                 // Step 4: Score and rank doctors using AI
-                const rankedDoctors = await this.scoreDoctors(doctors, aiAnalysis);
+                const rankedDoctors = await this.scoreDoctors(availableDoctors, aiAnalysis);
 
                 // Sort and take top 5
                 const topMatches = rankedDoctors.sort((a, b) => b.matchScore - a.matchScore).slice(0, 5);
@@ -198,23 +287,21 @@ This is NOT something to wait for a scheduled appointment. Please seek emergency
                 // Step 5: Generate final recommendation message
                 finalMessage = await this.generateRecommendationMessage(topMatches, aiAnalysis);
             } else {
-                // If no doctors found for the specific specialty, suggest available ones
+                // No doctors with available slots found — suggest other specialties
                 const availableSpecialties = await this.doctorRepository.getAvailableSpecialties();
 
-                if (availableSpecialties.length > 0) {
-                    finalMessage = `I understand you're looking for a ${aiAnalysis.specialty_required}. Currently, we don't have any verified doctors in that specific field available.
-
-However, we do have excellent specialists in the following areas:
-${availableSpecialties.map(s => `- ${s}`).join('\n')}
-
-Would you like to consult any of these specialists, or perhaps describe your symptoms differently?`;
+                if (doctors.length > 0 && availableDoctors.length === 0) {
+                    // Doctors exist for the specialty but all are fully booked
+                    finalMessage = `I found some ${aiAnalysis.specialty_required}s on our platform, but unfortunately all of them are fully booked at the moment. Please try again later or check back soon as new slots open up regularly.`;
+                } else if (availableSpecialties.length > 0) {
+                    finalMessage = `I understand you're looking for a ${aiAnalysis.specialty_required}. Currently, we don't have any verified doctors with available slots in that specific field.\n\nHowever, we do have specialists with open appointments in the following areas:\n${availableSpecialties.map(s => `- ${s}`).join('\n')}\n\nWould you like to consult any of these specialists, or perhaps describe your symptoms differently?`;
                 } else {
-                    finalMessage = `I understand you're looking for a ${aiAnalysis.specialty_required}. Currently, we don't have any verified doctors available on the platform matching that criteria. Please check back later as we are onboarding new doctors regularly.`;
+                    finalMessage = `I understand you're looking for a ${aiAnalysis.specialty_required}. Currently, we don't have any verified doctors with available slots matching that criteria. Please check back later as we are onboarding new doctors regularly.`;
                 }
             }
         }
 
-        
+
         await this.aiConversationRepository.addMessage(
             conversationId,
             "assistant",
@@ -346,11 +433,19 @@ Return JSON format: { "ranked_doctors": [{ "doctor_id": "id", "match_score": 95,
                 })
                 .filter((m): m is DoctorMatchDTO => m !== null);
 
-            return mapped;
+            // Enrich each match with live available slots
+            const enriched = await Promise.all(
+                mapped.map(async (m) => ({
+                    ...m,
+                    availableSlots: await this._getAvailableSlots(m.doctorId),
+                }))
+            );
+
+            return enriched;
 
         } catch {
-            // Fallback ranking
-            return doctors.map((d): DoctorMatchDTO => {
+            // Fallback ranking with slots
+            const fallback = doctors.map((d): DoctorMatchDTO => {
                 const user = (d.userId as unknown as { name?: string; profileImage?: string | null }) || {};
                 return {
                     doctorId: d._id.toString(),
@@ -361,6 +456,14 @@ Return JSON format: { "ranked_doctors": [{ "doctor_id": "id", "match_score": 95,
                     reasoning: `Matched based on specialty: ${String(d.specialty ?? "")}`,
                 };
             });
+
+            const enrichedFallback = await Promise.all(
+                fallback.map(async (m) => ({
+                    ...m,
+                    availableSlots: await this._getAvailableSlots(m.doctorId),
+                }))
+            );
+            return enrichedFallback;
         }
     }
 

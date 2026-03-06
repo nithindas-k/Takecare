@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowUp, User, Bot, RefreshCcw, LoaderIcon, AlertTriangle, Sparkles } from "lucide-react";
+import { ArrowUp, User, Bot, RefreshCcw, LoaderIcon, AlertTriangle, Sparkles, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -205,6 +205,31 @@ const AIDoctorMatcher: React.FC = () => {
                                                         </Badge>
                                                     </div>
                                                 </div>
+
+                                                {/* Available Slots */}
+                                                {match.availableSlots && match.availableSlots.length > 0 && (
+                                                    <div className="mb-3">
+                                                        <p className="text-[10px] sm:text-xs text-gray-500 font-semibold uppercase tracking-wide mb-2 flex items-center gap-1">
+                                                            <Clock className="w-3 h-3" />
+                                                            Available Slots
+                                                        </p>
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {match.availableSlots.slice(0, 3).map((slot, si) => (
+                                                                <span
+                                                                    key={si}
+                                                                    className="inline-flex items-center gap-1 text-[10px] sm:text-xs bg-cyan-50 text-cyan-700 border border-cyan-200 rounded-full px-2 py-0.5 font-medium"
+                                                                >
+                                                                    {slot.day.slice(0, 3)} · {slot.startTime}
+                                                                </span>
+                                                            ))}
+                                                            {match.availableSlots.length > 3 && (
+                                                                <span className="inline-flex items-center text-[10px] sm:text-xs text-gray-400 px-1">
+                                                                    +{match.availableSlots.length - 3} more
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 <Button
                                                     size="sm"
                                                     className="w-full text-xs sm:text-sm h-8 sm:h-9 bg-[#00A1B0] hover:bg-[#008f9c] transition-colors"
