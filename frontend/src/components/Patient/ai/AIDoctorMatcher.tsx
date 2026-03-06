@@ -136,6 +136,7 @@ const AIDoctorMatcher: React.FC = () => {
             <div
                 ref={scrollRef}
                 className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-white custom-scrollbar"
+                data-lenis-prevent="true"
             >
                 {messages.map((msg, index) => (
                     <div key={index} className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
