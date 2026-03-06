@@ -1,0 +1,11 @@
+Found 9 approved+active doctors
+
+[Cardiologist] _id:694199b9cbd5aab6bf1aea65  schedActive:true  freeSlots(9): Monday 09:00, Monday 09:30, Tuesday 09:00
+[Neurologist] _id:694248b5a30aaee54d6e9456  schedActive:true  freeSlots(6): Monday 09:00, Tuesday 09:00, Thursday 15:30
+[Neurologist] _id:69670a30919d9a353dd62607  schedActive:true  freeSlots(7): Monday 09:00, Wednesday 09:05, Wednesday 10:28
+[Cardiologist] _id:6941b7947d470d3c70f3780a  schedActive:true  freeSlots(4): Friday 09:00, Friday 22:22, Sunday 00:20
+[Psychiatrist] _id:6941b6ea5d9c5cf9865c6e5c  schedActive:true  freeSlots(1): Monday 09:00
+[Psychiatrist] _id:6963b1e7e0dab0281037f160  schedActive:true  freeSlots(11): Monday 09:00, Monday 16:38, Tuesday 09:00
+[Pediatrician] _id:694af174cfa23c21a06e6b01  schedActive:true  freeSlots(4): Monday 09:00, Monday 13:00, Wednesday 09:00
+[Pediatrician] _id:6985b1f67c8e946473accad6  schedActive:true  freeSlots(2): Monday 14:47, Friday 14:56
+[Cardiologist] _id:6986d80a19eddeba2c05f7c3  → NO SCHEDULE

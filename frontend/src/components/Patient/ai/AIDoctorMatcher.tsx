@@ -15,6 +15,7 @@ const AIDoctorMatcher: React.FC = () => {
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -22,9 +23,13 @@ const AIDoctorMatcher: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
+        // Use a small timeout to allow React to render the new DOM elements 
+        // and CSS animations to start before we scroll to the bottom.
+        const timer = setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 100);
+
+        return () => clearTimeout(timer);
     }, [messages, isLoading]);
 
     const loadHistory = async () => {
@@ -271,6 +276,9 @@ const AIDoctorMatcher: React.FC = () => {
                         </div>
                     </div>
                 )}
+
+                {/* Invisible element to scroll to */}
+                <div ref={messagesEndRef} className="h-1" />
             </div>
 
             {/* Input Area */}
