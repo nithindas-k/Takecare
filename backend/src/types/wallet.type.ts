@@ -14,7 +14,7 @@ export interface ITransaction {
     userId: Types.ObjectId;
     appointmentId?: Types.ObjectId;
     amount: number;
-    type: "Consultation Fee" | "Refund" | "Wallet Top-up";
+    type: "Consultation Fee" | "Refund" | "Wallet Top-up" | "Consultation Reversal" | "Commission Reversal";
     description: string;
     status: "completed" | "pending" | "failed";
 }

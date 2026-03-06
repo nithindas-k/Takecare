@@ -424,7 +424,45 @@ export class AppointmentService implements IAppointmentService {
                     const doctorDeduction = appointment.doctorEarnings - doctorKeeps;
                     const adminDeduction = appointment.adminCommission - adminKeeps;
 
-                    if (doctor) await this._walletService.deductMoney(doctor.userId.toString(), doctorDeduction, `Cancellation: patient cancelled #${appointment.customId || appointment.id}`, appointment._id.toString(), "Consultation Reversal", session);
+                    if (doctor) {
+                        // Guard: check doctor balance before deducting (they may have withdrawn earnings)
+                        const doctorCurrentBalance = await this._walletService.getWalletBalance(doctor.userId.toString());
+                        if (doctorCurrentBalance >= doctorDeduction) {
+                            await this._walletService.deductMoney(
+                                doctor.userId.toString(),
+                                doctorDeduction,
+                                `Cancellation: patient cancelled #${appointment.customId || appointment.id}`,
+                                appointment._id.toString(),
+                                "Consultation Reversal",
+                                session
+                            );
+                        } else if (doctorCurrentBalance > 0) {
+                            // Partial deduction — deduct only what's available; admin absorbs shortfall
+                            await this._walletService.deductMoney(
+                                doctor.userId.toString(),
+                                doctorCurrentBalance,
+                                `Partial cancellation reversal (doctor insufficient funds): #${appointment.customId || appointment.id}`,
+                                appointment._id.toString(),
+                                "Consultation Reversal",
+                                session
+                            );
+                            // Log the shortfall for reference
+                            this._logger.warn(`Doctor wallet shortfall on patient cancel: appointment ${appointment.customId || appointment.id}, shortfall ₹${doctorDeduction - doctorCurrentBalance}, absorbed by admin`);
+                        } else {
+                            // Doctor has zero balance — admin absorbs the entire doctor portion
+                            this._logger.warn(`Doctor has ₹0 balance on patient cancel: appointment ${appointment.customId || appointment.id}, full doctor deduction ₹${doctorDeduction} absorbed by admin`);
+                        }
+
+                        // Notify doctor about the cancellation-reversal
+                        if (this._notificationService) {
+                            await this._notificationService.notify(doctor.userId.toString(), {
+                                title: "Patient Cancelled Appointment",
+                                message: `Patient cancelled appointment #${appointment.customId || appointment.id}. Your wallet has been adjusted per cancellation policy.`,
+                                type: "warning",
+                                appointmentId: appointment._id.toString(),
+                            });
+                        }
+                    }
 
                     const admins = await this._userRepository.findByRole(ROLES.ADMIN);
                     const adminUser = admins[0];
@@ -551,7 +589,7 @@ export class AppointmentService implements IAppointmentService {
             }
 
             if (isDoctor) {
-              
+
 
                 if (rescheduleData.slotId) {
                     const newStartTime = parseAppointmentTime(rescheduleData.appointmentTime);

@@ -667,39 +667,40 @@ const VideoCallContent: React.FC = () => {
             </div>
 
             <Dialog open={!!(incomingCall?.isReceivingCall)} onOpenChange={() => { }}>
-                <DialogContent className="sm:max-w-md bg-[#111418]/95 backdrop-blur-3xl border-white/5 p-8 rounded-[2.5rem] shadow-2xl">
+                <DialogContent className="w-[calc(100%-2rem)] max-w-md bg-[#111418]/95 backdrop-blur-3xl border-white/5 p-5 sm:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-2xl max-h-[90dvh] overflow-y-auto">
                     <div className="flex flex-col items-center text-center">
-                        <div className="relative mb-8">
-                            <div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full animate-pulse"></div>
-                            <div className="relative h-24 w-24 rounded-[2rem] bg-emerald-500/10 border-2 border-emerald-500/20 flex items-center justify-center">
-                                <Video size={40} className="text-emerald-500 animate-bounce" />
+                        <div className="relative mb-5 sm:mb-8">
+                            <div className="absolute inset-0 bg-emerald-500/20 blur-xl sm:blur-3xl rounded-full animate-pulse" />
+                            <div className="relative h-16 w-16 sm:h-24 sm:w-24 rounded-2xl sm:rounded-[2rem] bg-emerald-500/10 border-2 border-emerald-500/20 flex items-center justify-center">
+                                <Video size={28} className="sm:hidden text-emerald-500 animate-bounce" />
+                                <Video size={40} className="hidden sm:block text-emerald-500 animate-bounce" />
                             </div>
                         </div>
 
-                        <div className="space-y-3 mb-10">
-                            <Badge className="bg-emerald-500/10 text-emerald-500 border-none text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1">
+                        <div className="space-y-2 mb-5 sm:mb-10">
+                            <Badge className="bg-emerald-500/10 text-emerald-500 border-none text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1">
                                 Secure Encryption Active
                             </Badge>
-                            <h2 className="text-3xl font-black text-white tracking-tight">Incoming Session</h2>
-                            <p className="text-gray-400 font-medium">
+                            <h2 className="text-xl sm:text-3xl font-black text-white tracking-tight">Incoming Session</h2>
+                            <p className="text-gray-400 text-sm font-medium">
                                 <span className="text-[#00A1B0] font-bold">{incomingCall?.name || 'Authorized Patient'}</span> is ready to begin the consultation.
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4 w-full">
+                        <div className="flex flex-col-reverse sm:grid sm:grid-cols-2 gap-3 w-full">
                             <Button
                                 variant="ghost"
                                 onClick={() => {
                                     leaveCall();
                                     navigate(-1);
                                 }}
-                                className="h-16 rounded-2xl bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-500 font-black uppercase tracking-widest text-xs transition-all"
+                                className="h-12 sm:h-16 rounded-2xl bg-white/5 hover:bg-red-500/10 text-gray-400 hover:text-red-500 font-black uppercase tracking-widest text-xs transition-all"
                             >
                                 Decline
                             </Button>
                             <Button
                                 onClick={() => answerCall()}
-                                className="h-16 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest text-xs shadow-xl shadow-emerald-600/20 transition-all active:scale-95"
+                                className="h-12 sm:h-16 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest text-xs shadow-xl shadow-emerald-600/20 transition-all active:scale-95"
                             >
                                 Accept Call
                             </Button>
@@ -1105,21 +1106,44 @@ const VideoCallContent: React.FC = () => {
                     )}
 
                     {(!callAccepted || callEnded) && (
-                        <div className="absolute inset-x-0 bottom-0 p-6 md:p-8 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col items-center gap-5">
+                        <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6 md:p-8 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col items-center gap-4">
 
                             <div className="text-center">
-                                <h3 className="text-white text-xl md:text-2xl font-bold mb-1 tracking-tight">
-                                    {callEnded
-                                        ? 'Call Disconnected'
-                                        : user?.role === 'doctor' ? 'Patient Consultation' : 'Doctor Consultation'
-                                    }
-                                </h3>
-                                <p className="text-gray-400 text-xs md:text-sm font-medium">
-                                    {callEnded
-                                        ? 'You can rejoin the session or start a new call'
-                                        : 'Check your audio and video before joining'
-                                    }
-                                </p>
+                                {callEnded ? (
+                                    <>
+                                        <h3 className="text-white text-lg sm:text-2xl font-bold mb-1 tracking-tight">Call Disconnected</h3>
+                                        <p className="text-gray-400 text-xs sm:text-sm font-medium">You can rejoin the session or return to the dashboard</p>
+                                    </>
+                                ) : !isDoctor && !incomingCall?.isReceivingCall ? (
+                                    <>
+                                        {/* Patient waiting for doctor */}
+                                        <div className="flex items-center justify-center gap-2 mb-2">
+                                            <div className="flex gap-1">
+                                                <span className="w-2 h-2 bg-[#00A1B0] rounded-full animate-bounce [animation-delay:0ms]" />
+                                                <span className="w-2 h-2 bg-[#00A1B0] rounded-full animate-bounce [animation-delay:150ms]" />
+                                                <span className="w-2 h-2 bg-[#00A1B0] rounded-full animate-bounce [animation-delay:300ms]" />
+                                            </div>
+                                        </div>
+                                        <h3 className="text-white text-lg sm:text-xl font-bold mb-1 tracking-tight">Waiting for your Doctor</h3>
+                                        <p className="text-gray-400 text-xs sm:text-sm font-medium">
+                                            {appointment?.appointmentTime
+                                                ? `Session scheduled at ${appointment.appointmentTime.split('-')[0]?.trim()} — please keep this page open`
+                                                : 'Your doctor will start the call shortly. Please stay on this page.'}
+                                        </p>
+                                        {appointment && isTimeOver && (
+                                            <p className="mt-2 text-amber-400 text-xs font-semibold animate-pulse">
+                                                ⏰ Session time has passed — the doctor may have exceeded the slot.
+                                            </p>
+                                        )}
+                                    </>
+                                ) : (
+                                    <>
+                                        <h3 className="text-white text-lg sm:text-2xl font-bold mb-1 tracking-tight">
+                                            {user?.role === 'doctor' ? 'Patient Consultation' : 'Doctor Consultation'}
+                                        </h3>
+                                        <p className="text-gray-400 text-xs sm:text-sm font-medium">Check your audio and video before joining</p>
+                                    </>
+                                )}
                             </div>
 
                             <div className="flex items-center gap-3">
@@ -1127,54 +1151,67 @@ const VideoCallContent: React.FC = () => {
                                     onClick={toggleMute}
                                     size="icon"
                                     variant="ghost"
-                                    className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl transition-all duration-200 border ${isMuted ? 'bg-red-500/90 border-red-400/30 text-white hover:bg-red-500' : 'bg-white/[0.06] border-white/[0.08] text-white hover:bg-white/[0.12]'}`}
+                                    className={`w-11 h-11 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-2xl transition-all duration-200 border ${isMuted ? 'bg-red-500/90 border-red-400/30 text-white hover:bg-red-500' : 'bg-white/[0.06] border-white/[0.08] text-white hover:bg-white/[0.12]'}`}
                                 >
-                                    {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
+                                    {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
                                 </Button>
                                 <Button
                                     onClick={toggleCam}
                                     size="icon"
                                     variant="ghost"
-                                    className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl transition-all duration-200 border ${isCamOff ? 'bg-red-500/90 border-red-400/30 text-white hover:bg-red-500' : 'bg-white/[0.06] border-white/[0.08] text-white hover:bg-white/[0.12]'}`}
+                                    className={`w-11 h-11 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-2xl transition-all duration-200 border ${isCamOff ? 'bg-red-500/90 border-red-400/30 text-white hover:bg-red-500' : 'bg-white/[0.06] border-white/[0.08] text-white hover:bg-white/[0.12]'}`}
                                 >
-                                    {isCamOff ? <VideoOff size={20} /> : <Video size={20} />}
+                                    {isCamOff ? <VideoOff size={18} /> : <Video size={18} />}
                                 </Button>
                             </div>
 
-                            <div className="w-full max-w-xs">
-                                {canRejoin ? (
+                            {isDoctor && (
+                                <div className="w-full max-w-xs">
+                                    {canRejoin ? (
+                                        <Button
+                                            onClick={async () => {
+                                                const session = await handleRejoinCall();
+                                                if (session) {
+                                                    toast.success('Rejoining call...');
+                                                    if (targetUserId) callUser(targetUserId, true);
+                                                }
+                                            }}
+                                            disabled={isRejoining || !stream}
+                                            className="w-full h-12 sm:h-13 bg-amber-500 hover:bg-amber-400 text-white rounded-2xl font-bold text-sm uppercase tracking-wider shadow-xl shadow-amber-500/25 transition-all duration-200 active:scale-[0.97] disabled:opacity-50"
+                                        >
+                                            {isRejoining ? (
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                    Rejoining…
+                                                </div>
+                                            ) : !stream ? (
+                                                'Awaiting Camera…'
+                                            ) : (
+                                                'Rejoin Session'
+                                            )}
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            onClick={() => targetUserId && callUser(targetUserId)}
+                                            disabled={!targetUserId || !stream}
+                                            className="w-full h-12 sm:h-13 bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl font-bold text-sm uppercase tracking-wider shadow-xl shadow-emerald-500/25 transition-all duration-200 active:scale-[0.97] disabled:opacity-50"
+                                        >
+                                            {!targetUserId ? 'Loading…' : !stream ? 'Awaiting Camera…' : callEnded ? 'Reconnect' : 'Start Consultation'}
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
+
+                            {!isDoctor && callEnded && (
+                                <div className="w-full max-w-xs">
                                     <Button
-                                        onClick={async () => {
-                                            const session = await handleRejoinCall();
-                                            if (session) {
-                                                toast.success('Rejoining call...');
-                                                if (targetUserId) callUser(targetUserId, true);
-                                            }
-                                        }}
-                                        disabled={isRejoining || !stream}
-                                        className="w-full h-13 bg-amber-500 hover:bg-amber-400 text-white rounded-2xl font-bold text-sm uppercase tracking-wider shadow-xl shadow-amber-500/25 transition-all duration-200 active:scale-[0.97] disabled:opacity-50"
+                                        onClick={() => navigate(isDoctor ? '/doctor/appointments' : '/patient/appointments')}
+                                        className="w-full h-12 bg-white/10 hover:bg-white/15 text-white rounded-2xl font-bold text-sm uppercase tracking-wider transition-all active:scale-[0.97]"
                                     >
-                                        {isRejoining ? (
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                                Rejoining…
-                                            </div>
-                                        ) : !stream ? (
-                                            "Awaiting Camera…"
-                                        ) : (
-                                            "Rejoin Session"
-                                        )}
+                                        Return to Dashboard
                                     </Button>
-                                ) : (
-                                    <Button
-                                        onClick={() => targetUserId && callUser(targetUserId)}
-                                        disabled={!targetUserId || !stream}
-                                        className="w-full h-13 bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl font-bold text-sm uppercase tracking-wider shadow-xl shadow-emerald-500/25 transition-all duration-200 active:scale-[0.97] disabled:opacity-50"
-                                    >
-                                        {!targetUserId ? 'Loading…' : !stream ? 'Awaiting Camera…' : callEnded ? 'Reconnect' : 'Start Consultation'}
-                                    </Button>
-                                )}
-                            </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

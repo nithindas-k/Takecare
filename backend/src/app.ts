@@ -119,7 +119,7 @@ app.use("/api/time", timeRouter);
 
 
 app.use((req, res) => {
-  res.status(HttpStatus.NOT_FOUND).json({ 
+  res.status(HttpStatus.NOT_FOUND).json({
     success: false,
     message: MESSAGES.ROUTE_NOT_FOUND,
     path: req.originalUrl,
@@ -133,8 +133,10 @@ import { createServer } from "http";
 import { socketService } from "./services/socket.service";
 import { AppointmentReminderService } from "./services/appointmentReminder.service";
 import { SessionTimerService } from "./services/sessionTimer.service";
+import { NoShowHandlerService } from "./services/noShowHandler.service";
 import { AppointmentRepository } from "./repositories/appointment.repository";
 import { ScheduleRepository } from "./repositories/schedule.repository";
+import { WalletRepository } from "./repositories/wallet.repository";
 import { notificationService } from "./routers/notification.router";
 
 const appointmentRepository = new AppointmentRepository();
@@ -152,6 +154,17 @@ const sessionTimerService = new SessionTimerService(
   new LoggerService("SessionTimerService")
 );
 sessionTimerService.start();
+
+const walletRepository = new WalletRepository();
+const noShowHandlerService = new NoShowHandlerService(
+  appointmentRepository,
+  walletRepository,
+  new UserRepository(),
+  new DoctorRepository(),
+  new LoggerService("NoShowHandlerService"),
+  notificationService
+);
+noShowHandlerService.start();
 
 const PORT = Number(env.PORT);
 
