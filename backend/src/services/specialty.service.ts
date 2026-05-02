@@ -32,11 +32,13 @@ export class SpecialtyService implements ISpecialtyService {
   }
 
   async getAllSpecialties(page: number = PAGINATION.DEFAULT_PAGE, limit: number = PAGINATION.DEFAULT_LIMIT, search?: string): Promise<SpecialtyListResponse> {
-    const { specialties, total } = await this._specialtyRepository.findAll(page, limit, search);
+    const { specialties, total, activeCount, inactiveCount } = await this._specialtyRepository.findAll(page, limit, search);
 
     return {
       specialties,
       total,
+      activeCount,
+      inactiveCount,
       page,
       limit,
       totalPages: Math.ceil(total / limit)

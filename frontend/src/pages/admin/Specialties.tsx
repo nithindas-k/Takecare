@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import TopNav from "../../components/admin/TopNav";
 import Sidebar from "../../components/admin/Sidebar";
-import { FaPlus, FaEdit, FaTrash, FaSearch, FaToggleOn, FaToggleOff, FaTimes } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaToggleOn, FaToggleOff, FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { specialtyService } from '../../services/specialtyService';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -26,7 +26,10 @@ const AdminSpecialties: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [limit] = useState(10);
+  const [activeCount, setActiveCount] = useState(0);
+  const [inactiveCount, setInactiveCount] = useState(0);
+  const [limit] = useState(5); // Changed to 5 to make pagination more visible if there are few items
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Modal State
@@ -40,13 +43,23 @@ const AdminSpecialties: React.FC = () => {
   const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [specialtyToDelete, setSpecialtyToDelete] = useState<{ id: string; name: string } | null>(null);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const fetchSpecialties = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await specialtyService.getAllSpecialties(currentPage, limit, search);
+      const response = await specialtyService.getAllSpecialties(currentPage, limit, debouncedSearch);
       if (response.success) {
         setSpecialties(response.data.specialties);
         setTotal(response.data.total);
+        setActiveCount(response.data.activeCount);
+        setInactiveCount(response.data.inactiveCount);
         setTotalPages(response.data.totalPages);
       }
     } catch (error) {
@@ -55,7 +68,7 @@ const AdminSpecialties: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, limit, search]);
+  }, [currentPage, limit, debouncedSearch]);
 
   useEffect(() => {
     fetchSpecialties();
@@ -181,16 +194,30 @@ const AdminSpecialties: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-500">{i === 1 ? 'Total' : i === 2 ? 'Active' : 'Inactive'}</p>
-                        {loading ? <Skeleton className="h-8 w-12" /> : <p className="text-2xl font-bold text-gray-900 mt-1">{i === 1 ? total : i === 2 ? specialties.filter(s => s.isActive).length : specialties.filter(s => !s.isActive).length}</p>}
-                      </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-500">Total Specialties</p>
+                      {loading ? <Skeleton className="h-8 w-12" /> : <p className="text-2xl font-bold text-gray-900 mt-1">{total}</p>}
                     </div>
                   </div>
-                ))}
+                </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-500">Active Specialties</p>
+                      {loading ? <Skeleton className="h-8 w-12" /> : <p className="text-2xl font-bold text-green-600 mt-1">{activeCount}</p>}
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-500">Inactive Specialties</p>
+                      {loading ? <Skeleton className="h-8 w-12" /> : <p className="text-2xl font-bold text-red-600 mt-1">{inactiveCount}</p>}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -240,12 +267,45 @@ const AdminSpecialties: React.FC = () => {
                 </div>
 
                 {totalPages > 1 && (
-                  <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                    <div className="text-sm text-gray-700">Showing {((currentPage - 1) * limit) + 1} to {Math.min(currentPage * limit, total)} of {total} results</div>
-                    <div className="flex gap-2">
-                      <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">Previous</button>
-                      <span className="px-3 py-1 text-sm">Page {currentPage} of {totalPages}</span>
-                      <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50">Next</button>
+                  <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+                    <div className="text-sm text-gray-500">
+                      Showing <span className="font-medium text-gray-900">{((currentPage - 1) * limit) + 1}</span> to{" "}
+                      <span className="font-medium text-gray-900">{Math.min(currentPage * limit, total)}</span> of{" "}
+                      <span className="font-medium text-gray-900">{total}</span> results
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="p-2 border border-gray-200 rounded-lg text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                      >
+                        <FaChevronLeft size={16} />
+                      </button>
+
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                        .map((p, i, arr) => (
+                          <React.Fragment key={p}>
+                            {i > 0 && arr[i - 1] !== p - 1 && <span className="text-gray-400">...</span>}
+                            <button
+                              onClick={() => setCurrentPage(p)}
+                              className={`w-9 h-9 rounded-lg text-sm font-medium transition-all ${currentPage === p
+                                ? "bg-primary text-white shadow-md shadow-primary/20"
+                                : "text-gray-600 hover:bg-gray-50 border border-transparent hover:border-gray-200"
+                                }`}
+                            >
+                              {p}
+                            </button>
+                          </React.Fragment>
+                        ))}
+
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="p-2 border border-gray-200 rounded-lg text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                      >
+                        <FaChevronRight size={16} />
+                      </button>
                     </div>
                   </div>
                 )}

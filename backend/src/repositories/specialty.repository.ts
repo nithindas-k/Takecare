@@ -20,7 +20,7 @@ export class SpecialtyRepository implements ISpecialtyRepository {
     return doc ? (doc.toObject() as Specialty) : null;
   }
 
-  async findAll(page: number, limit: number, search?: string): Promise<{ specialties: Specialty[], total: number }> {
+  async findAll(page: number, limit: number, search?: string): Promise<{ specialties: Specialty[], total: number, activeCount: number, inactiveCount: number }> {
     const skip = (page - 1) * limit;
     const query: Record<string, unknown> = {};
 
@@ -28,19 +28,23 @@ export class SpecialtyRepository implements ISpecialtyRepository {
       query.name = { $regex: search, $options: 'i' };
     }
 
-    const [specialties, total] = await Promise.all([
+    const [specialties, total, activeCount, inactiveCount] = await Promise.all([
       this.model
         .find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .exec(),
-      this.model.countDocuments(query)
+      this.model.countDocuments(query),
+      this.model.countDocuments({ ...query, isActive: true }),
+      this.model.countDocuments({ ...query, isActive: false })
     ]);
 
     return {
       specialties: specialties.map(s => s.toObject() as Specialty),
-      total
+      total,
+      activeCount,
+      inactiveCount
     };
   }
 

@@ -12,6 +12,8 @@ export interface Specialty {
 export interface SpecialtyListResponse {
   specialties: Specialty[];
   total: number;
+  activeCount: number;
+  inactiveCount: number;
   page: number;
   limit: number;
   totalPages: number;

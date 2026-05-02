@@ -59,6 +59,7 @@ export const APPOINTMENT_TYPE = {
   CHAT: "chat",
 } as const;
 
+
 export const CANCELED_BY = {
   PATIENT: "patient",
   DOCTOR: "doctor",
