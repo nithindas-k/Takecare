@@ -150,13 +150,13 @@ const App: React.FC = () => {
       <Routes>
 
         {/* Public Landing Page */}
-        <Route path="/landing" element={
+        <Route path="/" element={
           <PublicRoute>
             <LandingPage />
           </PublicRoute>
         } />
 
-        <Route path="/" element={<ProtectedRoute role="patient" >
+        <Route path="/login" element={<ProtectedRoute role="patient" >
           <Home />
         </ProtectedRoute>} />
 
