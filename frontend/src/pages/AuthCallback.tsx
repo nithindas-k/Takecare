@@ -30,7 +30,7 @@ const AuthCallback: React.FC = () => {
                 } else if (user.role === "admin") {
                     navigate("/admin/dashboard");
                 } else {
-                    navigate("/");
+                    navigate("/patient/home");
                 }
             } catch (error) {
                 console.error("Failed to parse user data", error);

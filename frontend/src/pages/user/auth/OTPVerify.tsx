@@ -241,7 +241,7 @@ const PatientOTPVerify: React.FC = () => {
             phone: response.data.user.phone,
             profileImage: response.data.user.profileImage,
           }));
-          setTimeout(() => navigate("/"), 1500);
+          setTimeout(() => navigate("/patient/home"), 1500);
         } else {
           setServerError(response.message || "Invalid OTP.");
         }

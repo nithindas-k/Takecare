@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { FaUserDoctor, FaStethoscope, FaNotesMedical } from "react-icons/fa6";
 import { useNavigate, Link } from "react-router-dom";
@@ -13,6 +13,14 @@ interface FormData {
   phone: string;
   password: string;
   confirmPassword: string;
+}
+
+interface TouchedFields {
+  name: boolean;
+  email: boolean;
+  phone: boolean;
+  password: boolean;
+  confirmPassword: boolean;
 }
 
 type Errors = Partial<Record<keyof FormData, string>>;
@@ -128,51 +136,86 @@ const DoctorRegister: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [errors, setErrors] = useState<Errors>({});
+  const [touched, setTouched] = useState<TouchedFields>({
+    name: false,
+    email: false,
+    phone: false,
+    password: false,
+    confirmPassword: false,
+  });
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [serverError, setServerError] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
 
-  const validate = useCallback((data: FormData): Errors => {
+  const validate = useCallback((data: FormData, touchState: TouchedFields): Errors => {
     const e: Errors = {};
-    if (!data.name.trim()) e.name = "Name is required.";
-    else if (data.name.trim().length < 2) e.name = "Name must be at least 2 characters.";
+    if (touchState.name) {
+      if (!data.name.trim()) e.name = "Name is required.";
+      else if (data.name.trim().length < 2) e.name = "Name must be at least 2 characters.";
+    }
 
-    if (!data.email.trim()) e.email = "Email is required.";
-    else if (!EMAIL_REGEX.test(data.email)) e.email = "Enter a valid email.";
+    if (touchState.email) {
+      if (!data.email.trim()) e.email = "Email is required.";
+      else if (!EMAIL_REGEX.test(data.email)) e.email = "Enter a valid email.";
+    }
 
-    if (!data.phone.trim()) e.phone = "Phone number is required.";
-    else if (!PHONE_REGEX.test(data.phone)) e.phone = "Enter a valid 10-digit phone number.";
+    if (touchState.phone) {
+      if (!data.phone.trim()) e.phone = "Phone number is required.";
+      else if (!PHONE_REGEX.test(data.phone)) e.phone = "Enter a valid 10-digit phone number.";
+    }
 
-    if (!data.password) e.password = "Password is required.";
-    else if (data.password.length < 6) e.password = "Password must be at least 6 characters.";
+    if (touchState.password) {
+      if (!data.password) e.password = "Password is required.";
+      else if (data.password.length < 6) e.password = "Password must be at least 6 characters.";
+    }
 
-    if (!data.confirmPassword) e.confirmPassword = "Please confirm password.";
-    else if (data.confirmPassword !== data.password) e.confirmPassword = "Passwords do not match.";
+    if (touchState.confirmPassword) {
+      if (!data.confirmPassword) e.confirmPassword = "Please confirm password.";
+      else if (data.confirmPassword !== data.password) e.confirmPassword = "Passwords do not match.";
+    }
 
     return e;
   }, []);
 
+  useEffect(() => {
+    setErrors(validate(formData, touched));
+  }, [formData, touched, validate]);
+
   const isValid = useMemo(() => {
-    const validation = validate(formData);
-    return Object.keys(validation).length === 0;
+    const fullValidation = validate(formData, {
+      name: true,
+      email: true,
+      phone: true,
+      password: true,
+      confirmPassword: true,
+    });
+    return Object.keys(fullValidation).length === 0;
   }, [formData, validate]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => {
-      const next = { ...prev };
-      delete next[name as keyof FormData];
-      return next;
-    });
     setServerError("");
     setSuccessMessage("");
+  }, []);
+
+  const handleBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    const { name } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
   }, []);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      const validation = validate(formData);
+      const allTouched = {
+        name: true,
+        email: true,
+        phone: true,
+        password: true,
+        confirmPassword: true,
+      };
+      setTouched(allTouched);
+      const validation = validate(formData, allTouched);
       setErrors(validation);
       if (Object.keys(validation).length > 0) return;
 
@@ -326,7 +369,8 @@ const DoctorRegister: React.FC = () => {
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    error={errors.name}
+                    onBlur={handleBlur}
+                    error={touched.name ? errors.name : undefined}
                     placeholder="Dr. Sanjay Kumar"
                     disabled={submitting}
                     className="py-2.5 text-sm"
@@ -338,7 +382,8 @@ const DoctorRegister: React.FC = () => {
                     type="email"
                     value={formData.email}
                     onChange={handleChange}
-                    error={errors.email}
+                    onBlur={handleBlur}
+                    error={touched.email ? errors.email : undefined}
                     placeholder="doctor@health.com"
                     disabled={submitting}
                   />
@@ -349,7 +394,8 @@ const DoctorRegister: React.FC = () => {
                     type="tel"
                     value={formData.phone}
                     onChange={handleChange}
-                    error={errors.phone}
+                    onBlur={handleBlur}
+                    error={touched.phone ? errors.phone : undefined}
                     placeholder="10-digit number"
                     disabled={submitting}
                   />
@@ -360,7 +406,8 @@ const DoctorRegister: React.FC = () => {
                     type={showPassword ? "text" : "password"}
                     value={formData.password}
                     onChange={handleChange}
-                    error={errors.password}
+                    onBlur={handleBlur}
+                    error={touched.password ? errors.password : undefined}
                     placeholder="Min 6 characters"
                     disabled={submitting}
                     className="pr-12"
@@ -381,7 +428,8 @@ const DoctorRegister: React.FC = () => {
                     type={showConfirmPassword ? "text" : "password"}
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    error={errors.confirmPassword}
+                    onBlur={handleBlur}
+                    error={touched.confirmPassword ? errors.confirmPassword : undefined}
                     placeholder="Re-enter password"
                     disabled={submitting}
                     className="pr-12"

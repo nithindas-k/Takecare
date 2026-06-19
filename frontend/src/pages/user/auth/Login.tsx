@@ -182,7 +182,7 @@ const PatientLogin: React.FC = () => {
           setFormData({ email: "", password: "", role: "patient" });
           setErrors({});
 
-          navigate("/");
+          navigate("/patient/home");
         } else {
           toast.error(response.message || "Login failed");
         }

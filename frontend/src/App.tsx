@@ -151,9 +151,7 @@ const App: React.FC = () => {
 
         {/* Public Landing Page */}
         <Route path="/" element={
-          <PublicRoute>
             <LandingPage />
-          </PublicRoute>
         } />
 
         <Route path="/login" element={<ProtectedRoute role="patient" >
