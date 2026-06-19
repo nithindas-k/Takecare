@@ -236,9 +236,15 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
         session?: ClientSession | undefined
     ): Promise<IAppointmentDocument | null> {
 
+        let actualId: string | Types.ObjectId = appointmentId;
+
         if (!Types.ObjectId.isValid(appointmentId)) {
-            process.stderr.write(`[AppointmentRepository] Invalid ObjectId: ${appointmentId}\n`);
-            return null;
+            const found = await this.model.findOne({ customId: appointmentId }).session(session || null).exec();
+            if (!found) {
+                process.stderr.write(`[AppointmentRepository] Appointment not found with customId: ${appointmentId}\n`);
+                return null;
+            }
+            actualId = found._id;
         }
 
         const update = Object.keys(updateData).some(key => key.startsWith('$'))
@@ -246,7 +252,7 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
             : { $set: updateData };
 
         const result = await this.model.findByIdAndUpdate(
-            appointmentId,
+            actualId,
             update,
             { new: true, runValidators: true, session: session || undefined }
         ).exec();
@@ -257,10 +263,17 @@ export class AppointmentRepository extends BaseRepository<IAppointmentDocument> 
 
     async deleteById(appointmentId: string, session?: ClientSession | undefined): Promise<IAppointmentDocument | null> {
 
+        let actualId: string | Types.ObjectId = appointmentId;
+
         if (!Types.ObjectId.isValid(appointmentId)) {
-            return null;
+            const found = await this.model.findOne({ customId: appointmentId }).session(session || null).exec();
+            if (!found) {
+                return null;
+            }
+            actualId = found._id;
         }
-        return await this.model.findByIdAndDelete(appointmentId).session(session || null).exec();
+
+        return await this.model.findByIdAndDelete(actualId).session(session || null).exec();
     }
 
     async countByStatus(status: string): Promise<number> {

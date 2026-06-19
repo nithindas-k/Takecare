@@ -42,6 +42,18 @@ export class AppointmentService implements IAppointmentService {
         return doctor._id.toString();
     }
 
+    private _getIdString(value: unknown): string {
+        if (!value) return "";
+        if (typeof value === "string") return value;
+        if (value instanceof Types.ObjectId) return value.toString();
+        if (typeof value === "object") {
+            const v = value as { _id?: unknown, id?: unknown };
+            if (v._id) return String(v._id);
+            if (v.id) return String(v.id);
+        }
+        return "";
+    }
+
     // ----------------------- PATIENT --------------------------
 
     async createAppointment(
@@ -562,10 +574,10 @@ export class AppointmentService implements IAppointmentService {
             let isDoctor = false;
             if (userRole === ROLES.DOCTOR) {
                 const doctor = await this._doctorRepository.findByUserId(userId);
-                isDoctor = doctor?._id.toString() === appointment.doctorId.toString();
+                isDoctor = doctor?._id.toString() === this._getIdString(appointment.doctorId);
             }
 
-            const isPatient = appointment.patientId.toString() === userId;
+            const isPatient = this._getIdString(appointment.patientId) === userId;
             if (!isPatient && !isDoctor && userRole !== ROLES.ADMIN) {
                 throw new AppError(MESSAGES.UNAUTHORIZED_ACCESS, HttpStatus.FORBIDDEN);
             }
@@ -576,7 +588,7 @@ export class AppointmentService implements IAppointmentService {
             }
 
             if (rescheduleData.slotId) {
-                const schedule = await this._scheduleRepository.findByDoctorId(appointment.doctorId.toString(), session);
+                const schedule = await this._scheduleRepository.findByDoctorId(this._getIdString(appointment.doctorId), session);
                 if (schedule) {
                     const slot = schedule.weeklySchedule
                         .flatMap(day => day.slots)
@@ -594,7 +606,7 @@ export class AppointmentService implements IAppointmentService {
                 if (rescheduleData.slotId) {
                     const newStartTime = parseAppointmentTime(rescheduleData.appointmentTime);
                     await this._scheduleRepository.updateSlotBookedStatus(
-                        appointment.doctorId.toString(),
+                        this._getIdString(appointment.doctorId),
                         rescheduleData.slotId,
                         true,
                         new Date(rescheduleData.appointmentDate),
@@ -603,7 +615,7 @@ export class AppointmentService implements IAppointmentService {
                     );
                 }
 
-                await this._appointmentRepository.updateById(appointmentId, {
+                await this._appointmentRepository.updateById(appointment._id.toString(), {
                     status: APPOINTMENT_STATUS.RESCHEDULE_REQUESTED,
                     rescheduleRequest: {
                         appointmentDate: new Date(rescheduleData.appointmentDate),
@@ -614,7 +626,7 @@ export class AppointmentService implements IAppointmentService {
                 }, session);
 
                 if (this._notificationService) {
-                    await this._notificationService.notify(appointment.patientId.toString(), {
+                    await this._notificationService.notify(this._getIdString(appointment.patientId), {
                         title: "Appointment Reschedule Requested",
                         message: `The doctor has requested to reschedule your appointment to ${rescheduleData.appointmentTime} on ${new Date(rescheduleData.appointmentDate).toDateString()}.`,
                         type: NOTIFICATION_TYPES.INFO,
@@ -622,14 +634,14 @@ export class AppointmentService implements IAppointmentService {
                     });
                 }
 
-                const populated = await this._appointmentRepository.findByIdPopulated(appointmentId, session);
+                const populated = await this._appointmentRepository.findByIdPopulated(appointment._id.toString(), session);
                 return AppointmentMapper.toResponseDTO(populated);
 
             } else {
                 if (appointment.slotId) {
                     const oldStartTime = parseAppointmentTime(appointment.appointmentTime);
                     await this._scheduleRepository.updateSlotBookedStatus(
-                        appointment.doctorId.toString(),
+                        this._getIdString(appointment.doctorId),
                         appointment.slotId,
                         false,
                         new Date(appointment.appointmentDate),
@@ -641,7 +653,7 @@ export class AppointmentService implements IAppointmentService {
                 if (rescheduleData.slotId) {
                     const newStartTime = parseAppointmentTime(rescheduleData.appointmentTime);
                     const slotUpdated = await this._scheduleRepository.updateSlotBookedStatus(
-                        appointment.doctorId.toString(),
+                        this._getIdString(appointment.doctorId),
                         rescheduleData.slotId,
                         true,
                         new Date(rescheduleData.appointmentDate),
@@ -654,7 +666,7 @@ export class AppointmentService implements IAppointmentService {
                     }
                 }
 
-                await this._appointmentRepository.updateById(appointmentId, {
+                await this._appointmentRepository.updateById(appointment._id.toString(), {
                     appointmentDate: new Date(rescheduleData.appointmentDate),
                     appointmentTime: rescheduleData.appointmentTime,
                     slotId: rescheduleData.slotId || null,
@@ -663,7 +675,7 @@ export class AppointmentService implements IAppointmentService {
                     rescheduleRequest: null,
                 }, session);
 
-                const populated = await this._appointmentRepository.findByIdPopulated(appointmentId, session);
+                const populated = await this._appointmentRepository.findByIdPopulated(appointment._id.toString(), session);
                 return AppointmentMapper.toResponseDTO(populated);
             }
         });
@@ -674,7 +686,7 @@ export class AppointmentService implements IAppointmentService {
             const appointment = await this._appointmentRepository.findById(appointmentId, session);
             if (!appointment) throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
 
-            if (appointment.patientId.toString() !== userId) {
+            if (this._getIdString(appointment.patientId) !== userId) {
                 throw new AppError("Unauthorized", HttpStatus.FORBIDDEN);
             }
 
@@ -688,7 +700,7 @@ export class AppointmentService implements IAppointmentService {
             if (appointment.slotId) {
                 const oldStartTime = parseAppointmentTime(appointment.appointmentTime);
                 await this._scheduleRepository.updateSlotBookedStatus(
-                    appointment.doctorId.toString(),
+                    this._getIdString(appointment.doctorId),
                     appointment.slotId,
                     false,
                     new Date(appointment.appointmentDate),
@@ -698,7 +710,7 @@ export class AppointmentService implements IAppointmentService {
                 this._logger.info(`Released old slot ${appointment.slotId} as reschedule to ${slotId} was accepted.`);
             }
 
-            await this._appointmentRepository.updateById(appointmentId, {
+            await this._appointmentRepository.updateById(appointment._id.toString(), {
                 appointmentDate,
                 appointmentTime,
                 slotId,
@@ -708,7 +720,7 @@ export class AppointmentService implements IAppointmentService {
             }, session);
 
             if (this._notificationService) {
-                const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
+                const doctor = await this._doctorRepository.findById(this._getIdString(appointment.doctorId));
                 if (doctor) {
                     await this._notificationService.notify(doctor.userId.toString(), {
                         title: "Reschedule Accepted",
@@ -726,7 +738,7 @@ export class AppointmentService implements IAppointmentService {
             const appointment = await this._appointmentRepository.findById(appointmentId, session);
             if (!appointment) throw new AppError(MESSAGES.APPOINTMENT_NOT_FOUND, HttpStatus.NOT_FOUND);
 
-            if (appointment.patientId.toString() !== userId) {
+            if (this._getIdString(appointment.patientId) !== userId) {
                 throw new AppError("Unauthorized", HttpStatus.FORBIDDEN);
             }
 
@@ -739,7 +751,7 @@ export class AppointmentService implements IAppointmentService {
             if (currentRescheduleRequest.slotId) {
                 const startTime = parseAppointmentTime(currentRescheduleRequest.appointmentTime);
                 await this._scheduleRepository.updateSlotBookedStatus(
-                    appointment.doctorId.toString(),
+                    this._getIdString(appointment.doctorId),
                     currentRescheduleRequest.slotId,
                     false,
                     new Date(currentRescheduleRequest.appointmentDate),
@@ -748,14 +760,14 @@ export class AppointmentService implements IAppointmentService {
                 );
             }
 
-            await this._appointmentRepository.updateById(appointmentId, {
+            await this._appointmentRepository.updateById(appointment._id.toString(), {
                 status: APPOINTMENT_STATUS.PENDING,
                 rescheduleRequest: null,
                 rescheduleRejectReason: reason,
             }, session);
 
             if (this._notificationService) {
-                const doctor = await this._doctorRepository.findById(appointment.doctorId.toString());
+                const doctor = await this._doctorRepository.findById(this._getIdString(appointment.doctorId));
                 if (doctor) {
                     await this._notificationService.notify(doctor.userId.toString(), {
                         title: "Reschedule Rejected",
