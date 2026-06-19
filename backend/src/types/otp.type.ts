@@ -11,7 +11,8 @@ export interface IOtp {
     gender?: "male" | "female" | "other" | null;
     dob?: Date | null;
   };
-  expiresAt: Date;
+  otpExpiresAt: Date;
+  sessionExpiresAt: Date;
   createdAt?: Date;
 }
 
@@ -32,6 +33,7 @@ export interface OTPData {
   email: string;
   otp: string;
   userData: OTPUserData;
-  expiresAt: Date;
+  otpExpiresAt: Date;
+  sessionExpiresAt: Date;
   createdAt?: Date;
 }

@@ -13,7 +13,8 @@ export interface IOTPDocument extends Document {
     gender?: "male" | "female" | "other" | null;
     dob?: Date | null;
   };
-  expiresAt: Date;
+  otpExpiresAt: Date;
+  sessionExpiresAt: Date;
   createdAt: Date;
 }
 
@@ -43,7 +44,11 @@ const OTPSchema = new Schema<IOTPDocument>(
       },
       dob: { type: Date, default: null },
     },
-    expiresAt: {
+    otpExpiresAt: {
+      type: Date,
+      required: true,
+    },
+    sessionExpiresAt: {
       type: Date,
       required: true,
     },
@@ -55,7 +60,7 @@ const OTPSchema = new Schema<IOTPDocument>(
 
 
 
-OTPSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+OTPSchema.index({ sessionExpiresAt: 1 }, { expireAfterSeconds: 0 });
 
 const OTPModel = model<IOTPDocument>("OTP", OTPSchema);
 

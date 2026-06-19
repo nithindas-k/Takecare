@@ -11,7 +11,7 @@ export class OTPRepository extends BaseRepository<IOTPDocument> implements IOTPR
     return await this.model.findOne({ email, otp }).exec();
   }
 
-  async updateOtp(email: string, data: { otp: string|null; expiresAt: Date }): Promise<IOTPDocument | null> {
+  async updateOtp(email: string, data: { otp: string|null; otpExpiresAt: Date; sessionExpiresAt?: Date }): Promise<IOTPDocument | null> {
     return await this.model.findOneAndUpdate({ email }, { $set: data }, { new: true }).exec();
   }
 
@@ -20,12 +20,12 @@ export class OTPRepository extends BaseRepository<IOTPDocument> implements IOTPR
   }
 
   async deleteExpired(): Promise<number> {
-    const result = await this.model.deleteMany({ expiresAt: { $lt: new Date() } }).exec();
+    const result = await this.model.deleteMany({ sessionExpiresAt: { $lt: new Date() } }).exec();
     return result.deletedCount || 0;
   }
 
   async isValid(email: string, otp: string): Promise<boolean> {
-    const record = await this.model.findOne({ email, otp, expiresAt: { $gt: new Date() } });
+    const record = await this.model.findOne({ email, otp, otpExpiresAt: { $gt: new Date() } });
     return !!record;
   }
 
