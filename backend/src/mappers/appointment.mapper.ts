@@ -49,6 +49,12 @@ export class AppointmentMapper {
             cancellationReason: apt.cancellationReason || undefined,
             cancelledAt: apt.cancelledAt || undefined,
             rejectionReason: apt.rejectionReason || undefined,
+            rescheduleRequest: apt.rescheduleRequest ? {
+                appointmentDate: apt.rescheduleRequest.appointmentDate,
+                appointmentTime: apt.rescheduleRequest.appointmentTime,
+                slotId: apt.rescheduleRequest.slotId || undefined,
+            } : undefined,
+            rescheduleRejectReason: apt.rescheduleRejectReason || undefined,
             paymentStatus: apt.paymentStatus,
             paymentId: apt.paymentId || undefined,
             paymentMethod: apt.paymentMethod || undefined,

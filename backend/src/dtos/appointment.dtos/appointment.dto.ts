@@ -67,6 +67,12 @@ export interface AppointmentResponseDTO {
     cancellationReason?: string;
     cancelledAt?: Date;
     rejectionReason?: string;
+    rescheduleRequest?: {
+        appointmentDate: Date;
+        appointmentTime: string;
+        slotId?: string | null;
+    } | null;
+    rescheduleRejectReason?: string | null;
     paymentStatus: string;
     paymentId?: string;
     paymentMethod?: string;
